@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2013-2014 Splunk, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"): you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+-->
+
+<Configuration status="info" name="example" packages="">
+    <!-- Define an appender that writes to a TCP socket. We use Log4J's SocketAppender, which
+         is documented at
+
+             https://logging.apache.org/log4j/2.x/manual/appenders.html#SocketAppender
+
+         You can find the documentation on how to open TCP inputs on Splunk at
+
+             http://docs.splunk.com/Documentation/Splunk/6.0.1/Data/Monitornetworkports
+
+         Note that TCP inputs are *not* the same as Splunk's management port.
+    -->
+    <Appenders>
+        <!--Socket name="socket" host="127.0.0.1" port="15000">
+            <PatternLayout pattern="%p: %m%n" charset="UTF-8"/>
+        </Socket-->
+        
+        <Http name="http-input"
+              url="http://localhost:8088/services/collector/event/1.0"
+              token="a6091e1f-5082-4e2d-8cab-c12f213045a0"
+              host=""
+              index="firehose"
+              source="firehose"
+              sourcetype="battlecat"
+              middleware="HttpEventCollectorUnitTestMiddleware"
+              batch_size_bytes="0"
+              batch_size_count="0"
+              batch_interval="0"
+              disableCertificateValidation="true">
+            <PatternLayout pattern="%m"/>
+        </Http>
+    </Appenders>
+    <!-- Define a logger named 'splunk.logger' which writes to the socket appender we defined above. -->
+    <Loggers>
+        <Root level="INFO">
+        </Root>
+        <Logger name="splunk.logger" level="info">
+            <AppenderRef ref="socket"/>
+        </Logger>
+        
+        <Logger name="splunk.log4j" level="info">
+            <AppenderRef ref="http-input"/>
+        </Logger>
+
+    </Loggers>
+
+</Configuration>
