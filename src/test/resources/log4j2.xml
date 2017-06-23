@@ -34,16 +34,17 @@ under the License.
         
         <Http name="http-input"
               url="https://127.0.0.1:8088/services/collector/event"
-              token="aa1b95fe-7efa-4b1e-b9ef-6721513cba26"
+              token="dab493e1-26aa-4916-9570-c7a169a2e433"
               host=""
               index="firehose"
               source=""
               sourcetype=""
-              middleware="HttpEventCollectorUnitTestMiddleware"
               batch_size_bytes="0"
               batch_size_count="0"
               batch_interval="0"
-              disableCertificateValidation="true">
+              disableCertificateValidation="true"
+              middleware="AckExtractorMiddleware"
+              ack="true">
             <PatternLayout pattern="%m"/>
         </Http>
     </Appenders>
