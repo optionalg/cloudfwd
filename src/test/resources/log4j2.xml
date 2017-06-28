@@ -40,11 +40,12 @@ under the License.
               source=""
               sourcetype=""
               batch_size_bytes="0"
-              batch_size_count="0"
+              batch_size_count="1"
               batch_interval="0"
               disableCertificateValidation="true"
-              middleware="AckExtractorMiddleware"
-              ack="true">
+              ack="true"
+              ackUrl="https://127.0.0.1:8088/services/collector/ack"
+        >
             <PatternLayout pattern="%m"/>
         </Http>
     </Appenders>
