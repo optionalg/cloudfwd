@@ -24,18 +24,11 @@ import java.util.Objects;
  * @author ghendrey
  */
 public class LoggingChannel implements Comparable  {
-  private HttpEventCollectorSender sender;
-  private LogFieldsProvider logFieldsProvider;
+  private final HttpEventCollectorSender sender;
+  private final SenderFactory logFieldsProvider =  new SenderFactory();
 
   
-  /* FIXME TODO return LoggingChannel whose constructor parameters come from lb.properties
-  public static LoggingChannel create(){
-    HttpEventCollectorSender sender = new HttpEventCollectorSender(Url, token, 0,
-            0, 0, sendModeStr, true, ackUrl, metadata)
-  }
-  */
-  
-  LoggingChannel(HttpEventCollectorSender sender) {
+  public LoggingChannel(HttpEventCollectorSender sender) {
     this.sender = sender;
   }
 
@@ -49,14 +42,14 @@ public class LoggingChannel implements Comparable  {
             Thread.currentThread().getName(), null, null, null);
   }
 
-  boolean betterThan(ChannelMetrics other) {
+  boolean betterThan(LoggingChannel other) {
       return this.compareTo(other) > 0;
   }
 
   /**
    * @return the metrics
    */
-  public ChannelMetrics getMetrics() {
+  public ChannelMetrics getChannelMetrics() {
     return sender.getChannelMetrics();
   }
 
@@ -79,7 +72,7 @@ public class LoggingChannel implements Comparable  {
       return 0;
     }
     long myBirth = sender.getChannelMetrics().getOldestUnackedBirthtime();
-    long otherBirth = ((ChannelMetrics)other).getOldestUnackedBirthtime();
+    long otherBirth = ((LoggingChannel)other).getChannelMetrics().getOldestUnackedBirthtime();
     return (int) (myBirth - otherBirth); //channel with youngest unacked message is preferred
   }
 

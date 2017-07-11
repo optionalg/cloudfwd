@@ -35,18 +35,20 @@ public class LoadBalancer implements Observer {
   private final List<LoggingChannel> channels = new ArrayList<>();
   private LoggingChannel bestChannel;
   private final AtomicBoolean available = new AtomicBoolean(true);
-  
-  public synchronized void addChannel(LoggingChannel channel){
+
+  public synchronized void addChannel(LoggingChannel channel) {
     channels.add(channel);
-    channel.getMetrics().addObserver(this);
-  }
+    if(channel.betterThan(bestChannel)){
+      bestChannel = channel;
+    }
+   }
 
   @Override
   public void update(Observable o, Object arg) {
     HttpEventCollectorSender sender = (HttpEventCollectorSender) arg;
     LoggingChannel channel = new LoggingChannel(sender);
     synchronized (this) {
-      if (channel.betterThan(bestChannel.getMetrics())) {
+      if (channel.betterThan(bestChannel)) {
         bestChannel = channel;
       }
       //if best channel is not available set the AtomicBoolean to false
@@ -62,24 +64,33 @@ public class LoadBalancer implements Observer {
 
   }
 
-  public void send(String msg) throws TimeoutException{
+  public void send(String msg) throws TimeoutException {
+    synchronized (channels) {
+      if (channels.isEmpty()) {
+        SenderFactory sFact = new SenderFactory();
+        HttpEventCollectorSender sender = sFact.createSender();
+        LoggingChannel lc = new LoggingChannel(sender);
+        addChannel(lc);
+      }
+    }
     while (!available.get()) {
       try {
         long start = System.currentTimeMillis();
         synchronized (this) {
           wait(TIMEOUT);
         }
-        if(start - System.currentTimeMillis() > TIMEOUT){
-          throw new TimeoutException("Unable to find available HEC logging channel in " + TIMEOUT + " ms.");         
+        if (start - System.currentTimeMillis() <= TIMEOUT) {
+          break; //got an available channel
+        } else {
+          throw new TimeoutException(
+                  "Unable to find available HEC logging channel in " + TIMEOUT + " ms.");
         }
       } catch (InterruptedException ex) {
         Logger.getLogger(LoadBalancer.class.getName()).log(Level.SEVERE, null,
                 ex);
-        continue;
       }
-      bestChannel.send(msg);
-      return;
-    }
+    }//end while
+    bestChannel.send(msg);
   }
 
 }

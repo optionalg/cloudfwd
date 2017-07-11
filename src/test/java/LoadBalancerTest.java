@@ -20,6 +20,13 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import com.splunk.cloudfwd.LoadBalancer;
+import com.splunk.cloudfwd.LoggingChannel;
+import com.splunk.cloudfwd.SenderFactory;
+import com.splunk.logging.HttpEventCollectorSender;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -46,11 +53,26 @@ public class LoadBalancerTest {
   public void tearDown() {
   }
 
-  // TODO add test methods here.
-  // The methods must be annotated with annotation @Test. For example:
-  //
-  // @Test
-  public void hello() {
-  
+
+  @Test
+  public void hello() throws InterruptedException {
+    LoadBalancer lb = new LoadBalancer();
+    try {
+      lb.send("HELLO CHANNEL!");
+      Thread.sleep(10000);
+    } catch (TimeoutException ex) {
+      System.out.println("COULDN'T GET A CHANNEL");
+    }
+    
   }
+  public static void main(String[] args) throws InterruptedException{
+    LoadBalancer lb = new LoadBalancer();
+    try {
+      lb.send("HELLO CHANNEL!");
+      Thread.sleep(10000);
+    } catch (TimeoutException ex) {
+      System.out.println("COULDN'T GET A CHANNEL");
+    }
+  }
+  
 }
