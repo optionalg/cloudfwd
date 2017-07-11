@@ -32,22 +32,28 @@ import java.util.logging.Logger;
 public class LoadBalancer implements Observer {
 
   private final static long TIMEOUT = 60 * 1000; //FIXME TODO make configurable
+  /* All channels that can be used to send messages. */
   private final List<LoggingChannel> channels = new ArrayList<>();
+  /* The best channel to send a message to, according to the metrics */
   private LoggingChannel bestChannel;
   private final AtomicBoolean available = new AtomicBoolean(true);
-
+  /* Registers a new channel with the load balancer.*/
   public synchronized void addChannel(LoggingChannel channel) {
+    /* Remember this channel. */
     channels.add(channel);
+    /* Be notified when the metrics of this channel changes. */
     if(channel.betterThan(bestChannel)){
       bestChannel = channel;
     }
    }
 
   @Override
+  /* Called when metric of a channel changes. */
   public void update(Observable o, Object arg) {
     HttpEventCollectorSender sender = (HttpEventCollectorSender) arg;
     LoggingChannel channel = new LoggingChannel(sender);
     synchronized (this) {
+      /* If the channel who’s metrics changed is better than the current bestChannel, use that one instead.*/
       if (channel.betterThan(bestChannel)) {
         bestChannel = channel;
       }
