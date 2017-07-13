@@ -17,11 +17,11 @@ package com.splunk.cloudfwd;
 
 import com.splunk.logging.HttpEventCollectorSender;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -39,11 +39,31 @@ public class LoadBalancer implements Observer, Closeable {
   /* The best channel to send a message to, according to the metrics */
   private LoggingChannel bestChannel;
   private final AtomicBoolean available = new AtomicBoolean(true);
+  private SenderFactory senderFactory; 
+  private final ConnectionState connectionState = new ConnectionState(); //consolidate metrics across all channels
+  
+  public LoadBalancer(){
+    this.senderFactory = new SenderFactory();
+  }
+  
+  public LoadBalancer(Properties p){
+    this.senderFactory = new SenderFactory(p);
+  }
+  
+  public void setProperties(Properties p){
+    this.senderFactory = new SenderFactory(p);
+  }
+  
+  
   /* Registers a new channel with the load balancer.*/
   public synchronized void addChannel(LoggingChannel channel) {
     /* Remember this channel. */
     channels.add(channel);
-    /* Be notified when the metrics of this channel changes. */
+    //consolidated metrics (i.e. across all channels) are maintained in the connectionState
+    channel.getChannelMetrics().addObserver(this.connectionState);
+    //This load balancer also listens to each channelMetric to keep bestChannel fresh
+    channel.getChannelMetrics().addObserver(this);
+    /*Give this newly added channel a chance to be the best channel immediately */
     if(channel.betterThan(bestChannel)){
       bestChannel = channel;
     }
@@ -75,8 +95,7 @@ public class LoadBalancer implements Observer, Closeable {
   public void send(String msg) throws TimeoutException {
     synchronized (channels) {
       if (channels.isEmpty()) {
-        SenderFactory sFact = new SenderFactory();
-        HttpEventCollectorSender sender = sFact.createSender();
+        HttpEventCollectorSender sender = senderFactory.createSender();
         LoggingChannel lc = new LoggingChannel(sender);
         addChannel(lc);
       }
@@ -106,6 +125,10 @@ public class LoadBalancer implements Observer, Closeable {
     for(LoggingChannel c:this.channels){
       c.close();
     }
+  }
+
+  ConnectionState getConnectionState() {
+    return this.connectionState;
   }
 
 }

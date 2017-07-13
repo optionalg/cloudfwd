@@ -19,14 +19,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import com.splunk.cloudfwd.LoadBalancer;
-import com.splunk.cloudfwd.LoggingChannel;
-import com.splunk.cloudfwd.SenderFactory;
-import com.splunk.logging.HttpEventCollectorSender;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -57,10 +50,8 @@ public class LoadBalancerTest {
   @Test
   public void hello() throws InterruptedException, TimeoutException {
     
-    try (LoadBalancer lb = new LoadBalancer()){
-      lb.send("HELLO CHANNEL!");
-    } finally{
-      Thread.sleep(5000);
+    try (com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection()){
+      c.send("HELLO CHANNEL!");
     }
     
   }

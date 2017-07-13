@@ -30,8 +30,39 @@ import java.util.logging.Logger;
  */
 public class SenderFactory {
 
+  public static final String EVENT_POST_URL_KEY = "url";
+  public static final String ACK_POST_URL_KEY = "ackUrl";
+  public static final String USE_ACKS_KEY = "ackl";
+  public static final String TOKEN_KEY = "token";
+  public static final String BATCH_COUNT_KEY = "batch_size_count";
+  public static final String BATCH_BYTES_KEY = "batch_size_bytes";
+  public static final String BATCH_INTERVAL_KEY = "batch_interval";
+  public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
+  public static final String SEND_MODE_KEY = "send_mode";
+
+  private String url;
+  private String token;
+  private long batchInterval;
+  private long batchSize;
+  private long batchCount;
+  private boolean ack;
+  private String ackUrl;
+  private boolean disableCertificateValidation;
+  private String sendMode;
+  
+  
+  
   Properties props = new Properties();
 
+  public SenderFactory(Properties overrides) {
+    this(); //setup all defaults by calling SenderFactory() empty constr
+    this.props.putAll(overrides);
+    validateAllSettings();
+  }
+
+  /**
+   * create SenderFactory with default properties read from lb.properties file
+   */
   public SenderFactory() {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
@@ -47,23 +78,19 @@ public class SenderFactory {
   }
 
   public HttpEventCollectorSender createSender() {
-    String url;
-    String token;
-    long batchInterval;
-    long batchSize;
-    long batchCount;
-    boolean ack;
-    String ackUrl;
-    boolean disableCertificateValidation;
+
     try {
-      url = props.getProperty("url");
-      token = props.getProperty("token");
-      batchInterval = Long.parseLong(props.getProperty("batch_interval"));
-      batchSize = Long.parseLong(props.getProperty("batch_size_bytes"));
-      batchCount = Long.parseLong(props.getProperty("batch_size_count"));
-      ack = Boolean.parseBoolean(props.getProperty("ack"));
-      ackUrl = props.getProperty("ackUrl");
-      disableCertificateValidation = Boolean.parseBoolean(props.getProperty("disableCertificateValidation"));
+      url = props.getProperty(EVENT_POST_URL_KEY);
+      token = props.getProperty(TOKEN_KEY);
+      batchInterval = Long.parseLong(props.getProperty(BATCH_INTERVAL_KEY, "0"));
+      batchSize = Long.parseLong(props.getProperty(BATCH_BYTES_KEY, "100"));
+      batchCount = Long.parseLong(props.getProperty(BATCH_COUNT_KEY, "65536")); //64k
+      ack = Boolean.parseBoolean(props.getProperty(USE_ACKS_KEY, "true")); //default is use acks
+      ackUrl = props.getProperty(ACK_POST_URL_KEY);
+      disableCertificateValidation = Boolean.parseBoolean(props.getProperty(
+              DISABLE_CERT_VALIDATION_KEY, "false"));
+      sendMode = props.getProperty(SEND_MODE_KEY, "parallel");
+      validateAllSettings();
     } catch (Exception e) {
       throw new RuntimeException("problem parsing lb.properties", e);
     }
@@ -74,10 +101,10 @@ public class SenderFactory {
             batchInterval,
             batchCount,
             batchSize,
-            "parallel", 
+            "parallel",
             ack,
             ackUrl, new HashMap());
-    if(disableCertificateValidation){
+    if (disableCertificateValidation) {
       sender.disableCertificateValidation();
     }
     return sender;
@@ -89,6 +116,13 @@ public class SenderFactory {
 
   String getSeverity() {
     return "INFO";
+  }
+
+  private void validateAllSettings() {
+    if (! (sendMode.equals("sequential") || sendMode.equals("parallel")))  {
+        throw new IllegalArgumentException("Invalid setting for " + SEND_MODE_KEY+": " + sendMode);
+    }
+    //TODO FIXME validate all other properties
   }
 
 }

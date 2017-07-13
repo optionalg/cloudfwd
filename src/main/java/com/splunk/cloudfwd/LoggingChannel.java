@@ -46,8 +46,9 @@ public class LoggingChannel implements Comparable, Closeable  {
             Thread.currentThread().getName(), null, null, null);
   }
   
+  
   public void failOver(LoggingChannel recoverer){
-   
+   //FIXME TODO
   }
   
   public Set<EventBatch> getUnacknowledgedEvents(){
