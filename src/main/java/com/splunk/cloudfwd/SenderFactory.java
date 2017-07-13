@@ -74,7 +74,7 @@ public class SenderFactory {
             batchInterval,
             batchCount,
             batchSize,
-            "sequential",
+            "parallel", 
             ack,
             ackUrl, new HashMap());
     if(disableCertificateValidation){

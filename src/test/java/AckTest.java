@@ -26,7 +26,6 @@ public class AckTest {
       }
     });
     
-    System.out.println("bork");
     SplunkCimLogEvent e = new SplunkCimLogEvent("Event name", "event-id") {
       {
         // You can add an arbitrary key=value pair with addField.

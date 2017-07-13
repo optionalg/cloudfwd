@@ -55,24 +55,18 @@ public class LoadBalancerTest {
 
 
   @Test
-  public void hello() throws InterruptedException {
-    LoadBalancer lb = new LoadBalancer();
-    try {
+  public void hello() throws InterruptedException, TimeoutException {
+    
+    try (LoadBalancer lb = new LoadBalancer()){
       lb.send("HELLO CHANNEL!");
-      Thread.sleep(10000);
-    } catch (TimeoutException ex) {
-      System.out.println("COULDN'T GET A CHANNEL");
+    } finally{
+      Thread.sleep(5000);
     }
     
   }
-  public static void main(String[] args) throws InterruptedException{
-    LoadBalancer lb = new LoadBalancer();
-    try {
-      lb.send("HELLO CHANNEL!");
-      Thread.sleep(10000);
-    } catch (TimeoutException ex) {
-      System.out.println("COULDN'T GET A CHANNEL");
-    }
+  public static void main(String[] args) throws InterruptedException, TimeoutException{
+    LoadBalancerTest lbt = new LoadBalancerTest();
+    lbt.hello();
   }
   
 }

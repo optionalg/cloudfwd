@@ -16,6 +16,8 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.logging.HttpEventCollectorSender;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
@@ -29,7 +31,7 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class LoadBalancer implements Observer {
+public class LoadBalancer implements Observer, Closeable {
 
   private final static long TIMEOUT = 60 * 1000; //FIXME TODO make configurable
   private final List<LoggingChannel> channels = new ArrayList<>();
@@ -91,6 +93,13 @@ public class LoadBalancer implements Observer {
       }
     }//end while
     bestChannel.send(msg);
+  }
+
+  @Override
+  public void close()  {
+    for(LoggingChannel c:this.channels){
+      c.close();
+    }
   }
 
 }

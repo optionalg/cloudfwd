@@ -16,14 +16,18 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.logging.ChannelMetrics;
+import com.splunk.logging.EventBatch;
 import com.splunk.logging.HttpEventCollectorSender;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  *
  * @author ghendrey
  */
-public class LoggingChannel implements Comparable  {
+public class LoggingChannel implements Comparable, Closeable  {
   private final HttpEventCollectorSender sender;
   private final SenderFactory logFieldsProvider =  new SenderFactory();
 
@@ -40,6 +44,14 @@ public class LoggingChannel implements Comparable  {
             msg,
             logger,
             Thread.currentThread().getName(), null, null, null);
+  }
+  
+  public void failOver(LoggingChannel recoverer){
+   
+  }
+  
+  public Set<EventBatch> getUnacknowledgedEvents(){
+    return sender.getAckWindow().getUnacknowleldgedEvents();
   }
 
   boolean betterThan(LoggingChannel other) {
@@ -96,6 +108,11 @@ public class LoggingChannel implements Comparable  {
     }
     final LoggingChannel other = (LoggingChannel) obj;
     return Objects.equals(this.sender.getChannel(), other.sender.getChannel());
+  }
+
+  @Override
+  public void close()  {
+    this.sender.close();
   }
   
   
