@@ -59,8 +59,11 @@ public class LoadBalancerTest {
             "HEC_LOGGER",
             Thread.currentThread().getName(), new HashMap(), null, null));
     try (com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection()) {
-      c.sendBatch(events, () -> {System.out.println("SUCCESS CHECKPOINT");
+      c.sendBatch(events, () -> {
+        System.out.println("SUCCESS CHECKPOINT");
+        System.exit(0);
       });
+      Thread.sleep(10000);
     }
 
   }
