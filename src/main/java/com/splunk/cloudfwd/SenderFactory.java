@@ -110,14 +110,6 @@ public class SenderFactory {
     return sender;
   }
 
-  String getLogger() {
-    return "FOO-FIXME";
-  }
-
-  String getSeverity() {
-    return "INFO";
-  }
-
   private void validateAllSettings() {
     if (! (sendMode.equals("sequential") || sendMode.equals("parallel")))  {
         throw new IllegalArgumentException("Invalid setting for " + SEND_MODE_KEY+": " + sendMode);

@@ -29,7 +29,7 @@ import java.util.Set;
  */
 public class LoggingChannel implements Comparable, Closeable  {
   private final HttpEventCollectorSender sender;
-  private final SenderFactory logFieldsProvider =  new SenderFactory();
+  //private final SenderFactory logFieldsProvider =  new SenderFactory();
 
   
   public LoggingChannel(HttpEventCollectorSender sender) {
@@ -37,10 +37,10 @@ public class LoggingChannel implements Comparable, Closeable  {
   }
 
   public void send(String msg) {
-    String providedLogger = this.logFieldsProvider.getLogger();
+    String providedLogger = "HEC-LOGGER";
     String logger = providedLogger != null ? providedLogger : "hec.channel." + sender.
             getChannel();
-    sender.send(logFieldsProvider.getSeverity(),
+    sender.send("info",
             msg,
             logger,
             Thread.currentThread().getName(), null, null, null);
