@@ -15,18 +15,45 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.logging.AckLifecycleState;
+import com.splunk.logging.ChannelMetrics;
+import com.splunk.logging.EventBatch;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
-
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 /**
  *
  * @author ghendrey
  */
 public class ConnectionState extends Observable implements Observer{
-
+  private final Map<Long, Runnable> successCallbacks = new ConcurrentSkipListMap<>();
+  
+  void setSuccessCallback(EventBatch events, Runnable callback){
+    this.successCallbacks.put(events.getId(), callback);
+  }
+  
   @Override
   public void update(Observable o, Object arg) {
-     System.out.println("HEY: someone write this code!"); //todo fixme
+    if(!(arg instanceof AckLifecycleState)){
+      return; //ignore updates we don't care about, like those destined for LoadBalancer
+    }
+    System.out.println("CONN STATE UPDATE");
+    AckLifecycleState es = (AckLifecycleState) arg;
+    if(es.getCurrentState()== AckLifecycleState.State.ACK_POLL_OK){
+      long id  = es.getEvents().getId();
+      Runnable runMe = successCallbacks.get(id);
+      if(null == runMe){
+        String msg = "failed to find callback for successfully acknowledged ackId: " + es.getEvents().getAckId();
+        Logger.getLogger(getClass().getName()).log(Level.SEVERE, msg);
+        throw new IllegalStateException(msg);
+      }
+      runMe.run(); //callback
+    }
+     ChannelMetrics cm = (ChannelMetrics) o;
+     
   }
   
 }

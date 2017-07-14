@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+import com.splunk.logging.EventBatch;
+import com.splunk.logging.HttpEventCollectorEventInfo;
+import java.util.HashMap;
+import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -26,38 +30,44 @@ import java.util.concurrent.TimeoutException;
  * @author ghendrey
  */
 public class LoadBalancerTest {
-  
+
   public LoadBalancerTest() {
   }
-  
+
   @BeforeClass
   public static void setUpClass() {
   }
-  
+
   @AfterClass
   public static void tearDownClass() {
   }
-  
+
   @Before
   public void setUp() {
   }
-  
+
   @After
   public void tearDown() {
   }
 
-
   @Test
   public void hello() throws InterruptedException, TimeoutException {
-    
-    try (com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection()){
-      c.send("HELLO CHANNEL!");
+    EventBatch events = new EventBatch();
+    events.add(new HttpEventCollectorEventInfo("info", "yo yo yo", "HEC_LOGGER",
+            Thread.currentThread().getName(), new HashMap(), null, null));
+    events.add(new HttpEventCollectorEventInfo("info", "hey hey hey",
+            "HEC_LOGGER",
+            Thread.currentThread().getName(), new HashMap(), null, null));
+    try (com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection()) {
+      c.sendBatch(events, () -> {System.out.println("SUCCESS CHECKPOINT");
+      });
     }
-    
+
   }
-  public static void main(String[] args) throws InterruptedException, TimeoutException{
+
+  public static void main(String[] args) throws InterruptedException, TimeoutException {
     LoadBalancerTest lbt = new LoadBalancerTest();
     lbt.hello();
   }
-  
+
 }

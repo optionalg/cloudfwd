@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.logging.EventBatch;
 import java.io.Closeable;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
@@ -39,8 +40,9 @@ public class Connection implements Closeable{
     lb.close();
   }
   
-  public void send(String msg) throws TimeoutException {
-    lb.send(msg);
+  
+  public void sendBatch(EventBatch events, Runnable callback) throws TimeoutException {
+    lb.sendBatch(events, callback);
   }
   
   public ConnectionState getConnectionState(){

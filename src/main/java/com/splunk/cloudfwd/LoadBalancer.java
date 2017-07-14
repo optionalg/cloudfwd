@@ -15,13 +15,16 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.logging.EventBatch;
 import com.splunk.logging.HttpEventCollectorSender;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -41,6 +44,7 @@ public class LoadBalancer implements Observer, Closeable {
   private final AtomicBoolean available = new AtomicBoolean(true);
   private SenderFactory senderFactory; 
   private final ConnectionState connectionState = new ConnectionState(); //consolidate metrics across all channels
+
   
   public LoadBalancer(){
     this.senderFactory = new SenderFactory();
@@ -72,6 +76,9 @@ public class LoadBalancer implements Observer, Closeable {
   @Override
   /* Called when metric of a channel changes. */
   public void update(Observable o, Object arg) {
+    if(! (arg instanceof HttpEventCollectorSender)){
+      return; //ignore updates that we are not interested in such as those destined for ConnectionState
+    }
     HttpEventCollectorSender sender = (HttpEventCollectorSender) arg;
     LoggingChannel channel = new LoggingChannel(sender);
     synchronized (this) {
@@ -92,7 +99,8 @@ public class LoadBalancer implements Observer, Closeable {
 
   }
 
-  public void send(String msg) throws TimeoutException {
+  void sendBatch(EventBatch events, Runnable succesCallback) throws TimeoutException {
+    this.connectionState.setSuccessCallback(events, succesCallback);
     synchronized (channels) {
       if (channels.isEmpty()) {
         HttpEventCollectorSender sender = senderFactory.createSender();
@@ -117,7 +125,7 @@ public class LoadBalancer implements Observer, Closeable {
                 ex);
       }
     }//end while
-    bestChannel.send(msg);
+    bestChannel.send(events);
   }
 
   @Override

@@ -36,14 +36,8 @@ public class LoggingChannel implements Comparable, Closeable  {
     this.sender = sender;
   }
 
-  public void send(String msg) {
-    String providedLogger = "HEC-LOGGER";
-    String logger = providedLogger != null ? providedLogger : "hec.channel." + sender.
-            getChannel();
-    sender.send("info",
-            msg,
-            logger,
-            Thread.currentThread().getName(), null, null, null);
+  public void send(EventBatch events) {
+    sender.sendBatch(events);
   }
   
   
