@@ -17,7 +17,6 @@
 import com.splunk.logging.EventBatch;
 import com.splunk.logging.HttpEventCollectorEventInfo;
 import java.util.HashMap;
-import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -52,17 +51,24 @@ public class LoadBalancerTest {
 
   @Test
   public void hello() throws InterruptedException, TimeoutException {
-    EventBatch events = new EventBatch();
-    events.add(new HttpEventCollectorEventInfo("info", "yo yo yo", "HEC_LOGGER",
-            Thread.currentThread().getName(), new HashMap(), null, null));
-    events.add(new HttpEventCollectorEventInfo("info", "hey hey hey",
-            "HEC_LOGGER",
-            Thread.currentThread().getName(), new HashMap(), null, null));
+
     try (com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection()) {
-      c.sendBatch(events, () -> {
-        System.out.println("SUCCESS CHECKPOINT");
-        System.exit(0);
-      });
+      int max = 10;
+      for (int i = 0; i < max; i++) {
+        final EventBatch events = new EventBatch();
+        events.add(new HttpEventCollectorEventInfo("info", "yo yo yo",
+                "HEC_LOGGER",
+                Thread.currentThread().getName(), new HashMap(), null, null));
+        events.add(new HttpEventCollectorEventInfo("info", "hey hey hey",
+                "HEC_LOGGER",
+                Thread.currentThread().getName(), new HashMap(), null, null));
+        c.sendBatch(events, () -> {
+          System.out.println("SUCCESS CHECKPOINT " + events.getId());
+          if(Long.parseLong(events.getId())==max){
+            System.exit(0); //highest sequence ID acknowledged. We are done!
+          }
+        });
+      }
       Thread.sleep(10000);
     }
 
