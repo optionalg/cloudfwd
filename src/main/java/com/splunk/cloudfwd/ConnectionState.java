@@ -63,6 +63,7 @@ public class ConnectionState extends Observable implements Observer {
   //acknowledged out of order. Return Callback from hightest EventBatch, for which there are no 
   //lower unacknowledged event batches.
   private synchronized Runnable getCallback(EventBatch events) {
+    events.setAcknowledged(true);
     if (!this.successCallbacks.containsKey(events.getId())) {
       String msg = "No callback registered for successfully acknowledged ackId: " + events.getAckId();
       Logger.getLogger(getClass().getName()).log(Level.SEVERE, msg);
