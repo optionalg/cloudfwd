@@ -17,12 +17,14 @@
 import com.splunk.logging.EventBatch;
 import com.splunk.logging.HttpEventCollectorEventInfo;
 import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -51,27 +53,29 @@ public class LoadBalancerTest {
 
   @Test
   public void hello() throws InterruptedException, TimeoutException {
+    com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection();
 
-    try (com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection()) {
-      int max = 10;
-      for (int i = 0; i < max; i++) {
-        final EventBatch events = new EventBatch();
-        events.add(new HttpEventCollectorEventInfo("info", "yo yo yo",
-                "HEC_LOGGER",
-                Thread.currentThread().getName(), new HashMap(), null, null));
-        events.add(new HttpEventCollectorEventInfo("info", "hey hey hey",
-                "HEC_LOGGER",
-                Thread.currentThread().getName(), new HashMap(), null, null));
-        c.sendBatch(events, () -> {
-          System.out.println("SUCCESS CHECKPOINT " + events.getId());
-          if(Long.parseLong(events.getId())==max){
-            System.exit(0); //highest sequence ID acknowledged. We are done!
-          }
-        });
-      }
-      Thread.sleep(10000);
+    AtomicInteger ackedCount = new AtomicInteger(0);
+    int max = 10;
+    CountDownLatch latch = new CountDownLatch(10);
+    for (int i = 0; i < max; i++) {
+      final EventBatch events = new EventBatch();
+      events.add(new HttpEventCollectorEventInfo("info", "yo yo yo",
+              "HEC_LOGGER",
+              Thread.currentThread().getName(), new HashMap(), null, null));
+      events.add(new HttpEventCollectorEventInfo("info", "hey hey hey",
+              "HEC_LOGGER",
+              Thread.currentThread().getName(), new HashMap(), null, null));
+      c.sendBatch(events, () -> {
+        System.out.println("SUCCESS CHECKPOINT " + events.getId());
+        if (10 == Long.parseLong(events.getId())) {
+          c.close();
+          System.exit(0);
+        }
+      });
     }
 
+    Thread.sleep(10000);
   }
 
   public static void main(String[] args) throws InterruptedException, TimeoutException {

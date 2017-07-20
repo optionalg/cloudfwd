@@ -20,11 +20,9 @@ import com.splunk.logging.HttpEventCollectorSender;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -42,25 +40,28 @@ public class LoadBalancer implements Observer, Closeable {
   /* The best channel to send a message to, according to the metrics */
   private LoggingChannel bestChannel;
   private final AtomicBoolean available = new AtomicBoolean(true);
-  private SenderFactory senderFactory; 
+  private ConfiguredObjectFactory configuredObjectFactory; 
   private final ConnectionState connectionState = new ConnectionState(); //consolidate metrics across all channels
+  private final IndexDiscoverer discoverer;
+  private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
 
   
   public LoadBalancer(){
-    this.senderFactory = new SenderFactory();
+    this(new Properties());
   }
   
   public LoadBalancer(Properties p){
-    this.senderFactory = new SenderFactory(p);
-  }
+    this.configuredObjectFactory = new ConfiguredObjectFactory(p);
+    this.discoverer = new IndexDiscoverer(configuredObjectFactory);
+    this.discoveryScheduler.start(discoverer);
+  }  
   
-  public void setProperties(Properties p){
-    this.senderFactory = new SenderFactory(p);
+  public void addIndexer(String host, String port){
+    
   }
-  
   
   /* Registers a new channel with the load balancer.*/
-  public synchronized void addChannel(LoggingChannel channel) {
+  protected synchronized void addChannel(LoggingChannel channel) {
     /* Remember this channel. */
     channels.add(channel);
     //consolidated metrics (i.e. across all channels) are maintained in the connectionState
@@ -72,6 +73,22 @@ public class LoadBalancer implements Observer, Closeable {
       bestChannel = channel;
     }
    }
+  
+  protected synchronized void removeChannel(LoggingChannel channel) {
+    /* Remember this channel. */
+    channels.add(channel);
+    //consolidated metrics (i.e. across all channels) are maintained in the connectionState
+    channel.getChannelMetrics().addObserver(this.connectionState);
+    //This load balancer also listens to each channelMetric to keep bestChannel fresh
+    channel.getChannelMetrics().addObserver(this);
+    /*Give this newly added channel a chance to be the best channel immediately */
+    if(channel.betterThan(bestChannel)){
+      bestChannel = channel;
+    }
+   }  
+  
+  
+  
 
   @Override
   /* Called when metric of a channel changes. */
@@ -99,11 +116,11 @@ public class LoadBalancer implements Observer, Closeable {
 
   }
 
-  void sendBatch(EventBatch events, Runnable succesCallback) throws TimeoutException {
+  public void sendBatch(EventBatch events, Runnable succesCallback) throws TimeoutException {
     this.connectionState.setSuccessCallback(events, succesCallback);
     synchronized (channels) {
       if (channels.isEmpty()) {
-        HttpEventCollectorSender sender = senderFactory.createSender();
+        HttpEventCollectorSender sender = configuredObjectFactory.createSender();
         LoggingChannel lc = new LoggingChannel(sender);
         addChannel(lc);
       }
@@ -133,9 +150,10 @@ public class LoadBalancer implements Observer, Closeable {
     for(LoggingChannel c:this.channels){
       c.close();
     }
+    this.discoveryScheduler.stop();
   }
 
-  ConnectionState getConnectionState() {
+  public ConnectionState getConnectionState() {
     return this.connectionState;
   }
 
