@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.logging.AckLifecycleState;
 import com.splunk.logging.EventBatch;
 import com.splunk.logging.HttpEventCollectorSender;
 import java.io.Closeable;
@@ -90,25 +91,35 @@ public class LoadBalancer implements Observer, Closeable {
   @Override
   /* Called when metric of a channel changes. */
   public void update(Observable o, Object arg) {
-    if (arg instanceof HttpEventCollectorSender) {
-      updateBestChannel((HttpEventCollectorSender) arg);
+    System.out.println("LB observed an update of " + arg.getClass().getName());
+    
+    if (arg instanceof AckLifecycleState) {      
+      updateBestChannel((AckLifecycleState) arg);
       return;
-    }
+    }    
 
     if (arg instanceof IndexDiscoverer.Change) {
       updateChannels((IndexDiscoverer.Change) arg);
+      return;
     }
+    
+   Logger.getLogger(getClass().getName()).log(Level.SEVERE, "Unhandled update from: {0} with arg: {1}", new Object[]{o.getClass().getCanonicalName(), arg.getClass().getName()});
+   throw new RuntimeException("Unhandled update from: " + o.getClass().getCanonicalName() + " with arg: " + arg.getClass().getName());
+    
 
   }
 
-  private void updateBestChannel(HttpEventCollectorSender sender) {
-    LoggingChannel channel = new LoggingChannel(sender);
+  private void updateBestChannel(AckLifecycleState state) {
+    //note LoggingChannel is just a very thin wrapper around the sender. We aren't really "creating" a channel
+    //here, as much as wrapping the channel construct around the sender
+    LoggingChannel channel = new LoggingChannel(state.getSender()); 
     synchronized (this) {
 
       //if channel is available, then the load balancer as a whole is available because we 
       //have at least this one good channel
       if(channel.isAvalialable()){
         this.available.set(true);
+        System.out.println("NOTIFY ALL");
         notifyAll(); //unblock send()
       }
     }
@@ -129,14 +140,18 @@ public class LoadBalancer implements Observer, Closeable {
       try {
         long start = System.currentTimeMillis();
         synchronized (this) {
+          System.out.println("------BLOCKING-----");
           wait(TIMEOUT);
         }
-        if (start - System.currentTimeMillis() <= TIMEOUT) {
+        if (System.currentTimeMillis() -start <= TIMEOUT) {
+          System.out.println("------UNBLOCKED----");
           break; //got an available channel
         } else {
+          System.out.println("------TIMED OUT----");
           throw new TimeoutException(
                   "Unable to find available HEC logging channel in " + TIMEOUT + " ms.");
         }
+        
       } catch (InterruptedException ex) {
         Logger.getLogger(LoadBalancer.class.getName()).log(Level.SEVERE, null,
                 ex);
@@ -162,6 +177,7 @@ public class LoadBalancer implements Observer, Closeable {
       URL url;
       try {
         url = new URL("https://" + s.getHostName() + ":" + s.getPort());
+        System.out.println("Trying to add URL: " + url);
         HttpEventCollectorSender sender = this.configuredObjectFactory.
                 createSender(url);
         addChannel(new LoggingChannel(sender));

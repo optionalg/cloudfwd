@@ -56,8 +56,7 @@ public class LoadBalancerTest {
     com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection();
 
     AtomicInteger ackedCount = new AtomicInteger(0);
-    int max = 10;
-    CountDownLatch latch = new CountDownLatch(10);
+    int max = 10000;    
     for (int i = 0; i < max; i++) {
       final EventBatch events = new EventBatch();
       events.add(new HttpEventCollectorEventInfo("info", "yo yo yo",
@@ -66,9 +65,10 @@ public class LoadBalancerTest {
       events.add(new HttpEventCollectorEventInfo("info", "hey hey hey",
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));
+      System.out.println("Send batch: " + i);
       c.sendBatch(events, () -> {
         System.out.println("SUCCESS CHECKPOINT " + events.getId());
-        if (10 == Long.parseLong(events.getId())) {
+        if ( max== Long.parseLong(events.getId())) {
           c.close();
           System.exit(0);
         }

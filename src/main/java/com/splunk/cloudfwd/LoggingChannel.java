@@ -29,7 +29,7 @@ import java.util.Set;
 public class LoggingChannel implements Comparable, Closeable  {
   private final HttpEventCollectorSender sender;
   //private final SenderFactory logFieldsProvider =  new SenderFactory();
-  private static final int FULL=4; //FIXME TODO set to reasonable value, configurable?
+  private static final int FULL=100; //FIXME TODO set to reasonable value, configurable?
 
   
   public LoggingChannel(HttpEventCollectorSender sender) {
