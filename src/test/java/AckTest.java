@@ -19,7 +19,7 @@ public class AckTest {
   @Test
   public void testHec() throws InterruptedException {
     HttpEventCollectorErrorHandler.onError((final EventBatch data, final Exception ex) -> {
-      System.out.println(ex);
+        System.out.println(ex);
     });
     
     SplunkCimLogEvent e = new SplunkCimLogEvent("Event name", "event-id") {
