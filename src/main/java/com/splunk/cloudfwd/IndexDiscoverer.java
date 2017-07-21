@@ -56,11 +56,22 @@ class IndexDiscoverer extends Observable {
     return addrs;
   }
   
-  void discover(){
-    diff(getInetAddressMap(senderFactory.getUrls()), mappings);
+  synchronized List<InetSocketAddress> getAddrs(){
+    List<InetSocketAddress> addrs = new ArrayList<>();
+    for (String url : this.mappings.keySet()) {
+      addrs.addAll(mappings.get(url));
+    }
+    return addrs;
+  }
+  
+  /*
+  * called by IndexerDiscoveryScheduler
+  */
+  synchronized void discover(){
+    update(getInetAddressMap(senderFactory.getUrls()), mappings);
   }
 
-  List<Change> diff(Map<String, List<InetSocketAddress>> current,
+  List<Change> update(Map<String, List<InetSocketAddress>> current,
           Map<String, List<InetSocketAddress>> prev) {
     List<Change> changes = new ArrayList<>();
     for (String url : current.keySet()) {
@@ -99,7 +110,7 @@ class IndexDiscoverer extends Observable {
    * @return
    */
   final static Map<String, List<InetSocketAddress>> getInetAddressMap(
-          Set<URL> urls) {
+          List<URL> urls) {
     ConcurrentSkipListMap<String, List<InetSocketAddress>> mapping = new ConcurrentSkipListMap<>();
     for (URL url : urls) {
       try {
@@ -152,6 +163,13 @@ class IndexDiscoverer extends Observable {
       this.change = change;
       this.inetSocketAddress = inetSocketAddress;
     }
+
+    @Override
+    public String toString() {
+      return "NETWORK: Change{" + "change=" + change + ", inetSocketAddress=" + inetSocketAddress + '}';
+    }
+    
+    
 
     /**
      * @return the change

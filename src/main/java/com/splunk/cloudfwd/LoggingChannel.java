@@ -29,6 +29,7 @@ import java.util.Set;
 public class LoggingChannel implements Comparable, Closeable  {
   private final HttpEventCollectorSender sender;
   //private final SenderFactory logFieldsProvider =  new SenderFactory();
+  private static final int FULL=4; //FIXME TODO set to reasonable value, configurable?
 
   
   public LoggingChannel(HttpEventCollectorSender sender) {
@@ -36,6 +37,7 @@ public class LoggingChannel implements Comparable, Closeable  {
   }
 
   public void send(EventBatch events) {
+    System.out.println("Sending to channel: " + sender.getChannel());
     sender.sendBatch(events);
   }
   
@@ -61,11 +63,14 @@ public class LoggingChannel implements Comparable, Closeable  {
 
   boolean isAvalialable() {
     ChannelMetrics metrics = sender.getChannelMetrics();
-    return metrics.getUnacknowledgedCount() > 100
-            || //100 outstanding aks
-            metrics.getOldestUnackedBirthtime() > System.currentTimeMillis() - 3 * 60 * 1000
-            || //or any outstanding ack older than 3 min
-            metrics.getMostRecentTimeToSuccess() < 30 * 1000; //or the most recently acknowledges message took longer than 30 seconds
+    return metrics.getUnacknowledgedCount() < FULL; //FIXME TODO make configurable
+           /* LET'S FOR THE MOMENT KEEP THE AVAILABLE CONDITION SUPER SIMPLE AND 
+              NOT INCLUDE THESE FANCIER THINGS
+            &&
+            metrics.getOldestUnackedBirthtime() < System.currentTimeMillis() - 3 * 60 * 1000 //FIXME TODO make configurable oldest unacked less than 3 min old
+            &&
+            metrics.getMostRecentTimeToSuccess() < 30 * 1000; //FIXME TODO make configurable the most recently acknowledges message took less than 30 seconds
+            */
 
   }
 

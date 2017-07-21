@@ -70,12 +70,12 @@ public class ConfiguredObjectFactory {
     }
   }
 
-  public Set<URL> getUrls() {
-    Set<URL> urls = new HashSet<>();
+  public List<URL> getUrls() {
+    List<URL> urls = new ArrayList<>();
     String[] splits = defaultProps.getProperty(COLLECTOR_URI).split(",");
     for (String urlString : splits) {
       try {
-        URL url = new URL(urlString);
+        URL url = new URL(urlString.trim());
         urls.add(url);
       } catch (MalformedURLException ex) {
         Logger.getLogger(IndexDiscoverer.class.getName()).
@@ -112,7 +112,7 @@ public class ConfiguredObjectFactory {
     return createSender(props);
   }
 
-  protected HttpEventCollectorSender createSender(Properties props) {
+  private HttpEventCollectorSender createSender(Properties props) {
     String url;
     String token;
     long batchInterval;
