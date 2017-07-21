@@ -34,7 +34,7 @@ under the License.
         
         <Http name="http-input"
               url="https://127.0.0.1:8088/services/collector/event"
-              token="dab493e1-26aa-4916-9570-c7a169a2e433"
+              token="e20b2a58-be4b-4400-83fb-ad322c7bcc3b"
               host=""
               index="firehose"
               source=""

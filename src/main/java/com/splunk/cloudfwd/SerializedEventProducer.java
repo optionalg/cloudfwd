@@ -15,37 +15,13 @@
  */
 package com.splunk.cloudfwd;
 
-import java.io.Closeable;
-import java.util.Properties;
-import java.util.concurrent.TimeoutException;
+import java.util.Map;
 
 /**
  *
  * @author ghendrey
  */
-public class Connection implements Closeable{
-  LoadBalancer lb;
-  
-  public Connection(){
-    this.lb = new LoadBalancer();
-  }
-  
-  public Connection(Properties settings){
-    this.lb = new LoadBalancer(settings);
-  }
-
-  @Override
-  public void close()  {
-    lb.close();
-  }
-  
-  
-  public void sendBatch(EventBatch events, Runnable callback) throws TimeoutException {
-    lb.sendBatch(events, callback);
-  }
-  
-  public ConnectionState getConnectionState(){
-    return lb.getConnectionState();
-  }
+public interface SerializedEventProducer {
+  public void setEventMetadata(Map<String, String> metadata);
   
 }

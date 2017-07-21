@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import com.splunk.logging.EventBatch;
-import com.splunk.logging.HttpEventCollectorEventInfo;
+import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HttpEventCollectorEventInfo;
 import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import org.junit.After;

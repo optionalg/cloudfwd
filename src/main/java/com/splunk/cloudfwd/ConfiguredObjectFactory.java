@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.logging.HttpEventCollectorSender;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;

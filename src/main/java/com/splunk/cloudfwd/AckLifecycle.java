@@ -15,37 +15,26 @@
  */
 package com.splunk.cloudfwd;
 
-import java.io.Closeable;
-import java.util.Properties;
-import java.util.concurrent.TimeoutException;
-
 /**
  *
  * @author ghendrey
  */
-public class Connection implements Closeable{
-  LoadBalancer lb;
-  
-  public Connection(){
-    this.lb = new LoadBalancer();
-  }
-  
-  public Connection(Properties settings){
-    this.lb = new LoadBalancer(settings);
-  }
+public interface AckLifecycle {
 
-  @Override
-  public void close()  {
-    lb.close();
-  }
-  
-  
-  public void sendBatch(EventBatch events, Runnable callback) throws TimeoutException {
-    lb.sendBatch(events, callback);
-  }
-  
-  public ConnectionState getConnectionState(){
-    return lb.getConnectionState();
-  }
-  
+  void preEventsPost(EventBatch events);
+
+  void eventPostOK(EventBatch events);
+
+  void eventPostNotOK(int code, String msg, EventBatch events);
+
+  void eventPostFailure(Exception ex);
+
+  void preAckPoll();
+
+  void ackPollOK(EventBatch events);
+
+  void ackPollNotOK(int statusCode, String reply);
+
+  void ackPollFailed(Exception ex);
 }
+

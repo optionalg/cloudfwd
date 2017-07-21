@@ -1,9 +1,9 @@
 /*
  * Proprietary and confidential. Copyright Splunk 2015
  */
-import com.splunk.logging.EventBatch;
-import com.splunk.logging.HttpEventCollectorErrorHandler;
-import com.splunk.logging.SplunkCimLogEvent;
+import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HttpEventCollectorErrorHandler;
+import com.splunk.cloudfwd.SplunkCimLogEvent;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.junit.Test;

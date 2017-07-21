@@ -15,8 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.logging.EventBatch;
-import com.splunk.logging.HttpEventCollectorSender;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
