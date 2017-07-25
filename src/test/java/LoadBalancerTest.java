@@ -17,7 +17,6 @@
 import com.splunk.logging.EventBatch;
 import com.splunk.logging.HttpEventCollectorEventInfo;
 import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -59,10 +58,7 @@ public class LoadBalancerTest {
     int max = 10000;    
     for (int i = 0; i < max; i++) {
       final EventBatch events = new EventBatch();
-      events.add(new HttpEventCollectorEventInfo("info", "yo yo yo",
-              "HEC_LOGGER",
-              Thread.currentThread().getName(), new HashMap(), null, null));
-      events.add(new HttpEventCollectorEventInfo("info", "hey hey hey",
+      events.add(new HttpEventCollectorEventInfo("info", "seqno="+i,
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));
       System.out.println("Send batch: " + i);
@@ -73,6 +69,7 @@ public class LoadBalancerTest {
           System.exit(0);
         }
       });
+      //Thread.sleep(100);
     }
 
     Thread.sleep(10000);

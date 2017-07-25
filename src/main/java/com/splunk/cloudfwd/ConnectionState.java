@@ -33,30 +33,52 @@ import java.util.logging.Logger;
  */
 public class ConnectionState extends Observable implements Observer {
 
+  private static final Logger LOG = Logger.getLogger(ConnectionState.class.
+          getName());
+
   //EventBatch callbacks are ordered by EventBatch id lexicographic comparison
   private final NavigableMap<String, BatchCallback> successCallbacks = new ConcurrentSkipListMap<>(); //key EventBatch.id, value is completion callback
 
-  void setSuccessCallback(EventBatch events, Runnable callback) {
+  synchronized void setSuccessCallback(EventBatch events, Runnable callback) {
     this.successCallbacks.put(events.getId(),
             new BatchCallback(events, callback));
   }
-  
+
   @Override
   public void update(Observable o, Object arg) {
-    if (!(arg instanceof AckLifecycleState)) {
-      return; //ignore updates we don't care about, like those destined for LoadBalancer
-    }
-    System.out.println("CONN STATE UPDATE");
-    AckLifecycleState es = (AckLifecycleState) arg;
-    if (es.getCurrentState() == AckLifecycleState.State.ACK_POLL_OK) {
-      String id = es.getEvents().getId();
-      Runnable runMe = getCallback(es.getEvents());
-      if (null != runMe) {
-        runMe.run(); //callback
+    System.out.println("ping connectionstate");
+    try {
+      if (!(arg instanceof AckLifecycleState)) {
+        LOG.info("ConnectionState ignoring update of " + arg.getClass().getName());
+        return; //ignore updates we don't care about, like those destined for LoadBalancer
       }
+
+      AckLifecycleState es = (AckLifecycleState) arg;
+      System.out.println("CONN STATE UPDATE channel="+es.getSender().getChannel());
+      if (es.getCurrentState() == AckLifecycleState.State.ACK_POLL_OK) {
+        String id = es.getEvents().getId();
+        System.out.println("MAYBE CALLBACK HIGHWATER for " + id);
+  
+        Runnable runMe = getCallback(es.getEvents());
+        if (null != runMe) {
+          runMe.run(); //callback
+        }
+      }
+    } catch (Exception ex) {
+      LOG.severe(ex.getMessage());
+      ex.printStackTrace();
+      throw new RuntimeException(ex.getMessage(), ex);
     }
-    ChannelMetrics cm = (ChannelMetrics) o;
-    
+
+  }
+  
+  public String eventBatchWindowStateToString(){
+    StringBuilder sb = new StringBuilder();
+    for(BatchCallback cb:this.successCallbacks.values()){
+      String chan = null == cb.events.getSender()?"--------------------------------null":cb.events.getSender().getChannel();
+      sb.append("chan=").append(chan).append(", seqno=").append(cb.events.getId()).append(", ackID=").append(cb.events.getAckId()).append(", acked=").append(cb.events.isAcknowledged()==true?"1":"0").append("\n");
+    }
+    return sb.toString();
   }
 
   //if EventsBatch is the lowest (by ID) then remove it, and consecutive higher keys that have been
@@ -64,8 +86,10 @@ public class ConnectionState extends Observable implements Observer {
   //lower unacknowledged event batches.
   private synchronized Runnable getCallback(EventBatch events) {
     events.setAcknowledged(true);
+    System.out.println("window state: " + eventBatchWindowStateToString());
     if (!this.successCallbacks.containsKey(events.getId())) {
-      String msg = "No callback registered for successfully acknowledged ackId: " + events.getAckId();
+      String msg = "No callback registered for successfully acknowledged ackId: " + events.
+              getAckId();
       Logger.getLogger(getClass().getName()).log(Level.SEVERE, msg);
       throw new IllegalStateException(msg);
     }
@@ -87,33 +111,33 @@ public class ConnectionState extends Observable implements Observer {
     }
     return null; //no callback returned. There are lower sequence number, unack'd EventBatch outstanding
   }
-  
+
   private static class BatchCallback {
-    
+
     private EventBatch events;
     private Runnable callback;
-    
+
     public BatchCallback(EventBatch events, Runnable callback) {
       this.events = events;
       this.callback = callback;
     }
-    
+
     public EventBatch getEvents() {
       return events;
     }
-    
+
     public void setEvents(EventBatch events) {
       this.events = events;
     }
-    
+
     public Runnable getCallback() {
       return callback;
     }
-    
+
     public void setCallback(Runnable callback) {
       this.callback = callback;
     }
-    
+
   }
-  
+
 }

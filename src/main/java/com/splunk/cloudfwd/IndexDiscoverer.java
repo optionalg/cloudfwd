@@ -25,7 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
-import java.util.Set;
+import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -62,6 +62,11 @@ class IndexDiscoverer extends Observable {
       addrs.addAll(mappings.get(url));
     }
     return addrs;
+  }
+  
+  public InetSocketAddress randomlyChooseAddr(){
+    List<InetSocketAddress> addrs = getAddrs();
+    return addrs.get(new Random(System.currentTimeMillis()).nextInt(addrs.size()));
   }
   
   /*
