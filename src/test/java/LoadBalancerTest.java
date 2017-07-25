@@ -55,7 +55,7 @@ public class LoadBalancerTest {
     com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection();
 
     AtomicInteger ackedCount = new AtomicInteger(0);
-    int max = 10000;    
+    int max = 40000;    
     for (int i = 0; i < max; i++) {
       final EventBatch events = new EventBatch();
       events.add(new HttpEventCollectorEventInfo("info", "seqno="+i,

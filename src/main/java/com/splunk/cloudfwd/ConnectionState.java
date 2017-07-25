@@ -86,7 +86,7 @@ public class ConnectionState extends Observable implements Observer {
   //lower unacknowledged event batches.
   private synchronized Runnable getCallback(EventBatch events) {
     events.setAcknowledged(true);
-    System.out.println("window state: " + eventBatchWindowStateToString());
+    //System.out.println("window state: " + eventBatchWindowStateToString());
     if (!this.successCallbacks.containsKey(events.getId())) {
       String msg = "No callback registered for successfully acknowledged ackId: " + events.
               getAckId();
@@ -108,7 +108,9 @@ public class ConnectionState extends Observable implements Observer {
         }
       }
       return highestAckdCallback;
-    }
+    }/*else{
+      this.successCallbacks.remove(events.getId()); //just remove callbacks for non-highwater marks
+     }*/
     return null; //no callback returned. There are lower sequence number, unack'd EventBatch outstanding
   }
 

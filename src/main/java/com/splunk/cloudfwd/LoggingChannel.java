@@ -39,7 +39,7 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
 
   private static final Logger LOG = Logger.getLogger(LoggingChannel.class.
           getName());
-  private final static long TIMEOUT = 10 * 60 * 1000; //FIXME TODO make configurable
+  private final static long TIMEOUT = 60 * 1000; //FIXME TODO make configurable
   private final HttpEventCollectorSender sender;
   private static final int FULL = 100; //FIXME TODO set to reasonable value, configurable?
   private static final ScheduledExecutorService reaperScheduler = Executors.
@@ -128,11 +128,11 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
                     "unable to close channel " + getChannelId() + ", will try again when channel empties");
           }
         }
+
       }
-      synchronized (this) {
-        System.out.println("TRYING TO UNBLOCK");
-        notifyAll();
-      }
+
+      System.out.println("TRYING TO UNBLOCK");
+      notifyAll();
 
     }
 
