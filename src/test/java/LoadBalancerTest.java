@@ -58,7 +58,7 @@ public class LoadBalancerTest {
     int max = 40000;    
     for (int i = 0; i < max; i++) {
       final EventBatch events = new EventBatch();
-      events.add(new HttpEventCollectorEventInfo("info", "seqno="+i,
+      events.add(new HttpEventCollectorEventInfo("event", "json","info", "seqno="+i,
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));
       System.out.println("Send batch: " + i);

@@ -40,6 +40,8 @@ public class ConfiguredObjectFactory {
   //public static final String ACK_POST_URL_KEY = "ackUrl";
   public static final String USE_ACKS_KEY = "ackl";
   public static final String TOKEN_KEY = "token";
+  public static final String ENDPOINT = "endpoint";
+  public static final String EVENT_TYPE = "eventtype";
   public static final String BATCH_COUNT_KEY = "batch_size_count";
   public static final String BATCH_BYTES_KEY = "batch_size_bytes";
   public static final String BATCH_INTERVAL_KEY = "batch_interval";
@@ -115,6 +117,8 @@ public class ConfiguredObjectFactory {
   private HttpEventCollectorSender createSender(Properties props) {
     String url;
     String token;
+    String endpoint;
+    String eventtype;
     long batchInterval;
     long batchSize;
     long batchCount;
@@ -124,7 +128,20 @@ public class ConfiguredObjectFactory {
     String sendMode;
 
     try {
-      url = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/event";
+      endpoint = props.getProperty(ENDPOINT, "event").trim();
+      if (endpoint.equals("event")) {
+        url = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/event";
+      } else if (endpoint.equals("raw")) {
+        url = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/raw";
+      } else {
+        throw new IllegalArgumentException(" Invalid event type set in properties: " + endpoint +
+                "\nEvent type can only be 'raw' or 'event'");
+      }
+      eventtype = props.getProperty(EVENT_TYPE, "json").trim();
+      if (!(eventtype.equals("json") || eventtype.equals("blob"))) {
+        throw new IllegalArgumentException(
+                "Invalid setting for " + EVENT_TYPE + ": " + eventtype);
+      }
       token = props.getProperty(TOKEN_KEY).trim();
       batchInterval = Long.parseLong(props.getProperty(BATCH_INTERVAL_KEY, "0").trim());
       batchSize = Long.parseLong(props.getProperty(BATCH_BYTES_KEY, "100").trim());
