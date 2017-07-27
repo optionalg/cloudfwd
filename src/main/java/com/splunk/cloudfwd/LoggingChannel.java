@@ -35,18 +35,18 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class LoggingChannel implements Comparable, Closeable, Observer {
+public class LoggingChannel implements Closeable, Observer {
 
   private static final Logger LOG = Logger.getLogger(LoggingChannel.class.
           getName());
-  private final static long TIMEOUT = 60 * 1000; //FIXME TODO make configurable
+  private final static long SEND_TIMEOUT = 60 * 1000; //FIXME TODO make configurable
   private final HttpEventCollectorSender sender;
-  private static final int FULL = 100; //FIXME TODO set to reasonable value, configurable?
+  private static final int FULL = 500; //FIXME TODO set to reasonable value, configurable?
   private static final ScheduledExecutorService reaperScheduler = Executors.
           newScheduledThreadPool(1); //for scheduling self-removal/shutdown
-  private static final long LIFESPAN = 10 * 1000; //5 min lifespan
-  private boolean closed;
-  private boolean quiesced;
+  private static final long LIFESPAN = 5*60*1000; //5 min lifespan
+  private volatile boolean closed;
+  private volatile boolean quiesced;
   private final LoadBalancer loadBalancer;
   private AtomicInteger unackedCount = new AtomicInteger(0);
 
@@ -54,10 +54,9 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
     this.loadBalancer = b;
     this.sender = sender;
     getChannelMetrics().addObserver(this);
-    //schedule the channel to be automatically quiesced at LIFESPAN
-
+    //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty 
     reaperScheduler.schedule(() -> {
-      quiesce();
+      closeAndReplace();
     }, LIFESPAN, TimeUnit.MILLISECONDS);
 
   }
@@ -81,12 +80,12 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
       while (true) {
         try {
           System.out.println("---BLOCKING---");
-          wait(TIMEOUT);
+          wait(SEND_TIMEOUT);
         } catch (InterruptedException ex) {
           Logger.getLogger(LoggingChannel.class.getName()).
                   log(Level.SEVERE, null, ex);
         }
-        if (System.currentTimeMillis() - start > TIMEOUT) {
+        if (System.currentTimeMillis() - start > SEND_TIMEOUT) {
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         } else {
@@ -125,17 +124,19 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
             close();
           } catch (IllegalStateException ex) {
             LOG.warning(
-                    "unable to close channel " + getChannelId() + ", will try again when channel empties");
+                    "unable to close channel " + getChannelId() + ": " + ex.getMessage());
           }
         }
-
       }
 
-      System.out.println("TRYING TO UNBLOCK");
-      notifyAll();
-
+      System.out.println("UNBLOCK");
+      notifyAll();      
     }
-
+  }
+  
+  synchronized void closeAndReplace(){
+    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+    quiesce(); //drain in-flight packets, and close+remove when empty 
   }
 
   /**
@@ -144,11 +145,7 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
    */
   protected synchronized void quiesce() {
     LOG.log(Level.INFO, "Quiescing channel: {0}", getChannelId());
-    //CRITICAL - must addChannel before removeChannel else can remove all channels and send will fail
-    this.loadBalancer.addChannelFromRandomlyChosenHost();
-    quiesced = true;
-    this.loadBalancer.removeChannel(getChannelId());
-
+    quiesced = true;   
   }
 
   @Override
@@ -159,29 +156,21 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
     }
     LOG.log(Level.INFO, "CLOSE {0}", getChannelId());
     if (!isEmpty()) {
-      quiesce();
+      quiesce(); //this essentially tells the channel to close after it is empty
       return;
     }
 
     this.closed = true;
     this.sender.close();
+    this.loadBalancer.removeChannel(getChannelId());
+    System.out.println("TRYING TO UNBLOCK");
+    notifyAll();    
     getChannelMetrics().deleteObserver(this);
     getChannelMetrics().deleteObserver(this.loadBalancer.getConnectionState());
   }
 
-  /*
-  protected void closeWhenEmpty(){
-    if(isEmpty()){
-      close();
-    }else{
-      LOG.log(Level.INFO,"Channel {0} not empty, deferring close.", getChannelId());
-    //try again later (many multiples of lifespan)
-    reaperScheduler.schedule(()->{
-      closeWhenEmpty();
-    }, 10*LIFESPAN, TimeUnit.MILLISECONDS);   
-    }
-  }
-   */
+ 
+   
   /**
    * Returns true if this channels has no unacknowledged EventBatch
    *
@@ -191,17 +180,10 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
     return this.unackedCount.get() == 0;
   }
 
-  /*
-  public Set<EventBatch> getUnacknowledgedEvents() {
-    return sender.getAckWindow().getUnacknowleldgedEvents();
+  int getUnackedCount(){
+    return this.unackedCount.get();
   }
-   */
-
- /*
-  synchronized boolean betterThan(LoggingChannel other) {
-    return this.compareTo(other) > 0;
-  }
-   */
+   
   /**
    * @return the metrics
    */
@@ -211,17 +193,10 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
 
   boolean isAvailable() {
     ChannelMetrics metrics = sender.getChannelMetrics();
-    return !quiesced && !closed && metrics.getUnacknowledgedCount() < FULL; //FIXME TODO make configurable
-    /* LET'S FOR THE MOMENT KEEP THE AVAILABLE CONDITION SUPER SIMPLE AND 
-              NOT INCLUDE THESE FANCIER THINGS
-            &&
-            metrics.getOldestUnackedBirthtime() < System.currentTimeMillis() - 3 * 60 * 1000 //FIXME TODO make configurable oldest unacked less than 3 min old
-            &&
-            metrics.getMostRecentTimeToSuccess() < 30 * 1000; //FIXME TODO make configurable the most recently acknowledges message took less than 30 seconds
-     */
-
+    return !quiesced && !closed && metrics.getUnacknowledgedCount() < FULL; //FIXME TODO make configurable   
   }
 
+  /*
   @Override
   public int compareTo(Object other) {
     if (null == other || !((LoggingChannel) other).isAvailable()) {
@@ -236,6 +211,7 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
     return (int) (myBirth - otherBirth); //channel with youngest unacked message is preferred
   }
 
+*/
   @Override
   public int hashCode() {
     int hash = 3;
@@ -243,6 +219,7 @@ public class LoggingChannel implements Comparable, Closeable, Observer {
     return hash;
   }
 
+  
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {

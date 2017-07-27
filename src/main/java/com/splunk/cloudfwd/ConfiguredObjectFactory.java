@@ -22,13 +22,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jdk.nashorn.internal.runtime.arrays.ArrayLikeIterator;
 
 /**
  *
@@ -45,8 +42,10 @@ public class ConfiguredObjectFactory {
   public static final String BATCH_INTERVAL_KEY = "batch_interval";
   public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
   public static final String SEND_MODE_KEY = "send_mode";
+  private static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
+  private String MAX_CHANNELS_KEY = "max_channels";
   
-  Properties defaultProps = new Properties();
+  private Properties defaultProps = new Properties();
 
   public ConfiguredObjectFactory(Properties overrides) {
     this(); //setup all defaults by calling SenderFactory() empty constr
@@ -88,22 +87,14 @@ public class ConfiguredObjectFactory {
     return urls;
   }
 
-  public List<HttpEventCollectorSender> getSenders() {
-    List<HttpEventCollectorSender> senders = new ArrayList<>();
-    String[] splits = defaultProps.getProperty(COLLECTOR_URI).split(",");
-    for (String urlString : splits) {
-      try {
-        URL url = new URL(urlString);
-        senders.add(createSender(url));
-      } catch (MalformedURLException ex) {
-        Logger.getLogger(IndexDiscoverer.class.getName()).
-                log(Level.SEVERE, "Malformed URL: '" + urlString + "'");
-        Logger.getLogger(ConfiguredObjectFactory.class.getName()).log(
-                Level.SEVERE, null,
-                ex);
-      }
-    }
-    return senders;
+  public int getChannelsPerDestination() {
+    return Integer.parseInt(defaultProps.getProperty(
+            CHANNELS_PER_DESTINATION_KEY, "8"));
+  }
+
+  public int maxChannels() {
+    return Integer.parseInt(defaultProps.getProperty(
+            MAX_CHANNELS_KEY, "64"));
   }
 
   public HttpEventCollectorSender createSender(URL url) {
@@ -126,9 +117,12 @@ public class ConfiguredObjectFactory {
     try {
       url = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/event";
       token = props.getProperty(TOKEN_KEY).trim();
-      batchInterval = Long.parseLong(props.getProperty(BATCH_INTERVAL_KEY, "0").trim());
-      batchSize = Long.parseLong(props.getProperty(BATCH_BYTES_KEY, "100").trim());
-      batchCount = Long.parseLong(props.getProperty(BATCH_COUNT_KEY, "65536").trim()); //64k
+      batchInterval = Long.parseLong(props.getProperty(BATCH_INTERVAL_KEY, "0").
+              trim());
+      batchSize = Long.parseLong(props.getProperty(BATCH_BYTES_KEY, "100").
+              trim());
+      batchCount = Long.parseLong(props.getProperty(BATCH_COUNT_KEY, "65536").
+              trim()); //64k
       ack = Boolean.parseBoolean(props.getProperty(USE_ACKS_KEY, "true").trim()); //default is use acks
       ackUrl = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/ack";
       disableCertificateValidation = Boolean.parseBoolean(props.getProperty(
@@ -139,7 +133,9 @@ public class ConfiguredObjectFactory {
                 "Invalid setting for " + SEND_MODE_KEY + ": " + sendMode);
       }
     } catch (Exception e) {
-      throw new RuntimeException("problem parsing lb.properties to create HttpEventCollectorSender", e);
+      throw new RuntimeException(
+              "problem parsing lb.properties to create HttpEventCollectorSender",
+              e);
     }
 
     HttpEventCollectorSender sender = new HttpEventCollectorSender(
@@ -160,6 +156,5 @@ public class ConfiguredObjectFactory {
   public HttpEventCollectorSender createSender() {
     return createSender(this.defaultProps);
   }
-
 
 }

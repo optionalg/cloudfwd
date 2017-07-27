@@ -53,7 +53,7 @@ class IndexDiscoveryScheduler {
     if(null == this.scheduler){
       return;
     }
-    scheduler.shutdown();
+    scheduler.shutdownNow();
     scheduler = null;
   }  
   

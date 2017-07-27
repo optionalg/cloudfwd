@@ -72,6 +72,11 @@ public class ConnectionState extends Observable implements Observer {
 
   }
   
+  @Override
+  public String toString(){
+    return eventBatchWindowStateToString();
+  }
+  
   public String eventBatchWindowStateToString(){
     StringBuilder sb = new StringBuilder();
     for(BatchCallback cb:this.successCallbacks.values()){
