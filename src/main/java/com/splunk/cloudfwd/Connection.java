@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.logging.EventBatch;
+import com.splunk.cloudfwd.http.EventBatch;
 import java.io.Closeable;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;

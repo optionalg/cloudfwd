@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.logging.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.HttpEventCollectorSender;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -33,18 +33,14 @@ import java.util.logging.Logger;
  */
 public class ConfiguredObjectFactory {
 
+  private static final Logger LOG = Logger.getLogger(
+          ConfiguredObjectFactory.class.getName());
+
+  private static final String TOKEN_KEY = "token";
   public static final String COLLECTOR_URI = "url";
-  //public static final String ACK_POST_URL_KEY = "ackUrl";
-  public static final String USE_ACKS_KEY = "ack";
-  public static final String TOKEN_KEY = "token";
-  public static final String BATCH_COUNT_KEY = "batch_size_count";
-  public static final String BATCH_BYTES_KEY = "batch_size_bytes";
-  public static final String BATCH_INTERVAL_KEY = "batch_interval";
   public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
-  public static final String SEND_MODE_KEY = "send_mode";
   private static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
-  private String MAX_CHANNELS_KEY = "max_channels";
-  
+
   private Properties defaultProps = new Properties();
 
   public ConfiguredObjectFactory(Properties overrides) {
@@ -63,8 +59,7 @@ public class ConfiguredObjectFactory {
       }
       defaultProps.load(is);
     } catch (IOException ex) {
-      Logger.getLogger(ConfiguredObjectFactory.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.log(Level.SEVERE, "problem loading lb.properties", ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -92,11 +87,6 @@ public class ConfiguredObjectFactory {
             CHANNELS_PER_DESTINATION_KEY, "8"));
   }
 
-  public int maxChannels() {
-    return Integer.parseInt(defaultProps.getProperty(
-            MAX_CHANNELS_KEY, "64"));
-  }
-
   public HttpEventCollectorSender createSender(URL url) {
     Properties props = new Properties(defaultProps);
     props.put("url", url.toString());
@@ -104,56 +94,23 @@ public class ConfiguredObjectFactory {
   }
 
   private HttpEventCollectorSender createSender(Properties props) {
-    String url;
-    String token;
-    long batchInterval;
-    long batchSize;
-    long batchCount;
-    boolean ack;
-    String ackUrl;
-    String healthUrl;
-    boolean disableCertificateValidation;
-    String sendMode;
-
     try {
-      url = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/event";
-      token = props.getProperty(TOKEN_KEY).trim();
-      batchInterval = Long.parseLong(props.getProperty(BATCH_INTERVAL_KEY, "0").
-              trim());
-      batchSize = Long.parseLong(props.getProperty(BATCH_BYTES_KEY, "100").
-              trim());
-      batchCount = Long.parseLong(props.getProperty(BATCH_COUNT_KEY, "65536").
-              trim()); //64k
-      ack = Boolean.parseBoolean(props.getProperty(USE_ACKS_KEY, "true").trim()); //default is use acks
-      ackUrl = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/ack";
-      healthUrl = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/health";
-      disableCertificateValidation = Boolean.parseBoolean(props.getProperty(
-              DISABLE_CERT_VALIDATION_KEY, "false").trim());
-      sendMode = props.getProperty(SEND_MODE_KEY, "parallel").trim();
-      if (!(sendMode.equals("sequential") || sendMode.equals("parallel"))) {
-        throw new IllegalArgumentException(
-                "Invalid setting for " + SEND_MODE_KEY + ": " + sendMode);
+      String url = props.getProperty(COLLECTOR_URI).trim();
+      String token = props.getProperty(TOKEN_KEY).trim();
+      boolean disableCertificateValidation = Boolean.parseBoolean(props.
+              getProperty(
+                      DISABLE_CERT_VALIDATION_KEY, "false").trim());
+      HttpEventCollectorSender sender = new HttpEventCollectorSender(url, token);
+      if (disableCertificateValidation) {
+        sender.disableCertificateValidation();
       }
-    } catch (Exception e) {
+      return sender;
+    } catch (Exception ex) {
+      LOG.log(Level.SEVERE, "Problem instantiating HTTP sender.", ex);
       throw new RuntimeException(
               "problem parsing lb.properties to create HttpEventCollectorSender",
-              e);
+              ex);
     }
-
-    HttpEventCollectorSender sender = new HttpEventCollectorSender(
-            url,
-            token,
-            batchInterval,
-            batchCount,
-            batchSize,
-            "parallel",
-            ack,
-            ackUrl,
-            healthUrl, new HashMap());
-    if (disableCertificateValidation) {
-      sender.disableCertificateValidation();
-    }
-    return sender;
   }
 
   public HttpEventCollectorSender createSender() {

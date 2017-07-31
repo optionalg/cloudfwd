@@ -15,8 +15,8 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.logging.AckLifecycleState;
-import com.splunk.logging.EventBatch;
+import com.splunk.cloudfwd.http.AckLifecycleState;
+import com.splunk.cloudfwd.http.EventBatch;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
