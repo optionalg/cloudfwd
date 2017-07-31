@@ -53,15 +53,13 @@ public class LoadBalancerTest {
   @Test
   public void hello() throws InterruptedException, TimeoutException {
     com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection();
-
-    AtomicInteger ackedCount = new AtomicInteger(0);
-    int max = 1000000;    
+    int max = 100000;    
     for (int i = 0; i < max; i++) {
       final EventBatch events = new EventBatch();
       events.add(new HttpEventCollectorEventInfo("info", "seqno="+i,
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));
-      System.out.println("Send batch: " + i);
+      System.out.println("Send batch: " + events.getId() + " i="+i);
       c.sendBatch(events, () -> {
         System.out.println("SUCCESS CHECKPOINT " + events.getId());
         if ( max== Long.parseLong(events.getId())) {

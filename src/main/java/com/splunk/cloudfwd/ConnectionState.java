@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.logging.AckLifecycleState;
-import com.splunk.logging.ChannelMetrics;
 import com.splunk.logging.EventBatch;
 import java.util.Iterator;
 import java.util.Map;

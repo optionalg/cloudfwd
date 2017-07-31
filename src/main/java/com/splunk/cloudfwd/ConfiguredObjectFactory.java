@@ -35,7 +35,7 @@ public class ConfiguredObjectFactory {
 
   public static final String COLLECTOR_URI = "url";
   //public static final String ACK_POST_URL_KEY = "ackUrl";
-  public static final String USE_ACKS_KEY = "ackl";
+  public static final String USE_ACKS_KEY = "ack";
   public static final String TOKEN_KEY = "token";
   public static final String BATCH_COUNT_KEY = "batch_size_count";
   public static final String BATCH_BYTES_KEY = "batch_size_bytes";
@@ -111,6 +111,7 @@ public class ConfiguredObjectFactory {
     long batchCount;
     boolean ack;
     String ackUrl;
+    String healthUrl;
     boolean disableCertificateValidation;
     String sendMode;
 
@@ -125,6 +126,7 @@ public class ConfiguredObjectFactory {
               trim()); //64k
       ack = Boolean.parseBoolean(props.getProperty(USE_ACKS_KEY, "true").trim()); //default is use acks
       ackUrl = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/ack";
+      healthUrl = props.getProperty(COLLECTOR_URI).trim() + "/services/collector/health";
       disableCertificateValidation = Boolean.parseBoolean(props.getProperty(
               DISABLE_CERT_VALIDATION_KEY, "false").trim());
       sendMode = props.getProperty(SEND_MODE_KEY, "parallel").trim();
@@ -146,7 +148,8 @@ public class ConfiguredObjectFactory {
             batchSize,
             "parallel",
             ack,
-            ackUrl, new HashMap());
+            ackUrl,
+            healthUrl, new HashMap());
     if (disableCertificateValidation) {
       sender.disableCertificateValidation();
     }
