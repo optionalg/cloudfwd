@@ -22,7 +22,10 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.http.HttpResponse;
+import org.apache.http.concurrent.FutureCallback;
 
 /**
  *
@@ -33,23 +36,17 @@ public class EventBatch implements SerializedEventProducer {
   private static final Logger LOG = Logger.getLogger(EventBatch.class.getName());
 
   private static AtomicLong batchIdGenerator = new AtomicLong(0);
-  private String id =String.format("%019d", batchIdGenerator.incrementAndGet());//must generate this batch's ID before posting events, since it's string and strings compare lexicographically we should zero pad to 19 digits (max long value)
+  private String id = String.format("%019d", batchIdGenerator.incrementAndGet());//must generate this batch's ID before posting events, since it's string and strings compare lexicographically we should zero pad to 19 digits (max long value)
   private Long ackId; //Will be null until we receive ackId for this batch from HEC
-  private long maxEventsBatchCount;
-  private long maxEventsBatchSize;
-  private final long flushInterval;
   private Map<String, String> metadata = new HashMap<>();
-  private final Timer timer;
   private final TimerTask flushTask = new ScheduledFlush();
   private final List<HttpEventCollectorEventInfo> eventsBatch = new ArrayList();
   private HttpEventCollectorSender sender;
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
-        
+
   public EventBatch() {
-    this.flushInterval = -1;
-    this.timer = null;
     this.sender = null;
   }
 
@@ -64,15 +61,7 @@ public class EventBatch implements SerializedEventProducer {
     } else if (maxEventsBatchSize == 0 && maxEventsBatchCount > 0) {
       maxEventsBatchSize = Long.MAX_VALUE;
     }
-    this.maxEventsBatchCount = maxEventsBatchCount;
-    this.maxEventsBatchSize = maxEventsBatchSize;
     this.metadata = metadata;
-    this.flushInterval = flushInterval;
-    this.timer = timer;
-    if (this.flushInterval > 0) {
-      // start scheduled flush timer
-      timer.scheduleAtFixedRate(this.flushTask, flushInterval, flushInterval);
-    }
   }
 
   public synchronized void add(HttpEventCollectorEventInfo event) {
@@ -95,16 +84,15 @@ public class EventBatch implements SerializedEventProducer {
     //the character encoding. it's very difficult to compute statically. We use the stringBuilder length
     //which is a character count. Will be same as serialized size only for single-byte encodings like
     //US-ASCII of ISO-8859-1    
-    return !flushed && (eventsBatch.size() >= maxEventsBatchCount || serializedCharCount() > maxEventsBatchSize);
+    return !flushed && (serializedCharCount() > 0);
   }
 
   protected synchronized void flush() {
     flushTask.cancel();
-    if (!this.flushed && this.stringBuilder.length()>0) {     
-      sender.postEventsAsync(this);
+    if (!this.flushed && this.stringBuilder.length() > 0) {
+      this.sender.getAckManager().postEvents(this);
+      flushed = true;
     }
-    flushed = true;
-
   }
 
   /**
@@ -145,26 +133,6 @@ public class EventBatch implements SerializedEventProducer {
     return this.eventsBatch;
   }
 
-  /**
-   * @return the maxEventsBatchCount
-   */
-  public long getMaxEventsBatchCount() {
-    return maxEventsBatchCount;
-  }
-
-  /**
-   * @return the maxEventsBatchSize
-   */
-  public long getMaxEventsBatchSize() {
-    return maxEventsBatchSize;
-  }
-
-  /**
-   * @return the flushInterval
-   */
-  public long getFlushInterval() {
-    return flushInterval;
-  }
 
   /**
    * @return the metadata
@@ -194,26 +162,12 @@ public class EventBatch implements SerializedEventProducer {
     this.ackId = ackId;
   }
 
-  /**
-   * @param maxEventsBatchCount the maxEventsBatchCount to set
-   */
-  public void setMaxEventsBatchCount(long maxEventsBatchCount) {
-    this.maxEventsBatchCount = maxEventsBatchCount;
-  }
-
-  /**
-   * @param maxEventsBatchSize the maxEventsBatchSize to set
-   */
-  public void setMaxEventsBatchSize(long maxEventsBatchSize) {
-    this.maxEventsBatchSize = maxEventsBatchSize;
-  }
-
-
   void setSender(HttpEventCollectorSender sender) {
-    if(null != this.sender){
-     String msg = "attempt to change the value of sender. Channel was " + this.sender.getChannel()+", and attempt to change to " + sender.getChannel();
-     LOG.severe(msg);
-     throw new IllegalStateException(msg);
+    if (null != this.sender) {
+      String msg = "attempt to change the value of sender. Channel was " + this.sender.
+              getChannel() + ", and attempt to change to " + sender.getChannel();
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
     }
     this.sender = sender;
   }

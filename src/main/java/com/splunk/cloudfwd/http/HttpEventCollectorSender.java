@@ -27,7 +27,6 @@ import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
-import org.apache.http.util.EntityUtils;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -39,7 +38,7 @@ import java.util.logging.Logger;
  * This is an internal helper class that sends logging events to Splunk http
  * event collector.
  */
-public final class HttpEventCollectorSender implements HttpEventCollectorMiddleware.IHttpSender {
+public final class HttpEventCollectorSender {
 
   private static final Logger LOG = Logger.getLogger(
           HttpEventCollectorSender.class.getName());
@@ -53,6 +52,7 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8";
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
+  private final AckManager ackManager;
 
 
   /**
@@ -78,10 +78,8 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private final SendMode sendMode;
-  private final HttpEventCollectorMiddleware middleware = new HttpEventCollectorMiddleware();
   private final String channel = newChannel();
   private final String ackUrl;
-  private final AckMiddleware ackMiddleware;
   private final String healthUrl;
 
   /**
@@ -96,8 +94,7 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
     this.ackUrl = url.trim() + "/services/collector/ack";
     this.healthUrl = url.trim() + "/services/collector/health";
     this.token = token;
-    this.ackMiddleware = new AckMiddleware(this);
-    this.middleware.add(ackMiddleware);
+    this.ackManager = new AckManager(this);
   }
   
   public String getChannel() {
@@ -109,7 +106,11 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
   }  
 
   public AckWindow getAckWindow() {
-    return this.ackMiddleware.getAckManager().getAckWindow();
+    return ackManager.getAckWindow();
+  }
+  
+  public AckManager getAckManager(){
+    return this.ackManager;
   }
 
   /**
@@ -137,7 +138,7 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
     if (null != eventsBatch) { //can happen if no msgs sent on this sender
       eventsBatch.close();
     }
-    this.ackMiddleware.close();
+    this.ackManager.close();
     stopHttpClient();
   }
 
@@ -150,7 +151,7 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
   }
 
   public ChannelMetrics getChannelMetrics() {
-    return this.ackMiddleware.getChannelMetrics();
+    return this.ackManager.getChannelMetrics();
   }
 
   private synchronized void startHttpClient() {
@@ -203,33 +204,8 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
       httpClient = null;
     }
   }
-
-  void postEventsAsync(final EventBatch events) {
-    this.middleware.postEvents(events, this,
-            new HttpEventCollectorMiddleware.IHttpSenderCallback() {
-      @Override
-      public void completed(int statusCode, String reply) {
-        if (statusCode != 200) {
-          HttpEventCollectorErrorHandler.error(
-                  events,
-                  new HttpEventCollectorErrorHandler.ServerErrorException(
-                          reply));
-        }
-      }
-
-      @Override
-      public void failed(Exception ex) {
-        HttpEventCollectorErrorHandler.error(
-                eventsBatch,
-                new HttpEventCollectorErrorHandler.ServerErrorException(
-                        ex.getMessage()));
-      }
-    });
-  }
-
-  @Override
-  public void postEvents(final EventBatch events,
-          final HttpEventCollectorMiddleware.IHttpSenderCallback callback) {
+  
+  public void postEvents(final EventBatch events,FutureCallback<HttpResponse> httpCallback) {
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
 
@@ -247,41 +223,11 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
             encoding);
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
-    httpClient.execute(httpPost, new FutureCallback<HttpResponse>() {
-      @Override
-      public void completed(HttpResponse response) {
-        String reply = "";
-        int httpStatusCode = response.getStatusLine().getStatusCode();
-        // read reply only in case of a server error
-        //if (httpStatusCode != 200) {
-        try {
-          reply = EntityUtils.toString(response.getEntity(), encoding);
-        } catch (IOException e) {
-          e.printStackTrace();
-          //if IOException ocurrs toStringing response, this is not something we can expect client 
-          //to handle
-          throw new RuntimeException(e.getMessage(), e);
-          //reply = e.getMessage();
-        }
-        //}
-        callback.completed(httpStatusCode, reply);
-      }
-
-      @Override
-      public void failed(Exception ex) {
-        ex.printStackTrace();
-        callback.failed(ex);
-      }
-
-      @Override
-      public void cancelled() {
-      }
-    });
+    httpClient.execute(httpPost, httpCallback);      
   }
 
-  @Override
-  public void pollAcks(AckManager ackMgr,
-          HttpEventCollectorMiddleware.IHttpSenderCallback callback) {
+
+  public void pollAcks(AckManager ackMgr,FutureCallback<HttpResponse> httpCallback) {
 
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
@@ -299,7 +245,7 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
     StringEntity entity;
     try {
       String req = ackMgr.getAckPollReq();
-      System.out.println("channel=" + getChannel() + " posting acks: " + req);
+      System.out.println("channel=" + getChannel() + " posting: " + req);
       entity = new StringEntity(req);
     } catch (UnsupportedEncodingException ex) {
       LOG.severe(ex.getMessage());
@@ -307,43 +253,10 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
     }
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
-    httpClient.execute(httpPost, new FutureCallback<HttpResponse>() {
-      @Override
-      public void completed(HttpResponse response) {
-        String reply = "";
-        int httpStatusCode = response.getStatusLine().getStatusCode();
-        // read reply only in case of a server error
-        //if (httpStatusCode != 200) {
-        try {
-          reply = EntityUtils.toString(response.getEntity(), encoding);
-          //System.out.println("reply: " + reply);	//fixme undo hack
-        } catch (IOException e) {
-          e.printStackTrace();
-          //if IOException ocurrs toStringing response, this is not something we can expect client 
-          //to handle
-          throw new RuntimeException(e.getMessage(), e);
-          //reply = e.getMessage();
-        }
-        //}
-        callback.completed(httpStatusCode, reply);
-      }
-
-      @Override
-      public void failed(Exception ex) {
-        ex.printStackTrace();
-        callback.failed(ex);
-      }
-
-      @Override
-      public void cancelled() {
-        System.out.println("cancelled"); //todo fixme
-      }
-    });
-
+    httpClient.execute(httpPost,httpCallback);
   }
 
-  public void pollHealth(
-          HttpEventCollectorMiddleware.IHttpSenderCallback callback) {
+  public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
     startHttpClient(); // make sure http client is started
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
@@ -356,31 +269,7 @@ public final class HttpEventCollectorSender implements HttpEventCollectorMiddlew
             ChannelHeader,
             getChannel());
 
-    httpClient.execute(httpGet, new FutureCallback<HttpResponse>() {
-      @Override
-      public void completed(HttpResponse response) {
-        final String encoding = "utf-8";
-        String msg = "";
-        int statusCode = response.getStatusLine().getStatusCode();
-        try {
-          msg = EntityUtils.toString(response.getEntity(), encoding);
-        } catch (IOException e) {
-          e.printStackTrace(); //fixme todo
-          throw new RuntimeException(e.getMessage(), e);
-        }
-        callback.completed(statusCode, msg);
-      }
-
-      @Override
-      public void failed(Exception ex) {
-        callback.failed(ex);
-      }
-
-      @Override
-      public void cancelled() {
-      }
-    });
-
+    httpClient.execute(httpGet, httpCallback);
   }
 
 }
