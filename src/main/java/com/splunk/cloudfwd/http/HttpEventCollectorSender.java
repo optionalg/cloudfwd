@@ -55,15 +55,6 @@ public final class HttpEventCollectorSender {
   private final AckManager ackManager;
 
 
-  /**
-   * Sender operation mode. Parallel means that all HTTP requests are
-   * asynchronous and may be indexed out of order. Sequential mode guarantees
-   * sequential order of the indexed events.
-   */
-  public enum SendMode {
-    Sequential,
-    Parallel
-  };
 
   /**
    * Recommended default values for events batching.
@@ -77,7 +68,6 @@ public final class HttpEventCollectorSender {
   private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
-  private final SendMode sendMode;
   private final String channel = newChannel();
   private final String ackUrl;
   private final String healthUrl;
@@ -89,7 +79,6 @@ public final class HttpEventCollectorSender {
    * @param token application token
    */
   public HttpEventCollectorSender(final String url, final String token) {
-    this.sendMode = SendMode.Parallel;
     this.eventUrl = url.trim() + "/services/collector/event";    
     this.ackUrl = url.trim() + "/services/collector/ack";
     this.healthUrl = url.trim() + "/services/collector/health";
@@ -161,11 +150,10 @@ public final class HttpEventCollectorSender {
     }
     // limit max  number of async requests in sequential mode, 0 means "use
     // default limit"
-    int maxConnTotal = sendMode == SendMode.Sequential ? 1 : 0;
     if (!disableCertificateValidation) {
       // create an http client that validates certificates
       httpClient = HttpAsyncClients.custom()
-              .setMaxConnTotal(maxConnTotal)
+              .setMaxConnTotal(0) //parallel requests
               .build();
     } else {
       // create strategy that accepts all certificates
@@ -180,7 +168,7 @@ public final class HttpEventCollectorSender {
         sslContext = SSLContexts.custom().loadTrustMaterial(
                 null, acceptingTrustStrategy).build();
         httpClient = HttpAsyncClients.custom()
-                .setMaxConnTotal(maxConnTotal)
+                .setMaxConnTotal(0) //parallel requests
                 .setHostnameVerifier(
                         SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
                 .setSSLContext(sslContext)

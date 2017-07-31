@@ -67,10 +67,7 @@ public class LoadBalancerTest {
           System.exit(0);
         }
       });
-      //Thread.sleep(100);
     }
-
-    Thread.sleep(10000);
   }
 
   public static void main(String[] args) throws InterruptedException, TimeoutException {
