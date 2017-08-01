@@ -92,7 +92,7 @@ public class AckManager implements AckLifecycle, Closeable {
   }
 
 
-  public void postEvents(EventBatch events) {
+  public void postEvents(EventBatch events, Endpoints endpoints) {
     preEventsPost(events);
     System.out.println(
             "channel=" + getSender().getChannel() + " events: " + this.
@@ -125,7 +125,7 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
     };
-    sender.postEvents(events, cb);
+    endpoints.postEvents(events, cb);
 
   }
 

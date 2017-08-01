@@ -22,10 +22,7 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
 
 /**
  *
@@ -45,6 +42,7 @@ public class EventBatch implements SerializedEventProducer {
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
+  private Endpoints simulatedEndpoints;
 
   public EventBatch() {
     this.sender = null;
@@ -62,6 +60,10 @@ public class EventBatch implements SerializedEventProducer {
       maxEventsBatchSize = Long.MAX_VALUE;
     }
     this.metadata = metadata;
+  }
+  
+  public void setSimulatedEndpoints(Endpoints endpoints){
+    this.simulatedEndpoints = endpoints;
   }
 
   public synchronized void add(HttpEventCollectorEventInfo event) {
@@ -90,7 +92,9 @@ public class EventBatch implements SerializedEventProducer {
   protected synchronized void flush() {
     flushTask.cancel();
     if (!this.flushed && this.stringBuilder.length() > 0) {
-      this.sender.getAckManager().postEvents(this);
+      //endpoints are either real (via the Sender) or simulated 
+      Endpoints endpoints = null!=simulatedEndpoints?simulatedEndpoints:sender;
+      this.sender.getAckManager().postEvents(this, endpoints);
       flushed = true;
     }
   }

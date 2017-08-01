@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  * This is an internal helper class that sends logging events to Splunk http
  * event collector.
  */
-public final class HttpEventCollectorSender {
+public final class HttpEventCollectorSender implements Endpoints {
 
   private static final Logger LOG = Logger.getLogger(
           HttpEventCollectorSender.class.getName());
@@ -53,8 +53,6 @@ public final class HttpEventCollectorSender {
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8";
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
   private final AckManager ackManager;
-
-
 
   /**
    * Recommended default values for events batching.
@@ -71,6 +69,7 @@ public final class HttpEventCollectorSender {
   private final String channel = newChannel();
   private final String ackUrl;
   private final String healthUrl;
+  private Endpoints simulatedEndpoints;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -79,26 +78,26 @@ public final class HttpEventCollectorSender {
    * @param token application token
    */
   public HttpEventCollectorSender(final String url, final String token) {
-    this.eventUrl = url.trim() + "/services/collector/event";    
+    this.eventUrl = url.trim() + "/services/collector/event";
     this.ackUrl = url.trim() + "/services/collector/ack";
     this.healthUrl = url.trim() + "/services/collector/health";
     this.token = token;
     this.ackManager = new AckManager(this);
   }
-  
+
   public String getChannel() {
     return channel;
   }
 
   private static String newChannel() {
     return java.util.UUID.randomUUID().toString();
-  }  
+  }
 
   public AckWindow getAckWindow() {
     return ackManager.getAckWindow();
   }
-  
-  public AckManager getAckManager(){
+
+  public AckManager getAckManager() {
     return this.ackManager;
   }
 
@@ -109,15 +108,24 @@ public final class HttpEventCollectorSender {
    */
   public synchronized void sendBatch(EventBatch events) {
     if (events.isFlushed()) {
-      LOG.severe(
-              "Illegal attempt to send already-flushed batch. EventBatch is not reusable.");
-      throw new IllegalStateException(
-              "Illegal attempt to send already-flushed batch. EventBatch is not reusable.");
+      String msg = "Illegal attempt to send already-flushed batch. EventBatch is not reusable.";
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
     }
     this.eventsBatch = events;
     eventsBatch.setSender(this);
-    eventsBatch.flush();
+    if (isSimulated()) {
+      eventsBatch.setSimulatedEndpoints(this.simulatedEndpoints);
+    }
 
+    eventsBatch.flush();
+  }
+
+  /**
+   * @return the simulated
+   */
+  public boolean isSimulated() {
+    return simulatedEndpoints != null;
   }
 
   /**
@@ -192,8 +200,9 @@ public final class HttpEventCollectorSender {
       httpClient = null;
     }
   }
-  
-  public void postEvents(final EventBatch events,FutureCallback<HttpResponse> httpCallback) {
+
+  public void postEvents(final EventBatch events,
+          FutureCallback<HttpResponse> httpCallback) {
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
 
@@ -211,11 +220,11 @@ public final class HttpEventCollectorSender {
             encoding);
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
-    httpClient.execute(httpPost, httpCallback);      
+    httpClient.execute(httpPost, httpCallback);
   }
 
-
-  public void pollAcks(AckManager ackMgr,FutureCallback<HttpResponse> httpCallback) {
+  public void pollAcks(AckManager ackMgr,
+          FutureCallback<HttpResponse> httpCallback) {
 
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
@@ -241,7 +250,7 @@ public final class HttpEventCollectorSender {
     }
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
-    httpClient.execute(httpPost,httpCallback);
+    httpClient.execute(httpPost, httpCallback);
   }
 
   public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
@@ -258,6 +267,21 @@ public final class HttpEventCollectorSender {
             getChannel());
 
     httpClient.execute(httpGet, httpCallback);
+  }
+
+  /**
+   * @return the simulatedEndpoints
+   */
+  public Endpoints getSimulatedEndpoints() {
+    return simulatedEndpoints;
+  }
+
+  /**
+   * @param simulatedEndpoints the simulatedEndpoints to set
+   */
+  public void setSimulatedEndpoints(
+          Endpoints simulatedEndpoints) {
+    this.simulatedEndpoints = simulatedEndpoints;
   }
 
 }
