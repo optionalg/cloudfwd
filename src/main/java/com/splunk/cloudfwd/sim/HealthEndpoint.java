@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd.sim;
 
-import java.io.Closeable;
+import com.splunk.cloudfwd.http.AbstractHttpCallback;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -23,10 +23,10 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public interface Endpoints extends Closeable{
-  public void postEvents(final EventBatch events,FutureCallback<HttpResponse> httpCallback);    
-  public void pollAcks(AckManager ackMgr,FutureCallback<HttpResponse> httpCallback);
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback);
-  @Override
-  public void close();
+public class HealthEndpoint {
+
+  public void pollHealth(FutureCallback<HttpResponse> cb) {
+    ((AbstractHttpCallback)cb).completed("If we care about the actual conent, this will break something.", 200);
+  }
+  
 }

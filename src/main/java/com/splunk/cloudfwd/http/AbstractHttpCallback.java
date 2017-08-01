@@ -42,6 +42,6 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
     }      
   }
 
-  abstract protected void completed(String reply, int code);
+  public abstract void completed(String reply, int code);
 
 }

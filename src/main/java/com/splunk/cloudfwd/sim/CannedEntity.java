@@ -20,7 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import org.apache.http.Header;
+import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.ParseException;
 
 /**
  *
@@ -49,7 +52,7 @@ public class CannedEntity implements HttpEntity{
 
     @Override
     public Header getContentType() {
-      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+      return null;
     }
 
     @Override

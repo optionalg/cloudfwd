@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEventInfo;
 import java.util.HashMap;
+import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -52,22 +55,29 @@ public class LoadBalancerTest {
 
   @Test
   public void hello() throws InterruptedException, TimeoutException {
-    com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection();
-    int max = 100000;    
+    Properties props = new Properties();
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection(props);
+    int max = 1000000;
+    CountDownLatch latch = new CountDownLatch(1);
     for (int i = 0; i < max; i++) {
       final EventBatch events = new EventBatch();
-      events.add(new HttpEventCollectorEventInfo("info", "seqno="+i,
+      events.add(new HttpEventCollectorEventInfo("info", "seqno=" + i,
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));
-      System.out.println("Send batch: " + events.getId() + " i="+i);
+      System.out.println("Send batch: " + events.getId() + " i=" + i);
       c.sendBatch(events, () -> {
         System.out.println("SUCCESS CHECKPOINT " + events.getId());
-        if ( max== Long.parseLong(events.getId())) {
+        if (max == Long.parseLong(events.getId())) {
           c.close();
-          System.exit(0);
+          latch.countDown();
         }
       });
     }
+    latch.await();
+    System.out.println("EXIT");
+    System.exit(0);
+
   }
 
   public static void main(String[] args) throws InterruptedException, TimeoutException {

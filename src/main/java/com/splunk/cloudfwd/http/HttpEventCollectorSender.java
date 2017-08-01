@@ -114,9 +114,10 @@ public final class HttpEventCollectorSender implements Endpoints {
     }
     this.eventsBatch = events;
     eventsBatch.setSender(this);
+    /*
     if (isSimulated()) {
       eventsBatch.setSimulatedEndpoints(this.simulatedEndpoints);
-    }
+    }*/
 
     eventsBatch.flush();
   }
@@ -131,11 +132,15 @@ public final class HttpEventCollectorSender implements Endpoints {
   /**
    * Close events sender
    */
+  @Override
   public void close() {
     if (null != eventsBatch) { //can happen if no msgs sent on this sender
       eventsBatch.close();
     }
     this.ackManager.close();
+    if (null != simulatedEndpoints) {
+      simulatedEndpoints.close();
+    }
     stopHttpClient();
   }
 
@@ -152,8 +157,8 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   private synchronized void startHttpClient() {
-    if (httpClient != null) {
-      // http client is already started
+    if (httpClient != null || isSimulated()) {
+      // http client is already started or we don't need it because we are simulated
       return;
     }
     // limit max  number of async requests in sequential mode, 0 means "use
@@ -201,8 +206,13 @@ public final class HttpEventCollectorSender implements Endpoints {
     }
   }
 
+  @Override
   public void postEvents(final EventBatch events,
           FutureCallback<HttpResponse> httpCallback) {
+    if (isSimulated()) {
+      this.simulatedEndpoints.postEvents(events, httpCallback);
+      return;
+    }
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
 
@@ -223,8 +233,14 @@ public final class HttpEventCollectorSender implements Endpoints {
     httpClient.execute(httpPost, httpCallback);
   }
 
+  @Override
   public void pollAcks(AckManager ackMgr,
           FutureCallback<HttpResponse> httpCallback) {
+    if (isSimulated()) {
+      System.out.println("SIMULATED POLL ACKS");
+      this.simulatedEndpoints.pollAcks(ackMgr, httpCallback);
+      return;
+    }
 
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
@@ -253,7 +269,12 @@ public final class HttpEventCollectorSender implements Endpoints {
     httpClient.execute(httpPost, httpCallback);
   }
 
+  @Override
   public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+    if (isSimulated()) {
+      this.simulatedEndpoints.pollHealth(httpCallback);
+      return;
+    }
     startHttpClient(); // make sure http client is started
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);

@@ -47,6 +47,7 @@ public class EventEndpoint {
 
   public EventEndpoint(AckEndpoint ackEndpoint) {
     this.ackEndpoint = ackEndpoint;
+    ackEndpoint.start();
   }
 
   public void post(EventBatch events, FutureCallback<HttpResponse> cb) {
@@ -55,8 +56,8 @@ public class EventEndpoint {
               new AckIdRespEntity(ackEndpoint.nextAckId())
       ));
     };
-    //return a single response with a delay uniformly distributed between  [0,300] ms
-    executor.schedule(respond, (long) rand.nextInt(300), TimeUnit.MILLISECONDS);
+    //return a single response with a delay uniformly distributed between  [0,5] ms
+    executor.schedule(respond, (long) rand.nextInt(5), TimeUnit.MILLISECONDS);
   }
 
   private static HttpEntity nextAckRespEntity(final int ackId) {
@@ -73,7 +74,7 @@ public class EventEndpoint {
 
   private static class AckIdRespEntity extends CannedEntity {
 
-    public AckIdRespEntity(int ackId) {
+    public AckIdRespEntity(long ackId) {
       super("{\"ackId\":" + ackId + "}");
     }
   }

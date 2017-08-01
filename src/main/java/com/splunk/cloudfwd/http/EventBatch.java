@@ -36,13 +36,13 @@ public class EventBatch implements SerializedEventProducer {
   private String id = String.format("%019d", batchIdGenerator.incrementAndGet());//must generate this batch's ID before posting events, since it's string and strings compare lexicographically we should zero pad to 19 digits (max long value)
   private Long ackId; //Will be null until we receive ackId for this batch from HEC
   private Map<String, String> metadata = new HashMap<>();
-  private final TimerTask flushTask = new ScheduledFlush();
+  //private final TimerTask flushTask = new ScheduledFlush();
   private final List<HttpEventCollectorEventInfo> eventsBatch = new ArrayList();
   private HttpEventCollectorSender sender;
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
-  private Endpoints simulatedEndpoints;
+  //private Endpoints simulatedEndpoints;
 
   public EventBatch() {
     this.sender = null;
@@ -61,10 +61,11 @@ public class EventBatch implements SerializedEventProducer {
     }
     this.metadata = metadata;
   }
-  
+  /*
   public void setSimulatedEndpoints(Endpoints endpoints){
     this.simulatedEndpoints = endpoints;
   }
+  */
 
   public synchronized void add(HttpEventCollectorEventInfo event) {
     if (flushed) {
@@ -90,11 +91,9 @@ public class EventBatch implements SerializedEventProducer {
   }
 
   protected synchronized void flush() {
-    flushTask.cancel();
     if (!this.flushed && this.stringBuilder.length() > 0) {
       //endpoints are either real (via the Sender) or simulated 
-      Endpoints endpoints = null!=simulatedEndpoints?simulatedEndpoints:sender;
-      this.sender.getAckManager().postEvents(this, endpoints);
+      this.sender.getAckManager().postEvents(this);
       flushed = true;
     }
   }

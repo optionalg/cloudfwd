@@ -56,7 +56,7 @@ public class ConnectionState extends Observable implements Observer {
       System.out.println("CONN STATE UPDATE channel="+es.getSender().getChannel());
       if (es.getCurrentState() == AckLifecycleState.State.ACK_POLL_OK) {
         String id = es.getEvents().getId();
-        System.out.println("MAYBE CALLBACK HIGHWATER for " + id);
+        System.out.println("MAYBE CALLBACK HIGHWATER for " + id + "(ackId is "+es.getEvents().getAckId()+")");
   
         Runnable runMe = getCallback(es.getEvents());
         if (null != runMe) {

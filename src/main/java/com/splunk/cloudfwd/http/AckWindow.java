@@ -72,8 +72,15 @@ public class AckWindow {
   public void handleEventPostResponse(EventPostResponse epr,
           EventBatch events) {
     Long ackId = epr.getAckId();
-    postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
+    //System.out.println("handler event post response for ack " + ackId);
+    EventBatch removed = postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
+    if(null == removed){
+      String msg = "failed to track event batch " + events.getId();
+      LOG.severe(msg);
+      throw new RuntimeException(msg);
+    }
     polledAcks.put(ackId, events);
+    //System.out.println("Tracked ackIDs on client now: " + polledAcks.keySet());
     channelMetrics.ackIdCreated(ackId, events);
   }
 
@@ -115,11 +122,8 @@ public class AckWindow {
     return this.channelMetrics;
   }
 
-  public Set<EventBatch> getUnacknowleldgedEvents() {
-    Set<EventBatch> unacked = new HashSet<>();
-    unacked.addAll(this.postedEventBatches.values());
-    unacked.addAll(this.polledAcks.values());
-    return unacked;
+  public Collection<Long> getUnacknowleldgedEvents() {
+    return polledAcks.keySet();
   }
 
 }
