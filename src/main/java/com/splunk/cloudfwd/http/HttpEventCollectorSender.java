@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  * This is an internal helper class that sends logging events to Splunk http
  * event collector.
  */
-public final class HttpEventCollectorSender {
+public final class HttpEventCollectorSender implements Endpoints {
 
   private static final Logger LOG = Logger.getLogger(
           HttpEventCollectorSender.class.getName());
@@ -54,17 +54,6 @@ public final class HttpEventCollectorSender {
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
   private final AckManager ackManager;
 
-
-  /**
-   * Sender operation mode. Parallel means that all HTTP requests are
-   * asynchronous and may be indexed out of order. Sequential mode guarantees
-   * sequential order of the indexed events.
-   */
-  public enum SendMode {
-    Sequential,
-    Parallel
-  };
-
   /**
    * Recommended default values for events batching.
    */
@@ -77,10 +66,10 @@ public final class HttpEventCollectorSender {
   private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
-  private final SendMode sendMode;
   private final String channel = newChannel();
   private final String ackUrl;
   private final String healthUrl;
+  private Endpoints simulatedEndpoints;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -89,27 +78,26 @@ public final class HttpEventCollectorSender {
    * @param token application token
    */
   public HttpEventCollectorSender(final String url, final String token) {
-    this.sendMode = SendMode.Parallel;
-    this.eventUrl = url.trim() + "/services/collector/event";    
+    this.eventUrl = url.trim() + "/services/collector/event";
     this.ackUrl = url.trim() + "/services/collector/ack";
     this.healthUrl = url.trim() + "/services/collector/health";
     this.token = token;
     this.ackManager = new AckManager(this);
   }
-  
+
   public String getChannel() {
     return channel;
   }
 
   private static String newChannel() {
     return java.util.UUID.randomUUID().toString();
-  }  
+  }
 
   public AckWindow getAckWindow() {
     return ackManager.getAckWindow();
   }
-  
-  public AckManager getAckManager(){
+
+  public AckManager getAckManager() {
     return this.ackManager;
   }
 
@@ -120,25 +108,39 @@ public final class HttpEventCollectorSender {
    */
   public synchronized void sendBatch(EventBatch events) {
     if (events.isFlushed()) {
-      LOG.severe(
-              "Illegal attempt to send already-flushed batch. EventBatch is not reusable.");
-      throw new IllegalStateException(
-              "Illegal attempt to send already-flushed batch. EventBatch is not reusable.");
+      String msg = "Illegal attempt to send already-flushed batch. EventBatch is not reusable.";
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
     }
     this.eventsBatch = events;
     eventsBatch.setSender(this);
-    eventsBatch.flush();
+    /*
+    if (isSimulated()) {
+      eventsBatch.setSimulatedEndpoints(this.simulatedEndpoints);
+    }*/
 
+    eventsBatch.flush();
+  }
+
+  /**
+   * @return the simulated
+   */
+  public boolean isSimulated() {
+    return simulatedEndpoints != null;
   }
 
   /**
    * Close events sender
    */
+  @Override
   public void close() {
     if (null != eventsBatch) { //can happen if no msgs sent on this sender
       eventsBatch.close();
     }
     this.ackManager.close();
+    if (null != simulatedEndpoints) {
+      simulatedEndpoints.close();
+    }
     stopHttpClient();
   }
 
@@ -155,17 +157,16 @@ public final class HttpEventCollectorSender {
   }
 
   private synchronized void startHttpClient() {
-    if (httpClient != null) {
-      // http client is already started
+    if (httpClient != null || isSimulated()) {
+      // http client is already started or we don't need it because we are simulated
       return;
     }
     // limit max  number of async requests in sequential mode, 0 means "use
     // default limit"
-    int maxConnTotal = sendMode == SendMode.Sequential ? 1 : 0;
     if (!disableCertificateValidation) {
       // create an http client that validates certificates
       httpClient = HttpAsyncClients.custom()
-              .setMaxConnTotal(maxConnTotal)
+              .setMaxConnTotal(0) //parallel requests
               .build();
     } else {
       // create strategy that accepts all certificates
@@ -180,7 +181,7 @@ public final class HttpEventCollectorSender {
         sslContext = SSLContexts.custom().loadTrustMaterial(
                 null, acceptingTrustStrategy).build();
         httpClient = HttpAsyncClients.custom()
-                .setMaxConnTotal(maxConnTotal)
+                .setMaxConnTotal(0) //parallel requests
                 .setHostnameVerifier(
                         SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
                 .setSSLContext(sslContext)
@@ -204,8 +205,14 @@ public final class HttpEventCollectorSender {
       httpClient = null;
     }
   }
-  
-  public void postEvents(final EventBatch events,FutureCallback<HttpResponse> httpCallback) {
+
+  @Override
+  public void postEvents(final EventBatch events,
+          FutureCallback<HttpResponse> httpCallback) {
+    if (isSimulated()) {
+      this.simulatedEndpoints.postEvents(events, httpCallback);
+      return;
+    }
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
 
@@ -223,11 +230,17 @@ public final class HttpEventCollectorSender {
             encoding);
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
-    httpClient.execute(httpPost, httpCallback);      
+    httpClient.execute(httpPost, httpCallback);
   }
 
-
-  public void pollAcks(AckManager ackMgr,FutureCallback<HttpResponse> httpCallback) {
+  @Override
+  public void pollAcks(AckManager ackMgr,
+          FutureCallback<HttpResponse> httpCallback) {
+    if (isSimulated()) {
+      System.out.println("SIMULATED POLL ACKS");
+      this.simulatedEndpoints.pollAcks(ackMgr, httpCallback);
+      return;
+    }
 
     startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
@@ -253,10 +266,15 @@ public final class HttpEventCollectorSender {
     }
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
-    httpClient.execute(httpPost,httpCallback);
+    httpClient.execute(httpPost, httpCallback);
   }
 
+  @Override
   public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+    if (isSimulated()) {
+      this.simulatedEndpoints.pollHealth(httpCallback);
+      return;
+    }
     startHttpClient(); // make sure http client is started
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
@@ -270,6 +288,21 @@ public final class HttpEventCollectorSender {
             getChannel());
 
     httpClient.execute(httpGet, httpCallback);
+  }
+
+  /**
+   * @return the simulatedEndpoints
+   */
+  public Endpoints getSimulatedEndpoints() {
+    return simulatedEndpoints;
+  }
+
+  /**
+   * @param simulatedEndpoints the simulatedEndpoints to set
+   */
+  public void setSimulatedEndpoints(
+          Endpoints simulatedEndpoints) {
+    this.simulatedEndpoints = simulatedEndpoints;
   }
 
 }

@@ -74,7 +74,7 @@ public class LoggingChannel implements Closeable, Observer {
       LOG.
               info("Send to quiesced channel (this should happen from time to time)");
     }
-    System.out.println("Sending to channel: " + sender.getChannel());
+    System.out.println("Sending to channel: " + sender.getChannel());   
     if (unackedCount.get() == FULL) {
       long start = System.currentTimeMillis();
       while (true) {
@@ -99,8 +99,9 @@ public class LoggingChannel implements Closeable, Observer {
     if (quiesced || closed) {
       return false;
     }
+    //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
-    System.out.println("channel=" + getChannelId() + " unack-count=" + count);
+    System.out.println("channel=" + getChannelId() + " unack-count=" + count); 
     sender.sendBatch(events);
     return true;
   }

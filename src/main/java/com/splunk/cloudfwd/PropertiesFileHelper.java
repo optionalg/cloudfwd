@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -31,19 +32,20 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class ConfiguredObjectFactory {
+public class PropertiesFileHelper {
 
-  private static final Logger LOG = Logger.getLogger(
-          ConfiguredObjectFactory.class.getName());
+  private static final Logger LOG = Logger.getLogger(PropertiesFileHelper.class.
+          getName());
 
-  private static final String TOKEN_KEY = "token";
+  public static final String TOKEN_KEY = "token";
   public static final String COLLECTOR_URI = "url";
   public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
-  private static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
+  public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
+  public static final String MOCK_HTTP_KEY = "mock_http";
 
   private Properties defaultProps = new Properties();
 
-  public ConfiguredObjectFactory(Properties overrides) {
+  public PropertiesFileHelper(Properties overrides) {
     this(); //setup all defaults by calling SenderFactory() empty constr
     this.defaultProps.putAll(overrides);
   }
@@ -51,7 +53,7 @@ public class ConfiguredObjectFactory {
   /**
    * create SenderFactory with default properties read from lb.properties file
    */
-  public ConfiguredObjectFactory() {
+  public PropertiesFileHelper() {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
       if (null == is) {
@@ -74,7 +76,7 @@ public class ConfiguredObjectFactory {
       } catch (MalformedURLException ex) {
         Logger.getLogger(IndexDiscoverer.class.getName()).
                 log(Level.SEVERE, "Malformed URL: '" + urlString + "'");
-        Logger.getLogger(ConfiguredObjectFactory.class.getName()).log(
+        Logger.getLogger(PropertiesFileHelper.class.getName()).log(
                 Level.SEVERE, null,
                 ex);
       }
@@ -87,6 +89,18 @@ public class ConfiguredObjectFactory {
             CHANNELS_PER_DESTINATION_KEY, "8"));
   }
 
+  public boolean isMockHttp() {
+    return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
+            "false").trim());
+  }
+
+  public boolean isCertValidationDisabled() {
+    return Boolean.parseBoolean(this.defaultProps.
+            getProperty(
+                    DISABLE_CERT_VALIDATION_KEY, "false").trim());
+
+  }
+
   public HttpEventCollectorSender createSender(URL url) {
     Properties props = new Properties(defaultProps);
     props.put("url", url.toString());
@@ -97,12 +111,12 @@ public class ConfiguredObjectFactory {
     try {
       String url = props.getProperty(COLLECTOR_URI).trim();
       String token = props.getProperty(TOKEN_KEY).trim();
-      boolean disableCertificateValidation = Boolean.parseBoolean(props.
-              getProperty(
-                      DISABLE_CERT_VALIDATION_KEY, "false").trim());
       HttpEventCollectorSender sender = new HttpEventCollectorSender(url, token);
-      if (disableCertificateValidation) {
+      if (isCertValidationDisabled()) {
         sender.disableCertificateValidation();
+      }
+      if(isMockHttp()){
+        sender.setSimulatedEndpoints(new SimulatedHECEndpoints());
       }
       return sender;
     } catch (Exception ex) {

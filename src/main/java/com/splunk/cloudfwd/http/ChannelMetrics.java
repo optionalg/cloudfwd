@@ -105,7 +105,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       try {
           AckLifecycleState state = new AckLifecycleState(
                   AckLifecycleState.State.EVENT_POST_OK, events, this.sender);
-            System.out.println("NOTIFYING ACK_POLL_OK");
+            System.out.println("NOTIFYING EVENT_POST_OK");
             this.notifyObservers(state);
       } catch (Exception e) {
           LOG.severe(e.getMessage());
@@ -205,7 +205,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       ackIdSucceeded(events.getAckId());
       AckLifecycleState state = new AckLifecycleState(
               AckLifecycleState.State.ACK_POLL_OK, events, this.sender);
-      System.out.println("NOTIFYING ACK_POLL_OK");
+      System.out.println("NOTIFYING ACK_POLL_OK for ackId" + events.getAckId());
       setChanged();
       notifyObservers(state);
     } catch (Exception e) {

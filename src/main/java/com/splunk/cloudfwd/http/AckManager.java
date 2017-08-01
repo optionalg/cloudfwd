@@ -112,7 +112,7 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
       @Override
-      protected void completed(String reply, int code) {
+      public void completed(String reply, int code) {
         if (code == 200) {
           try {
             consumeEventPostResponse(reply, events);
@@ -132,6 +132,7 @@ public class AckManager implements AckLifecycle, Closeable {
 
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
   public void consumeEventPostResponse(String resp, EventBatch events) {
+    //System.out.println("consuming event post response" + resp);
     EventPostResponse epr;
     try {
       Map<String, Object> map = mapper.readValue(resp,
@@ -146,7 +147,7 @@ public class AckManager implements AckLifecycle, Closeable {
       throw new RuntimeException(ex.getMessage(), ex);
     }
 
-    System.out.println("ABOUT TO HANDLE EPR");
+    //System.out.println("ABOUT TO HANDLE EPR");
     ackWindow.handleEventPostResponse(epr, events);
 
     // start polling for acks
@@ -175,7 +176,7 @@ public class AckManager implements AckLifecycle, Closeable {
     System.out.println("sending acks");
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
-      protected void completed(String reply, int code) {
+      public void completed(String reply, int code) {
         System.out.println(
                 "channel=" + AckManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
@@ -236,7 +237,7 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
       @Override
-      protected void completed(String reply, int code) {
+      public void completed(String reply, int code) {
         setChannelHealth(code, reply);
       }
 

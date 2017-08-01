@@ -15,33 +15,18 @@
  */
 package com.splunk.cloudfwd.http;
 
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.io.Closeable;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.util.EntityUtils;
 
 /**
  *
  * @author ghendrey
  */
-public abstract class AbstractHttpCallback implements FutureCallback<HttpResponse> {
-
-  private static final Logger LOG = Logger.getLogger(AbstractHttpCallback.class.
-          getName());
-
+public interface Endpoints extends Closeable{
+  public void postEvents(final EventBatch events,FutureCallback<HttpResponse> httpCallback);    
+  public void pollAcks(AckManager ackMgr,FutureCallback<HttpResponse> httpCallback);
+  public void pollHealth(FutureCallback<HttpResponse> httpCallback);
   @Override
-  final public void completed(HttpResponse response) {
-    int code = response.getStatusLine().getStatusCode();
-    try {
-      String reply = EntityUtils.toString(response.getEntity(), "utf-8");
-      completed(reply, code);
-    } catch (IOException e) {      
-      LOG.log(Level.SEVERE, "failed to unmarshal response", e);
-    }      
-  }
-
-  public abstract void completed(String reply, int code);
-
+  public void close();
 }

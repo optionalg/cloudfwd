@@ -41,9 +41,9 @@ class IndexDiscoverer extends Observable {
   //InetSocketAddresses resolved. This means that equality for URL changes based on DNS host resolution
   //and would be changing over time
   private final Map<String, List<InetSocketAddress>> mappings;
-  private ConfiguredObjectFactory senderFactory = new ConfiguredObjectFactory();
+  private PropertiesFileHelper senderFactory = new PropertiesFileHelper();
 
-  IndexDiscoverer(ConfiguredObjectFactory f) {
+  IndexDiscoverer(PropertiesFileHelper f) {
     this.senderFactory = f;
     this.mappings = getInetAddressMap(senderFactory.getUrls());
   }

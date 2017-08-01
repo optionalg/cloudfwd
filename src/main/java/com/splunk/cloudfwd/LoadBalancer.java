@@ -44,7 +44,7 @@ public class LoadBalancer implements Observer, Closeable {
   /* All channels that can be used to send messages. Key is channel ID */
   private final Map<String, LoggingChannel> channels = new ConcurrentSkipListMap<>();
   //private final AtomicBoolean available = new AtomicBoolean(true);
-  private ConfiguredObjectFactory configuredObjectFactory;
+  private PropertiesFileHelper configuredObjectFactory;
   private final ConnectionState connectionState = new ConnectionState(); //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -55,7 +55,7 @@ public class LoadBalancer implements Observer, Closeable {
   }
 
   public LoadBalancer(Properties p) {
-    this.configuredObjectFactory = new ConfiguredObjectFactory(p);
+    this.configuredObjectFactory = new PropertiesFileHelper(p);
     this.channelsPerDestination = this.configuredObjectFactory.
             getChannelsPerDestination();
     this.discoverer = new IndexDiscoverer(configuredObjectFactory);
