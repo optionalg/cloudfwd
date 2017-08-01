@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.util.EntityUtils;
+import com.splunk.cloudfwd.util.PollScheduler;
 
 /**
  * AckManager is the mediator between sending and receiving messages to splunk
@@ -201,7 +202,7 @@ public class AckManager implements AckLifecycle, Closeable {
 
   }
 
-  public void setChannelHealth(int statusCode, String msg) {
+  private void setChannelHealth(int statusCode, String msg) {
     // For status code anything other 200
     switch (statusCode) {
       case 200:

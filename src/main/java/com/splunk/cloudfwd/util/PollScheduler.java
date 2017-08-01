@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd.util;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Periodically delegates polling for acks to the AckManager. Just a simple periodic scheduler.
+ * Periodically delegates polling. Just a simple periodic scheduler.
  * @author ghendrey
  */
-class PollScheduler {
+public class PollScheduler {
 
   private ScheduledExecutorService scheduler;
   private boolean started;
@@ -39,7 +39,7 @@ class PollScheduler {
 
   }
 
-  synchronized boolean isStarted() {
+  public synchronized boolean isStarted() {
     return started;
   }
 
