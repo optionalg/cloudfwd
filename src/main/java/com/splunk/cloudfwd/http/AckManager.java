@@ -140,7 +140,6 @@ public class AckManager implements AckLifecycle, Closeable {
       });
       epr = new EventPostResponse(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
-      getChannelMetrics().eventPostOK(events);
     } catch (IOException ex) {
       Logger.getLogger(getClass().getName()).log(Level.SEVERE, ex.getMessage(),
               ex);
@@ -152,7 +151,10 @@ public class AckManager implements AckLifecycle, Closeable {
 
     // start polling for acks
     startPolling();
+    
+    eventPostOK(events);
   }
+  
 
   public void consumeAckPollResponse(String resp) {
     try {
@@ -270,7 +272,7 @@ public class AckManager implements AckLifecycle, Closeable {
 
   @Override
   public void eventPostOK(EventBatch events) {
-    getChannelMetrics().eventPostOK(events);
+      getChannelMetrics().eventPostOK(events);
   }
 
   @Override
@@ -323,6 +325,7 @@ public class AckManager implements AckLifecycle, Closeable {
     return this.ackPollInProgress;
   }
 
+  @Override
   public void close() {
     this.ackPollController.stop();
     this.healthPollController.stop();

@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.AckLifecycleState;
+import com.splunk.cloudfwd.http.LifecycleEvent;
 import com.splunk.cloudfwd.http.EventBatch;
 import java.util.Iterator;
 import java.util.Map;
@@ -47,14 +47,14 @@ public class ConnectionState extends Observable implements Observer {
   public void update(Observable o, Object arg) {
     System.out.println("ping connectionstate");
     try {
-      if (!(arg instanceof AckLifecycleState)) {
+      if (!(arg instanceof LifecycleEvent)) {
         LOG.info("ConnectionState ignoring update of " + arg.getClass().getName());
         return; //ignore updates we don't care about, like those destined for LoadBalancer
       }
 
-      AckLifecycleState es = (AckLifecycleState) arg;
+      LifecycleEvent es = (LifecycleEvent) arg;
       System.out.println("CONN STATE UPDATE channel="+es.getSender().getChannel());
-      if (es.getCurrentState() == AckLifecycleState.State.ACK_POLL_OK) {
+      if (es.getCurrentState() == LifecycleEvent.Type.ACK_POLL_OK) {
         String id = es.getEvents().getId();
         System.out.println("MAYBE CALLBACK HIGHWATER for " + id + "(ackId is "+es.getEvents().getAckId()+")");
   

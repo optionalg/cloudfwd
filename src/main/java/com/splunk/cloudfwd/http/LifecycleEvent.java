@@ -19,9 +19,9 @@ package com.splunk.cloudfwd.http;
  *
  * @author ghendrey
  */
-public class AckLifecycleState {
+public class LifecycleEvent {
 
-  public enum State {
+  public enum Type {
 	// States tied to an EventBatch object
     PRE_EVENT_POST,
     EVENT_POST_OK,
@@ -38,28 +38,28 @@ public class AckLifecycleState {
     HEALTH_POLL_FAILED
   };
 
-  private final State currentState;
+  private final Type currentState;
   private EventBatch events = null;
   private final HttpEventCollectorSender sender;
 
-  public AckLifecycleState(State currentState
+  public LifecycleEvent(Type currentState
 		  , EventBatch events
 		  , HttpEventCollectorSender sender) throws Exception {
-	if (currentState.compareTo(State.HEALTH_POLL_OK) < 0
+	if (currentState.compareTo(Type.HEALTH_POLL_OK) < 0
 		&& events == null) {
 		throw new IllegalStateException("Provided state requires an EventBatch object");
 	}
     this.currentState = currentState;
     this.sender = sender;
 
-    // ignore events for State values not an needing EventBatch object
-	if (currentState.compareTo(State.HEALTH_POLL_OK) < 0) {
+    // ignore events for Type values not an needing EventBatch object
+	if (currentState.compareTo(Type.HEALTH_POLL_OK) < 0) {
 	  this.events = events;
 	}
   }
 
-  public AckLifecycleState(State currentState, HttpEventCollectorSender sender) throws Exception {
-	if (currentState.compareTo(State.HEALTH_POLL_OK) < 0) {
+  public LifecycleEvent(Type currentState, HttpEventCollectorSender sender) throws Exception {
+	if (currentState.compareTo(Type.HEALTH_POLL_OK) < 0) {
 		throw new IllegalStateException("Provided state requires an EventBatch object");
 	}
 	this.currentState = currentState;
@@ -69,7 +69,7 @@ public class AckLifecycleState {
   /**
    * @return the currentState
    */
-  public State getCurrentState() {
+  public Type getCurrentState() {
     return currentState;
   }
 

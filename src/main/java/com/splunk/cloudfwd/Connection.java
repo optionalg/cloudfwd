@@ -19,25 +19,33 @@ import com.splunk.cloudfwd.http.EventBatch;
 import java.io.Closeable;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 /**
  *
  * @author ghendrey
  */
 public class Connection implements Closeable{
+  public final static long SEND_TIMEOUT = 5 * 1000; //FIXME TODO make configurable
   LoadBalancer lb;
+  private Consumer<Exception> exceptionHandler;
   
   public Connection(){
-    this.lb = new LoadBalancer();
+    this.lb = new LoadBalancer(this);
   }
   
   public Connection(Properties settings){
-    this.lb = new LoadBalancer(settings);
+    this.lb = new LoadBalancer(this, settings);
   }
 
   @Override
   public void close()  {
-    lb.close();
+    //we must close asynchronously to prevent deadlocking
+    //when close() is invoked from a callback like the
+    //Exception handler
+    new Thread(() -> {
+      lb.close();
+    }).start();
   }
   
   
@@ -45,8 +53,15 @@ public class Connection implements Closeable{
     lb.sendBatch(events, callback);
   }
   
-  public ConnectionState getConnectionState(){
-    return lb.getConnectionState();
+  public void setExceptionHandler(Consumer<Exception> handler){
+    this.exceptionHandler = handler;
+  }
+
+  /**
+   * @return the exceptionHandler
+   */
+  public Consumer<Exception> getExceptionHandler() {
+    return exceptionHandler;
   }
   
 }

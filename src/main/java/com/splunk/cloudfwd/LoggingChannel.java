@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.AckLifecycleState;
+import com.splunk.cloudfwd.http.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,18 +38,19 @@ import java.util.logging.Logger;
  */
 public class LoggingChannel implements Closeable, Observer {
 
+  public static final int ACK_DUP_DETECTOR_WINDOW_SIZE = 10000;
   private static final Logger LOG = Logger.getLogger(LoggingChannel.class.
           getName());
-  private final static long SEND_TIMEOUT = 60 * 1000; //FIXME TODO make configurable
   private final HttpEventCollectorSender sender;
   private static final int FULL = 500; //FIXME TODO set to reasonable value, configurable?
   private static final ScheduledExecutorService reaperScheduler = Executors.
           newScheduledThreadPool(1); //for scheduling self-removal/shutdown
-  private static final long LIFESPAN = 5*60*1000; //5 min lifespan
+  private static final long LIFESPAN = 5 * 60 * 1000; //5 min lifespan
   private volatile boolean closed;
   private volatile boolean quiesced;
   private final LoadBalancer loadBalancer;
-  private AtomicInteger unackedCount = new AtomicInteger(0);
+  private final AtomicInteger unackedCount = new AtomicInteger(0);
+  private final StickySessionEnforcer stickySessionEnforcer = new StickySessionEnforcer();
 
   public LoggingChannel(LoadBalancer b, HttpEventCollectorSender sender) {
     this.loadBalancer = b;
@@ -74,18 +76,18 @@ public class LoggingChannel implements Closeable, Observer {
       LOG.
               info("Send to quiesced channel (this should happen from time to time)");
     }
-    System.out.println("Sending to channel: " + sender.getChannel());   
+    System.out.println("Sending to channel: " + sender.getChannel());
     if (unackedCount.get() == FULL) {
       long start = System.currentTimeMillis();
       while (true) {
         try {
           System.out.println("---BLOCKING---");
-          wait(SEND_TIMEOUT);
+          wait(Connection.SEND_TIMEOUT);
         } catch (InterruptedException ex) {
           Logger.getLogger(LoggingChannel.class.getName()).
                   log(Level.SEVERE, null, ex);
         }
-        if (System.currentTimeMillis() - start > SEND_TIMEOUT) {
+        if (System.currentTimeMillis() - start > Connection.SEND_TIMEOUT) {
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         } else {
@@ -101,41 +103,63 @@ public class LoggingChannel implements Closeable, Observer {
     }
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
-    System.out.println("channel=" + getChannelId() + " unack-count=" + count); 
+    System.out.println("channel=" + getChannelId() + " unack-count=" + count);
     sender.sendBatch(events);
     return true;
   }
 
   @Override
   public synchronized void update(Observable o, Object arg) {
-    AckLifecycleState s = (AckLifecycleState) arg;
-    if (s.getCurrentState() == AckLifecycleState.State.ACK_POLL_OK) {
-      int count = unackedCount.decrementAndGet();
-      System.out.
-              println("channel=" + getChannelId() + " unacked-count-post-decr=" + count + " seqno=" + s.
-                      getEvents().getId() + " ackid= " + s.getEvents().
-                      getAckId());
-      if (count < 0) {
-        String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
-        LOG.severe(msg);
-        throw new RuntimeException(msg);
-      } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method 
-        if (quiesced) {
-          try {
-            close();
-          } catch (IllegalStateException ex) {
-            LOG.warning(
-                    "unable to close channel " + getChannelId() + ": " + ex.getMessage());
-          }
+    try {
+      LifecycleEvent s = (LifecycleEvent) arg;
+      LifecycleEvent.Type eventType = ((LifecycleEvent) arg).getCurrentState();
+      switch (eventType) {
+        case ACK_POLL_OK: {
+          ackReceived(s);
+          break;
+        }
+        case EVENT_POST_OK: {
+          System.out.println("OBSERVED EVENT_POST_OK");
+          checkForStickySessionViolation(s);
+          break;
         }
       }
-
-      System.out.println("UNBLOCK");
-      notifyAll();      
+    } catch (Exception e) {
+      LOG.log(Level.SEVERE, e.getMessage(), e);
+      Consumer c = this.loadBalancer.getConnection().getExceptionHandler();
+      if(c != null){
+        c.accept(e); 
+      }
+      forceClose();
     }
   }
-  
-  synchronized void closeAndReplace(){
+
+  private void ackReceived(LifecycleEvent s) throws RuntimeException {
+    int count = unackedCount.decrementAndGet();
+    System.out.
+            println("channel=" + getChannelId() + " unacked-count-post-decr=" + count + " seqno=" + s.
+                    getEvents().getId() + " ackid= " + s.getEvents().
+                    getAckId());
+    if (count < 0) {
+      String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
+      LOG.severe(msg);
+      throw new RuntimeException(msg);
+    } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
+      if (quiesced) {
+        try {
+          close();
+        } catch (IllegalStateException ex) {
+          LOG.warning(
+                  "unable to close channel " + getChannelId() + ": " + ex.
+                  getMessage());
+        }
+      }
+    }
+    System.out.println("UNBLOCK");
+    notifyAll();
+  }
+
+  synchronized void closeAndReplace() {
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
     quiesce(); //drain in-flight packets, and close+remove when empty 
   }
@@ -146,14 +170,23 @@ public class LoggingChannel implements Closeable, Observer {
    */
   protected synchronized void quiesce() {
     LOG.log(Level.INFO, "Quiescing channel: {0}", getChannelId());
-    quiesced = true;   
+    quiesced = true;
   }
 
+  private synchronized void forceClose(){
+    LOG.log(Level.INFO, "FORCE CLOSING CHANNEL  {0}", getChannelId());
+    this.sender.close();
+    this.loadBalancer.removeChannel(getChannelId());
+    System.out.println("TRYING TO UNBLOCK");
+    this.closed = true;
+    notifyAll();    
+  }
   @Override
   public synchronized void close() {
     if (closed) {
       LOG.severe("LoggingChannel already closed.");
-      throw new IllegalStateException("LoggingChannel already closed.");
+      return;
+      //throw new IllegalStateException("LoggingChannel already closed.");
     }
     LOG.log(Level.INFO, "CLOSE {0}", getChannelId());
     if (!isEmpty()) {
@@ -161,17 +194,15 @@ public class LoggingChannel implements Closeable, Observer {
       return;
     }
 
-    this.closed = true;
     this.sender.close();
     this.loadBalancer.removeChannel(getChannelId());
     System.out.println("TRYING TO UNBLOCK");
-    notifyAll();    
-    getChannelMetrics().deleteObserver(this);
-    getChannelMetrics().deleteObserver(this.loadBalancer.getConnectionState());
+    //getChannelMetrics().deleteObserver(this);
+    //getChannelMetrics().deleteObserver(this.loadBalancer.getConnectionState());
+    this.closed = true;
+    notifyAll();
   }
 
- 
-   
   /**
    * Returns true if this channels has no unacknowledged EventBatch
    *
@@ -181,10 +212,10 @@ public class LoggingChannel implements Closeable, Observer {
     return this.unackedCount.get() == 0;
   }
 
-  int getUnackedCount(){
+  int getUnackedCount() {
     return this.unackedCount.get();
   }
-   
+
   /**
    * @return the metrics
    */
@@ -197,22 +228,6 @@ public class LoggingChannel implements Closeable, Observer {
     return !quiesced && !closed && metrics.getUnacknowledgedCount() < FULL; //FIXME TODO make configurable   
   }
 
-  /*
-  @Override
-  public int compareTo(Object other) {
-    if (null == other || !((LoggingChannel) other).isAvailable()) {
-      return 1;
-    }
-    if (this.equals(other)) {
-      return 0;
-    }
-    long myBirth = sender.getChannelMetrics().getOldestUnackedBirthtime();
-    long otherBirth = ((LoggingChannel) other).getChannelMetrics().
-            getOldestUnackedBirthtime();
-    return (int) (myBirth - otherBirth); //channel with youngest unacked message is preferred
-  }
-
-*/
   @Override
   public int hashCode() {
     int hash = 3;
@@ -220,7 +235,6 @@ public class LoggingChannel implements Closeable, Observer {
     return hash;
   }
 
-  
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
@@ -238,6 +252,28 @@ public class LoggingChannel implements Closeable, Observer {
 
   String getChannelId() {
     return sender.getChannel();
+  }
+
+  private void checkForStickySessionViolation(LifecycleEvent s) {
+    System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
+    this.stickySessionEnforcer.recordAckId(s.getEvents());
+  }
+
+  private static class StickySessionEnforcer {
+    boolean seenAckIdOne;
+
+    synchronized void recordAckId(EventBatch events) throws IllegalStateException {
+      int ackId = events.getAckId().intValue();
+      if(ackId==1){
+        if(seenAckIdOne){
+        throw new IllegalHECAcknowledgementStateException(
+                "ackId " + ackId + " has already been received on channel " + events.
+                getSender().getChannel());        
+        }else{
+          seenAckIdOne = true;
+        }
+      }
+    }
   }
 
 }

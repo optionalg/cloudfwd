@@ -18,22 +18,18 @@ package com.splunk.cloudfwd.sim;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.http.AckManager;
-import com.splunk.cloudfwd.http.EventBatch;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import org.apache.http.HttpResponse;
@@ -48,8 +44,8 @@ public class AckEndpoint implements Closeable {
   private static final Logger LOG = Logger.getLogger(AckEndpoint.class.getName());
   
   ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-  AtomicLong ackId = new AtomicLong(0);
-  NavigableMap<Long, Boolean> acksStates= new ConcurrentSkipListMap<>(); //key is ackId
+  protected AtomicLong ackId = new AtomicLong(0);
+  protected NavigableMap<Long, Boolean> acksStates= new ConcurrentSkipListMap<>(); //key is ackId
   Random rand = new Random(System.currentTimeMillis());
   volatile boolean started;
   

@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
 import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import java.io.IOException;
@@ -22,7 +23,6 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -42,6 +42,7 @@ public class PropertiesFileHelper {
   public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
   public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
   public static final String MOCK_HTTP_KEY = "mock_http";
+  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";  
 
   private Properties defaultProps = new Properties();
 
@@ -93,6 +94,18 @@ public class PropertiesFileHelper {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
             "false").trim());
   }
+  
+  public Endpoints getSimulatedEndpoints(){
+    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,"com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
+    try {
+      return (Endpoints) Class.forName(classname).newInstance();
+    } catch (Exception ex) {
+      Logger.getLogger(PropertiesFileHelper.class.getName()).
+              log(Level.SEVERE, null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+    
+  } 
 
   public boolean isCertValidationDisabled() {
     return Boolean.parseBoolean(this.defaultProps.
@@ -116,7 +129,7 @@ public class PropertiesFileHelper {
         sender.disableCertificateValidation();
       }
       if(isMockHttp()){
-        sender.setSimulatedEndpoints(new SimulatedHECEndpoints());
+        sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
       return sender;
     } catch (Exception ex) {

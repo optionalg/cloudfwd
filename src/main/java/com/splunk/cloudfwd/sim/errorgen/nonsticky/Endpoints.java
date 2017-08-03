@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.sim;
+package com.splunk.cloudfwd.sim.errorgen.nonsticky;
 
 import com.splunk.cloudfwd.http.AckManager;
-import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.EventBatch;
-import java.io.IOException;
+import com.splunk.cloudfwd.sim.HealthEndpoint;
+import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -26,38 +26,31 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public class SimulatedHECEndpoints implements Endpoints{
-  protected AckEndpoint ackEndpoint;
-  protected EventEndpoint eventEndpoint;
-  protected HealthEndpoint healthEndpoint;
+public class Endpoints extends SimulatedHECEndpoints {
   
-  
-  public SimulatedHECEndpoints(){
-    this.ackEndpoint = new AckEndpoint();
-    this.eventEndpoint= new EventEndpoint(ackEndpoint);
-    this.healthEndpoint = new HealthEndpoint();
+  public Endpoints() {
+    super.eventEndpoint= new NonStickEventEndpoint(); //will set itself up with several channels
+    super.healthEndpoint = new HealthEndpoint();
+    super.ackEndpoint = null; //not used (instead we let the NonStickEventsEndpoint manage the ackEndpoint)
   }
-
+  
   @Override
   public void postEvents(EventBatch events,
           FutureCallback<HttpResponse> httpCallback) {
     eventEndpoint.post(events, httpCallback);
   }
-
-  @Override
+  
+    @Override
   public void pollAcks(AckManager ackMgr,
           FutureCallback<HttpResponse> httpCallback) {
-    ackEndpoint.pollAcks(ackMgr, httpCallback);
+    //we have to ask the NonStickEventEndpoint for the AckEndpoint, because it switches between 
+    //more than one AckEndpoint...THAT'S THE POINT of this simulator
+    eventEndpoint.getAckEndpoint().pollAcks(ackMgr, httpCallback);
   }
 
-  @Override
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
-    this.healthEndpoint.pollHealth(httpCallback);
-  }
-
-  @Override
+    @Override
   public void close()  {
-    ackEndpoint.close();
+    ((NonStickEventEndpoint)eventEndpoint).close();
   }
   
 }
