@@ -49,12 +49,14 @@ public class LoadBalancer implements Observer, Closeable {
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
   private int robin; //incremented (mod channels) to perform round robin
+  private final Connection connection;
 
-  public LoadBalancer() {
-    this(new Properties());
+  LoadBalancer(Connection c) {
+    this(c, new Properties());
   }
 
-  public LoadBalancer(Properties p) {
+  LoadBalancer(Connection c, Properties p) {
+    this.connection = c;
     this.configuredObjectFactory = new PropertiesFileHelper(p);
     this.channelsPerDestination = this.configuredObjectFactory.
             getChannelsPerDestination();
@@ -105,8 +107,10 @@ public class LoadBalancer implements Observer, Closeable {
   @Override
   public synchronized void close() {
     this.discoveryScheduler.stop();
-    for (LoggingChannel c : this.channels.values()) {
-      c.close();
+    synchronized(channels){
+      for (LoggingChannel c : this.channels.values()) {
+        c.close();
+      }
     }
   }
 
@@ -173,7 +177,7 @@ public class LoadBalancer implements Observer, Closeable {
 
   }
 
-  private synchronized void sendRoundRobin(EventBatch events) {
+  private synchronized void sendRoundRobin(EventBatch events) throws TimeoutException {
     try {
       if (channels.isEmpty()) {
         throw new IllegalStateException(
@@ -182,7 +186,7 @@ public class LoadBalancer implements Observer, Closeable {
       LoggingChannel tryMe = null;
       int tryCount = 0;
       //round robin until either A) we find an available channel
-
+      long start = System.currentTimeMillis();
       while (true) {
         //note: the channelsSnapshot must be refreshed each time through this loop
         //or newly added channels won't be seen, and eventually you will just have a list
@@ -200,9 +204,16 @@ public class LoadBalancer implements Observer, Closeable {
         if (tryMe.send(events)) {
           break;
         }
+        if(System.currentTimeMillis()-start > Connection.SEND_TIMEOUT){
+          System.out.println("TIMEOUT EXCEEDED");
+          throw new TimeoutException("Send timeout exceeded.");
+        }
       }
 
-    } catch (Exception e) {
+    }catch(TimeoutException e){
+      throw e;  //we want TimeoutExceptions handled by Caller
+    }
+    catch (Exception e) {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
               getMessage());
       throw new RuntimeException(e.getMessage(), e);
@@ -222,6 +233,13 @@ public class LoadBalancer implements Observer, Closeable {
    */
   public void setChannelsPerDestination(int channelsPerDestination) {
     this.channelsPerDestination = channelsPerDestination;
+  }
+
+  /**
+   * @return the connection
+   */
+  public Connection getConnection() {
+    return connection;
   }
 
 }

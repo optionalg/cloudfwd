@@ -15,13 +15,9 @@
  */
 package com.splunk.cloudfwd.http;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.logging.Logger;
@@ -78,22 +74,11 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     }
   }
    */
-
   public void ackIdCreated(long ackId, EventBatch events) {
     long birthtime = System.currentTimeMillis();
     birthTimes.put(ackId, birthtime);
     if (oldestUnackedBirthtime == Long.MIN_VALUE) { //not set yet id MIN_VALUE
-      oldestUnackedBirthtime = birthtime; //this happens only once. It's a dumb firt run edgecase
-      this.setChanged();
-      try {
-          AckLifecycleState state = new AckLifecycleState(
-                  AckLifecycleState.State.EVENT_POST_OK, events, this.sender);
-            System.out.println("NOTIFYING EVENT_POST_OK");
-            this.notifyObservers(state);
-      } catch (Exception e) {
-          LOG.severe(e.getMessage());
-          throw new RuntimeException(e.getMessage(), e);
-      }
+      oldestUnackedBirthtime = birthtime; //this happens only once. It's a dumb firt run edgecase      
     }
   }
 
@@ -134,7 +119,9 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     return new Date(oldestUnackedBirthtime).toString();
   }
 
-  public boolean getChannelHealth() { return this.lastHealthCheck; }
+  public boolean getChannelHealth() {
+    return this.lastHealthCheck;
+  }
 
   /**
    * @return the mostRecentTimeToSuccess
@@ -163,8 +150,23 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
   }
 
   @Override
-  public void eventPostOK(EventBatch events) {
+  public void eventPostOK(EventBatch events) { //needs to be synchronized to insure intervening notifyObservers doesn't clearChanged
     eventPostOKCount++;
+    
+    System.out.println("EVENT POST OK");
+    try {
+      LifecycleEvent state = new LifecycleEvent(
+              LifecycleEvent.Type.EVENT_POST_OK, events, this.sender);
+      System.out.println("NOTIFYING EVENT_POST_OK");
+      synchronized (this) {
+        this.setChanged();
+        this.notifyObservers(state);
+      }
+    } catch (Exception e) {
+      LOG.severe(e.getMessage());
+      throw new RuntimeException(e.getMessage(), e);
+    }
+
   }
 
   @Override
@@ -187,11 +189,13 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     try {
       ackPollOKCount++;
       ackIdSucceeded(events.getAckId());
-      AckLifecycleState state = new AckLifecycleState(
-              AckLifecycleState.State.ACK_POLL_OK, events, this.sender);
+      LifecycleEvent state = new LifecycleEvent(
+              LifecycleEvent.Type.ACK_POLL_OK, events, this.sender);
       System.out.println("NOTIFYING ACK_POLL_OK for ackId" + events.getAckId());
-      setChanged();
-      notifyObservers(state);
+      synchronized (this) {
+        setChanged();
+        notifyObservers(state);
+      }
     } catch (Exception e) {
       LOG.severe(e.getMessage());
       throw new RuntimeException(e.getMessage(), e);
@@ -210,40 +214,40 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
 
   @Override
   public void healthPollFailed(Exception ex) {
-	// There's a 400 fail that is sent back by the HEC
-	// when the token is invalid.
-	healthPollFailureCount++;
+    // There's a 400 fail that is sent back by the HEC
+    // when the token is invalid.
+    healthPollFailureCount++;
   }
 
   @Override
   public void healthPollOK() {
-	lastHealthCheck = true;
-	healthPollOKCount++;
+    lastHealthCheck = true;
+    healthPollOKCount++;
     try {
-        AckLifecycleState state = new AckLifecycleState(
-            AckLifecycleState.State.HEALTH_POLL_OK, this.sender);
-        System.out.println("NOTIFYING HEALTH_POLL_OK");
-        setChanged();
-        notifyObservers(state);
+      LifecycleEvent state = new LifecycleEvent(
+              LifecycleEvent.Type.HEALTH_POLL_OK, this.sender);
+      System.out.println("NOTIFYING HEALTH_POLL_OK");
+      setChanged();
+      notifyObservers(state);
     } catch (Exception e) {
-        LOG.severe(e.getMessage());
-        throw new RuntimeException(e.getMessage(), e);
+      LOG.severe(e.getMessage());
+      throw new RuntimeException(e.getMessage(), e);
     }
   }
 
   @Override
   public void healthPollNotOK(int code, String msg) {
-	lastHealthCheck = false;
-	healthPollNotOKCount++;
+    lastHealthCheck = false;
+    healthPollNotOKCount++;
     try {
-        AckLifecycleState state = new AckLifecycleState(
-            AckLifecycleState.State.HEALTH_POLL_NOT_OK, this.sender);
-        System.out.println("NOTIFYING HEALTH_POLL_NOT_OK");
-        setChanged();
-        notifyObservers(state);
+      LifecycleEvent state = new LifecycleEvent(
+              LifecycleEvent.Type.HEALTH_POLL_NOT_OK, this.sender);
+      System.out.println("NOTIFYING HEALTH_POLL_NOT_OK");
+      setChanged();
+      notifyObservers(state);
     } catch (Exception e) {
-        LOG.severe(e.getMessage());
-        throw new RuntimeException(e.getMessage(), e);
+      LOG.severe(e.getMessage());
+      throw new RuntimeException(e.getMessage(), e);
     }
   }
 }

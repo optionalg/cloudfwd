@@ -57,7 +57,7 @@ public class LoadBalancerTest {
     Properties props = new Properties();
     props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection(props);
-    int max = 100000;
+    int max = 1000000;
     CountDownLatch latch = new CountDownLatch(1);
     for (int i = 0; i < max; i++) {
       final EventBatch events = new EventBatch();

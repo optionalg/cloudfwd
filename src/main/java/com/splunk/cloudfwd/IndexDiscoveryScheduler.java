@@ -49,10 +49,10 @@ class IndexDiscoveryScheduler {
   }
 
   public synchronized void stop() {
-    System.out.println("SHUTTING DOWN INDEX DISCOVER POLLER");
     if(null == this.scheduler){
       return;
     }
+    System.out.println("SHUTTING DOWN INDEX DISCOVER POLLER");
     scheduler.shutdownNow();
     scheduler = null;
   }  
