@@ -20,8 +20,6 @@ import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
 import java.io.Closeable;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Observable;
 import java.util.Observer;
@@ -230,22 +228,6 @@ public class LoggingChannel implements Closeable, Observer {
     return !quiesced && !closed && metrics.getUnacknowledgedCount() < FULL; //FIXME TODO make configurable   
   }
 
-  /*
-  @Override
-  public int compareTo(Object other) {
-    if (null == other || !((LoggingChannel) other).isAvailable()) {
-      return 1;
-    }
-    if (this.equals(other)) {
-      return 0;
-    }
-    long myBirth = sender.getChannelMetrics().getOldestUnackedBirthtime();
-    long otherBirth = ((LoggingChannel) other).getChannelMetrics().
-            getOldestUnackedBirthtime();
-    return (int) (myBirth - otherBirth); //channel with youngest unacked message is preferred
-  }
-
-   */
   @Override
   public int hashCode() {
     int hash = 3;
@@ -278,33 +260,19 @@ public class LoggingChannel implements Closeable, Observer {
   }
 
   private static class StickySessionEnforcer {
-
-    private LRUCache<Integer, Boolean> duplicateTracker = new LRUCache<>(
-            LoggingChannel.ACK_DUP_DETECTOR_WINDOW_SIZE);
+    boolean seenAckIdOne;
 
     synchronized void recordAckId(EventBatch events) throws IllegalStateException {
       int ackId = events.getAckId().intValue();
-      if (duplicateTracker.containsKey(ackId)) {
+      if(ackId==1){
+        if(seenAckIdOne){
         throw new IllegalHECAcknowledgementStateException(
                 "ackId " + ackId + " has already been received on channel " + events.
-                getSender().getChannel());
+                getSender().getChannel());        
+        }else{
+          seenAckIdOne = true;
+        }
       }
-      duplicateTracker.put(ackId, true); //record fact that we have seen this ackId
-    }
-
-  }
-
-  private static class LRUCache<K, V> extends LinkedHashMap<K, V> {
-
-    private final int cacheSize;
-
-    public LRUCache(int cacheSize) {
-      this.cacheSize = cacheSize;
-    }
-
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-      return size() >= cacheSize;
     }
   }
 
