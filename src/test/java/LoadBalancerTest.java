@@ -16,7 +16,7 @@
 
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.http.EventBatch;
-import com.splunk.cloudfwd.http.HttpEventCollectorEventInfo;
+import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -60,8 +60,8 @@ public class LoadBalancerTest {
     int max = 1000000;
     CountDownLatch latch = new CountDownLatch(1);
     for (int i = 0; i < max; i++) {
-      final EventBatch events = new EventBatch();
-      events.add(new HttpEventCollectorEventInfo("info", "seqno=" + i,
+      final EventBatch events = new EventBatch(EventBatch.Endpoint.raw, EventBatch.Eventtype.json);
+      events.add(new HttpEventCollectorEvent("info", "seqno=" + i,
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));
       System.out.println("Send batch: " + events.getId() + " i=" + i);
