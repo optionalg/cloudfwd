@@ -62,6 +62,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   public static final int DefaultBatchCount = 10; // 10 events
 
   private final String eventUrl;
+  private final String rawUrl;
   private final String token;
   private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
@@ -79,6 +80,7 @@ public final class HttpEventCollectorSender implements Endpoints {
    */
   public HttpEventCollectorSender(final String url, final String token) {
     this.eventUrl = url.trim() + "/services/collector/event";
+    this.rawUrl = url.trim() + "/services/collector/raw";
     this.ackUrl = url.trim() + "/services/collector/ack";
     this.healthUrl = url.trim() + "/services/collector/health";
     this.token = token;
@@ -217,7 +219,8 @@ public final class HttpEventCollectorSender implements Endpoints {
     final String encoding = "utf-8";
 
     // create http request
-    final HttpPost httpPost = new HttpPost(eventUrl);
+    String endpointUrl = ((events.getEndpoint() == EventBatch.Endpoint.event ? eventUrl : rawUrl));
+    final HttpPost httpPost = new HttpPost(endpointUrl);
     httpPost.setHeader(
             AuthorizationHeaderTag,
             String.format(AuthorizationHeaderScheme, token));

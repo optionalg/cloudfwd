@@ -15,12 +15,7 @@
  */
 package com.splunk.cloudfwd.http;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
@@ -31,21 +26,30 @@ import java.util.logging.Logger;
 public class EventBatch implements SerializedEventProducer {
 
   private static final Logger LOG = Logger.getLogger(EventBatch.class.getName());
-
   private static AtomicLong batchIdGenerator = new AtomicLong(0);
   private String id = String.format("%019d", batchIdGenerator.incrementAndGet());//must generate this batch's ID before posting events, since it's string and strings compare lexicographically we should zero pad to 19 digits (max long value)
   private Long ackId; //Will be null until we receive ackId for this batch from HEC
   private Map<String, String> metadata = new HashMap<>();
   //private final TimerTask flushTask = new ScheduledFlush();
-  private final List<HttpEventCollectorEventInfo> eventsBatch = new ArrayList();
+  private final List<HttpEventCollectorEvent> eventsBatch = new ArrayList();
   private HttpEventCollectorSender sender;
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
-  //private Endpoints simulatedEndpoints;
+  public enum Endpoint {
+    event, raw
+  }
+  public enum Eventtype {
+    blob, json
+  }
 
-  public EventBatch() {
+  private Endpoint endpoint;
+  private Eventtype eventtype;
+
+  public EventBatch(Endpoint endpoint, Eventtype eventtype) {
     this.sender = null;
+    this.endpoint = endpoint;
+    this.eventtype = eventtype;
   }
 
   EventBatch(HttpEventCollectorSender sender, long maxEventsBatchCount,
@@ -67,7 +71,7 @@ public class EventBatch implements SerializedEventProducer {
   }
   */
 
-  public synchronized void add(HttpEventCollectorEventInfo event) {
+  public synchronized void add(HttpEventCollectorEvent event) {
     if (flushed) {
       throw new IllegalStateException(
               "Events cannot be added to a flushed EventBatch");
@@ -79,7 +83,11 @@ public class EventBatch implements SerializedEventProducer {
      */
 
     eventsBatch.add(event);
-    stringBuilder.append(event.toString(metadata));
+    if (this.endpoint == Endpoint.event) {
+      stringBuilder.append(event.toEventEndpointString(metadata));
+    } else {
+      stringBuilder.append(event.toRawEndpointString());
+    }
   }
 
   protected synchronized boolean isFlushable() {
@@ -108,6 +116,13 @@ public class EventBatch implements SerializedEventProducer {
 
   @Override
   public String toString() {
+    if (this.endpoint == Endpoint.raw) {
+      if (this.eventtype == Eventtype.json) {
+        List<String> myList = new ArrayList<String>(
+                Arrays.asList(this.stringBuilder.toString().split(",")));
+        return myList.toString();
+      }
+    }
     return this.stringBuilder.toString();
   }
 
@@ -128,11 +143,11 @@ public class EventBatch implements SerializedEventProducer {
     return eventsBatch.size();
   }
 
-  public HttpEventCollectorEventInfo get(int idx) {
+  public HttpEventCollectorEvent get(int idx) {
     return this.eventsBatch.get(idx);
   }
 
-  public List<HttpEventCollectorEventInfo> getEvents() {
+  public List<HttpEventCollectorEvent> getEvents() {
     return this.eventsBatch;
   }
 
@@ -202,6 +217,8 @@ public class EventBatch implements SerializedEventProducer {
   public HttpEventCollectorSender getSender() {
     return sender;
   }
+
+  public Enum<Endpoint> getEndpoint() {return endpoint;}
 
   private class ScheduledFlush extends TimerTask {
 
