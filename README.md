@@ -1,25 +1,24 @@
 # Cloud forwarder
 
-Use Cloudfwd to capture and ingest data from external sources into Splunk indexers. 
+Use Cloudfwd to capture and ingest data from external sources directly into Splunk indexers. 
 
 ## Getting Started
 
 ### Prerequisites
 
 1. Splunk 6.4+
-2. Maven
-3. Java 8
-4. HEC Token
+2. [Maven](https://maven.apache.org/index.html)
+3. [Java 8](http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html)
+4. [HEC Token](http://dev.splunk.com/view/event-collector/SP-CAAAE7G)
 
-```
-Give examples
-```
 
-### Installing
+### Installation
 
-A step by step series of examples that tell you have to get a development env running
+Make sure that you have the necessary prerequisites before setting up the Cloud forwarder. 
 
-Say what the step will be
+1. Set up your HEC token http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector
+2. Add more steps here
+
 
 ```
 Give the example
@@ -65,5 +64,4 @@ Version 1.0
 ## License
 
 This project is licensed under the Apache 2.0 License - see the [LICENSE.md](LICENSE.md) file for details
-
 
