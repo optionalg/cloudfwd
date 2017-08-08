@@ -153,11 +153,11 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
   public void eventPostOK(EventBatch events) { //needs to be synchronized to insure intervening notifyObservers doesn't clearChanged
     eventPostOKCount++;
     
-    System.out.println("EVENT POST OK");
+    //System.out.println("EVENT POST OK");
     try {
       LifecycleEvent state = new LifecycleEvent(
               LifecycleEvent.Type.EVENT_POST_OK, events, this.sender);
-      System.out.println("NOTIFYING EVENT_POST_OK");
+      //System.out.println("NOTIFYING EVENT_POST_OK");
       synchronized (this) {
         this.setChanged();
         this.notifyObservers(state);

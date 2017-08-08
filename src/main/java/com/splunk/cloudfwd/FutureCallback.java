@@ -13,21 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd;
 
-import java.io.Closeable;
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
+import com.splunk.cloudfwd.http.EventBatch;
 
 /**
  *
  * @author ghendrey
  */
-public interface Endpoints extends Closeable{
-  public void postEvents(final EventBatch events,FutureCallback<HttpResponse> httpCallback);    
-  public void pollAcks(AckManager ackMgr,FutureCallback<HttpResponse> httpCallback);
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback);
-  @Override
-  public void close();
-  public void start();
+public interface FutureCallback {
+
+    public void acknowledged(EventBatch events);
+
+    public void failed(EventBatch events, Exception ex);
+    
+    public void checkpoint(EventBatch events);
+
+    
 }

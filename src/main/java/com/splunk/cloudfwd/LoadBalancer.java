@@ -45,24 +45,25 @@ public class LoadBalancer implements Observer, Closeable {
   private final Map<String, LoggingChannel> channels = new ConcurrentSkipListMap<>();
   //private final AtomicBoolean available = new AtomicBoolean(true);
   private PropertiesFileHelper configuredObjectFactory;
-  private final ConnectionState connectionState = new ConnectionState(); //consolidate metrics across all channels
+  private final ConnectionState connectionState; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
   private int robin; //incremented (mod channels) to perform round robin
   private final Connection connection;
+  private boolean closed;
 
   LoadBalancer(Connection c) {
     this(c, new Properties());
   }
 
-  LoadBalancer(Connection c, Properties p) {
+  LoadBalancer(Connection c,  Properties p) {
     this.connection = c;
     this.configuredObjectFactory = new PropertiesFileHelper(p);
     this.channelsPerDestination = this.configuredObjectFactory.
             getChannelsPerDestination();
     this.discoverer = new IndexDiscoverer(configuredObjectFactory);
+    this.connectionState = new ConnectionState(c);
     this.discoverer.addObserver(this);
-    //this.discoveryScheduler.start(discoverer);
   }
 
   @Override
@@ -95,9 +96,12 @@ public class LoadBalancer implements Observer, Closeable {
     System.out.println(change);
   }
 
-  public synchronized void sendBatch(EventBatch events, Runnable succesCallback)
+  public synchronized void sendBatch(EventBatch events)
           throws TimeoutException {
-    this.connectionState.setSuccessCallback(events, succesCallback);
+    if(null == this.connection.getCallbacks()){
+      throw new IllegalStateException("Connection FutureCallback has not been set.");
+    }
+    this.connectionState.registerInFlightEvents(events);
     if (channels.isEmpty()) {
       createChannels(discoverer.getAddrs());
     }
@@ -105,14 +109,26 @@ public class LoadBalancer implements Observer, Closeable {
   }
 
   @Override
-  public synchronized void close() {
+  public void close() {
     this.discoveryScheduler.stop();
     synchronized(channels){
       for (LoggingChannel c : this.channels.values()) {
         c.close();
       }
     }
+    this.closed = true;
   }
+  
+  void closeNow() {
+    this.discoveryScheduler.stop();
+    synchronized(channels){
+      for (LoggingChannel c : this.channels.values()) {
+        c.forceClose();
+      }
+    }
+    this.closed = true;
+  }
+  
 
   public ConnectionState getConnectionState() {
     return this.connectionState;
@@ -140,7 +156,9 @@ public class LoadBalancer implements Observer, Closeable {
       System.out.println("Trying to add URL: " + url);
       HttpEventCollectorSender sender = this.configuredObjectFactory.
               createSender(url);
-      addChannel(new LoggingChannel(this, sender));
+      LoggingChannel c = new LoggingChannel(this, sender);
+      sender.setChannel(c);
+      addChannel(c);     
     } catch (MalformedURLException ex) {
       Logger.getLogger(LoadBalancer.class.getName()).log(Level.SEVERE, null,
               ex);
@@ -157,14 +175,16 @@ public class LoadBalancer implements Observer, Closeable {
   }
 
   //also must not be synchronized
-  void removeChannel(String channelId) {
+  void removeChannel(String channelId, boolean force) {
     LoggingChannel c = this.channels.remove(channelId);
+    /*
     if (c == null) {
       LOG.severe("attempt to remove unknown channel: " + channelId);
       throw new RuntimeException(
               "attempt to remove unknown channel: " + channelId);
     }
-    if (!c.isEmpty()) {
+    */
+    if (!force && !c.isEmpty()) {
       LOG.severe(
               "Attempt to remove non-empty channel: " + channelId + " containing " + c.
               getUnackedCount() + " unacked payloads");
@@ -187,7 +207,7 @@ public class LoadBalancer implements Observer, Closeable {
       int tryCount = 0;
       //round robin until either A) we find an available channel
       long start = System.currentTimeMillis();
-      while (true) {
+      while (true && !closed) {
         //note: the channelsSnapshot must be refreshed each time through this loop
         //or newly added channels won't be seen, and eventually you will just have a list
         //consisting of closed channels. Also, it must be a snapshot, not use the live
@@ -216,6 +236,7 @@ public class LoadBalancer implements Observer, Closeable {
     catch (Exception e) {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
               getMessage());
+      e.printStackTrace();
       throw new RuntimeException(e.getMessage(), e);
     }
 
@@ -241,5 +262,5 @@ public class LoadBalancer implements Observer, Closeable {
   public Connection getConnection() {
     return connection;
   }
-
+  
 }

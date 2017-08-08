@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.http.EventBatch;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -28,19 +29,26 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public class EventEndpoint {
+public class EventEndpoint implements Endpoint{
 
   Random rand = new Random(System.currentTimeMillis());
-  ScheduledExecutorService executor = Executors.newScheduledThreadPool(4);
+  final ScheduledExecutorService executor;
   private AckEndpoint ackEndpoint;
 
-   protected EventEndpoint(){
-     
-   }
-  
+  protected EventEndpoint() {
+    ThreadFactory f = new ThreadFactory() {
+      @Override
+      public Thread newThread(Runnable r) {
+        return new Thread(r, "EventEndpoint");
+      }
+    };
+    executor = Executors.newScheduledThreadPool(1, f);
+  }
+
   public EventEndpoint(AckEndpoint ackEndpoint) {
+    this();
     this.ackEndpoint = ackEndpoint;
-    ackEndpoint.start();
+    //ackEndpoint.start();
   }
 
   public void post(EventBatch events, FutureCallback<HttpResponse> cb) {
@@ -52,8 +60,8 @@ public class EventEndpoint {
     //return a single response with a delay uniformly distributed between  [0,5] ms
     executor.schedule(respond, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
   }
-  
-  protected long nextAckId(){
+
+  protected long nextAckId() {
     return ackEndpoint.nextAckId();
   }
 
@@ -67,6 +75,17 @@ public class EventEndpoint {
    */
   public AckEndpoint getAckEndpoint() {
     return ackEndpoint;
+  }
+
+  @Override
+  public void close() {
+    System.out.println("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
+    executor.shutdownNow();
+  }
+
+  @Override
+  public void start() {
+    //no-op
   }
 
   private static class EventPostResponse extends CannedOKHttpResponse {

@@ -20,15 +20,14 @@ import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
 import java.io.Closeable;
-import java.util.Objects;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -38,34 +37,64 @@ import java.util.logging.Logger;
  */
 public class LoggingChannel implements Closeable, Observer {
 
-  public static final int ACK_DUP_DETECTOR_WINDOW_SIZE = 10000;
   private static final Logger LOG = Logger.getLogger(LoggingChannel.class.
           getName());
   private final HttpEventCollectorSender sender;
-  private static final int FULL = 500; //FIXME TODO set to reasonable value, configurable?
-  private static final ScheduledExecutorService reaperScheduler = Executors.
-          newScheduledThreadPool(1); //for scheduling self-removal/shutdown
-  private static final long LIFESPAN = 5 * 60 * 1000; //5 min lifespan
+  private static final int FULL = 10000; //FIXME TODO set to reasonable value, configurable?
+  private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
+  private static final long LIFESPAN = 60; //5 min lifespan
   private volatile boolean closed;
   private volatile boolean quiesced;
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final StickySessionEnforcer stickySessionEnforcer = new StickySessionEnforcer();
+  private volatile boolean started;
+  private String channelId;
 
   public LoggingChannel(LoadBalancer b, HttpEventCollectorSender sender) {
     this.loadBalancer = b;
     this.sender = sender;
+    this.channelId = newChannelId();
+
     getChannelMetrics().addObserver(this);
+
+  }
+
+  private static String newChannelId() {
+    return java.util.UUID.randomUUID().toString();
+  }
+  
+  //flushing can only happen
+  void pollAcks(){
+    this.sender.getAckManager().pollAcks(); // poll for acks right now
+  }
+
+  public synchronized void start() {
+    if (started) {
+      return;
+    }
+    sender.setChannel(this);
     //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty 
+    ThreadFactory f = new ThreadFactory() {
+      @Override
+      public Thread newThread(Runnable r) {
+        return new Thread(r, "Channel Reaper");
+      }
+    };
+
+    reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);    
     reaperScheduler.schedule(() -> {
       closeAndReplace();
-    }, LIFESPAN, TimeUnit.MILLISECONDS);
-
+    }, LIFESPAN, TimeUnit.SECONDS);
+    started = true;
   }
 
   public synchronized boolean send(EventBatch events) throws TimeoutException {
     if (!isAvailable()) {
       return false;
+    }
+    if (!started) {
+      start();
     }
     if (this.closed) {
       LOG.severe("Attempt to send to closed channel");
@@ -76,13 +105,17 @@ public class LoggingChannel implements Closeable, Observer {
       LOG.
               info("Send to quiesced channel (this should happen from time to time)");
     }
-    System.out.println("Sending to channel: " + sender.getChannel());
+    //System.out.println("Sending to channel: " + sender.getChannel());
     if (unackedCount.get() == FULL) {
+      //force an immediate poll for acks, rather than waiting until the next periodically 
+      //scheduled ack poll
+      pollAcks();
       long start = System.currentTimeMillis();
       while (true) {
         try {
           System.out.println("---BLOCKING---");
           wait(Connection.SEND_TIMEOUT);
+          System.out.println("UNBLOCKED");
         } catch (InterruptedException ex) {
           Logger.getLogger(LoggingChannel.class.getName()).
                   log(Level.SEVERE, null, ex);
@@ -91,55 +124,62 @@ public class LoggingChannel implements Closeable, Observer {
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         } else {
-          System.out.println("---UNBLOCKED--");
+          System.out.println("---NO TIMEOUT--");
           break;
         }
       }
     }
-    //essentially this is a "double check" since this channel could be closed while this
-    //method was blocked. It happens.
+    //essentially this is a "double check" since this channel could ge closed while this
+    //method was blocked. It happens.It's also why quiesced and closed must be marked volatile
+    //so their values are not cached by the thread.
     if (quiesced || closed) {
       return false;
     }
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
-    System.out.println("channel=" + getChannelId() + " unack-count=" + count);
+    //System.out.println("channel=" + getChannelId() + " unack-count=" + count);
     sender.sendBatch(events);
     return true;
   }
 
   @Override
   public synchronized void update(Observable o, Object arg) {
+    LifecycleEvent lifecycleEvent = null;
     try {
-      LifecycleEvent s = (LifecycleEvent) arg;
+      lifecycleEvent = (LifecycleEvent) arg;
       LifecycleEvent.Type eventType = ((LifecycleEvent) arg).getCurrentState();
       switch (eventType) {
         case ACK_POLL_OK: {
-          ackReceived(s);
+          ackReceived(lifecycleEvent);
+          notifyAll();
           break;
         }
         case EVENT_POST_OK: {
-          System.out.println("OBSERVED EVENT_POST_OK");
-          checkForStickySessionViolation(s);
+          //System.out.println("OBSERVED EVENT_POST_OK");
+          checkForStickySessionViolation(lifecycleEvent);
           break;
         }
       }
     } catch (Exception e) {
       LOG.log(Level.SEVERE, e.getMessage(), e);
-      Consumer c = this.loadBalancer.getConnection().getExceptionHandler();
-      if(c != null){
-        c.accept(e); 
-      }
-      forceClose();
+      FutureCallback c = this.loadBalancer.getConnection().getCallbacks();
+      EventBatch events = lifecycleEvent == null ? null : lifecycleEvent.
+              getEvents();
+      new Thread(() -> {
+        c.failed(events, e); //FIXME TODO -- there are many places where we should be calling failed. 
+      }).start();
+
     }
   }
 
   private void ackReceived(LifecycleEvent s) throws RuntimeException {
     int count = unackedCount.decrementAndGet();
+    /*
     System.out.
             println("channel=" + getChannelId() + " unacked-count-post-decr=" + count + " seqno=" + s.
                     getEvents().getId() + " ackid= " + s.getEvents().
                     getAckId());
+    */
     if (count < 0) {
       String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
       LOG.severe(msg);
@@ -156,10 +196,12 @@ public class LoggingChannel implements Closeable, Observer {
       }
     }
     System.out.println("UNBLOCK");
-    notifyAll();
   }
 
   synchronized void closeAndReplace() {
+    if (closed || quiesced) {
+      return;
+    }
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
     quiesce(); //drain in-flight packets, and close+remove when empty 
   }
@@ -171,16 +213,20 @@ public class LoggingChannel implements Closeable, Observer {
   protected synchronized void quiesce() {
     LOG.log(Level.INFO, "Quiescing channel: {0}", getChannelId());
     quiesced = true;
+    pollAcks();//so we don't have to wait for the next ack polling interval
   }
 
-  private synchronized void forceClose(){
+  synchronized void forceClose() {
     LOG.log(Level.INFO, "FORCE CLOSING CHANNEL  {0}", getChannelId());
-    this.sender.close();
-    this.loadBalancer.removeChannel(getChannelId());
-    System.out.println("TRYING TO UNBLOCK");
-    this.closed = true;
-    notifyAll();    
+    try {
+      this.sender.close();
+    } catch (Exception e) {
+      LOG.log(Level.SEVERE, e.getMessage(), e);
+    }
+    this.loadBalancer.removeChannel(getChannelId(), true);
+    finishClose();
   }
+
   @Override
   public synchronized void close() {
     if (closed) {
@@ -193,14 +239,24 @@ public class LoggingChannel implements Closeable, Observer {
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
     }
+    
+    try {
+      this.sender.close();
+    } catch (Exception e) {
+      LOG.log(Level.SEVERE, e.getMessage(), e);
+    }
+    this.loadBalancer.removeChannel(getChannelId(), false);
+    finishClose();
+  }
 
-    this.sender.close();
-    this.loadBalancer.removeChannel(getChannelId());
+  private synchronized void finishClose() {
     System.out.println("TRYING TO UNBLOCK");
-    //getChannelMetrics().deleteObserver(this);
-    //getChannelMetrics().deleteObserver(this.loadBalancer.getConnectionState());
     this.closed = true;
+    if(null != reaperScheduler){
+      reaperScheduler.shutdownNow();
+    }
     notifyAll();
+
   }
 
   /**
@@ -229,47 +285,35 @@ public class LoggingChannel implements Closeable, Observer {
   }
 
   @Override
-  public int hashCode() {
-    int hash = 3;
-    hash = 19 * hash + Objects.hashCode(this.sender.getChannel());
-    return hash;
+  public String toString() {
+    return this.channelId;
   }
 
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    final LoggingChannel other = (LoggingChannel) obj;
-    return Objects.equals(this.sender.getChannel(), other.sender.getChannel());
+  public Connection getConnection() {
+    return this.loadBalancer.getConnection();
   }
 
-  String getChannelId() {
-    return sender.getChannel();
+  public String getChannelId() {
+    return channelId;
   }
 
   private void checkForStickySessionViolation(LifecycleEvent s) {
-    System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
+    //System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
     this.stickySessionEnforcer.recordAckId(s.getEvents());
   }
 
   private static class StickySessionEnforcer {
+
     boolean seenAckIdOne;
 
     synchronized void recordAckId(EventBatch events) throws IllegalStateException {
       int ackId = events.getAckId().intValue();
-      if(ackId==1){
-        if(seenAckIdOne){
-        throw new IllegalHECAcknowledgementStateException(
-                "ackId " + ackId + " has already been received on channel " + events.
-                getSender().getChannel());        
-        }else{
+      if (ackId == 1) {
+        if (seenAckIdOne) {
+          throw new IllegalHECAcknowledgementStateException(
+                  "ackId " + ackId + " has already been received on channel " + events.
+                  getSender().getChannel());
+        } else {
           seenAckIdOne = true;
         }
       }

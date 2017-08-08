@@ -45,6 +45,11 @@ public class EventBatch implements SerializedEventProducer {
 
   private Endpoint endpoint;
   private Eventtype eventtype;
+  
+  public EventBatch(){
+    this.endpoint = Endpoint.event;
+    this.eventtype = Eventtype.blob;
+  }
 
   public EventBatch(Endpoint endpoint, Eventtype eventtype) {
     this.sender = null;
@@ -70,6 +75,10 @@ public class EventBatch implements SerializedEventProducer {
     this.simulatedEndpoints = endpoints;
   }
   */
+  
+  public void setSeqNo(long seqno){
+    this.id = String.format("%019d", seqno);
+  }
 
   public synchronized void add(HttpEventCollectorEvent event) {
     if (flushed) {

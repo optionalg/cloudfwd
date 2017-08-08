@@ -18,7 +18,6 @@ package com.splunk.cloudfwd.sim;
 import com.splunk.cloudfwd.http.AckManager;
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.EventBatch;
-import java.io.IOException;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -30,13 +29,8 @@ public class SimulatedHECEndpoints implements Endpoints{
   protected AckEndpoint ackEndpoint;
   protected EventEndpoint eventEndpoint;
   protected HealthEndpoint healthEndpoint;
+  private boolean started;
   
-  
-  public SimulatedHECEndpoints(){
-    this.ackEndpoint = new AckEndpoint();
-    this.eventEndpoint= new EventEndpoint(ackEndpoint);
-    this.healthEndpoint = new HealthEndpoint();
-  }
 
   @Override
   public void postEvents(EventBatch events,
@@ -56,8 +50,48 @@ public class SimulatedHECEndpoints implements Endpoints{
   }
 
   @Override
-  public void close()  {
-    ackEndpoint.close();
+  public final void close()  {
+    if(null != ackEndpoint){
+      ackEndpoint.close();
+    }
+    if(null != eventEndpoint){
+    eventEndpoint.close();
+    }
+    if(null != healthEndpoint){
+       healthEndpoint.close();
+    }
+  }
+
+  @Override
+  public synchronized void start() {
+    if (started){
+      return;
+    }
+    this.ackEndpoint = createAckEndpoint();
+    if(null != ackEndpoint){
+      ackEndpoint.start();
+    }
+    this.eventEndpoint = createEventEndpoint();
+    if(null != eventEndpoint){
+    eventEndpoint.start();
+    }
+    this.healthEndpoint = createHealthEndpoint();
+    if(null != healthEndpoint){
+       healthEndpoint.start();
+    }
+    started = true;
+  }
+
+  protected AckEndpoint createAckEndpoint() {
+    return new AckEndpoint();
+  }
+
+  protected EventEndpoint createEventEndpoint() {
+    return new EventEndpoint(ackEndpoint);
+  }
+
+  protected HealthEndpoint createHealthEndpoint() {
+    return new HealthEndpoint();
   }
   
 }

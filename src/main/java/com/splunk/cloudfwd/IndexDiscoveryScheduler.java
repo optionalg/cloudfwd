@@ -17,28 +17,45 @@ package com.splunk.cloudfwd;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 /**
  *
  * @author ghendrey
  */
 class IndexDiscoveryScheduler {
+
+  private static final Logger LOG = Logger.getLogger(IndexDiscoveryScheduler.class.getName());
   
   private IndexDiscoverer discoverer;
   private ScheduledExecutorService scheduler;
   private boolean started;
+  private boolean stopped;
 
   public synchronized void start(IndexDiscoverer d){
     if(started){
       throw new IllegalStateException("AckPollController already started");
     }
+    if(stopped){
+      LOG.info("Ignoring request to start stopped IndexDiscoveryScheduler");
+      return;
+    }
     this.discoverer = d;
-    this.scheduler = Executors.newScheduledThreadPool(1);
+        ThreadFactory f = new ThreadFactory(){
+      @Override
+      public Thread newThread(Runnable r) {
+        return new Thread(r, "IndexDiscovery poller");
+      }
+    };
+    this.scheduler = Executors.newScheduledThreadPool(1, f);
     Runnable poller = () -> {        
           this.discoverer.discover();
     };
-    scheduler.scheduleAtFixedRate(poller, 0, 1, TimeUnit.SECONDS);
+    //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
+    //if the execution time of a task exceeds the period. We don't want that.
+    scheduler.scheduleWithFixedDelay(poller, 0, 1, TimeUnit.SECONDS);
     this.started = true;
     System.out.println("STARTED INDEX DISCOVERY POLLING");
 
@@ -49,6 +66,7 @@ class IndexDiscoveryScheduler {
   }
 
   public synchronized void stop() {
+    this.stopped = true;
     if(null == this.scheduler){
       return;
     }

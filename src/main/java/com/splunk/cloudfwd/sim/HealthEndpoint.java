@@ -23,10 +23,20 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public class HealthEndpoint {
+public class HealthEndpoint implements Endpoint{
 
   public void pollHealth(FutureCallback<HttpResponse> cb) {
     ((AbstractHttpCallback)cb).completed("If we care about the actual conent, this will break something.", 200);
+  }
+
+  @Override
+  public void close() {
+    //no-op for now
+  }
+
+  @Override
+  public void start() {
+    //no-op
   }
   
 }

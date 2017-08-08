@@ -25,43 +25,50 @@ import java.util.function.Consumer;
  *
  * @author ghendrey
  */
-public class Connection implements Closeable{
-  public final static long SEND_TIMEOUT = 5 * 1000; //FIXME TODO make configurable
+public class Connection implements Closeable {
+
+  public final static long SEND_TIMEOUT = 60 * 1000; //FIXME TODO make configurable
   LoadBalancer lb;
-  private Consumer<Exception> exceptionHandler;
-  
-  public Connection(){
+  private final FutureCallback callbacks;
+
+  public Connection(FutureCallback callbacks) {
+    this.callbacks = callbacks;
     this.lb = new LoadBalancer(this);
   }
-  
-  public Connection(Properties settings){
+
+  public Connection(FutureCallback callbacks, Properties settings) {
+    this.callbacks = callbacks;
     this.lb = new LoadBalancer(this, settings);
   }
 
   @Override
-  public void close()  {
+  public void close() {
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
     //Exception handler
     new Thread(() -> {
       lb.close();
-    }).start();
+    },  "LoadBalancer Closer").start();
   }
-  
-  
-  public void sendBatch(EventBatch events, Runnable callback) throws TimeoutException {
-    lb.sendBatch(events, callback);
+
+  public void closeNow() {
+    //we must close asynchronously to prevent deadlocking
+    //when close() is invoked from a callback like the
+    //Exception handler
+    new Thread(() -> {
+      lb.closeNow();
+    }, "LoadBalancer Closer").start();
   }
-  
-  public void setExceptionHandler(Consumer<Exception> handler){
-    this.exceptionHandler = handler;
+
+  public void sendBatch(EventBatch events) throws TimeoutException {
+    lb.sendBatch(events);
   }
 
   /**
-   * @return the exceptionHandler
+   * @return the callbacks
    */
-  public Consumer<Exception> getExceptionHandler() {
-    return exceptionHandler;
+  public FutureCallback getCallbacks() {
+    return callbacks;
   }
-  
+
 }

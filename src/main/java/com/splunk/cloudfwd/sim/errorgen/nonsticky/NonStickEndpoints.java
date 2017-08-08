@@ -17,6 +17,8 @@ package com.splunk.cloudfwd.sim.errorgen.nonsticky;
 
 import com.splunk.cloudfwd.http.AckManager;
 import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.sim.AckEndpoint;
+import com.splunk.cloudfwd.sim.EventEndpoint;
 import com.splunk.cloudfwd.sim.HealthEndpoint;
 import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
@@ -26,19 +28,12 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public class Endpoints extends SimulatedHECEndpoints {
+public class NonStickEndpoints extends SimulatedHECEndpoints {
   
-  public Endpoints() {
-    super.eventEndpoint= new NonStickEventEndpoint(); //will set itself up with several channels
-    super.healthEndpoint = new HealthEndpoint();
-    super.ackEndpoint = null; //not used (instead we let the NonStickEventsEndpoint manage the ackEndpoint)
+  public NonStickEndpoints() {
+
   }
   
-  @Override
-  public void postEvents(EventBatch events,
-          FutureCallback<HttpResponse> httpCallback) {
-    eventEndpoint.post(events, httpCallback);
-  }
   
     @Override
   public void pollAcks(AckManager ackMgr,
@@ -47,10 +42,22 @@ public class Endpoints extends SimulatedHECEndpoints {
     //more than one AckEndpoint...THAT'S THE POINT of this simulator
     eventEndpoint.getAckEndpoint().pollAcks(ackMgr, httpCallback);
   }
-
-    @Override
-  public void close()  {
-    ((NonStickEventEndpoint)eventEndpoint).close();
+  
+  @Override
+    protected AckEndpoint createAckEndpoint() {
+    return null; //this class manages its own ack endpoints
   }
+
+  @Override
+  protected EventEndpoint createEventEndpoint() {
+    return new NonStickEventEndpoint();
+  }
+
+  @Override
+  protected HealthEndpoint createHealthEndpoint() {
+    return new HealthEndpoint();
+  }
+
+
   
 }

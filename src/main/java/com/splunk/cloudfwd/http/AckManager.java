@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.http.HttpResponse;
@@ -43,17 +44,16 @@ public class AckManager implements AckLifecycle, Closeable {
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpEventCollectorSender sender;
-  private final PollScheduler ackPollController = new PollScheduler();
-  private final PollScheduler healthPollController = new PollScheduler();
+  private final PollScheduler ackPollController = new PollScheduler("ack poller");
+  private final PollScheduler healthPollController = new PollScheduler("health poller");
   private final AckWindow ackWindow;
   private final ChannelMetrics channelMetrics;
-  private boolean ackPollInProgress;
+  private volatile boolean ackPollInProgress;
 
   AckManager(HttpEventCollectorSender sender) {
     this.sender = sender;
     this.channelMetrics = new ChannelMetrics(sender);
     this.ackWindow = new AckWindow(this.channelMetrics);
-
     // start polling for health
   }
 
@@ -80,33 +80,37 @@ public class AckManager implements AckLifecycle, Closeable {
         }
         this.pollAcks();
       };
-      ackPollController.start(poller);
+      ackPollController.start(poller, 250, TimeUnit.MILLISECONDS);
     }
     if (!healthPollController.isStarted()) {
       Runnable poller = () -> {
         this.pollHealth();
       };
-      healthPollController.start(poller);
+      healthPollController.start(poller, 5, TimeUnit.SECONDS);
     }    
   }
 
 
   public void postEvents(EventBatch events) {
     preEventsPost(events);
+    /*
     System.out.println(
             "channel=" + getSender().getChannel() + " events: " + this.
             toString());
+    */
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
 
       @Override
       public void failed(Exception ex) {
         eventPostFailure(ex);
+        AckManager.this.sender.getConnection().getCallbacks().failed(events, ex);
       }
 
       @Override
       public void cancelled() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        Exception ex = new RuntimeException("HTTP post cancelled while posting events");
+        AckManager.this.sender.getConnection().getCallbacks().failed(events, ex);
       }
 
       @Override
@@ -196,7 +200,7 @@ public class AckManager implements AckLifecycle, Closeable {
 
       @Override
       public void cancelled() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        LOG.severe("ack poll cancelled.");
       }
     };
     sender.pollAcks(this, cb);
@@ -274,7 +278,7 @@ public class AckManager implements AckLifecycle, Closeable {
   }
 
   @Override
-  public void eventPostFailure(Exception ex) {
+  public void eventPostFailure(Exception ex) {    
     getChannelMetrics().eventPostFailure(ex);
   }
 
@@ -289,11 +293,13 @@ public class AckManager implements AckLifecycle, Closeable {
 
   @Override
   public void ackPollNotOK(int statusCode, String reply) {
+    LOG.log(Level.SEVERE, "ack poll failed. Http status="+statusCode + ". Reply was " + reply);
     getChannelMetrics().ackPollNotOK(statusCode, reply);
   }
 
   @Override
   public void ackPollFailed(Exception ex) {
+    LOG.log(Level.SEVERE, ex.getMessage(), ex);
     getChannelMetrics().ackPollFailed(ex);
   }
 
@@ -306,6 +312,7 @@ public class AckManager implements AckLifecycle, Closeable {
 
   @Override
   public void healthPollFailed(Exception ex) {
+    LOG.log(Level.SEVERE, ex.getMessage(), ex);
     getChannelMetrics().healthPollFailed(ex);
   }
 
@@ -328,4 +335,5 @@ public class AckManager implements AckLifecycle, Closeable {
     this.ackPollController.stop();
     this.healthPollController.stop();
   }
+
 }

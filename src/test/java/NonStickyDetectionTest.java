@@ -20,77 +20,84 @@ import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  *
  * @author ghendrey
  */
-public class NonStickyDetectionTest {
+public class NonStickyDetectionTest extends AbstractConnectionTest {
 
   public NonStickyDetectionTest() {
   }
-
-  @BeforeClass
-  public static void setUpClass() {
-  }
-
-  @AfterClass
-  public static void tearDownClass() {
-  }
-
-  @Before
-  public void setUp() {
-  }
-
+  
   @After
+  @Override
   public void tearDown() {
+    //must use closeNow, because close() waits for channels to empty. But do to the failure that we are
+    //*trying* to induce with this test, the channels will never empty
+    this.connection.closeNow();     
   }
 
-  // TODO add test methods here.
-  // The methods must be annotated with annotation @Test. For example:
-  //
+  @Override
+  protected AckTracker getAckTracker() {
+    return new AckTracker(getNumBatchesToSend()) {
+      @Override
+      public void failed(EventBatch events, Exception e) {
+        //The point of this test is to insure that we DO get this exception...
+        //because it means we DID *detect* a non-sticky channel and fail
+        //appropriately.
+        Assert.
+                assertTrue(e.getMessage(),
+                        e instanceof IllegalHECAcknowledgementStateException);
+        System.out.println("Got expected exception: " + e);
+        latch.countDown(); //allow the test to finish
+      }
+    };
+  }
+
   @Test
-  public void checkNonStickyChannelDetected() throws TimeoutException, InterruptedException {
+  public void checkNonStickyChannelDetected() throws InterruptedException {
+
+    try {
+      super.sendEvents();
+    } catch (TimeoutException e) {
+      System.out.println(
+              "Got expected timeout exception because all channels are broken (per test design): " + e.
+              getMessage());
+    }
+  }
+
+  @Override
+  protected Properties getProps() {
     Properties props = new Properties();
     props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //simulate a non-sticky endpoint
     props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
-            "com.splunk.cloudfwd.sim.errorgen.nonsticky.Endpoints");
-    com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection(props);
-    CountDownLatch latch = new CountDownLatch(1);
-    c.setExceptionHandler((e) -> {
-      Assert.
-              assertTrue(e.getMessage(),
-                      e instanceof IllegalHECAcknowledgementStateException);
-      System.out.println("Got expected exception: " + e);
-      c.close();
-      latch.countDown();
-    });
-    int max = 1000;
-    try {
-      for (int i = 0; i < max; i++) {
-        final EventBatch events = new EventBatch(EventBatch.Endpoint.event, EventBatch.Eventtype.json);
-        events.add(new HttpEventCollectorEvent("info", "seqno=" + i,
-                "HEC_LOGGER",
-                Thread.currentThread().getName(), new HashMap(), null, null));
-        System.out.println("Send batch: " + events.getId() + " i=" + i);
-        c.sendBatch(events, null);
-      }
-    } catch (Exception e) {
-      Assert.
-              assertTrue(e.getMessage(),
-                      e instanceof TimeoutException);
-      System.out.println("Got expected timeout exception because all channels are broken (per test design): "+e.getMessage());
-    }
-    latch.await();
+            "com.splunk.cloudfwd.sim.errorgen.nonsticky.NonStickEndpoints");
+    return props;
+  }
+
+  @Override
+  protected EventBatch nextEventBatch() {
+    final EventBatch events = new EventBatch(EventBatch.Endpoint.event,
+            EventBatch.Eventtype.json);
+    events.add(new HttpEventCollectorEvent("info", "nothing to see here",
+            "HEC_LOGGER",
+            Thread.currentThread().getName(), new HashMap(), null, null));
+    return events;
+  }
+
+  @Override
+  protected int getNumBatchesToSend() {
+    return 2;
+  }
+  
+   public static void main(String[] args) {
+    new NonStickyDetectionTest().runTests();    
   }
 
 }

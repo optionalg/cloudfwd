@@ -17,25 +17,41 @@ package com.splunk.cloudfwd.http;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Periodically delegates polling for acks to the AckManager. Just a simple periodic scheduler.
+ * Periodically delegates polling for acks to the AckManager. Just a simple
+ * periodic scheduler.
+ *
  * @author ghendrey
  */
 class PollScheduler {
 
   private ScheduledExecutorService scheduler;
   private boolean started;
+  private final String name;
 
-  public synchronized void start(Runnable poller){
-    if(started){
+  PollScheduler(String name) {
+    this.name = name;
+  }
+
+  public synchronized void start(Runnable poller, long delay, TimeUnit units) {
+    if (started) {
       throw new IllegalStateException("PollController already started");
     }
-    this.scheduler = Executors.newScheduledThreadPool(1);
-    scheduler.scheduleAtFixedRate(poller, 0, 1, TimeUnit.SECONDS);
+    ThreadFactory f = new ThreadFactory() {
+      @Override
+      public Thread newThread(Runnable r) {
+        return new Thread(r, name);
+      }
+    };
+    this.scheduler = Executors.newScheduledThreadPool(0, f);
+    //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
+    //if the execution time of a task exceeds the period. We don't want that.
+    scheduler.scheduleWithFixedDelay(poller, 0, delay, units);
     this.started = true;
-    System.out.println("STARTED POLLING");
+    System.out.println("STARTED POLLING: " + name);
 
   }
 
@@ -44,12 +60,12 @@ class PollScheduler {
   }
 
   public synchronized void stop() {
-    System.out.println("SHUTTING DOWN POLLER");
-    if(null != scheduler){    
+    System.out.println("SHUTTING DOWN POLLER:  " + name);
+    if (null != scheduler) {
       //scheduler.shutdown();
       scheduler.shutdownNow();
     }
     scheduler = null;
   }
-  
+
 }

@@ -19,11 +19,6 @@ import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
 
@@ -31,57 +26,43 @@ import java.util.concurrent.TimeoutException;
  *
  * @author ghendrey
  */
-public class LoadBalancerTest {
+public class LoadBalancerTest extends AbstractConnectionTest {
+  protected static int MAX = 100000;
 
   public LoadBalancerTest() {
   }
 
-  @BeforeClass
-  public static void setUpClass() {
-  }
-
-  @AfterClass
-  public static void tearDownClass() {
-  }
-
-  @Before
-  public void setUp() {
-  }
-
-  @After
-  public void tearDown() {
-  }
 
   @Test
-  public void hello() throws InterruptedException, TimeoutException {
-    Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
-    com.splunk.cloudfwd.Connection c = new com.splunk.cloudfwd.Connection(props);
-    int max = 1000000;
-    CountDownLatch latch = new CountDownLatch(1);
-    for (int i = 0; i < max; i++) {
-      final EventBatch events = new EventBatch(EventBatch.Endpoint.raw, EventBatch.Eventtype.json);
-      events.add(new HttpEventCollectorEvent("info", "seqno=" + i,
-              "HEC_LOGGER",
-              Thread.currentThread().getName(), new HashMap(), null, null));
-      System.out.println("Send batch: " + events.getId() + " i=" + i);
-      c.sendBatch(events, () -> {
-        System.out.println("SUCCESS CHECKPOINT " + events.getId());
-        if (max == Long.parseLong(events.getId())) {
-          c.close();
-          latch.countDown();
-        }
-      });
-    }
-    latch.await();
-    System.out.println("EXIT");
-    System.exit(0);
-
+  public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
+    super.sendEvents();
   }
 
   public static void main(String[] args) throws InterruptedException, TimeoutException {
-    LoadBalancerTest lbt = new LoadBalancerTest();
-    lbt.hello();
+    new LoadBalancerTest().runTests();
   }
+
+  @Override
+  protected Properties getProps() {
+    Properties props = new Properties();
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    return props;
+  }
+
+  @Override
+  protected EventBatch nextEventBatch() {
+      final EventBatch events = new EventBatch(EventBatch.Endpoint.raw,
+              EventBatch.Eventtype.json);
+      events.add(new HttpEventCollectorEvent("info", "nothing to see here",
+              "HEC_LOGGER",
+              Thread.currentThread().getName(), new HashMap(), null, null));
+      return events;
+  }
+
+  @Override
+  protected int getNumBatchesToSend() {
+    return MAX;
+  }
+
 
 }

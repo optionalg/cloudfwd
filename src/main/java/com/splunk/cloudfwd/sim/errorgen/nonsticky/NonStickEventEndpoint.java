@@ -41,6 +41,7 @@ public class NonStickEventEndpoint extends EventEndpoint {
   int eventCount;
   AtomicInteger totalCount = new AtomicInteger(0);
   Random rand = new Random(0);
+  private boolean started;
 
   public NonStickEventEndpoint() {
     for (int i = 0; i < NUM_ACK_ENDPOINTS; i++) {
@@ -64,16 +65,30 @@ public class NonStickEventEndpoint extends EventEndpoint {
   }
 
   @Override
-  public AckEndpoint getAckEndpoint() {   
+  public AckEndpoint getAckEndpoint() {
     AckEndpoint a = ackEndpoints.get(currentChannelIdx);
     System.out.println("AckEndpoint is " + a);
     return a;
   }
 
-  void close() {
-    this.ackEndpoints.forEach(e->{
-      close();
+  @Override
+  public void close() {
+    super.close();
+    this.ackEndpoints.forEach(e -> {
+      e.close();
     });
+  }
+
+  @Override
+  public synchronized void start() {
+    if(started){
+      return;
+    }
+    super.start();
+    this.ackEndpoints.forEach(e -> {
+      e.start();
+    });
+    started = true;
   }
 
 }

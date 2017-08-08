@@ -17,6 +17,8 @@ package com.splunk.cloudfwd.http;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.LoggingChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -67,7 +69,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
-  private final String channel = newChannel();
+  private LoggingChannel channel = null;
   private final String ackUrl;
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
@@ -87,12 +89,12 @@ public final class HttpEventCollectorSender implements Endpoints {
     this.ackManager = new AckManager(this);
   }
 
-  public String getChannel() {
+  public LoggingChannel getChannel() {
     return channel;
   }
 
-  private static String newChannel() {
-    return java.util.UUID.randomUUID().toString();
+  public Connection getConnection(){
+    return channel.getConnection();
   }
 
   public AckWindow getAckWindow() {
@@ -158,8 +160,13 @@ public final class HttpEventCollectorSender implements Endpoints {
     return this.ackManager.getChannelMetrics();
   }
 
-  private synchronized void startHttpClient() {
-    if (httpClient != null || isSimulated()) {
+  @Override
+  public synchronized void start() {
+    if (isSimulated()) {
+      simulatedEndpoints.start();
+    }
+
+    if (httpClient != null) {
       // http client is already started or we don't need it because we are simulated
       return;
     }
@@ -211,11 +218,11 @@ public final class HttpEventCollectorSender implements Endpoints {
   @Override
   public void postEvents(final EventBatch events,
           FutureCallback<HttpResponse> httpCallback) {
+    start(); // make sure http client or simulator is started
     if (isSimulated()) {
       this.simulatedEndpoints.postEvents(events, httpCallback);
       return;
     }
-    startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
 
     // create http request
@@ -227,7 +234,7 @@ public final class HttpEventCollectorSender implements Endpoints {
 
     httpPost.setHeader(
             ChannelHeader,
-            getChannel());
+            getChannel().getChannelId());
 
     StringEntity entity = new StringEntity(eventsBatch.toString(),//eventsBatchString.toString(),
             encoding);
@@ -239,13 +246,13 @@ public final class HttpEventCollectorSender implements Endpoints {
   @Override
   public void pollAcks(AckManager ackMgr,
           FutureCallback<HttpResponse> httpCallback) {
+    start(); // make sure http client or simulator is started
     if (isSimulated()) {
       System.out.println("SIMULATED POLL ACKS");
       this.simulatedEndpoints.pollAcks(ackMgr, httpCallback);
       return;
     }
 
-    startHttpClient(); // make sure http client is started
     final String encoding = "utf-8";
 
     // create http request
@@ -256,7 +263,7 @@ public final class HttpEventCollectorSender implements Endpoints {
 
     httpPost.setHeader(
             ChannelHeader,
-            getChannel());
+            getChannel().getChannelId());
 
     StringEntity entity;
     try {
@@ -274,11 +281,12 @@ public final class HttpEventCollectorSender implements Endpoints {
 
   @Override
   public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+    start(); // make sure http client or simulator is started
     if (isSimulated()) {
+      System.out.println("SIMULATED POLL HEALTH");
       this.simulatedEndpoints.pollHealth(httpCallback);
       return;
     }
-    startHttpClient(); // make sure http client is started
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
     final HttpGet httpGet = new HttpGet(getUrl);
@@ -288,7 +296,7 @@ public final class HttpEventCollectorSender implements Endpoints {
 
     httpGet.setHeader(
             ChannelHeader,
-            getChannel());
+            getChannel().getChannelId());
 
     httpClient.execute(httpGet, httpCallback);
   }
@@ -306,6 +314,10 @@ public final class HttpEventCollectorSender implements Endpoints {
   public void setSimulatedEndpoints(
           Endpoints simulatedEndpoints) {
     this.simulatedEndpoints = simulatedEndpoints;
+  }
+
+  public void setChannel(LoggingChannel c) {
+    this.channel=c;
   }
 
 }

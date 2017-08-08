@@ -92,7 +92,7 @@ public class AckWindow {
 
       for (long ackId : succeeded) {
         EventBatch events = this.polledAcks.get(ackId);
-        System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
+        //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
         if(ackId != events.getAckId()){
           String msg = "ackId mismatch key ackID=" +ackId + " recordedAckId=" + events.getAckId();
           LOG.severe(msg);
