@@ -17,24 +17,26 @@ Use Cloudfwd to capture and ingest data from external sources directly into Splu
 Make sure that you have the necessary prerequisites before setting up the Cloud forwarder. 
 
 1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
-3. In resources > lb.properties, set your destination URL. You can put an ELB destination or multiple host destinations, separated by commas. 
+3. In resources > lb.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas. 
 4. In resources > lb. properties, input your generated HEC token.
+```
+url=https://127.0.0.1:8088
+token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
+```
 5. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 6. Save your changes.
-7. Run your ....
-8. Yay success
 
 You can now search on your ingested data in your Splunk instance.
 
-##Examples
+## Examples
 
 ### Getting data from Amazon Kinesis Streams into Splunk using Cloud forwarder
 This example will use the same configurations set up in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html) from the AWS website. We have provided the Java code in the /examples/ folder, but you will need to go through the Kinesis Stream tutorial to setup Kinesis Streams, DynamoDB, and your IAM role. 
 
-###Prerequisites
+### Prerequisites
 1. Steps 1-5 in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html)
 
-###Steps
+### Steps
 1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
 2. In example > resources > lb.properties, set your destination URL. You can put an ELB destination or multiple host destinations, separated by commas. 
 3. In example > resources > lb.properties, input your generated HEC token.
@@ -42,8 +44,8 @@ This example will use the same configurations set up in the [Amazon Kinesis Stre
 5. Save your modified lb.properties file. 
 6. Run the StockTradeWriter class with the following arguments: stream_name AWS_region_name your_profile_name. 
 7. Run the StockTradeProcessor class with the following arguments: application_name stream_name AWS_region_name profile_name. This may take a few minutes.
-8. Go to the Splunk destination url that you defined in lb.properties
-9. Switch the time range picker to All time(real-time)
+8. Go to your Splunk deployment.
+9. Switch the time range picker to All time(real-time).
 9. Run 'index=*' in Splunk search. 
 
 After a minute, you should see Splunk output stock trade events.
