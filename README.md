@@ -25,6 +25,8 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 5. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 6. Save your changes.
+7. Open your Splunk deployment.
+8. Switch the time range picker to All time(real-time).
 
 You can now search on your ingested data in your Splunk instance.
 
@@ -38,15 +40,20 @@ This example will use the same configurations set up in the [Amazon Kinesis Stre
 
 ### Steps
 1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
-2. In example > resources > lb.properties, set your destination URL. You can put an ELB destination or multiple host destinations, separated by commas. 
+2. In example > resources > lb.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas. 
 3. In example > resources > lb.properties, input your generated HEC token.
+```
+url=https://127.0.0.1:8088
+token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
+```
 4. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 5. Save your modified lb.properties file. 
-6. Run the StockTradeWriter class with the following arguments: stream_name AWS_region_name your_profile_name. 
-7. Run the StockTradeProcessor class with the following arguments: application_name stream_name AWS_region_name profile_name. This may take a few minutes.
-8. Go to your Splunk deployment.
-9. Switch the time range picker to All time(real-time).
-9. Run 'index=*' in Splunk search. 
+6. In your preferred IDE, open the Java project in the /examples/ folder. 
+7. Run the StockTradeWriter class with the following arguments: ```stream_name AWS_region_name your_profile_name ```.
+8. Run the StockTradeProcessor class with the following arguments: ```application_name stream_name AWS_region_name profile_name ```. This may take a few minutes.
+9. Go to your Splunk deployment.
+10. Switch the time range picker to All time(real-time).
+11. Run 'index=*' in Splunk search. 
 
 After a minute, you should see Splunk output stock trade events.
 
@@ -64,4 +71,3 @@ Version 1.0
 ## License
 
 This project is licensed under the Apache 2.0 License - see the [LICENSE.md](LICENSE.md) file for details
-
