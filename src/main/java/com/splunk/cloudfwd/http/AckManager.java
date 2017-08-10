@@ -114,10 +114,10 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
       @Override
-      public void completed(String reply, int code) {
+      public void completed(String reply, int code, ElbCookie cookie) {
         if (code == 200) {
           try {
-            consumeEventPostResponse(reply, events);
+            consumeEventPostResponse(reply, events, cookie);
           } catch (Exception ex) {
             LOG.log(Level.SEVERE, null, ex);
           }
@@ -133,7 +133,7 @@ public class AckManager implements AckLifecycle, Closeable {
   }
 
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
-  public void consumeEventPostResponse(String resp, EventBatch events) {
+  public void consumeEventPostResponse(String resp, EventBatch events, ElbCookie cookie) {
     //System.out.println("consuming event post response" + resp);
     EventPostResponse epr;
     try {
@@ -142,6 +142,12 @@ public class AckManager implements AckLifecycle, Closeable {
       });
       epr = new EventPostResponse(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
+
+      // update cookie if it exists in the response
+      if (cookie.getValue() != null) {
+        sender.setCookie(cookie);
+      }
+
     } catch (IOException ex) {
       Logger.getLogger(getClass().getName()).log(Level.SEVERE, ex.getMessage(),
               ex);
@@ -180,7 +186,7 @@ public class AckManager implements AckLifecycle, Closeable {
     System.out.println("sending acks");
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
-      public void completed(String reply, int code) {
+      public void completed(String reply, int code, ElbCookie cookie) {
         System.out.println(
                 "channel=" + AckManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
@@ -241,7 +247,7 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
       @Override
-      public void completed(String reply, int code) {
+      public void completed(String reply, int code, ElbCookie cookie) {
         setChannelHealth(code, reply);
       }
 

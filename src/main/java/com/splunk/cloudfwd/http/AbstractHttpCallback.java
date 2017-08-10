@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.http;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.util.EntityUtils;
@@ -36,12 +37,13 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
     int code = response.getStatusLine().getStatusCode();
     try {
       String reply = EntityUtils.toString(response.getEntity(), "utf-8");
-      completed(reply, code);
+      ElbCookie cookie = new ElbCookie(response);
+      completed(reply, code, cookie);
     } catch (IOException e) {      
-      LOG.log(Level.SEVERE, "failed to unmarshal response", e);
-    }      
+      LOG.log(Level.SEVERE, "failed to unmarshall response", e);
+    }
   }
 
-  public abstract void completed(String reply, int code);
+  protected abstract void completed(String reply, int code, ElbCookie cookie);
 
 }

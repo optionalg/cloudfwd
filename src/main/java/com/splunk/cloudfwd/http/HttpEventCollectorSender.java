@@ -22,6 +22,7 @@ import com.splunk.cloudfwd.LoggingChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContexts;
@@ -54,6 +55,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8";
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
+  private static final String CookieHeader = "Cookie";
   private final AckManager ackManager;
 
   /**
@@ -70,6 +72,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private LoggingChannel channel = null;
+  private ElbCookie cookie;
   private final String ackUrl;
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
@@ -236,6 +239,8 @@ public final class HttpEventCollectorSender implements Endpoints {
             ChannelHeader,
             getChannel().getChannelId());
 
+    setCookieIfExists(httpPost);
+
     StringEntity entity = new StringEntity(eventsBatch.toString(),//eventsBatchString.toString(),
             encoding);
     entity.setContentType(HttpContentType);
@@ -264,6 +269,8 @@ public final class HttpEventCollectorSender implements Endpoints {
     httpPost.setHeader(
             ChannelHeader,
             getChannel().getChannelId());
+
+    setCookieIfExists(httpPost);
 
     StringEntity entity;
     try {
@@ -298,7 +305,21 @@ public final class HttpEventCollectorSender implements Endpoints {
             ChannelHeader,
             getChannel().getChannelId());
 
+    setCookieIfExists(httpGet);
+
     httpClient.execute(httpGet, httpCallback);
+  }
+
+  private void setCookieIfExists(HttpRequestBase request) {
+    if (cookie != null) {
+      request.setHeader(
+              CookieHeader,
+              cookie.getNameAndValue());
+    }
+  }
+
+  public void setCookie(ElbCookie cookie) {
+    this.cookie = cookie;
   }
 
   /**
