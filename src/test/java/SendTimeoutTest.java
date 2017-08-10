@@ -14,38 +14,52 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.FutureCallback;
+import com.splunk.cloudfwd.IllegalHECAcknowledgementStateException;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  *
  * @author ghendrey
  */
-public class LoadBalancerTest extends AbstractConnectionTest {
-  protected static int MAX = 1000000;
+public class SendTimeoutTest extends AbstractConnectionTest {
 
-  public LoadBalancerTest() {
+  public SendTimeoutTest() {
   }
 
+  @Before
+  @Override
+  public void setUp() {
+    super.setUp();
+    super.connection.setSendTimeout(100);
+  }
 
   @Test
-  public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
-    super.sendEvents();
-  }
+  public void testTimeout() throws InterruptedException {
+    try {
+      super.sendEvents();
+    } catch (TimeoutException ex) {
 
-  public static void main(String[] args) throws InterruptedException, TimeoutException {
-    new LoadBalancerTest().runTests();
+    }
   }
 
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
     props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //simulate a slow endpoint
+    props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
+            "com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints");
     return props;
   }
 
@@ -58,11 +72,24 @@ public class LoadBalancerTest extends AbstractConnectionTest {
               Thread.currentThread().getName(), new HashMap(), null, null));
       return events;
   }
-
+  
   @Override
   protected int getNumBatchesToSend() {
-    return MAX;
+    return 1;
   }
-
-
+  
+  @Override
+  protected AckTracker getAckTracker() {
+    return new AckTracker(getNumBatchesToSend()) {
+      @Override
+      public void failed(EventBatch events, Exception e) {
+        //We expect a timeout
+        Assert.
+                assertTrue(e.getMessage(),
+                        e instanceof TimeoutException);
+        System.out.println("Got expected exception: " + e);
+        latch.countDown(); //allow the test to finish
+      }
+    };
+  }
 }
