@@ -314,7 +314,7 @@ public final class HttpEventCollectorSender implements Endpoints {
     if (cookie != null) {
       request.setHeader(
               CookieHeader,
-              cookie.getNameAndValue());
+              cookie.getNameValuePair());
     }
   }
 
