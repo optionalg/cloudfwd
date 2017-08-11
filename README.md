@@ -25,8 +25,7 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 5. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 6. Save your changes.
-7. Open your Splunk deployment.
-8. Switch the time range picker to All time(real-time).
+7. Add information on API calls that the customer will need to set up in order to access classes from Cloudfwd. 
 
 You can now search on your ingested data in your Splunk instance.
 
@@ -36,12 +35,12 @@ You can now search on your ingested data in your Splunk instance.
 This example will use the same configurations set up in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html) from the AWS website. We have provided the Java code in the /examples/ folder, but you will need to go through the Kinesis Stream tutorial to setup Kinesis Streams, DynamoDB, and your IAM role. 
 
 ### Prerequisites
-1. Steps 1-5 in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html)
+1. Steps 1 and 2 in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html)
 
 ### Steps
 1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
-2. In example > resources > lb.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas. 
-3. In example > resources > lb.properties, input your generated HEC token.
+2. In examples > resources > lb.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas. 
+3. In examples > resources > lb.properties, input your generated HEC token.
 ```
 url=https://127.0.0.1:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
@@ -49,8 +48,8 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 4. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 5. Save your modified lb.properties file. 
 6. In your preferred IDE, open the Java project in the /examples/ folder. 
-7. Run the StockTradeWriter class with the following arguments: ```stream_name AWS_region_name your_profile_name ```.
-8. Run the StockTradeProcessor class with the following arguments: ```application_name stream_name AWS_region_name profile_name ```. This may take a few minutes.
+7. Run the StockTradeWriter class with the following arguments: ```<stream_name> <AWS_region_name> <your_profile_name> ```.
+8. Run the StockTradeProcessor class with the following arguments: ```<application_name> <stream_name> <AWS_region_name> <profile_name> ```. This may take a few minutes.
 9. Go to your Splunk deployment.
 10. Switch the time range picker to All time(real-time).
 11. Run 'index=*' in Splunk search. 
