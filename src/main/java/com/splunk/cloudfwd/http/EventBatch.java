@@ -36,6 +36,8 @@ public class EventBatch implements SerializedEventProducer {
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
+  private final long creationTime = System.currentTimeMillis();
+  
   public enum Endpoint {
     event, raw
   }
@@ -61,20 +63,14 @@ public class EventBatch implements SerializedEventProducer {
           long maxEventsBatchSize,
           long flushInterval, Map<String, String> metadata, Timer timer) {
     this.sender = sender;
-    // when size configuration setting is missing it's treated as "infinity",
-    // i.e., any value is accepted.
-    if (maxEventsBatchCount == 0 && maxEventsBatchSize > 0) {
-      maxEventsBatchCount = Long.MAX_VALUE;
-    } else if (maxEventsBatchSize == 0 && maxEventsBatchCount > 0) {
-      maxEventsBatchSize = Long.MAX_VALUE;
-    }
     this.metadata = metadata;
   }
-  /*
-  public void setSimulatedEndpoints(Endpoints endpoints){
-    this.simulatedEndpoints = endpoints;
+  
+  public boolean isTimedOut(long timeout){
+    long flightTime =System.currentTimeMillis() - creationTime;
+    System.out.println("Flight time " + flightTime);
+    return  flightTime>= timeout;
   }
-  */
   
   public void setSeqNo(long seqno){
     this.id = String.format("%019d", seqno);
