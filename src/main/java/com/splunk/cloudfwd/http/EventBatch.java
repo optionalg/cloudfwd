@@ -27,7 +27,8 @@ public class EventBatch implements SerializedEventProducer {
 
   private static final Logger LOG = Logger.getLogger(EventBatch.class.getName());
   private static AtomicLong batchIdGenerator = new AtomicLong(0);
-  private String id = String.format("%019d", batchIdGenerator.incrementAndGet());//must generate this batch's ID before posting events, since it's string and strings compare lexicographically we should zero pad to 19 digits (max long value)
+  // TODO: clarify and clean up the API for event batch IDs/sequence numbers (method and variable names as well as proper usage)
+  private String id = String.format("%019d", batchIdGenerator.incrementAndGet()); // must generate this batch's ID before posting events, since it's string and strings compare lexicographically we should zero pad to 19 digits (max long value)
   private Long ackId; //Will be null until we receive ackId for this batch from HEC
   private Map<String, String> metadata = new HashMap<>();
   //private final TimerTask flushTask = new ScheduledFlush();
@@ -74,6 +75,10 @@ public class EventBatch implements SerializedEventProducer {
   
   public void setSeqNo(long seqno){
     this.id = String.format("%019d", seqno);
+  }
+
+  public void setSeqNo(String seqno) {
+    this.id = seqno;
   }
 
   public synchronized void add(HttpEventCollectorEvent event) {

@@ -12,15 +12,14 @@ import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
 
 import java.util.Map;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * Created by eprokop on 8/8/17.
  */
 public class StockTradeProcessorCallback implements FutureCallback{
     private static final Log LOG = LogFactory.getLog(StockTradeProcessorCallback.class);
-    private final Map<String, IRecordProcessorCheckpointer> checkpointerMap = new HashMap<>(); // TODO should this be made thread-safe instead?
-    private final Map<String, String> sequenceNumberMap = new HashMap<>(); // TODO should this be made thread-safe instead?
+    private final Map<String, IRecordProcessorCheckpointer> checkpointerMap = new ConcurrentSkipListMap<>(); // event batch highest seq. no -> checkpointer fn
     private final String shardId;
 
     public StockTradeProcessorCallback(String shardId) {
@@ -29,24 +28,30 @@ public class StockTradeProcessorCallback implements FutureCallback{
 
     @Override
     public void acknowledged(EventBatch events) {
-        LOG.info("Received ack for eventBatchId=" + events.getId() + " (shardId=" + shardId + ")");
+        LOG.info("Received ack for event batch with sequenceNumber="
+                + events.getId()
+                + " (shardId=" + shardId + ")");
     }
 
     @Override
     public void failed(EventBatch events, Exception ex) {
-        // TODO do something else on failure?
-        LOG.warn("Sending failed for eventBatchId=" + events.getId() + " (shardId=" + shardId + "): " + ex.getMessage());
+        // TODO: do something else on failure?
+        LOG.warn("Sending failed for event batch with sequenceNumber="
+                + events.getId()
+                + " (shardId=" + shardId + "): "
+                + ex.getMessage());
     }
 
     @Override
     public void checkpoint(EventBatch events) {
-        String eventBatchId = events.getId();
-        String sequenceNumber = sequenceNumberMap.get(eventBatchId); // highest sequence number in the event batch
+        String sequenceNumber = events.getId(); // highest sequence number in the event batch
         try {
-            LOG.info("Checkpointing on shardId=" + shardId + " at eventBatchId=" + eventBatchId + " (sequenceNumber=" + sequenceNumber + ")");
-            checkpointerMap.get(eventBatchId).checkpoint(sequenceNumber);
-            checkpointerMap.remove(eventBatchId);
-            sequenceNumberMap.remove(eventBatchId);
+            LOG.info("Checkpointing at sequenceNumber="
+                    + sequenceNumber
+                    + "(shardId=" + shardId + ")");
+            IRecordProcessorCheckpointer cp = checkpointerMap.get(sequenceNumber);
+            cp.checkpoint(sequenceNumber);
+            checkpointerMap.remove(sequenceNumber);
         } catch (ShutdownException se) {
             // Ignore checkpoint if the processor instance has been shutdown (fail over).
             LOG.info("Caught shutdown exception, skipping checkpoint.", se);
@@ -59,8 +64,7 @@ public class StockTradeProcessorCallback implements FutureCallback{
         }
     }
 
-    public void addCheckpointer(String sequenceNumber, String eventBatchId, IRecordProcessorCheckpointer checkpointer) {
-        checkpointerMap.put(eventBatchId, checkpointer);
-        sequenceNumberMap.put(eventBatchId, sequenceNumber);
+    public void addCheckpointer(String sequenceNumber, IRecordProcessorCheckpointer checkpointer) {
+        checkpointerMap.put(sequenceNumber, checkpointer);
     }
 }
