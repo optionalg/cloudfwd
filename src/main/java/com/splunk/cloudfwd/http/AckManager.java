@@ -74,7 +74,7 @@ public class AckManager implements AckLifecycle, Closeable {
         if (this.getAckWindow().isEmpty()) {
           System.out.println("No acks to poll for");
           return;
-        } else if (this.isAckPollInProgress()) {
+        }else if (this.isAckPollInProgress()) {
           System.out.println("skipping ack poll - already have one in flight");
           return;
         }

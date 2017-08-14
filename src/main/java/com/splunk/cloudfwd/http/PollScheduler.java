@@ -26,19 +26,19 @@ import java.util.concurrent.TimeUnit;
  *
  * @author ghendrey
  */
-class PollScheduler {
+public class PollScheduler {
 
   private ScheduledExecutorService scheduler;
   private boolean started;
   private final String name;
 
-  PollScheduler(String name) {
+  public PollScheduler(String name) {
     this.name = name;
   }
 
   public synchronized void start(Runnable poller, long delay, TimeUnit units) {
     if (started) {
-      throw new IllegalStateException("PollController already started");
+      return;
     }
     ThreadFactory f = new ThreadFactory() {
       @Override
@@ -55,7 +55,7 @@ class PollScheduler {
 
   }
 
-  synchronized boolean isStarted() {
+  public synchronized boolean isStarted() {
     return started;
   }
 
@@ -66,6 +66,7 @@ class PollScheduler {
       scheduler.shutdownNow();
     }
     scheduler = null;
+    started = false;
   }
 
 }

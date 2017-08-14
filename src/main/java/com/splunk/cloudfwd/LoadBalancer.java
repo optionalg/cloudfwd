@@ -224,7 +224,7 @@ public class LoadBalancer implements Observer, Closeable {
         if (tryMe.send(events)) {
           break;
         }
-        if(System.currentTimeMillis()-start > Connection.SEND_TIMEOUT){
+        if(System.currentTimeMillis()-start > Connection.DEFAULT_SEND_TIMEOUT_MS){
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         }
