@@ -17,6 +17,7 @@ package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.LifecycleEvent;
 import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.http.EventBatchLifecycleEvent;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -53,18 +54,19 @@ public class ConnectionState extends Observable implements Observer {
         return; //ignore updates we don't care about, like those destined for LoadBalancer
       }
 
-      LifecycleEvent es = (LifecycleEvent) arg;
+      LifecycleEvent lifecycleEvent = (LifecycleEvent) arg;
       /*
       System.out.println("CONN STATE UPDATE channel=" + es.getSender().
               getChannel());*/
-      if (es.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
-        String id = es.getEvents().getId();
+      if (lifecycleEvent.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
+        EventBatchLifecycleEvent eble = (EventBatchLifecycleEvent)lifecycleEvent;
+        String id = eble.getEvents().getId();
         /*
         System.out.println(
                 "MAYBE CALLBACK HIGHWATER for " + id + "(ackId is " + es.
                 getEvents().getAckId() + ")");
         */
-        acknowledgeHighwaterAndBelow(es.getEvents());
+        acknowledgeHighwaterAndBelow(eble.getEvents());
       }
     } catch (Exception ex) {
       LOG.severe(ex.getMessage());

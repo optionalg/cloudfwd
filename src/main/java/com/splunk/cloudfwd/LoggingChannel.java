@@ -18,6 +18,7 @@ package com.splunk.cloudfwd;
 import com.splunk.cloudfwd.http.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.http.EventBatchLifecycleEvent;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
 import java.io.Closeable;
 import java.util.Observable;
@@ -167,9 +168,8 @@ public class LoggingChannel implements Closeable, Observer {
     } catch (Exception e) {
       LOG.log(Level.SEVERE, e.getMessage(), e);
       FutureCallback c = this.loadBalancer.getConnection().getCallbacks();
-      EventBatch events = lifecycleEvent == null ? null : lifecycleEvent.
-              getEvents();
-      new Thread(() -> {
+      EventBatch events = lifecycleEvent == null ? null :((EventBatchLifecycleEvent)lifecycleEvent).getEvents();
+      new Thread(() -> {//FIXME TODO - usea thread pool
         c.failed(events, e); //FIXME TODO -- there are many places where we should be calling failed. 
       }).start();
 
@@ -303,7 +303,7 @@ public class LoggingChannel implements Closeable, Observer {
 
   private void checkForStickySessionViolation(LifecycleEvent s) {
     //System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
-    this.stickySessionEnforcer.recordAckId(s.getEvents());
+    this.stickySessionEnforcer.recordAckId(((EventBatchLifecycleEvent)s).getEvents());
   }
 
   private static class StickySessionEnforcer {
