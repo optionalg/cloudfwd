@@ -26,7 +26,7 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class ChannelMetrics extends Observable implements AckLifecycle {
+public class ChannelMetrics extends Observable implements AckLifecycle, LifecycleEventObserver {
 
   private static final Logger LOG = Logger.getLogger(ChannelMetrics.class.
           getName());
@@ -155,8 +155,8 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     
     //System.out.println("EVENT POST OK");
     try {
-      LifecycleEvent state = new LifecycleEvent(
-              LifecycleEvent.Type.EVENT_POST_OK, events, this.sender);
+      LifecycleEvent state = new EventBatchLifecycleEvent(
+              LifecycleEvent.Type.EVENT_POST_OK, events);
       //System.out.println("NOTIFYING EVENT_POST_OK");
       synchronized (this) {
         this.setChanged();
@@ -189,8 +189,8 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     try {
       ackPollOKCount++;
       ackIdSucceeded(events.getAckId());
-      LifecycleEvent state = new LifecycleEvent(
-              LifecycleEvent.Type.ACK_POLL_OK, events, this.sender);
+      LifecycleEvent state = new EventBatchLifecycleEvent(
+              LifecycleEvent.Type.ACK_POLL_OK, events);
       System.out.println("NOTIFYING ACK_POLL_OK for ackId" + events.getAckId());
       synchronized (this) {
         setChanged();
@@ -225,7 +225,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     healthPollOKCount++;
     try {
       LifecycleEvent state = new LifecycleEvent(
-              LifecycleEvent.Type.HEALTH_POLL_OK, this.sender);
+              LifecycleEvent.Type.HEALTH_POLL_OK);
       System.out.println("NOTIFYING HEALTH_POLL_OK");
       setChanged();
       notifyObservers(state);
@@ -241,7 +241,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     healthPollNotOKCount++;
     try {
       LifecycleEvent state = new LifecycleEvent(
-              LifecycleEvent.Type.HEALTH_POLL_NOT_OK, this.sender);
+              LifecycleEvent.Type.HEALTH_POLL_NOT_OK);
       System.out.println("NOTIFYING HEALTH_POLL_NOT_OK");
       setChanged();
       notifyObservers(state);
@@ -249,5 +249,10 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       LOG.severe(e.getMessage());
       throw new RuntimeException(e.getMessage(), e);
     }
+  }
+
+  @Override
+  public void update(LifecycleEvent e) {
+    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
   }
 }

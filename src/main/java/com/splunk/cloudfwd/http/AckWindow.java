@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class AckWindow {
+public class AckWindow implements LifecycleEventObserver{
 
   private static final Logger LOG = Logger.getLogger(AckWindow.class.getName());
 
@@ -122,6 +122,11 @@ public class AckWindow {
 
   public Collection<Long> getUnacknowleldgedEvents() {
     return polledAcks.keySet();
+  }
+
+  @Override
+  public void update(LifecycleEvent e) {
+    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
   }
 
 }

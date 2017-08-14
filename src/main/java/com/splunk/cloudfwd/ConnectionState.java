@@ -57,7 +57,7 @@ public class ConnectionState extends Observable implements Observer {
       /*
       System.out.println("CONN STATE UPDATE channel=" + es.getSender().
               getChannel());*/
-      if (es.getCurrentState() == LifecycleEvent.Type.ACK_POLL_OK) {
+      if (es.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
         String id = es.getEvents().getId();
         /*
         System.out.println(

@@ -15,44 +15,25 @@
  */
 package com.splunk.cloudfwd.http;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  *
  * @author ghendrey
  */
-public class LifecycleEvent {
-
-  public enum Type {
-	// States tied to an EventBatch object
-    PRE_EVENT_POST,
-    EVENT_POST_OK,
-    EVENT_POST_NOT_OK,
-    EVENT_POST_FAILURE,
-    PRE_ACK_POLL,
-    ACK_POLL_OK,
-    ACK_POLL_NOT_OK,
-    ACK_POLL_FAILURE,
-
-    // States without an EventBatch object
-    HEALTH_POLL_OK,
-    HEALTH_POLL_NOT_OK,
-    HEALTH_POLL_FAILED
-  };
-
-  private final Type type;
-
-
-  public LifecycleEvent(final Type type) throws Exception {
-    this.type = type;
-
+public class LifecycleEventObservable {
+  List<LifecycleEventObserver> observers = new ArrayList<>();
+  
+  
+  public void addObserver(LifecycleEventObserver o){
+    this.observers.add(o);
   }
-
-
-  /**
-   * @return the type
-   */
-  public Type getType() {
-    return type;
+  
+  protected void notifyObservers(LifecycleEvent event){
+    observers.forEach((observer)->{
+      observer.update(event);
+    });
   }
-
-
+  
 }

@@ -151,7 +151,7 @@ public class LoggingChannel implements Closeable, Observer {
     LifecycleEvent lifecycleEvent = null;
     try {
       lifecycleEvent = (LifecycleEvent) arg;
-      LifecycleEvent.Type eventType = ((LifecycleEvent) arg).getCurrentState();
+      LifecycleEvent.Type eventType = ((LifecycleEvent) arg).getType();
       switch (eventType) {
         case ACK_POLL_OK: {
           ackReceived(lifecycleEvent);

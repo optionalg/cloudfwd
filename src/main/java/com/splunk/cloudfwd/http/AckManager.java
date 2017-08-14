@@ -38,7 +38,7 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public class AckManager implements AckLifecycle, Closeable {
+public class AckManager implements AckLifecycle, Closeable, LifecycleEventObserver {
 
   private static final Logger LOG = Logger.getLogger(AckManager.class.getName());
 
@@ -334,6 +334,16 @@ public class AckManager implements AckLifecycle, Closeable {
   public void close() {
     this.ackPollController.stop();
     this.healthPollController.stop();
+  }
+
+  @Override
+  public void update(LifecycleEvent e) {
+    switch(e.getType()){
+      case PRE_EVENT_POST:{}
+      
+    }
+    ackWindow.update(e);
+    channelMetrics.update(e);
   }
 
 }
