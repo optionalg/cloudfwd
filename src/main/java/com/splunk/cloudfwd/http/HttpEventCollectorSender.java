@@ -72,7 +72,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private LoggingChannel channel = null;
-  private ElbCookie cookie;
+  private ElbCookie cookie = null;
   private final String ackUrl;
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
@@ -239,7 +239,7 @@ public final class HttpEventCollectorSender implements Endpoints {
             ChannelHeader,
             getChannel().getChannelId());
 
-    setCookieIfExists(httpPost);
+    setCookieHeaderIfExists(httpPost);
 
     StringEntity entity = new StringEntity(eventsBatch.toString(),//eventsBatchString.toString(),
             encoding);
@@ -270,7 +270,7 @@ public final class HttpEventCollectorSender implements Endpoints {
             ChannelHeader,
             getChannel().getChannelId());
 
-    setCookieIfExists(httpPost);
+    setCookieHeaderIfExists(httpPost);
 
     StringEntity entity;
     try {
@@ -305,12 +305,12 @@ public final class HttpEventCollectorSender implements Endpoints {
             ChannelHeader,
             getChannel().getChannelId());
 
-    setCookieIfExists(httpGet);
+    setCookieHeaderIfExists(httpGet);
 
     httpClient.execute(httpGet, httpCallback);
   }
 
-  private void setCookieIfExists(HttpRequestBase request) {
+  private void setCookieHeaderIfExists(HttpRequestBase request) {
     if (cookie != null) {
       request.setHeader(
               CookieHeader,

@@ -17,13 +17,14 @@ public class ElbCookie {
             Header header = (Header)headerIterator.next();
             if (header.getName().equals(COOKIE_NAME)) {
                 value = header.getValue();
+                break;
             }
         }
     }
 
     /**
      *
-     * @return the value of the cookie
+     * @return the value of the cookie (or null if there was no AWSELB cookie in the response)
      */
     public String getValue() {
         return value;
@@ -31,7 +32,7 @@ public class ElbCookie {
 
     /**
      *
-     * @return the name and value pair for the cookie, to be used for an HTTP header
+     * @return the name and value pair for the cookie to be used in an HTTP header
      */
     public String getNameValuePair() {
         if (value != null) {
