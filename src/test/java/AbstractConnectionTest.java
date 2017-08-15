@@ -58,7 +58,7 @@ public abstract class AbstractConnectionTest {
      for (int i = 0; i < expected; i++) {
       final EventBatch events =nextEventBatch();
       events.setSeqNo(i+1); //1-based sequence numbers
-      //System.out.println("Send batch: " + events.getId() + " i=" + i);
+      System.out.println("Send batch: " + events.getId() + " i=" + i);
       this.connection.sendBatch(events);
     }
     connection.close(); //will flush 

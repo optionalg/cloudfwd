@@ -19,7 +19,6 @@ import com.splunk.cloudfwd.http.EventBatch;
 import java.io.Closeable;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 
 /**
  *
@@ -27,18 +26,31 @@ import java.util.function.Consumer;
  */
 public class Connection implements Closeable {
 
-  public final static long SEND_TIMEOUT = 60 * 1000; //FIXME TODO make configurable
-  LoadBalancer lb;
-  private final FutureCallback callbacks;
+  public final static long DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
+  private final LoadBalancer lb;
+  private CallbackInterceptor callbacks;
+  private TimeoutChecker timeoutChecker;
 
   public Connection(FutureCallback callbacks) {
-    this.callbacks = callbacks;
+    //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
+    //the EventBatch that succeeded or failed from the timoutChecker
+    this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
+    this.callbacks = new CallbackInterceptor(callbacks,
+            timeoutChecker::removeEvents);
+    this.timeoutChecker.setInterceptor(this.callbacks);
     this.lb = new LoadBalancer(this);
   }
 
   public Connection(FutureCallback callbacks, Properties settings) {
-    this.callbacks = callbacks;
+    this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
+    this.callbacks = new CallbackInterceptor(callbacks,
+            timeoutChecker::removeEvents);
+    this.timeoutChecker.setInterceptor(this.callbacks);
     this.lb = new LoadBalancer(this, settings);
+  }
+
+  public synchronized void setSendTimeout(long ms) {
+    this.timeoutChecker.setTimeout(ms);
   }
 
   @Override
@@ -48,19 +60,23 @@ public class Connection implements Closeable {
     //Exception handler
     new Thread(() -> {
       lb.close();
-    },  "LoadBalancer Closer").start();
+      timeoutChecker.stop();
+    }, "Connection Closer").start();
   }
 
   public void closeNow() {
     //we must close asynchronously to prevent deadlocking
-    //when close() is invoked from a callback like the
+    //when closeNow() is invoked from a callback like the
     //Exception handler
     new Thread(() -> {
       lb.closeNow();
-    }, "LoadBalancer Closer").start();
+      timeoutChecker.stop();
+    }, "Connection Closer").start();
   }
 
   public void sendBatch(EventBatch events) throws TimeoutException {
+    timeoutChecker.start();
+    timeoutChecker.add(events);
     lb.sendBatch(events);
   }
 

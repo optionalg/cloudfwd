@@ -63,10 +63,14 @@ public class LoggingChannel implements Closeable, Observer {
   private static String newChannelId() {
     return java.util.UUID.randomUUID().toString();
   }
-  
-  //flushing can only happen
-  void pollAcks(){
-    this.sender.getAckManager().pollAcks(); // poll for acks right now
+
+  //Occasionally it's an optimization to be able to force ack polling to happen ASAP (vs wait for polling interval).
+  //However, we can't directly invoke methods on the AckManager as that can lead to a dealock (saw it, not
+  //guess about it). What happens is AckManager will want to call channelMetrics.ackPollOK, but channelMetrics
+  //is also trying to acquire the lock on this object. So deadlock.
+  synchronized void pollAcks() {
+    new Thread(sender.getAckManager()::pollAcks // poll for acks right now
+    , "Ack Kicker");
   }
 
   public synchronized void start() {
@@ -82,7 +86,7 @@ public class LoggingChannel implements Closeable, Observer {
       }
     };
 
-    reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);    
+    reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
     reaperScheduler.schedule(() -> {
       closeAndReplace();
     }, LIFESPAN, TimeUnit.SECONDS);
@@ -116,13 +120,13 @@ public class LoggingChannel implements Closeable, Observer {
       while (true) {
         try {
           System.out.println("---BLOCKING---");
-          wait(Connection.SEND_TIMEOUT);
+          wait(Connection.DEFAULT_SEND_TIMEOUT_MS);
           System.out.println("UNBLOCKED");
         } catch (InterruptedException e) {
           LOG.severe(e.getMessage());
           events.getCallbacks().failed(events, e);
         }
-        if (System.currentTimeMillis() - start > Connection.SEND_TIMEOUT) {
+        if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
           msg = "Send timeout exceeded";
           TimeoutException timeoutEx = new TimeoutException(msg);
           LOG.severe(msg);
@@ -185,7 +189,7 @@ public class LoggingChannel implements Closeable, Observer {
             println("channel=" + getChannelId() + " unacked-count-post-decr=" + count + " seqno=" + s.
                     getEvents().getId() + " ackid= " + s.getEvents().
                     getAckId());
-    */
+     */
     if (count < 0) {
       String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
       LOG.severe(msg);
@@ -246,7 +250,7 @@ public class LoggingChannel implements Closeable, Observer {
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
     }
-    
+
     try {
       this.sender.close();
     } catch (Exception e) {
@@ -260,7 +264,7 @@ public class LoggingChannel implements Closeable, Observer {
   private synchronized void finishClose() {
     System.out.println("TRYING TO UNBLOCK");
     this.closed = true;
-    if(null != reaperScheduler){
+    if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();
     }
     notifyAll();

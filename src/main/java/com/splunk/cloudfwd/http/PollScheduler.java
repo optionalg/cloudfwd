@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-class PollScheduler {
+public class PollScheduler {
 
   private static final Logger LOG = Logger.getLogger(PollScheduler.class.
           getName());
@@ -36,14 +36,14 @@ class PollScheduler {
   private final String name;
   private HttpEventCollectorSender sender;
 
-  PollScheduler(HttpEventCollectorSender sender, String name) {
+  public PollScheduler(HttpEventCollectorSender sender, String name) {
     this.sender = sender;
     this.name = name;
   }
 
   public synchronized void start(Runnable poller, long delay, TimeUnit units) {
     if (started) {
-      throw new IllegalStateException("PollController already started");
+      return;
     }
     ThreadFactory f = new ThreadFactory() {
       @Override
@@ -68,7 +68,7 @@ class PollScheduler {
 
   }
 
-  synchronized boolean isStarted() {
+  public synchronized boolean isStarted() {
     return started;
   }
 
@@ -79,6 +79,7 @@ class PollScheduler {
       scheduler.shutdownNow();
     }
     scheduler = null;
+    started = false;
   }
 
 }
