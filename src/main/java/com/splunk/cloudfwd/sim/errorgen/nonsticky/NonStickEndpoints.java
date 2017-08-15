@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.sim.AckEndpoint;
 import com.splunk.cloudfwd.sim.EventEndpoint;
 import com.splunk.cloudfwd.sim.HealthEndpoint;
 import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -36,7 +37,7 @@ public class NonStickEndpoints extends SimulatedHECEndpoints {
   
   
     @Override
-  public void pollAcks(AckManager ackMgr,
+  public void pollAcks(AckManager ackMgr, HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
     //we have to ask the NonStickEventEndpoint for the AckEndpoint, because it switches between 
     //more than one AckEndpoint...THAT'S THE POINT of this simulator

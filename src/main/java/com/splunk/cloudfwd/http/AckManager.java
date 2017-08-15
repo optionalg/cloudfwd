@@ -209,7 +209,7 @@ public class AckManager implements AckLifecycle, Closeable {
         LOG.severe("ack poll cancelled.");
       }
     };
-    sender.pollAcks(this, cb);
+    sender.pollAcks(this, null, cb);
 
   }
 

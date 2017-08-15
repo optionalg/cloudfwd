@@ -78,6 +78,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private final String ackUrl;
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
+  private String simulatedChannelId = java.util.UUID.randomUUID().toString();
 
   /**
    * Initialize HttpEventCollectorSender
@@ -236,11 +237,11 @@ public final class HttpEventCollectorSender implements Endpoints {
 
     httpPost.setHeader(
             ChannelHeader,
-            getChannel().getChannelId());
+            getChannelId());
 
     setCookieHeaderIfExists(httpPost);
 
-    StringEntity entity = new StringEntity(eventsBatch.toString(),//eventsBatchString.toString(),
+    StringEntity entity = new StringEntity(events.toString(),//eventsBatchString.toString(),
             encoding);
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
@@ -266,7 +267,7 @@ public final class HttpEventCollectorSender implements Endpoints {
 
     httpPost.setHeader(
             ChannelHeader,
-            getChannel().getChannelId());
+            getChannelId());
 
     setCookieHeaderIfExists(httpPost);
 
@@ -302,7 +303,7 @@ public final class HttpEventCollectorSender implements Endpoints {
 
     httpGet.setHeader(
             ChannelHeader,
-            getChannel().getChannelId());
+            getChannelId());
 
     setCookieHeaderIfExists(httpGet);
     if (isSimulated()) {
@@ -325,6 +326,9 @@ public final class HttpEventCollectorSender implements Endpoints {
     this.cookie = cookie;
   }
 
+  public ElbCookie getCookie() {
+    return cookie;
+  }
   /**
    * @return the simulatedEndpoints
    */
@@ -344,4 +348,10 @@ public final class HttpEventCollectorSender implements Endpoints {
     this.channel=c;
   }
 
+  private String getChannelId() {
+    if (isSimulated() && channel == null) {
+      return simulatedChannelId;
+    }
+    return getChannel().getChannelId();
+  }
 }
