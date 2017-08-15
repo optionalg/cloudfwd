@@ -29,14 +29,16 @@ import java.util.concurrent.TimeoutException;
  */
 class TimeoutChecker {
 
-  private PollScheduler timoutCheckScheduler = new PollScheduler(
-          "Event Timeout Scheduler");
+  private PollScheduler timeoutCheckScheduler;
   private final Map<String, EventBatch> eventBatches = new ConcurrentHashMap<>();
   private long timeout = Connection.DEFAULT_SEND_TIMEOUT_MS;
   private CallbackInterceptor interceptor;
+  private Connection connection;
 
-  public TimeoutChecker(long ms) {
+  public TimeoutChecker(Connection connection, long ms) {
+    this.connection = connection;
     this.timeout = ms;
+    timeoutCheckScheduler = new PollScheduler(this.connection, "Event Timeout Scheduler");
   }
   
   public void setTimeout(long ms){
@@ -46,7 +48,7 @@ class TimeoutChecker {
   }
 
   synchronized void start() {
-    timoutCheckScheduler.start(this::checkTimeouts, timeout,
+    timeoutCheckScheduler.start(this::checkTimeouts, timeout,
             TimeUnit.MILLISECONDS);
   }
 
@@ -68,7 +70,7 @@ class TimeoutChecker {
   }
 
   public void stop() {
-    timoutCheckScheduler.stop();
+    timeoutCheckScheduler.stop();
   }
 
   public void add(EventBatch events) {
