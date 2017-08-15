@@ -49,6 +49,7 @@ public class LoggingChannel implements Closeable, Observer {
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final StickySessionEnforcer stickySessionEnforcer = new StickySessionEnforcer();
   private volatile boolean started;
+  private volatile boolean healthy = true;
   private String channelId;
 
   public LoggingChannel(LoadBalancer b, HttpEventCollectorSender sender) {
@@ -110,21 +111,26 @@ public class LoggingChannel implements Closeable, Observer {
               info("Send to quiesced channel (this should happen from time to time)");
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
-    if (unackedCount.get() == FULL) {
+
+    // when number of unacked events becomes sizable or HEC becomes unhealthy
+    if (unackedCount.get() == FULL || !healthy) {
       //force an immediate poll for acks, rather than waiting until the next periodically 
       //scheduled ack poll
-      pollAcks();
+      if (healthy)
+        pollAcks();
+
+      long sendTimeout = this.loadBalancer.getConnection().getSendTimeout();
       long start = System.currentTimeMillis();
       while (true) {
         try {
           System.out.println("---BLOCKING---");
-          wait(Connection.DEFAULT_SEND_TIMEOUT_MS);
+          wait(sendTimeout);
           System.out.println("UNBLOCKED");
         } catch (InterruptedException ex) {
           Logger.getLogger(LoggingChannel.class.getName()).
                   log(Level.SEVERE, null, ex);
         }
-        if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
+        if (System.currentTimeMillis() - start > sendTimeout) {
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         } else {
@@ -161,6 +167,21 @@ public class LoggingChannel implements Closeable, Observer {
         case EVENT_POST_OK: {
           //System.out.println("OBSERVED EVENT_POST_OK");
           checkForStickySessionViolation(lifecycleEvent);
+          break;
+        }
+        case HEALTH_POLL_OK: {
+        if (!this.healthy) {
+            System.out.println("LOGGING CHANNEL --- HEALTHY: " + this.channelId);
+            this.healthy = true;
+            notifyAll();
+          }
+          break;
+        }
+        case HEALTH_POLL_NOT_OK: {
+          if (this.healthy) {
+            System.out.println("LOGGING CHANNEL --- UNHEALTHY: " + this.channelId);
+            this.healthy = false;
+          }
           break;
         }
       }
@@ -299,6 +320,10 @@ public class LoggingChannel implements Closeable, Observer {
 
   public String getChannelId() {
     return channelId;
+  }
+
+  public boolean getHealth() {
+    return healthy;
   }
 
   private void checkForStickySessionViolation(LifecycleEvent s) {

@@ -57,7 +57,24 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
 
   @Override
   public String toString() {
-    return "ChannelMetrics{" + "birthTimesSize=" + birthTimes.size() + ", oldestUnackedBirthtime=" + oldestUnackedBirthtime + ", mostRecentTimeToSuccess=" + mostRecentTimeToSuccess + ", sender=" + sender + ", eventPostCount=" + eventPostCount + ", eventPostOKCount=" + eventPostOKCount + ", eventPostNotOKCount=" + eventPostNotOKCount + ", eventPostFailureCount=" + eventPostFailureCount + ", ackPollCount=" + ackPollCount + ", ackPollOKCount=" + ackPollOKCount + ", ackPollNotOKCount=" + ackPollNotOKCount + ", ackPollFailureCount=" + ackPollFailureCount + '}';
+    return "ChannelMetrics{"
+    	+ "birthTimesSize=" + birthTimes.size()
+    	+ ", oldestUnackedBirthtime=" + oldestUnackedBirthtime
+    	+ ", mostRecentTimeToSuccess=" + mostRecentTimeToSuccess
+    	+ ", sender=" + sender
+    	+ ", eventPostCount=" + eventPostCount
+    	+ ", eventPostOKCount=" + eventPostOKCount
+    	+ ", eventPostNotOKCount=" + eventPostNotOKCount
+    	+ ", eventPostFailureCount=" + eventPostFailureCount
+    	+ ", ackPollCount=" + ackPollCount
+    	+ ", ackPollOKCount=" + ackPollOKCount
+    	+ ", ackPollNotOKCount=" + ackPollNotOKCount
+    	+ ", ackPollFailureCount=" + ackPollFailureCount
+    	+ ", lastHealthCheck=" + lastHealthCheck
+    	+ ", healthPollOKCount=" + healthPollOKCount
+    	+ ", healthPollNotOKCount=" + healthPollNotOKCount
+    	+ ", healthPollFailureCount=" + healthPollFailureCount
+    	+ '}';
   }
 
   boolean isChannelEmpty() {
@@ -88,14 +105,13 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
     if (null != (birthTime = birthTimes.remove(ackId))) {
       this.mostRecentTimeToSuccess = System.currentTimeMillis() - birthTime;
       if (oldestUnackedBirthtime == this.mostRecentTimeToSuccess) { //in this case we just processed the oldest ack
-        oldestUnackedBirthtime = scanForOldestUnacked();//so we need to figure out which unacked id is now oldest
+        oldestUnackedBirthtime = scanForOldestUnacked(); //so we need to figure out which unacked id is now oldest
       }
     } else {
       LOG.severe("no birth time recorded for ackId: " + ackId);
       throw new IllegalStateException(
               "no birth time recorded for ackId: " + ackId);
     }
-
   }
 
   private long scanForOldestUnacked() {

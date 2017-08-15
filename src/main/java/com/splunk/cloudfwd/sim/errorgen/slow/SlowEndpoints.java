@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd.sim.errorgen.slow;
 
 import com.splunk.cloudfwd.http.AckManager;
-import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
@@ -29,7 +28,7 @@ import org.apache.http.concurrent.FutureCallback;
  * @author ghendrey
  */
 public class SlowEndpoints extends SimulatedHECEndpoints {
-  private final long sleep = 10000; //10 second
+  protected long sleep = 10000; //10 second
 
   @Override
   public void pollAcks(AckManager ackMgr,

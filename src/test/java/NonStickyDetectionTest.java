@@ -61,14 +61,9 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
 
   @Test
   public void checkNonStickyChannelDetected() throws InterruptedException {
-
-    try {
       super.sendEvents();
-    } catch (TimeoutException e) {
-      System.out.println(
-              "Got expected timeout exception because all channels are broken (per test design): " + e.
-              getMessage());
-    }
+      //todo: a timeout used to be expected here
+      //Assert.fail()?
   }
 
   @Override

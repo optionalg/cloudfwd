@@ -16,7 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.EventBatch;
-import com.splunk.cloudfwd.http.PollScheduler;
+import com.splunk.cloudfwd.util.PollScheduler;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,6 +45,10 @@ class TimeoutChecker {
     start();
   }
 
+  public long getTimeout() {
+    return this.timeout;
+  }
+
   synchronized void start() {
     timoutCheckScheduler.start(this::checkTimeouts, timeout,
             TimeUnit.MILLISECONDS);
@@ -57,8 +61,8 @@ class TimeoutChecker {
       final Map.Entry<String, EventBatch> e = iter.next();
       EventBatch events = e.getValue();
       if (events.isTimedOut(this.timeout)) {
-        //this is the one case were we cannlt call failed() directly, but rather have to go directly (via unwrap)
-        //to the user-supplied callback. Otherrwise we just loop back here over and over!
+        //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
+        //to the user-supplied callback. Otherwise we just loop back here over and over!
         interceptor.unwrap().failed(events,
                 new TimeoutException(
                         "EventBatch with id " + events.getId() + " timed out."));

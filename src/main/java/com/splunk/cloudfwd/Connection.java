@@ -53,6 +53,10 @@ public class Connection implements Closeable {
     this.timeoutChecker.setTimeout(ms);
   }
 
+  public long getSendTimeout() {
+    return this.timeoutChecker.getTimeout();
+  }
+
   @Override
   public void close() {
     //we must close asynchronously to prevent deadlocking
@@ -74,7 +78,7 @@ public class Connection implements Closeable {
     }, "Connection Closer").start();
   }
 
-  public void sendBatch(EventBatch events) throws TimeoutException {
+  public void sendBatch(EventBatch events) {
     timeoutChecker.start();
     timeoutChecker.add(events);
     lb.sendBatch(events);

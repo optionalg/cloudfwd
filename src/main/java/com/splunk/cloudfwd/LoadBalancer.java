@@ -96,8 +96,7 @@ public class LoadBalancer implements Observer, Closeable {
     System.out.println(change);
   }
 
-  public synchronized void sendBatch(EventBatch events)
-          throws TimeoutException {
+  public synchronized void sendBatch(EventBatch events) {
     if(null == this.connection.getCallbacks()){
       throw new IllegalStateException("Connection FutureCallback has not been set.");
     }
@@ -197,7 +196,7 @@ public class LoadBalancer implements Observer, Closeable {
 
   }
 
-  private synchronized void sendRoundRobin(EventBatch events) throws TimeoutException {
+  private synchronized void sendRoundRobin(EventBatch events) {
     try {
       if (channels.isEmpty()) {
         throw new IllegalStateException(
@@ -224,14 +223,15 @@ public class LoadBalancer implements Observer, Closeable {
         if (tryMe.send(events)) {
           break;
         }
-        if(System.currentTimeMillis()-start > Connection.DEFAULT_SEND_TIMEOUT_MS){
+        if(System.currentTimeMillis()-start > this.getConnection().getSendTimeout()){
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         }
       }
 
     }catch(TimeoutException e){
-      throw e;  //we want TimeoutExceptions handled by Caller
+        LOG.log(Level.SEVERE, e.getMessage(), e);
+        this.getConnection().getCallbacks().failed(events, e);
     }
     catch (Exception e) {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.

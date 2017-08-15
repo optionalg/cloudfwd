@@ -53,18 +53,28 @@ public abstract class AbstractConnectionTest {
     }
   }
   
-  protected void sendEvents() throws TimeoutException, InterruptedException{
-    int expected = getNumBatchesToSend();
-     for (int i = 0; i < expected; i++) {
+  protected void sendEvents() throws InterruptedException{
+    int i, expected = getNumBatchesToSend();
+     for (i = 0; (!interrupt() && i < expected); i++) {
       final EventBatch events =nextEventBatch();
       events.setSeqNo(i+1); //1-based sequence numbers
       System.out.println("Send batch: " + events.getId() + " i=" + i);
       this.connection.sendBatch(events);
     }
+    if (interrupt()) {
+      System.out.println("Send batch i=" + i +
+             " was the final batch before interrupted in test");
+      System.out.println("Expected number of batches was " +
+             expected);
+    }
     connection.close(); //will flush 
     this.ackTracker.await(10, TimeUnit.MINUTES);
   }
   
+  protected boolean interrupt() {
+  return false;
+  }
+
   protected abstract Properties getProps();
   protected abstract EventBatch nextEventBatch();
   protected abstract int getNumBatchesToSend();
