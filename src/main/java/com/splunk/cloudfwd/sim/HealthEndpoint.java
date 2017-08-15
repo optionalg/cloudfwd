@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.sim;
 import com.splunk.cloudfwd.http.AbstractHttpCallback;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.message.BasicHttpResponse;
 
 /**
  *
@@ -26,7 +27,8 @@ import org.apache.http.concurrent.FutureCallback;
 public class HealthEndpoint implements Endpoint{
 
   public void pollHealth(FutureCallback<HttpResponse> cb) {
-    ((AbstractHttpCallback)cb).completed("If we care about the actual conent, this will break something.", 200);
+    HttpResponse response = new BasicHttpResponse(new OKStatusLine());
+    ((AbstractHttpCallback)cb).completed(response);
   }
 
   @Override

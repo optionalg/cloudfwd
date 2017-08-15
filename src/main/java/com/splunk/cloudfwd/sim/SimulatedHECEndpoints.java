@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.sim;
 import com.splunk.cloudfwd.http.AckManager;
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.EventBatch;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -33,19 +34,26 @@ public class SimulatedHECEndpoints implements Endpoints{
   
 
   @Override
-  public void postEvents(EventBatch events,
+  public void postEvents(EventBatch events, HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
+
     eventEndpoint.post(events, httpCallback);
   }
 
+  public void postEventsSticky(EventBatch events,
+                         FutureCallback<HttpResponse> httpCallback, String setCookieValue) {
+
+    eventEndpoint.postSticky(events, httpCallback, setCookieValue);
+  }
+
   @Override
-  public void pollAcks(AckManager ackMgr,
+  public void pollAcks(AckManager ackMgr, HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
     ackEndpoint.pollAcks(ackMgr, httpCallback);
   }
 
   @Override
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+  public void pollHealth(final HttpRequest request, FutureCallback<HttpResponse> httpCallback) {
     this.healthEndpoint.pollHealth(httpCallback);
   }
 

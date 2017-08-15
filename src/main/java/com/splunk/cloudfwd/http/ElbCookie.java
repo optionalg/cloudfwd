@@ -8,7 +8,7 @@ import org.apache.http.HeaderIterator;
  * Created by eprokop on 8/9/17.
  */
 public class ElbCookie {
-    private static final String COOKIE_NAME = "AWSELB";
+    public static final String COOKIE_NAME = "AWSELB";
     private String value = null;
 
     public ElbCookie(HttpResponse response) {

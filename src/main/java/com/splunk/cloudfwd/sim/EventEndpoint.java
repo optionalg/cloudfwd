@@ -15,15 +15,19 @@
  */
 package com.splunk.cloudfwd.sim;
 
+import com.splunk.cloudfwd.http.AbstractHttpCallback;
 import com.splunk.cloudfwd.http.EventBatch;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.message.BasicHeader;
 
 /**
  *
@@ -56,6 +60,19 @@ public class EventEndpoint implements Endpoint{
       cb.completed(new EventPostResponse(
               new AckIdRespEntity(nextAckId())
       ));
+    };
+    //return a single response with a delay uniformly distributed between  [0,5] ms
+    executor.schedule(respond, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+  }
+
+  public void postSticky(EventBatch events,
+                         FutureCallback<HttpResponse> cb, String setCookieValue) {
+    AbstractHttpCallback callback = (AbstractHttpCallback)cb;
+    Runnable respond = () -> {
+      EventPostResponse response = new EventPostResponse(
+              new AckIdRespEntity(nextAckId()));
+      response.setHeader(new BasicHeader("Set-Cookie", setCookieValue));
+      callback.completed(response);
     };
     //return a single response with a delay uniformly distributed between  [0,5] ms
     executor.schedule(respond, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);

@@ -19,6 +19,8 @@ package com.splunk.cloudfwd.http;
  */
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.LoggingChannel;
+import com.splunk.cloudfwd.sim.StickyEndpoints;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -219,13 +221,10 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   @Override
-  public void postEvents(final EventBatch events,
+  public void postEvents(final EventBatch events, final HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
     start(); // make sure http client or simulator is started
-    if (isSimulated()) {
-      this.simulatedEndpoints.postEvents(events, httpCallback);
-      return;
-    }
+
     final String encoding = "utf-8";
 
     // create http request
@@ -245,18 +244,17 @@ public final class HttpEventCollectorSender implements Endpoints {
             encoding);
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
+    if (isSimulated()) {
+      this.simulatedEndpoints.postEvents(events, httpPost, httpCallback);
+      return;
+    }
     httpClient.execute(httpPost, httpCallback);
   }
 
   @Override
-  public void pollAcks(AckManager ackMgr,
+  public void pollAcks(AckManager ackMgr, final HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
     start(); // make sure http client or simulator is started
-    if (isSimulated()) {
-      System.out.println("SIMULATED POLL ACKS");
-      this.simulatedEndpoints.pollAcks(ackMgr, httpCallback);
-      return;
-    }
 
     final String encoding = "utf-8";
 
@@ -283,17 +281,18 @@ public final class HttpEventCollectorSender implements Endpoints {
     }
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
+    if (isSimulated()) {
+      System.out.println("SIMULATED POLL ACKS");
+      this.simulatedEndpoints.pollAcks(ackMgr, httpPost, httpCallback);
+      return;
+    }
     httpClient.execute(httpPost, httpCallback);
   }
 
   @Override
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+  public void pollHealth(final HttpRequest request, FutureCallback<HttpResponse> httpCallback) {
     start(); // make sure http client or simulator is started
-    if (isSimulated()) {
-      System.out.println("SIMULATED POLL HEALTH");
-      this.simulatedEndpoints.pollHealth(httpCallback);
-      return;
-    }
+
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
     final HttpGet httpGet = new HttpGet(getUrl);
@@ -306,7 +305,11 @@ public final class HttpEventCollectorSender implements Endpoints {
             getChannel().getChannelId());
 
     setCookieHeaderIfExists(httpGet);
-
+    if (isSimulated()) {
+      System.out.println("SIMULATED POLL HEALTH");
+      this.simulatedEndpoints.pollHealth(httpGet, httpCallback);
+      return;
+    }
     httpClient.execute(httpGet, httpCallback);
   }
 

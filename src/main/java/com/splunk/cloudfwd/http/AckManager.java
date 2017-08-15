@@ -128,7 +128,7 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
     };
-    sender.postEvents(events, cb);
+    sender.postEvents(events, null, cb);
 
   }
 
@@ -252,7 +252,7 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
     };
-    sender.pollHealth(cb);
+    sender.pollHealth(null, cb);
   }
 
   /**
