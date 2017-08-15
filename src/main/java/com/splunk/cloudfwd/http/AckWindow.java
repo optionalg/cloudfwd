@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -40,8 +39,10 @@ public class AckWindow {
   private final Map<Long, EventBatch> polledAcks = new ConcurrentSkipListMap<>(); //key ackID
   private final Map<String, EventBatch> postedEventBatches = new ConcurrentSkipListMap<>();//key EventBatch ID
   private final ChannelMetrics channelMetrics;
+  private final HttpEventCollectorSender sender;
 
-  AckWindow(ChannelMetrics channelMetrics) {
+  AckWindow(HttpEventCollectorSender sender, ChannelMetrics channelMetrics) {
+    this.sender = sender;
     this.channelMetrics = channelMetrics;
   }
 
@@ -52,9 +53,10 @@ public class AckWindow {
       Map json = new HashMap();
       json.put("acks", polledAcks.keySet()); //{"acks":[1,2,3...]}
       return mapper.writeValueAsString(json); //this class itself marshals out to {"acks":[id,id,id]}
-    } catch (JsonProcessingException ex) {
-      Logger.getLogger(AckWindow.class.getName()).log(Level.SEVERE, null, ex);
-      throw new RuntimeException(ex.getMessage(), ex);
+    } catch (JsonProcessingException e) {
+      LOG.severe(e.getMessage());
+      sender.getConnection().getCallbacks().failed(null, e);
+      throw new RuntimeException(e.getMessage(), e); // Have to return string/throw exception due to method signature
     }
 
   }
@@ -75,7 +77,7 @@ public class AckWindow {
     if(null == removed){
       String msg = "failed to track event batch " + events.getId();
       LOG.severe(msg);
-      throw new RuntimeException(msg);
+      sender.getConnection().getCallbacks().failed(events, new Exception(msg));
     }
     polledAcks.put(ackId, events);
     //System.out.println("Tracked ackIDs on client now: " + polledAcks.keySet());
@@ -83,6 +85,7 @@ public class AckWindow {
   }
 
   public void handleAckPollResponse(AckPollResponse apr) {
+    String msg;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
       System.out.println("success acked ids: " + succeeded);
@@ -94,14 +97,15 @@ public class AckWindow {
         EventBatch events = this.polledAcks.get(ackId);
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
         if(ackId != events.getAckId()){
-          String msg = "ackId mismatch key ackID=" +ackId + " recordedAckId=" + events.getAckId();
+          msg = "ackId mismatch key ackID=" +ackId + " recordedAckId=" + events.getAckId();
           LOG.severe(msg);
+          sender.getConnection().getCallbacks().failed(null, new IllegalStateException(msg));
           throw new IllegalStateException(msg);
         }
         if (null == events) {
-          Logger.getLogger(getClass().getName()).log(Level.SEVERE,
-                  "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
-                  ackId);
+          msg = "Unable to find EventBatch in buffer for successfully acknowledged ackId: " + ackId;
+          LOG.severe(msg);
+          sender.getConnection().getCallbacks().failed(null, new Exception(msg));
         }
         
         channelMetrics.ackPollOK(events);
@@ -112,7 +116,7 @@ public class AckWindow {
       //System.out.println("polledAcks now " + polledAcks.keySet());
     } catch (Exception e) {
       LOG.severe("caught exception in handleAckPollResponse: " + e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
+      sender.getConnection().getCallbacks().failed(null, e);
     }
   }
 

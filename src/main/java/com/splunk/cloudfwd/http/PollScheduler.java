@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 /**
  * Periodically delegates polling for acks to the AckManager. Just a simple
@@ -28,11 +29,15 @@ import java.util.concurrent.TimeUnit;
  */
 class PollScheduler {
 
+  private static final Logger LOG = Logger.getLogger(PollScheduler.class.
+          getName());
   private ScheduledExecutorService scheduler;
   private boolean started;
   private final String name;
+  private HttpEventCollectorSender sender;
 
-  PollScheduler(String name) {
+  PollScheduler(HttpEventCollectorSender sender, String name) {
+    this.sender = sender;
     this.name = name;
   }
 
@@ -46,10 +51,18 @@ class PollScheduler {
         return new Thread(r, name);
       }
     };
+    Runnable wrappedPoller = () -> {
+      try {
+        poller.run();
+      } catch (Exception e) {
+        LOG.severe(e.getMessage());
+        sender.getConnection().getCallbacks().failed(null, e);
+      }
+    };
     this.scheduler = Executors.newScheduledThreadPool(0, f);
     //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
     //if the execution time of a task exceeds the period. We don't want that.
-    scheduler.scheduleWithFixedDelay(poller, 0, delay, units);
+    scheduler.scheduleWithFixedDelay(wrappedPoller, 0, delay, units);
     this.started = true;
     System.out.println("STARTED POLLING: " + name);
 

@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
@@ -44,8 +43,8 @@ public class AckManager implements AckLifecycle, Closeable {
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpEventCollectorSender sender;
-  private final PollScheduler ackPollController = new PollScheduler("ack poller");
-  private final PollScheduler healthPollController = new PollScheduler("health poller");
+  private final PollScheduler ackPollController;
+  private final PollScheduler healthPollController;
   private final AckWindow ackWindow;
   private final ChannelMetrics channelMetrics;
   private volatile boolean ackPollInProgress;
@@ -53,7 +52,9 @@ public class AckManager implements AckLifecycle, Closeable {
   AckManager(HttpEventCollectorSender sender) {
     this.sender = sender;
     this.channelMetrics = new ChannelMetrics(sender);
-    this.ackWindow = new AckWindow(this.channelMetrics);
+    this.ackWindow = new AckWindow(sender, this.channelMetrics);
+    this.ackPollController = new PollScheduler(sender, "ack poller");
+    this.healthPollController = new PollScheduler(sender, "health poller");
     // start polling for health
   }
 
@@ -102,15 +103,15 @@ public class AckManager implements AckLifecycle, Closeable {
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
 
       @Override
-      public void failed(Exception ex) {
-        eventPostFailure(ex);
-        AckManager.this.sender.getConnection().getCallbacks().failed(events, ex);
+      public void failed(Exception e) {
+        eventPostFailure(e);
+        AckManager.this.sender.getConnection().getCallbacks().failed(events, e);
       }
 
       @Override
       public void cancelled() {
-        Exception ex = new RuntimeException("HTTP post cancelled while posting events");
-        AckManager.this.sender.getConnection().getCallbacks().failed(events, ex);
+        Exception e = new RuntimeException("HTTP post cancelled while posting events");
+        AckManager.this.sender.getConnection().getCallbacks().failed(events, e);
       }
 
       @Override
@@ -118,12 +119,15 @@ public class AckManager implements AckLifecycle, Closeable {
         if (code == 200) {
           try {
             consumeEventPostResponse(reply, events);
-          } catch (Exception ex) {
-            LOG.log(Level.SEVERE, null, ex);
+          } catch (Exception e) {
+            LOG.severe(e.getMessage());
+            AckManager.this.sender.getConnection().getCallbacks().failed(events, e);
           }
         } else {
-          LOG.log(Level.SEVERE, "server didn't return ack ids");
+          String msg = "server didn't return ack ids";
+          LOG.severe(msg);
           eventPostNotOK(code, reply, events);
+          AckManager.this.sender.getConnection().getCallbacks().failed(events, new Exception(msg));
         }
       }
 
@@ -142,14 +146,13 @@ public class AckManager implements AckLifecycle, Closeable {
       });
       epr = new EventPostResponse(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
-    } catch (IOException ex) {
-      Logger.getLogger(getClass().getName()).log(Level.SEVERE, ex.getMessage(),
-              ex);
-      throw new RuntimeException(ex.getMessage(), ex);
-    }
 
-    //System.out.println("ABOUT TO HANDLE EPR");
-    ackWindow.handleEventPostResponse(epr, events);
+      //System.out.println("ABOUT TO HANDLE EPR");
+      ackWindow.handleEventPostResponse(epr, events);
+    } catch (IOException e) {
+      LOG.severe(e.getMessage());
+      sender.getConnection().getCallbacks().failed(events, e);
+    }
 
     // start polling for acks
     startPolling();
@@ -163,8 +166,9 @@ public class AckManager implements AckLifecycle, Closeable {
       AckPollResponse ackPollResp = mapper.
               readValue(resp, AckPollResponse.class);
       this.ackWindow.handleAckPollResponse(ackPollResp);
-    } catch (IOException ex) {
-      throw new RuntimeException(ex.getMessage(), ex);
+    } catch (IOException e) {
+      LOG.severe(e.getMessage());
+      sender.getConnection().getCallbacks().failed(null, e);
     }
 
   }
@@ -192,15 +196,20 @@ public class AckManager implements AckLifecycle, Closeable {
       }
 
       @Override
-      public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to poll acks", ex);
-        AckManager.this.ackPollFailed(ex);
+      public void failed(Exception e) {
+        String msg = "failed to poll acks";
+        LOG.severe(msg);
+        sender.getConnection().getCallbacks().failed(null, new Exception(msg + ": " + e.getMessage()));
+
+        AckManager.this.ackPollFailed(e);
         AckManager.this.ackPollInProgress = false;
       }
 
       @Override
       public void cancelled() {
-        LOG.severe("ack poll cancelled.");
+        String msg = "ack poll cancelled.";
+        LOG.severe(msg);
+        sender.getConnection().getCallbacks().failed(null, new Exception(msg));
       }
     };
     sender.pollAcks(this, cb);
@@ -230,14 +239,18 @@ public class AckManager implements AckLifecycle, Closeable {
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
-      public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to poll health", ex);
-        healthPollFailed(ex);
+      public void failed(Exception e) {
+        String msg = "failed to poll health";
+        LOG.severe(msg);
+        healthPollFailed(e);
+        sender.getConnection().getCallbacks().failed(null, new Exception(msg + ": " + e.getMessage()));
       }
 
       @Override
       public void cancelled() {
-        LOG.severe("cancelled health poll");
+        String msg = "cancelled health poll";
+        LOG.severe(msg);
+        sender.getConnection().getCallbacks().failed(null, new Exception(msg));
       }
 
       @Override
@@ -293,14 +306,17 @@ public class AckManager implements AckLifecycle, Closeable {
 
   @Override
   public void ackPollNotOK(int statusCode, String reply) {
-    LOG.log(Level.SEVERE, "ack poll failed. Http status="+statusCode + ". Reply was " + reply);
+    String msg = "ack poll failed. Http status="+statusCode + ". Reply was " + reply;
+    LOG.severe(msg);
     getChannelMetrics().ackPollNotOK(statusCode, reply);
+    sender.getConnection().getCallbacks().failed(null, new Exception(msg));
   }
 
   @Override
-  public void ackPollFailed(Exception ex) {
-    LOG.log(Level.SEVERE, ex.getMessage(), ex);
-    getChannelMetrics().ackPollFailed(ex);
+  public void ackPollFailed(Exception e) {
+    LOG.severe(e.getMessage());
+    getChannelMetrics().ackPollFailed(e);
+    sender.getConnection().getCallbacks().failed(null, e);
   }
 
   /**
@@ -311,9 +327,10 @@ public class AckManager implements AckLifecycle, Closeable {
   }
 
   @Override
-  public void healthPollFailed(Exception ex) {
-    LOG.log(Level.SEVERE, ex.getMessage(), ex);
-    getChannelMetrics().healthPollFailed(ex);
+  public void healthPollFailed(Exception e) {
+    LOG.severe(e.getMessage());
+    getChannelMetrics().healthPollFailed(e);
+    sender.getConnection().getCallbacks().failed(null, e);
   }
 
   @Override

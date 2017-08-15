@@ -42,9 +42,13 @@ class IndexDiscoverer extends Observable {
   //and would be changing over time
   private final Map<String, List<InetSocketAddress>> mappings;
   private PropertiesFileHelper senderFactory = new PropertiesFileHelper();
+  private final Connection connection;
+  private static final Logger LOG = Logger.getLogger(IndexDiscoverer.class.
+          getName());
 
-  IndexDiscoverer(PropertiesFileHelper f) {
+  IndexDiscoverer(Connection c, PropertiesFileHelper f) {
     this.senderFactory = f;
+    this.connection = c;
     this.mappings = getInetAddressMap(senderFactory.getUrls());
   }
   
@@ -114,7 +118,7 @@ class IndexDiscoverer extends Observable {
    * @param urls
    * @return
    */
-  final static Map<String, List<InetSocketAddress>> getInetAddressMap(
+  final Map<String, List<InetSocketAddress>> getInetAddressMap(
           List<URL> urls) {
     ConcurrentSkipListMap<String, List<InetSocketAddress>> mapping = new ConcurrentSkipListMap<>();
     for (URL url : urls) {
@@ -128,11 +132,11 @@ class IndexDiscoverer extends Observable {
             return new ArrayList<>();
           }).add(sockAddr);
         }
-      } catch (UnknownHostException ex) {
-        Logger.getLogger(IndexDiscoverer.class.getName()).
-                log(Level.SEVERE, "Unknown Host: ''{0}''", url.getHost());
-        Logger.getLogger(IndexDiscoverer.class.getName()).
-                log(Level.SEVERE, null, ex);
+      } catch (UnknownHostException e) {
+        LOG.severe("Unknown Host: '" + url.getHost() + "'");
+        LOG.severe(e.getMessage());
+
+        connection.getCallbacks().failed(null, e);
       }
     }
     return mapping;

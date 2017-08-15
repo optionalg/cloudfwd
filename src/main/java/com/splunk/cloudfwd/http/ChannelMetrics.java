@@ -91,9 +91,11 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
         oldestUnackedBirthtime = scanForOldestUnacked();//so we need to figure out which unacked id is now oldest
       }
     } else {
-      LOG.severe("no birth time recorded for ackId: " + ackId);
-      throw new IllegalStateException(
-              "no birth time recorded for ackId: " + ackId);
+      String msg = "no birth time recorded for ackId: " + ackId;
+      IllegalStateException e = new IllegalStateException(msg);
+      LOG.severe(msg);
+      sender.getConnection().getCallbacks().failed(null, e);
+      throw e;
     }
 
   }
@@ -164,6 +166,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       }
     } catch (Exception e) {
       LOG.severe(e.getMessage());
+      sender.getConnection().getCallbacks().failed(events, e);
       throw new RuntimeException(e.getMessage(), e);
     }
 
@@ -175,7 +178,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
   }
 
   @Override
-  public void eventPostFailure(Exception ex) {
+  public void eventPostFailure(Exception e) {
     eventPostFailureCount++;
   }
 
@@ -198,6 +201,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       }
     } catch (Exception e) {
       LOG.severe(e.getMessage());
+      sender.getConnection().getCallbacks().failed(events, e);
       throw new RuntimeException(e.getMessage(), e);
     }
   }
@@ -208,12 +212,12 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
   }
 
   @Override
-  public void ackPollFailed(Exception ex) {
+  public void ackPollFailed(Exception e) {
     ackPollFailureCount++;
   }
 
   @Override
-  public void healthPollFailed(Exception ex) {
+  public void healthPollFailed(Exception e) {
     // There's a 400 fail that is sent back by the HEC
     // when the token is invalid.
     healthPollFailureCount++;
@@ -231,6 +235,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       notifyObservers(state);
     } catch (Exception e) {
       LOG.severe(e.getMessage());
+      sender.getConnection().getCallbacks().failed(null, e);
       throw new RuntimeException(e.getMessage(), e);
     }
   }
@@ -247,6 +252,7 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       notifyObservers(state);
     } catch (Exception e) {
       LOG.severe(e.getMessage());
+      sender.getConnection().getCallbacks().failed(null, e);
       throw new RuntimeException(e.getMessage(), e);
     }
   }

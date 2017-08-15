@@ -42,13 +42,15 @@ public class PropertiesFileHelper {
   public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
   public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
   public static final String MOCK_HTTP_KEY = "mock_http";
-  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";  
+  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
 
   private Properties defaultProps = new Properties();
+  private Connection connection;
 
-  public PropertiesFileHelper(Properties overrides) {
+  public PropertiesFileHelper(Connection connection, Properties overrides) {
     this(); //setup all defaults by calling SenderFactory() empty constr
     this.defaultProps.putAll(overrides);
+    this.connection = connection;
   }
 
   /**
@@ -61,9 +63,9 @@ public class PropertiesFileHelper {
         throw new RuntimeException("can't find /lb.properties");
       }
       defaultProps.load(is);
-    } catch (IOException ex) {
-      LOG.log(Level.SEVERE, "problem loading lb.properties", ex);
-      throw new RuntimeException(ex.getMessage(), ex);
+    } catch (IOException e) {
+      LOG.severe("problem loading lb.properties");
+      connection.getCallbacks().failed(null, e);
     }
   }
 
@@ -74,12 +76,12 @@ public class PropertiesFileHelper {
       try {
         URL url = new URL(urlString.trim());
         urls.add(url);
-      } catch (MalformedURLException ex) {
+      } catch (MalformedURLException e) {
+        LOG.severe(e.getMessage());
         Logger.getLogger(IndexDiscoverer.class.getName()).
                 log(Level.SEVERE, "Malformed URL: '" + urlString + "'");
-        Logger.getLogger(PropertiesFileHelper.class.getName()).log(
-                Level.SEVERE, null,
-                ex);
+        this.connection.getCallbacks().failed(null, e);
+
       }
     }
     return urls;
@@ -99,10 +101,10 @@ public class PropertiesFileHelper {
     String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,"com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
     try {
       return (Endpoints) Class.forName(classname).newInstance();
-    } catch (Exception ex) {
-      Logger.getLogger(PropertiesFileHelper.class.getName()).
-              log(Level.SEVERE, null, ex);
-      throw new RuntimeException(ex.getMessage(), ex);
+    } catch (Exception e) {
+      LOG.severe(e.getMessage());
+      this.connection.getCallbacks().failed(null, e);
+      throw new RuntimeException(e.getMessage(), e); // Method must return Endpoints value/throw exception
     }
     
   } 
@@ -132,11 +134,11 @@ public class PropertiesFileHelper {
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
       return sender;
-    } catch (Exception ex) {
-      LOG.log(Level.SEVERE, "Problem instantiating HTTP sender.", ex);
-      throw new RuntimeException(
-              "problem parsing lb.properties to create HttpEventCollectorSender",
-              ex);
+    } catch (Exception e) {
+      String msg = "problem parsing lb.properties to instantiate HttpEventCollectorSender.";
+      LOG.severe(msg);
+      this.connection.getCallbacks().failed(null, e);
+      throw new RuntimeException(msg); // Method must return HttpEventCollectorSender value / throw Exception
     }
   }
 

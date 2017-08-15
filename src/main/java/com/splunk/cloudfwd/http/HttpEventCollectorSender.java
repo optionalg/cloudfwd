@@ -113,8 +113,10 @@ public final class HttpEventCollectorSender implements Endpoints {
   public synchronized void sendBatch(EventBatch events) {
     if (events.isFlushed()) {
       String msg = "Illegal attempt to send already-flushed batch. EventBatch is not reusable.";
+      IllegalStateException e = new IllegalStateException(msg);
       LOG.severe(msg);
-      throw new IllegalStateException(msg);
+      events.getCallbacks().failed(events, e);
+      throw e;
     }
     this.eventsBatch = events;
     eventsBatch.setSender(this);
@@ -197,7 +199,7 @@ public final class HttpEventCollectorSender implements Endpoints {
                 .build();
       } catch (Exception e) {
         LOG.severe(e.getMessage());
-        e.printStackTrace(); //fixme TODO
+        ackManager.getSender().getConnection().getCallbacks().failed(null, e);
       }
     }
     httpClient.start();
@@ -270,13 +272,13 @@ public final class HttpEventCollectorSender implements Endpoints {
       String req = ackMgr.getAckPollReq();
       System.out.println("channel=" + getChannel() + " posting: " + req);
       entity = new StringEntity(req);
-    } catch (UnsupportedEncodingException ex) {
-      LOG.severe(ex.getMessage());
-      throw new RuntimeException(ex.getMessage(), ex);
+      entity.setContentType(HttpContentType);
+      httpPost.setEntity(entity);
+      httpClient.execute(httpPost, httpCallback);
+    } catch (UnsupportedEncodingException e) {
+      LOG.severe(e.getMessage());
+      ackManager.getSender().getConnection().getCallbacks().failed(null, e);
     }
-    entity.setContentType(HttpContentType);
-    httpPost.setEntity(entity);
-    httpClient.execute(httpPost, httpCallback);
   }
 
   @Override

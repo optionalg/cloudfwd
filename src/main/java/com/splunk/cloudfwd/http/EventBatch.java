@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.http;
 
+import com.splunk.cloudfwd.FutureCallback;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
@@ -93,7 +94,12 @@ public class EventBatch implements SerializedEventProducer {
 
     eventsBatch.add(event);
     if (this.endpoint == Endpoint.event) {
-      stringBuilder.append(event.toEventEndpointString(metadata));
+      try {
+        stringBuilder.append(event.toEventEndpointString(metadata));
+      } catch (Exception e) {
+        LOG.severe(e.getMessage());
+        this.getCallbacks().failed(null, e);
+      }
     } else {
       stringBuilder.append(event.toRawEndpointString());
     }
@@ -193,8 +199,10 @@ public class EventBatch implements SerializedEventProducer {
     if (null != this.sender) {
       String msg = "attempt to change the value of sender. Channel was " + this.sender.
               getChannel() + ", and attempt to change to " + sender.getChannel();
+      IllegalStateException e = new IllegalStateException(msg);
       LOG.severe(msg);
-      throw new IllegalStateException(msg);
+      sender.getConnection().getCallbacks().failed(null, e);
+      throw e;
     }
     this.sender = sender;
   }
@@ -229,6 +237,10 @@ public class EventBatch implements SerializedEventProducer {
 
   public Enum<Endpoint> getEndpoint() {return endpoint;}
 
+  public FutureCallback getCallbacks() {
+    return this.sender.getConnection().getCallbacks();
+  }
+
   private class ScheduledFlush extends TimerTask {
 
     @Override
@@ -237,5 +249,4 @@ public class EventBatch implements SerializedEventProducer {
     }
 
   }
-
 }

@@ -23,7 +23,6 @@ import java.util.NavigableMap;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -66,10 +65,9 @@ public class ConnectionState extends Observable implements Observer {
         */
         acknowledgeHighwaterAndBelow(es.getEvents());
       }
-    } catch (Exception ex) {
-      LOG.severe(ex.getMessage());
-      ex.printStackTrace();
-      throw new RuntimeException(ex.getMessage(), ex);
+    } catch (Exception e) {
+      LOG.severe(e.getMessage());
+      this.connection.getCallbacks().failed(null, e);
     }
 
   }
@@ -101,8 +99,10 @@ public class ConnectionState extends Observable implements Observer {
     if (!this.orderedEvents.containsKey(events.getId())) {
       String msg = "No callback registered for successfully acknowledged ackId: " + events.
               getAckId();
-      Logger.getLogger(getClass().getName()).log(Level.SEVERE, msg);
-      throw new IllegalStateException(msg);
+      IllegalStateException e = new IllegalStateException((msg));
+      LOG.severe(msg);
+      this.connection.getCallbacks().failed(events, e);
+      throw e;
     }
     FutureCallback cb = this.connection.getCallbacks();
     //todo: maybe schedule acknowledge to be async
@@ -129,8 +129,10 @@ public class ConnectionState extends Observable implements Observer {
       }
     }
     if (null == events) {
-      throw new IllegalStateException(
-              "Failed to move highwater mark. No events present.");
+      String msg = "Failed to move highwater mark. No events present.";
+      IllegalStateException e = new IllegalStateException(msg);
+      this.connection.getCallbacks().failed(null, e);
+      throw e;
     }
     //todo: maybe schedule checkpoint to be async
     cb.checkpoint(events); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.

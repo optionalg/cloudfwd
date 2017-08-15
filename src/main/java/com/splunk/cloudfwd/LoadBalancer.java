@@ -47,7 +47,7 @@ public class LoadBalancer implements Observer, Closeable {
   private PropertiesFileHelper configuredObjectFactory;
   private final ConnectionState connectionState; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
-  private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
+  private final IndexDiscoveryScheduler discoveryScheduler;
   private int robin; //incremented (mod channels) to perform round robin
   private final Connection connection;
   private boolean closed;
@@ -58,12 +58,13 @@ public class LoadBalancer implements Observer, Closeable {
 
   LoadBalancer(Connection c,  Properties p) {
     this.connection = c;
-    this.configuredObjectFactory = new PropertiesFileHelper(p);
+    this.configuredObjectFactory = new PropertiesFileHelper(c, p);
     this.channelsPerDestination = this.configuredObjectFactory.
             getChannelsPerDestination();
-    this.discoverer = new IndexDiscoverer(configuredObjectFactory);
+    this.discoverer = new IndexDiscoverer(c, configuredObjectFactory);
     this.connectionState = new ConnectionState(c);
     this.discoverer.addObserver(this);
+    this.discoveryScheduler = new IndexDiscoveryScheduler(this.connection);
   }
 
   @Override
@@ -78,14 +79,16 @@ public class LoadBalancer implements Observer, Closeable {
         return;
       }
 
-      Logger.getLogger(getClass().getName()).log(Level.SEVERE,
-              "Unhandled update from: {0} with arg: {1}", new Object[]{o.
-                getClass().getCanonicalName(), arg.getClass().getName()});
+      String msg = "Unhandled update from: " + new Object[]{o.
+              getClass().getCanonicalName() + " with arg: " + arg.getClass().getName()};
+      LOG.severe(msg);
+      connection.getCallbacks().failed(null, new Exception(msg));
+
       throw new RuntimeException("Unhandled update from: " + o.getClass().
               getCanonicalName() + " with arg: " + arg.getClass().getName());
     } catch (Exception e) {
       LOG.severe(e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
+      connection.getCallbacks().failed(null, e);
     } catch (Throwable t) {
       System.out.println("shit");
     }
@@ -159,9 +162,10 @@ public class LoadBalancer implements Observer, Closeable {
       LoggingChannel c = new LoggingChannel(this, sender);
       sender.setChannel(c);
       addChannel(c);     
-    } catch (MalformedURLException ex) {
-      Logger.getLogger(LoadBalancer.class.getName()).log(Level.SEVERE, null,
-              ex);
+    } catch (MalformedURLException e) {
+      LOG.severe(e.getMessage());
+      connection.getCallbacks().failed(null, e);
+
     }
   }
 
@@ -185,14 +189,11 @@ public class LoadBalancer implements Observer, Closeable {
     }
     */
     if (!force && !c.isEmpty()) {
-      LOG.severe(
-              "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-              getUnackedCount() + " unacked payloads");
+      String msg = "Attempt to remove non-empty channel: " + channelId + " containing " + c.
+              getUnackedCount() + " unacked payloads";
+      LOG.severe(msg);
       System.out.println(this.connectionState);
-      throw new RuntimeException(
-              "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-              getUnackedCount() + " unacked payloads");
-
+      connection.getCallbacks().failed(null, new Exception(msg));
     }
 
   }
@@ -234,9 +235,9 @@ public class LoadBalancer implements Observer, Closeable {
       throw e;  //we want TimeoutExceptions handled by Caller
     }
     catch (Exception e) {
-      LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
+      LOG.severe("Exception caught in sendRountRobin: " + e.
               getMessage());
-      e.printStackTrace();
+      connection.getCallbacks().failed(events, e);
       throw new RuntimeException(e.getMessage(), e);
     }
 

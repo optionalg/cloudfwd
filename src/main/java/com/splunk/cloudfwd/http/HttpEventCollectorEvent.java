@@ -29,6 +29,7 @@ import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,7 +49,8 @@ public class HttpEventCollectorEvent {
     private final String exception_message;
     private final Serializable marker;
     private static final ObjectMapper jsonMapper = new ObjectMapper();
-
+    private static final Logger LOG = Logger.getLogger(HttpEventCollectorEvent.class.
+            getName());
     /**
      * Create a new HttpEventCollectorEventInfo container
      * @param severity of event
@@ -178,8 +180,8 @@ public class HttpEventCollectorEvent {
         try {
             return jsonMapper.writeValueAsString(event_node);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            //TODO Handle Exception and Add Logger
+            LOG.severe(e.getMessage());
+            // Exception is logged in failure callback by caller
             throw new RuntimeException(e.getMessage(), e);
         }
     }

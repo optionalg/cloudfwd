@@ -90,6 +90,7 @@ public class LoggingChannel implements Closeable, Observer {
   }
 
   public synchronized boolean send(EventBatch events) throws TimeoutException {
+    String msg;
     if (!isAvailable()) {
       return false;
     }
@@ -97,13 +98,14 @@ public class LoggingChannel implements Closeable, Observer {
       start();
     }
     if (this.closed) {
-      LOG.severe("Attempt to send to closed channel");
-      throw new IllegalStateException(
-              "Attempt to send to quiesced/closed channel");
+      msg = "Attempt to send to quiesced/closed channel";
+      IllegalStateException illegalStateEx = new IllegalStateException(msg);
+      LOG.severe(msg);
+      events.getCallbacks().failed(events, illegalStateEx);
+      throw illegalStateEx;
     }
     if (this.quiesced) {
-      LOG.
-              info("Send to quiesced channel (this should happen from time to time)");
+      LOG.info("Send to quiesced channel (this should happen from time to time)");
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
     if (unackedCount.get() == FULL) {
@@ -116,13 +118,16 @@ public class LoggingChannel implements Closeable, Observer {
           System.out.println("---BLOCKING---");
           wait(Connection.SEND_TIMEOUT);
           System.out.println("UNBLOCKED");
-        } catch (InterruptedException ex) {
-          Logger.getLogger(LoggingChannel.class.getName()).
-                  log(Level.SEVERE, null, ex);
+        } catch (InterruptedException e) {
+          LOG.severe(e.getMessage());
+          events.getCallbacks().failed(events, e);
         }
         if (System.currentTimeMillis() - start > Connection.SEND_TIMEOUT) {
-          System.out.println("TIMEOUT EXCEEDED");
-          throw new TimeoutException("Send timeout exceeded.");
+          msg = "Send timeout exceeded";
+          TimeoutException timeoutEx = new TimeoutException(msg);
+          LOG.severe(msg);
+          events.getCallbacks().failed(events, timeoutEx);
+          throw timeoutEx;
         } else {
           System.out.println("---NO TIMEOUT--");
           break;
@@ -161,18 +166,19 @@ public class LoggingChannel implements Closeable, Observer {
         }
       }
     } catch (Exception e) {
-      LOG.log(Level.SEVERE, e.getMessage(), e);
+      LOG.severe(e.getMessage());
       FutureCallback c = this.loadBalancer.getConnection().getCallbacks();
       EventBatch events = lifecycleEvent == null ? null : lifecycleEvent.
               getEvents();
+      // TODO: Consider refactoring all failed() callbacks to use managed Thread Pool
       new Thread(() -> {
-        c.failed(events, e); //FIXME TODO -- there are many places where we should be calling failed. 
+        c.failed(events, e);
       }).start();
 
     }
   }
 
-  private void ackReceived(LifecycleEvent s) throws RuntimeException {
+  private void ackReceived(LifecycleEvent s) {
     int count = unackedCount.decrementAndGet();
     /*
     System.out.
@@ -183,15 +189,15 @@ public class LoggingChannel implements Closeable, Observer {
     if (count < 0) {
       String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
       LOG.severe(msg);
-      throw new RuntimeException(msg);
+      this.loadBalancer.getConnection().getCallbacks().failed(null, new Exception(msg));
     } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
       if (quiesced) {
         try {
           close();
-        } catch (IllegalStateException ex) {
-          LOG.warning(
-                  "unable to close channel " + getChannelId() + ": " + ex.
-                  getMessage());
+        } catch (IllegalStateException e) {
+          String msg = "unable to close channel " + getChannelId() + ": " + e.getMessage();
+          LOG.warning(msg);
+          this.loadBalancer.getConnection().getCallbacks().failed(null, new Exception(msg));
         }
       }
     }
@@ -221,7 +227,8 @@ public class LoggingChannel implements Closeable, Observer {
     try {
       this.sender.close();
     } catch (Exception e) {
-      LOG.log(Level.SEVERE, e.getMessage(), e);
+      LOG.severe(e.getMessage());
+      this.loadBalancer.getConnection().getCallbacks().failed(null, e);
     }
     this.loadBalancer.removeChannel(getChannelId(), true);
     finishClose();
@@ -243,7 +250,8 @@ public class LoggingChannel implements Closeable, Observer {
     try {
       this.sender.close();
     } catch (Exception e) {
-      LOG.log(Level.SEVERE, e.getMessage(), e);
+      LOG.severe(e.getMessage());
+      this.loadBalancer.getConnection().getCallbacks().failed(null, e);
     }
     this.loadBalancer.removeChannel(getChannelId(), false);
     finishClose();

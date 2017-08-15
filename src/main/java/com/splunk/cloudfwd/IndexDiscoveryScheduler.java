@@ -33,6 +33,11 @@ class IndexDiscoveryScheduler {
   private ScheduledExecutorService scheduler;
   private boolean started;
   private boolean stopped;
+  private Connection connection;
+
+  IndexDiscoveryScheduler(Connection connection) {
+    this.connection = connection;
+  }
 
   public synchronized void start(IndexDiscoverer d){
     if(started){
@@ -50,8 +55,13 @@ class IndexDiscoveryScheduler {
       }
     };
     this.scheduler = Executors.newScheduledThreadPool(1, f);
-    Runnable poller = () -> {        
-          this.discoverer.discover();
+    Runnable poller = () -> {
+      try {
+        this.discoverer.discover();
+      } catch (Exception e) {
+        LOG.severe(e.getMessage());
+        connection.getCallbacks().failed(null, e);
+      }
     };
     //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
     //if the execution time of a task exceeds the period. We don't want that.
