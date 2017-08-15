@@ -15,6 +15,8 @@
  */
 package com.splunk.cloudfwd.http;
 
+import com.splunk.cloudfwd.Connection;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -34,10 +36,10 @@ public class PollScheduler {
   private ScheduledExecutorService scheduler;
   private boolean started;
   private final String name;
-  private HttpEventCollectorSender sender;
+  private Connection connection;
 
-  public PollScheduler(HttpEventCollectorSender sender, String name) {
-    this.sender = sender;
+  public PollScheduler(Connection connection, String name) {
+    this.connection = connection;
     this.name = name;
   }
 
@@ -56,7 +58,7 @@ public class PollScheduler {
         poller.run();
       } catch (Exception e) {
         LOG.severe(e.getMessage());
-        sender.getConnection().getCallbacks().failed(null, e);
+        connection.getCallbacks().failed(null, e);
       }
     };
     this.scheduler = Executors.newScheduledThreadPool(0, f);

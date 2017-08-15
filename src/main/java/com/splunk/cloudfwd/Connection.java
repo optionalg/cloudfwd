@@ -34,7 +34,7 @@ public class Connection implements Closeable {
   public Connection(FutureCallback callbacks) {
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
     //the EventBatch that succeeded or failed from the timoutChecker
-    this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
+    this.timeoutChecker = new TimeoutChecker(this, DEFAULT_SEND_TIMEOUT_MS);
     this.callbacks = new CallbackInterceptor(callbacks,
             timeoutChecker::removeEvents);
     this.timeoutChecker.setInterceptor(this.callbacks);
@@ -42,7 +42,7 @@ public class Connection implements Closeable {
   }
 
   public Connection(FutureCallback callbacks, Properties settings) {
-    this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
+    this.timeoutChecker = new TimeoutChecker(this, DEFAULT_SEND_TIMEOUT_MS);
     this.callbacks = new CallbackInterceptor(callbacks,
             timeoutChecker::removeEvents);
     this.timeoutChecker.setInterceptor(this.callbacks);

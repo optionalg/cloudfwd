@@ -53,8 +53,8 @@ public class AckManager implements AckLifecycle, Closeable {
     this.sender = sender;
     this.channelMetrics = new ChannelMetrics(sender);
     this.ackWindow = new AckWindow(sender, this.channelMetrics);
-    this.ackPollController = new PollScheduler(sender, "ack poller");
-    this.healthPollController = new PollScheduler(sender, "health poller");
+    this.ackPollController = new PollScheduler(sender.getConnection(), "ack poller");
+    this.healthPollController = new PollScheduler(sender.getConnection(), "health poller");
     // start polling for health
   }
 
