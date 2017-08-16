@@ -23,10 +23,11 @@ import org.apache.http.StatusLine;
  * @author ghendrey
  */
 class OKStatusLine implements StatusLine {
+  private ProtocolVersion pv = new ProtocolVersion("HTTP", 1, 1);
   
   @Override
   public ProtocolVersion getProtocolVersion() {
-    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    return this.pv;
   }
 
   @Override
@@ -36,7 +37,7 @@ class OKStatusLine implements StatusLine {
 
   @Override
   public String getReasonPhrase() {
-    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    return "OK";
   }
   
 }
