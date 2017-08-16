@@ -105,8 +105,7 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
               "Attempt to send to quiesced/closed channel");
     }
     if (this.quiesced) {
-      LOG.
-              info("Send to quiesced channel (this should happen from time to time)");
+      LOG.info("Send to quiesced channel (this should happen from time to time)");
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
     if (unackedCount.get() == FULL) {
