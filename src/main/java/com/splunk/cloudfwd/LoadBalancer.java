@@ -83,9 +83,6 @@ public class LoadBalancer implements Observer, Closeable {
               getClass().getCanonicalName() + " with arg: " + arg.getClass().getName()};
       LOG.severe(msg);
       connection.getCallbacks().failed(null, new Exception(msg));
-
-      throw new RuntimeException("Unhandled update from: " + o.getClass().
-              getCanonicalName() + " with arg: " + arg.getClass().getName());
     } catch (Exception e) {
       LOG.severe(e.getMessage());
       connection.getCallbacks().failed(null, e);
@@ -238,7 +235,6 @@ public class LoadBalancer implements Observer, Closeable {
       LOG.severe("Exception caught in sendRountRobin: " + e.
               getMessage());
       connection.getCallbacks().failed(events, e);
-      throw new RuntimeException(e.getMessage(), e);
     }
 
   }

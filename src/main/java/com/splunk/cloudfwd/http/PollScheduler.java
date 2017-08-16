@@ -37,9 +37,17 @@ public class PollScheduler {
   private boolean started;
   private final String name;
   private Connection connection;
+  private HttpEventCollectorSender sender;
 
+  // PollScheduler is instantiated from both Connection (which does not have Sender access)
+  // and AckManager (which does not have Connection access on init), so we must have 2 constructors.
   public PollScheduler(Connection connection, String name) {
     this.connection = connection;
+    this.name = name;
+  }
+
+  public PollScheduler(HttpEventCollectorSender sender, String name) {
+    this.sender = sender;
     this.name = name;
   }
 
@@ -58,7 +66,12 @@ public class PollScheduler {
         poller.run();
       } catch (Exception e) {
         LOG.severe(e.getMessage());
-        connection.getCallbacks().failed(null, e);
+        if (this.connection != null) {
+          connection.getCallbacks().failed(null, e);
+
+        } else if (this.sender != null) {
+          sender.getConnection().getCallbacks().failed(null, e);
+        }
       }
     };
     this.scheduler = Executors.newScheduledThreadPool(0, f);
