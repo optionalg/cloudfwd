@@ -11,6 +11,8 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 
 import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by eprokop on 8/14/17.
@@ -46,18 +48,32 @@ public class ELBStickySessionTest {
 
     @Test
     public void testEventPostSetCookie() {
+        CountDownLatch latch = new CountDownLatch(1);
         EventBatch events = nextEventBatch();
+
+        final String[] cookieValue1 = new String[1];
+        final ElbCookie[] cookie1 = new ElbCookie[1];
+        final String[] cookieValue2 = new String[1];
+        final String[] cookieValueName = new String[1];
+
         FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
             @Override
             protected void completed(String reply, int code, ElbCookie cookie) {
                 if (code == 200) {
-                    Assert.assertNotNull("Cookie value passed to consumeEventPostResponse should not be null",
-                            cookie.getValue());
+//                    Assert.assertNotNull("Cookie value passed to consumeEventPostResponse should not be null",
+//                            cookie.getValue());
+                    cookieValue1[0] = cookie.getValue();
                     sender.getAckManager().consumeEventPostResponse(reply, events, cookie);
-                    Assert.assertNotNull("Cookie in HttpEventCollectorSender should not be null", sender.getCookie());
-                    Assert.assertNotNull("Cookie value in HttpEventCollectorSender should not be null", sender.getCookie().getValue());
-                    Assert.assertEquals("Cookie name should be 'AWSELB'", sender.getCookie().getValue().split("=")[0], "AWSELB");
+                    cookie1[0] = sender.getCookie();
+                    cookieValue2[0] = sender.getCookie().getValue();
+                    cookieValueName[0] = sender.getCookie().getNameValuePair().split("=")[0];
+//                    Assert.assertNotNull("Cookie in HttpEventCollectorSender should not be null", sender.getCookie());
+//                    Assert.assertNotNull("Cookie value in HttpEventCollectorSender should not be null", sender.getCookie().getValue());
+//                    Assert.assertEquals("Cookie name should be 'AWSELB'", sender.getCookie().getValue().split("=")[0], "AWSELB");
+
+
                     System.out.println("Done!");
+                    latch.countDown();
                 } else {
                     Assert.fail("Simulated endpoint broken: didn't receive a 200");
                 }
@@ -73,8 +89,19 @@ public class ELBStickySessionTest {
 
             }
         };
-
+        sender.getAckManager().preEventsPost(events);
         sender.postEvents(events, null, cb);
+        try {
+            boolean success = latch.await(1, TimeUnit.MINUTES);
+            if (!success) Assert.fail("CountDownLatch timed out");
+            Assert.assertNotNull("Cookie value passed to consumeEventPostResponse should not be null",
+                    cookieValue1[0]);
+            Assert.assertNotNull("Cookie in HttpEventCollectorSender should not be null", cookie1[0]);
+            Assert.assertNotNull("Cookie value in HttpEventCollectorSender should not be null", cookieValue2[0]);
+            Assert.assertEquals("Cookie name should be 'AWSELB'", "AWSELB",cookieValueName[0]);
+        } catch (InterruptedException e) {
+
+        }
     }
 
     private void runTests() {

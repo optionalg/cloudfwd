@@ -1,8 +1,6 @@
 package com.splunk.cloudfwd.http;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.HeaderIterator;
+import org.apache.http.*;
 
 /**
  * Created by eprokop on 8/9/17.
@@ -15,10 +13,14 @@ public class ElbCookie {
         HeaderIterator headerIterator = response.headerIterator("Set-Cookie");
         while (headerIterator.hasNext()) {
             Header header = (Header)headerIterator.next();
-            if (header.getName().equals(COOKIE_NAME)) {
-                value = header.getValue();
-                break;
+            HeaderElement[] elements = header.getElements();
+            for (HeaderElement element : elements) {
+                if (element.getName().equals(COOKIE_NAME)) {
+                    value = element.getValue();
+                    break;
+                }
             }
+            if (value != null) break;
         }
     }
 
