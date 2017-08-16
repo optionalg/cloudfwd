@@ -19,17 +19,18 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * A simple value object for unmarshalling the response to the ack poll. Convenience method to extract the
  * ackIds that have succeeded.
  * @author ghendrey
  */
-public class AckPollResponse {
-  private Map<String, Boolean> acks = new ConcurrentSkipListMap<>();
+public class AckPollResponseValueObject {
+  private final SortedMap<String, Boolean> acks = new TreeMap<>();
 
-  public AckPollResponse() {
+  public AckPollResponseValueObject() {
   } 
   
   Collection<Long> getSuccessIds() {
@@ -49,12 +50,6 @@ public class AckPollResponse {
     return acks;
   }
 
-  /**
-   * @param acks the acks to set
-   */
-  public void setAcks(
-          Map<String, Boolean> acks) {
-    this.acks = acks;
-  }
+
   
 }

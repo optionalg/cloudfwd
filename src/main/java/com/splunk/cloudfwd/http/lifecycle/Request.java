@@ -13,34 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd.http.lifecycle;
 
 /**
  *
  * @author ghendrey
  */
-public interface AckLifecycle {
-
-  void preEventsPost(EventBatch events);
-
-  void eventPostOK(EventBatch events);
-
-  void eventPostNotOK(int code, String msg, EventBatch events);
-
-  void eventPostFailure(Exception ex);
-
-  void preAckPoll();
-
-  void ackPollOK(EventBatch events);
-
-  void ackPollNotOK(int statusCode, String reply);
-
-  void ackPollFailed(Exception ex);
-
-  void healthPollFailed(Exception ex);
-
-  void healthPollOK();
-
-  void healthPollNotOK(int code, String msg);
+public class Request extends LifecycleEvent{
+  
+  public Request(Type type) {
+    super(type);
+  }
+  
 }
-

@@ -15,14 +15,13 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.LifecycleEvent;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.EventBatch;
-import com.splunk.cloudfwd.http.EventBatchLifecycleEvent;
+import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.io.Closeable;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -36,7 +35,7 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class LoggingChannel implements Closeable, Observer {
+public class LoggingChannel implements Closeable, LifecycleEventObserver {
 
   private static final Logger LOG = Logger.getLogger(LoggingChannel.class.
           getName());
@@ -50,15 +49,15 @@ public class LoggingChannel implements Closeable, Observer {
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final StickySessionEnforcer stickySessionEnforcer = new StickySessionEnforcer();
   private volatile boolean started;
-  private String channelId;
+  private final String channelId;
+  private final ChannelMetrics channelMetrics;
 
-  public LoggingChannel(LoadBalancer b, HttpEventCollectorSender sender) {
+  public LoggingChannel(LoadBalancer b, HttpEventCollectorSender sender, Connection c) {
     this.loadBalancer = b;
     this.sender = sender;
     this.channelId = newChannelId();
-
-    getChannelMetrics().addObserver(this);
-
+    this.channelMetrics = new ChannelMetrics(c);
+    this.channelMetrics.addObserver(this);
   }
 
   private static String newChannelId() {
@@ -66,19 +65,18 @@ public class LoggingChannel implements Closeable, Observer {
   }
 
   //Occasionally it's an optimization to be able to force ack polling to happen ASAP (vs wait for polling interval).
-  //However, we can't directly invoke methods on the AckManager as that can lead to a dealock (saw it, not
-  //guess about it). What happens is AckManager will want to call channelMetrics.ackPollOK, but channelMetrics
+  //However, we can't directly invoke methods on the HecIOManager as that can lead to a dealock (saw it, not
+  //guess about it). What happens is HecIOManager will want to call channelMetrics.ackPollOK, but channelMetrics
   //is also trying to acquire the lock on this object. So deadlock.
   synchronized void pollAcks() {
-    new Thread(sender.getAckManager()::pollAcks // poll for acks right now
-    , "Ack Kicker");
+    new Thread(sender.getHecIOManager()::pollAcks // poll for acks right now
+            , "Ack Kicker");
   }
 
   public synchronized void start() {
     if (started) {
       return;
     }
-    sender.setChannel(this);
     //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty 
     ThreadFactory f = new ThreadFactory() {
       @Override
@@ -143,10 +141,32 @@ public class LoggingChannel implements Closeable, Observer {
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
     //System.out.println("channel=" + getChannelId() + " unack-count=" + count);
+    if(!sender.getChannel().equals(this)){
+      String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.getChannel().getChannelId();
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
+    }
     sender.sendBatch(events);
     return true;
   }
 
+  @Override
+  synchronized public void update(LifecycleEvent e) {
+    switch (e.getType()) {
+      case ACK_POLL_OK: {
+        ackReceived(e);
+        notifyAll();
+        break;
+      }
+      case EVENT_POST_OK: {
+        //System.out.println("OBSERVED EVENT_POST_OK");
+        checkForStickySessionViolation(e);
+        break;
+      }
+    }
+  }
+
+  /*
   @Override
   public synchronized void update(Observable o, Object arg) {
     LifecycleEvent lifecycleEvent = null;
@@ -168,14 +188,15 @@ public class LoggingChannel implements Closeable, Observer {
     } catch (Exception e) {
       LOG.log(Level.SEVERE, e.getMessage(), e);
       FutureCallback c = this.loadBalancer.getConnection().getCallbacks();
-      EventBatch events = lifecycleEvent == null ? null :((EventBatchLifecycleEvent)lifecycleEvent).getEvents();
+      EventBatch events = lifecycleEvent == null ? null : ((EventBatchResponse) lifecycleEvent).
+              getEvents();
       new Thread(() -> {//FIXME TODO - usea thread pool
         c.failed(events, e); //FIXME TODO -- there are many places where we should be calling failed. 
       }).start();
 
     }
   }
-
+   */
   private void ackReceived(LifecycleEvent s) throws RuntimeException {
     int count = unackedCount.decrementAndGet();
     /*
@@ -268,7 +289,7 @@ public class LoggingChannel implements Closeable, Observer {
    *
    * @return true if ackwindow is empty
    */
-  protected boolean isEmpty() {
+  public boolean isEmpty() {
     return this.unackedCount.get() == 0;
   }
 
@@ -280,12 +301,12 @@ public class LoggingChannel implements Closeable, Observer {
    * @return the metrics
    */
   public final ChannelMetrics getChannelMetrics() {
-    return sender.getChannelMetrics();
+    return this.channelMetrics;
   }
 
   boolean isAvailable() {
     ChannelMetrics metrics = sender.getChannelMetrics();
-    return !quiesced && !closed && metrics.getUnacknowledgedCount() < FULL; //FIXME TODO make configurable   
+    return !quiesced && !closed && this.unackedCount.get() < FULL; //FIXME TODO make configurable   
   }
 
   @Override
@@ -303,7 +324,7 @@ public class LoggingChannel implements Closeable, Observer {
 
   private void checkForStickySessionViolation(LifecycleEvent s) {
     //System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
-    this.stickySessionEnforcer.recordAckId(((EventBatchLifecycleEvent)s).getEvents());
+    this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
   }
 
   private static class StickySessionEnforcer {

@@ -17,7 +17,7 @@ package com.splunk.cloudfwd.sim;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.http.AckManager;
+import com.splunk.cloudfwd.http.HecIOManager;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.HashMap;
@@ -97,10 +97,10 @@ public class AckEndpoint implements Endpoint {
     return this.acksStates.remove(ackId);
   }
 
-  public void pollAcks(AckManager ackMgr, FutureCallback<HttpResponse> cb) {
+  public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
     try {
       //System.out.println("Server side simulation: " + this.acksStates.size() + " acks tracked on server: " + acksStates);
-      Collection<Long> unacked = ackMgr.getAckWindow().
+      Collection<Long> unacked = ackMgr.getAckTracker().
               getUnacknowleldgedEvents();
       //System.out.println("Server recieved these acks to check: " + unacked);      
       SortedMap<Long, Boolean> acks = new TreeMap<>();

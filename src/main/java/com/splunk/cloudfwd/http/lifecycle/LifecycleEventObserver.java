@@ -13,25 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd.http.lifecycle;
 
 /**
  *
  * @author ghendrey
  */
-public class EventBatchLifecycleEvent extends LifecycleEvent{
-  private EventBatch events = null;
-    
-  public EventBatchLifecycleEvent(Type type, EventBatch events) throws Exception {
-    super(type);
-    this.events = events;
-  }
-  
-    /**
-   * @return the events
-   */
-  public EventBatch getEvents() {
-    return events;
-  }
-  
+public interface LifecycleEventObserver {
+  public void update(LifecycleEvent e);
 }

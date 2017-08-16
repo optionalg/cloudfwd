@@ -15,27 +15,21 @@
  */
 package com.splunk.cloudfwd.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Date;
-import java.util.Observable;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObservable;
 import java.util.logging.Logger;
 
 /**
  *
  * @author ghendrey
  */
-public class ChannelMetrics extends Observable implements AckLifecycle, LifecycleEventObserver {
+public class ChannelMetrics extends LifecycleEventObservable implements LifecycleEventObserver {
 
   private static final Logger LOG = Logger.getLogger(ChannelMetrics.class.
           getName());
-
-  private static final ObjectMapper mapper = new ObjectMapper(); //JSON serializer
-  private final ConcurrentMap<Long, Long> birthTimes = new ConcurrentSkipListMap<>(); //ackid -> creation time
-  private long oldestUnackedBirthtime = Long.MIN_VALUE;
-  private long mostRecentTimeToSuccess = 0;
-  private final HttpEventCollectorSender sender;
+  /*
   private long eventPostCount;
   private long eventPostOKCount;
   private long eventPostNotOKCount;
@@ -44,215 +38,50 @@ public class ChannelMetrics extends Observable implements AckLifecycle, Lifecycl
   private long ackPollOKCount;
   private long ackPollNotOKCount;
   private long ackPollFailureCount;
+   */
 
   // health-related
   private boolean lastHealthCheck;
-  private long healthPollOKCount;
-  private long healthPollNotOKCount;
-  private long healthPollFailureCount;
+  // private long healthPollOKCount;
+  // private long healthPollNotOKCount;
+  // private long healthPollFailureCount;
 
-  ChannelMetrics(HttpEventCollectorSender sender) {
-    this.sender = sender;
-  }
-
-  @Override
-  public String toString() {
-    return "ChannelMetrics{" + "birthTimesSize=" + birthTimes.size() + ", oldestUnackedBirthtime=" + oldestUnackedBirthtime + ", mostRecentTimeToSuccess=" + mostRecentTimeToSuccess + ", sender=" + sender + ", eventPostCount=" + eventPostCount + ", eventPostOKCount=" + eventPostOKCount + ", eventPostNotOKCount=" + eventPostNotOKCount + ", eventPostFailureCount=" + eventPostFailureCount + ", ackPollCount=" + ackPollCount + ", ackPollOKCount=" + ackPollOKCount + ", ackPollNotOKCount=" + ackPollNotOKCount + ", ackPollFailureCount=" + ackPollFailureCount + '}';
-  }
-
-  boolean isChannelEmpty() {
-    return birthTimes.isEmpty();
-  }
-
-  /*
-  @Override
-  public String toString() {
-    try {
-      return "METRICS ---> " + mapper.writeValueAsString(this);
-    } catch (JsonProcessingException ex) {
-      throw new RuntimeException(ex.getMessage(), ex);
-    }
-  }
-   */
-  public void ackIdCreated(long ackId, EventBatch events) {
-    long birthtime = System.currentTimeMillis();
-    birthTimes.put(ackId, birthtime);
-    if (oldestUnackedBirthtime == Long.MIN_VALUE) { //not set yet id MIN_VALUE
-      oldestUnackedBirthtime = birthtime; //this happens only once. It's a dumb firt run edgecase      
-    }
-  }
-
-  private void ackIdSucceeded(long ackId) {
-
-    Long birthTime;
-    if (null != (birthTime = birthTimes.remove(ackId))) {
-      this.mostRecentTimeToSuccess = System.currentTimeMillis() - birthTime;
-      if (oldestUnackedBirthtime == this.mostRecentTimeToSuccess) { //in this case we just processed the oldest ack
-        oldestUnackedBirthtime = scanForOldestUnacked();//so we need to figure out which unacked id is now oldest
-      }
-    } else {
-      LOG.severe("no birth time recorded for ackId: " + ackId);
-      throw new IllegalStateException(
-              "no birth time recorded for ackId: " + ackId);
-    }
-
-  }
-
-  private long scanForOldestUnacked() {
-    long oldest = Long.MAX_VALUE;
-    for (long birthtime : birthTimes.values()) { //O(n) acceptable 'cause window gonna be small
-      if (birthtime < oldest) {
-        oldest = birthtime;
-      }
-    }
-    return oldest;
-  }
-
-  /**
-   * @return the unacknowledgedCount
-   */
-  public int getUnacknowledgedCount() {
-    return birthTimes.size();
-  }
-
-  public String getOldest() {
-    return new Date(oldestUnackedBirthtime).toString();
-  }
-
-  public boolean getChannelHealth() {
-    return this.lastHealthCheck;
-  }
-
-  /**
-   * @return the mostRecentTimeToSuccess
-   */
-  public long getMostRecentTimeToSuccess() {
-    return mostRecentTimeToSuccess; //Duration.ofMillis(mostRecentTimeToSuccess).toString();
-  }
-
-  /**
-   * @return the birthTimes
-   */
-  public ConcurrentMap<Long, Long> getBirthTimes() {
-    return birthTimes;
-  }
-
-  /**
-   * @return the oldestUnackedBirthtime
-   */
-  public long getOldestUnackedBirthtime() {
-    return oldestUnackedBirthtime;
-  }
-
-  @Override
-  public void preEventsPost(EventBatch batch) {
-    eventPostCount++;
-  }
-
-  @Override
-  public void eventPostOK(EventBatch events) { //needs to be synchronized to insure intervening notifyObservers doesn't clearChanged
-    eventPostOKCount++;
-    
-    //System.out.println("EVENT POST OK");
-    try {
-      LifecycleEvent state = new EventBatchLifecycleEvent(
-              LifecycleEvent.Type.EVENT_POST_OK, events);
-      //System.out.println("NOTIFYING EVENT_POST_OK");
-      synchronized (this) {
-        this.setChanged();
-        this.notifyObservers(state);
-      }
-    } catch (Exception e) {
-      LOG.severe(e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
-    }
-
-  }
-
-  @Override
-  public void eventPostNotOK(int code, String msg, EventBatch events) {
-    eventPostNotOKCount++;
-  }
-
-  @Override
-  public void eventPostFailure(Exception ex) {
-    eventPostFailureCount++;
-  }
-
-  @Override
-  public void preAckPoll() {
-    ackPollCount++;
-  }
-
-  @Override
-  public void ackPollOK(EventBatch events) {
-    try {
-      ackPollOKCount++;
-      ackIdSucceeded(events.getAckId());
-      LifecycleEvent state = new EventBatchLifecycleEvent(
-              LifecycleEvent.Type.ACK_POLL_OK, events);
-      System.out.println("NOTIFYING ACK_POLL_OK for ackId" + events.getAckId());
-      synchronized (this) {
-        setChanged();
-        notifyObservers(state);
-      }
-    } catch (Exception e) {
-      LOG.severe(e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
-    }
-  }
-
-  @Override
-  public void ackPollNotOK(int statusCode, String reply) {
-    ackPollNotOKCount++;
-  }
-
-  @Override
-  public void ackPollFailed(Exception ex) {
-    ackPollFailureCount++;
-  }
-
-  @Override
-  public void healthPollFailed(Exception ex) {
-    // There's a 400 fail that is sent back by the HEC
-    // when the token is invalid.
-    healthPollFailureCount++;
-  }
-
-  @Override
-  public void healthPollOK() {
-    lastHealthCheck = true;
-    healthPollOKCount++;
-    try {
-      LifecycleEvent state = new LifecycleEvent(
-              LifecycleEvent.Type.HEALTH_POLL_OK);
-      System.out.println("NOTIFYING HEALTH_POLL_OK");
-      setChanged();
-      notifyObservers(state);
-    } catch (Exception e) {
-      LOG.severe(e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
-    }
-  }
-
-  @Override
-  public void healthPollNotOK(int code, String msg) {
-    lastHealthCheck = false;
-    healthPollNotOKCount++;
-    try {
-      LifecycleEvent state = new LifecycleEvent(
-              LifecycleEvent.Type.HEALTH_POLL_NOT_OK);
-      System.out.println("NOTIFYING HEALTH_POLL_NOT_OK");
-      setChanged();
-      notifyObservers(state);
-    } catch (Exception e) {
-      LOG.severe(e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
-    }
+  public ChannelMetrics(Connection c) {
+    super(c);
   }
 
   @Override
   public void update(LifecycleEvent e) {
-    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    handleLifecycleEvent(e);
+  }
+
+  private void handleLifecycleEvent(LifecycleEvent e) {
+    switch (e.getType()) {
+      case EVENT_POST_OK: {;
+        //System.out.println("NOTIFYING EVENT_POST_OK");
+        notifyObservers(e);
+        break;
+      }
+      case ACK_POLL_OK: {
+        notifyObservers(e);
+        break;
+      }
+
+      case HEALTH_POLL_OK: {
+        lastHealthCheck = true;
+        notifyObservers(e);
+        break;
+      }
+      case HEALTH_POLL_NOT_OK: {
+        lastHealthCheck = false;
+        notifyObservers(e);
+        break;
+      }
+      case HEALTH_POLL_FAILED: {
+        lastHealthCheck = false;
+        notifyObservers(e);
+        break;
+      }
+    }
   }
 }

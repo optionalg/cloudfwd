@@ -13,46 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd.http.lifecycle;
 
 /**
  *
  * @author ghendrey
  */
-public class LifecycleEvent {
+public class Response extends LifecycleEvent {
 
-  public enum Type {
-	// States tied to an EventBatch object
-    PRE_EVENT_POST,
-    EVENT_POST_OK,
-    EVENT_POST_NOT_OK,
-    EVENT_POST_FAILURE,
-    PRE_ACK_POLL,
-    ACK_POLL_OK,
-    ACK_POLL_NOT_OK,
-    ACK_POLL_FAILURE,
+  private final int httpCode;
+  private final String resp;
 
-    // States without an EventBatch object
-    HEALTH_POLL_OK,
-    HEALTH_POLL_NOT_OK,
-    HEALTH_POLL_FAILED
-  };
-
-  private final Type type;
-
-
-  public LifecycleEvent(final Type type) throws Exception {
-    this.type = type;
-
+  public Response(final Type type, int httpCode, String resp) {
+    super(type);
+    this.httpCode = httpCode;
+    this.resp = resp;
   }
-
 
   /**
-   * @return the type
+   * @return the httpCode
    */
-  public Type getType() {
-    return type;
+  public int getHttpCode() {
+    return httpCode;
   }
 
-
+  /**
+   * @return the resp
+   */
+  public String getResp() {
+    return resp;
+  }
 }
