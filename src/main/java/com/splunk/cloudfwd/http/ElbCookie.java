@@ -43,4 +43,9 @@ public class ElbCookie {
         return "";
     }
 
+    @Override
+    public String toString() {
+        return getNameValuePair();
+    }
+
 }
