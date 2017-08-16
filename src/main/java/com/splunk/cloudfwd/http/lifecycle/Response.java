@@ -13,23 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
-
-import java.io.Closeable;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
+package com.splunk.cloudfwd.http.lifecycle;
 
 /**
  *
  * @author ghendrey
  */
-public interface Endpoints extends Closeable{
-  public void postEvents(final EventBatch events, final HttpRequest request, FutureCallback<HttpResponse> httpCallback);
-  public void pollAcks(HecIOManager ackMgr, final HttpRequest request, FutureCallback<HttpResponse> httpCallback);
-  public void pollHealth(final HttpRequest request, FutureCallback<HttpResponse> httpCallback);
-  @Override
-  public void close();
-  public void start();
+public class Response extends LifecycleEvent {
+
+  private final int httpCode;
+  private final String resp;
+
+  public Response(final Type type, int httpCode, String resp) {
+    super(type);
+    this.httpCode = httpCode;
+    this.resp = resp;
+  }
+
+  /**
+   * @return the httpCode
+   */
+  public int getHttpCode() {
+    return httpCode;
+  }
+
+  /**
+   * @return the resp
+   */
+  public String getResp() {
+    return resp;
+  }
 }

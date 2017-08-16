@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.sim;
 
-import com.splunk.cloudfwd.http.AckManager;
+import com.splunk.cloudfwd.http.HecIOManager;
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.EventBatch;
 import org.apache.http.HttpRequest;
@@ -47,7 +47,7 @@ public class SimulatedHECEndpoints implements Endpoints{
   }
 
   @Override
-  public void pollAcks(AckManager ackMgr, HttpRequest request,
+  public void pollAcks(HecIOManager ackMgr, HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
     ackEndpoint.pollAcks(ackMgr, httpCallback);
   }

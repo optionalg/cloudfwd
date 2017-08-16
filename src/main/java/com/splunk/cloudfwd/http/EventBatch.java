@@ -111,7 +111,7 @@ public class EventBatch implements SerializedEventProducer {
   protected synchronized void flush() {
     if (!this.flushed && this.stringBuilder.length() > 0) {
       //endpoints are either real (via the Sender) or simulated 
-      this.sender.getAckManager().postEvents(this);
+      this.sender.getHecIOManager().postEvents(this);
       flushed = true;
     }
   }

@@ -15,8 +15,15 @@
  */
 package com.splunk.cloudfwd.http;
 
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.http.lifecycle.RequestFailed;
+import com.splunk.cloudfwd.http.lifecycle.Response;
+import com.splunk.cloudfwd.http.lifecycle.EventBatchFailure;
+import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
+import com.splunk.cloudfwd.http.lifecycle.EventBatchRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.http.lifecycle.PreRequest;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
@@ -27,54 +34,48 @@ import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
 /**
- * AckManager is the mediator between sending and receiving messages to splunk
- * (as such it is the only piece of the Ack-system that touches the
- * HttpEventCollectorSender). AckManager sends via the sender and receives and
- * unmarshals responses. From these responses it maintains the ack window by
- * adding newly received ackIds to the ack window, or removing them on success.
- * It also owns the AckPollScheduler which will periodically call back
- * "pollAcks" on this, which sends the content of the ackWindow to Splunk via
- * the sender, to check their status.
+ * HecIOManager is the mediator between sending and receiving messages to splunk
+ (as such it is the only piece of the Ack-system that touches the
+ HttpEventCollectorSender). HecIOManager sends via the sender and receives and
+ unmarshals responses. From these responses it maintains the ack window by
+ adding newly received ackIds to the ack window, or removing them on success.
+ It also owns the AckPollScheduler which will periodically call back
+ "pollAcks" on this, which sends the content of the ackTracker to Splunk via
+ the sender, to check their status.
  *
  * @author ghendrey
  */
-public class AckManager implements AckLifecycle, Closeable {
+public class HecIOManager implements Closeable {
 
-  private static final Logger LOG = Logger.getLogger(AckManager.class.getName());
+  private static final Logger LOG = Logger.getLogger(HecIOManager.class.getName());
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpEventCollectorSender sender;
   private final PollScheduler ackPollController = new PollScheduler("ack poller");
-  private final PollScheduler healthPollController = new PollScheduler("health poller");
-  private final AckWindow ackWindow;
-  private final ChannelMetrics channelMetrics;
+  private final PollScheduler healthPollController = new PollScheduler(
+          "health poller");
+  private final AckTracker ackTracker;
   private volatile boolean ackPollInProgress;
 
-  AckManager(HttpEventCollectorSender sender) {
+  HecIOManager(HttpEventCollectorSender sender) {
     this.sender = sender;
-    this.channelMetrics = new ChannelMetrics(sender);
-    this.ackWindow = new AckWindow(this.channelMetrics);
-    // start polling for health
+    this.ackTracker = new AckTracker(sender);
   }
 
   /**
    * @return the ackPollReq
    */
   public String getAckPollReq() {
-    return ackWindow.toString();
-  }
-
-  public ChannelMetrics getChannelMetrics() {
-    return channelMetrics;
+    return ackTracker.toString();
   }
 
   private synchronized void startPolling() {
     if (!ackPollController.isStarted()) {
       Runnable poller = () -> {
-        if (this.getAckWindow().isEmpty()) {
+        if (this.getAckTracker().isEmpty()) {
           System.out.println("No acks to poll for");
           return;
-        }else if (this.isAckPollInProgress()) {
+        } else if (this.isAckPollInProgress()) {
           System.out.println("skipping ack poll - already have one in flight");
           return;
         }
@@ -87,30 +88,34 @@ public class AckManager implements AckLifecycle, Closeable {
         this.pollHealth();
       };
       healthPollController.start(poller, 5, TimeUnit.SECONDS);
-    }    
+    }
   }
 
-
   public void postEvents(EventBatch events) {
-    preEventsPost(events);
+    this.ackTracker.preEventPost(events);
+    sender.getChannelMetrics().update(new EventBatchRequest(
+            LifecycleEvent.Type.PRE_EVENT_POST, events));
     /*
     System.out.println(
             "channel=" + getSender().getChannel() + " events: " + this.
             toString());
-    */
+     */
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
 
       @Override
       public void failed(Exception ex) {
-        eventPostFailure(ex);
-        AckManager.this.sender.getConnection().getCallbacks().failed(events, ex);
+        //eventPostFailure(ex);
+        sender.getChannelMetrics().update(new EventBatchFailure(
+                LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
+        sender.getConnection().getCallbacks().failed(events, ex);
       }
 
       @Override
       public void cancelled() {
-        Exception ex = new RuntimeException("HTTP post cancelled while posting events");
-        AckManager.this.sender.getConnection().getCallbacks().failed(events, ex);
+        Exception ex = new RuntimeException(
+                "HTTP post cancelled while posting events");
+        sender.getConnection().getCallbacks().failed(events, ex);
       }
 
       @Override
@@ -123,7 +128,9 @@ public class AckManager implements AckLifecycle, Closeable {
           }
         } else {
           LOG.log(Level.SEVERE, "server didn't return ack ids");
-          eventPostNotOK(code, reply, events);
+          //eventPostNotOK(code, reply, events);
+          sender.getChannelMetrics().update(new EventBatchResponse(
+                  LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply, events));
         }
       }
 
@@ -135,12 +142,12 @@ public class AckManager implements AckLifecycle, Closeable {
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
   public void consumeEventPostResponse(String resp, EventBatch events, ElbCookie cookie) {
     //System.out.println("consuming event post response" + resp);
-    EventPostResponse epr;
+    EventPostResponseValueObject epr;
     try {
       Map<String, Object> map = mapper.readValue(resp,
               new TypeReference<Map<String, Object>>() {
       });
-      epr = new EventPostResponse(map);
+      epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
 
       // update cookie if it exists in the response
@@ -155,20 +162,20 @@ public class AckManager implements AckLifecycle, Closeable {
     }
 
     //System.out.println("ABOUT TO HANDLE EPR");
-    ackWindow.handleEventPostResponse(epr, events);
+    ackTracker.handleEventPostResponse(epr, events);
 
     // start polling for acks
     startPolling();
-    
-    eventPostOK(events);
+
+    sender.getChannelMetrics().update(new EventBatchResponse(
+            LifecycleEvent.Type.EVENT_POST_OK, 200, resp, events));
   }
-  
 
   public void consumeAckPollResponse(String resp) {
     try {
-      AckPollResponse ackPollResp = mapper.
-              readValue(resp, AckPollResponse.class);
-      this.ackWindow.handleAckPollResponse(ackPollResp);
+      AckPollResponseValueObject ackPollResp = mapper.
+              readValue(resp, AckPollResponseValueObject.class);
+      this.ackTracker.handleAckPollResponse(ackPollResp);
     } catch (IOException ex) {
       throw new RuntimeException(ex.getMessage(), ex);
     }
@@ -177,31 +184,33 @@ public class AckManager implements AckLifecycle, Closeable {
 
   //called by the AckPollScheduler
   public void pollAcks() {
-    if (this.ackWindow.isEmpty()) {
+    if (this.ackTracker.isEmpty()) {
       return; //ack poll scheduled but not needed
     }
     System.out.println("POLLING ACKS...");
     this.ackPollInProgress = true;
-    preAckPoll();
+    sender.getChannelMetrics().update(new PreRequest(LifecycleEvent.Type.PRE_ACK_POLL));
     System.out.println("sending acks");
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
-      public void completed(String reply, int code, ElbCookie cookie) {
-        System.out.println(
-                "channel=" + AckManager.this.sender.getChannel() + " reply: " + reply);
+        public void completed(String reply, int code, ElbCookie cookie) {
+        System.out.println("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
           consumeAckPollResponse(reply);
         } else {
-          ackPollNotOK(code, reply);
+          sender.getChannelMetrics().update(new Response(
+                  LifecycleEvent.Type.ACK_POLL_NOT_OK, code, reply));
         }
-        AckManager.this.ackPollInProgress = false;
+        HecIOManager.this.ackPollInProgress = false;
       }
 
       @Override
       public void failed(Exception ex) {
         LOG.log(Level.SEVERE, "failed to poll acks", ex);
-        AckManager.this.ackPollFailed(ex);
-        AckManager.this.ackPollInProgress = false;
+        //AckManager.this.ackPollFailed(ex);
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.ACK_POLL_FAILURE, ex));
+        HecIOManager.this.ackPollInProgress = false;
       }
 
       @Override
@@ -218,15 +227,21 @@ public class AckManager implements AckLifecycle, Closeable {
     switch (statusCode) {
       case 200:
         System.out.println("Health check is good");
-        healthPollOK();
+       sender.getChannelMetrics().update(new Response(LifecycleEvent.Type.HEALTH_POLL_OK,
+                200, msg));
         break;
       case 503:
-        healthPollNotOK(statusCode, msg);
+ 
+        sender.getChannelMetrics().update(new Response(
+                LifecycleEvent.Type.HEALTH_POLL_NOT_OK, statusCode, msg));
         break;
       default:
         // 400 should not be indicative of unhealthy HEC
         // but rather the URL/token is wrong.
-        healthPollFailed(new Exception(msg));
+        //healthPollFailed(new Exception(msg));
+        //this is actualy a failure. Something is actually *wrong* with the endpoint or configured URL
+        sender.getConnection().getCallbacks().failed(null, new Exception(
+                "HEC health endpoint returned " + statusCode + ". Response was: " + msg));
         break;
     }
   }
@@ -238,12 +253,14 @@ public class AckManager implements AckLifecycle, Closeable {
       @Override
       public void failed(Exception ex) {
         LOG.log(Level.SEVERE, "failed to poll health", ex);
-        healthPollFailed(ex);
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.HEALTH_POLL_FAILED, ex));
       }
 
       @Override
       public void cancelled() {
-        LOG.severe("cancelled health poll");
+        sender.getConnection().getCallbacks().failed(null, new Exception(
+                "HEC health endpoint request cancelled."));
       }
 
       @Override
@@ -262,74 +279,11 @@ public class AckManager implements AckLifecycle, Closeable {
     return sender;
   }
 
-  @Override
-  public void preEventsPost(EventBatch events) {
-    ackWindow.preEventPost(events);
-    getChannelMetrics().preEventsPost(events);
-  }
-
-  @Override
-  public void eventPostNotOK(int statusCode, String reply, EventBatch events) {
-    getChannelMetrics().eventPostNotOK(statusCode, reply, events);
-  }
-
-  @Override
-  public void preAckPoll() {
-    getChannelMetrics().preAckPoll();
-  }
-
-  @Override
-  public void eventPostOK(EventBatch events) {
-      getChannelMetrics().eventPostOK(events);
-  }
-
-  @Override
-  public void eventPostFailure(Exception ex) {    
-    getChannelMetrics().eventPostFailure(ex);
-  }
-
-  @Override
-  public void ackPollOK(EventBatch events) {
-    //see consumeEventsPostResponse. We don't yet know what the events are that 
-    //are correlated to the ack poll response! So this method can't ever be
-    //legally called
-    throw new IllegalStateException(
-            "ackPollOK was illegally called on AckManager");
-  }
-
-  @Override
-  public void ackPollNotOK(int statusCode, String reply) {
-    LOG.log(Level.SEVERE, "ack poll failed. Http status="+statusCode + ". Reply was " + reply);
-    getChannelMetrics().ackPollNotOK(statusCode, reply);
-  }
-
-  @Override
-  public void ackPollFailed(Exception ex) {
-    LOG.log(Level.SEVERE, ex.getMessage(), ex);
-    getChannelMetrics().ackPollFailed(ex);
-  }
-
   /**
-   * @return the ackWindow
+   * @return the ackTracker
    */
-  public AckWindow getAckWindow() {
-    return ackWindow;
-  }
-
-  @Override
-  public void healthPollFailed(Exception ex) {
-    LOG.log(Level.SEVERE, ex.getMessage(), ex);
-    getChannelMetrics().healthPollFailed(ex);
-  }
-
-  @Override
-  public void healthPollOK() {
-    getChannelMetrics().healthPollOK();
-  }
-
-  @Override
-  public void healthPollNotOK(int code, String msg) {
-    getChannelMetrics().healthPollNotOK(code, msg);
+  public AckTracker getAckTracker() {
+    return ackTracker;
   }
 
   boolean isAckPollInProgress() {
@@ -341,5 +295,4 @@ public class AckManager implements AckLifecycle, Closeable {
     this.ackPollController.stop();
     this.healthPollController.stop();
   }
-
 }

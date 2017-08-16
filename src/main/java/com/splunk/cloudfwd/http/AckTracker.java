@@ -17,10 +17,12 @@ package com.splunk.cloudfwd.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,17 +34,17 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class AckWindow {
+public class AckTracker {
 
-  private static final Logger LOG = Logger.getLogger(AckWindow.class.getName());
+  private static final Logger LOG = Logger.getLogger(AckTracker.class.getName());
 
-  private final static ObjectMapper mapper = new ObjectMapper();
-  private final Map<Long, EventBatch> polledAcks = new ConcurrentSkipListMap<>(); //key ackID
-  private final Map<String, EventBatch> postedEventBatches = new ConcurrentSkipListMap<>();//key EventBatch ID
-  private final ChannelMetrics channelMetrics;
+  private final static ObjectMapper jsonMapper = new ObjectMapper();
+  private final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
+  private final Map<String, EventBatch> postedEventBatches = new ConcurrentHashMap<>();//key EventBatch ID
+  private final HttpEventCollectorSender sender;
 
-  AckWindow(ChannelMetrics channelMetrics) {
-    this.channelMetrics = channelMetrics;
+  AckTracker(HttpEventCollectorSender sender) {
+    this.sender = sender;
   }
 
   @Override
@@ -51,23 +53,23 @@ public class AckWindow {
     try {
       Map json = new HashMap();
       json.put("acks", polledAcks.keySet()); //{"acks":[1,2,3...]}
-      return mapper.writeValueAsString(json); //this class itself marshals out to {"acks":[id,id,id]}
+      return jsonMapper.writeValueAsString(json); //this class itself marshals out to {"acks":[id,id,id]}
     } catch (JsonProcessingException ex) {
-      Logger.getLogger(AckWindow.class.getName()).log(Level.SEVERE, null, ex);
+      Logger.getLogger(AckTracker.class.getName()).log(Level.SEVERE, null, ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
 
   }
 
-  public boolean isEmpty() {
-    return this.channelMetrics.isChannelEmpty();//polledAcks.isEmpty() && postedEventBatches.isEmpty();
+  public boolean isEmpty() {    
+    return this.sender.getChannel().isEmpty();//.getChannelMetrics().isChannelEmpty();//polledAcks.isEmpty() && postedEventBatches.isEmpty();
   }
 
   public void preEventPost(EventBatch batch) {
     postedEventBatches.put(batch.getId(), batch);  //track what we attempt to post, so in case fail we can try again  
   }
 
-  public void handleEventPostResponse(EventPostResponse epr,
+  public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatch events) {
     Long ackId = epr.getAckId();
     //System.out.println("handler event post response for ack " + ackId);
@@ -79,10 +81,10 @@ public class AckWindow {
     }
     polledAcks.put(ackId, events);
     //System.out.println("Tracked ackIDs on client now: " + polledAcks.keySet());
-    channelMetrics.ackIdCreated(ackId, events);
   }
 
-  public void handleAckPollResponse(AckPollResponse apr) {
+  public void handleAckPollResponse(AckPollResponseValueObject apr) {
+    EventBatch events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
       System.out.println("success acked ids: " + succeeded);
@@ -91,7 +93,7 @@ public class AckWindow {
       }
 
       for (long ackId : succeeded) {
-        EventBatch events = this.polledAcks.get(ackId);
+        events = this.polledAcks.get(ackId);
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
         if(ackId != events.getAckId()){
           String msg = "ackId mismatch key ackID=" +ackId + " recordedAckId=" + events.getAckId();
@@ -104,20 +106,19 @@ public class AckWindow {
                   ackId);
         }
         
-        channelMetrics.ackPollOK(events);
-        //polledAcks.remove(ackId);      
+        this.sender.getChannelMetrics().update(new EventBatchResponse(LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?", events));     
       }
       //System.out.println("polledAcks was " + polledAcks.keySet());
       polledAcks.keySet().removeAll(succeeded);
       //System.out.println("polledAcks now " + polledAcks.keySet());
     } catch (Exception e) {
       LOG.severe("caught exception in handleAckPollResponse: " + e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
+      sender.getConnection().getCallbacks().failed(events, e);
     }
   }
 
   ChannelMetrics getChannelMetrics() {
-    return this.channelMetrics;
+    return this.sender.getChannelMetrics();
   }
 
   public Collection<Long> getUnacknowleldgedEvents() {

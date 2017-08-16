@@ -15,13 +15,13 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.LifecycleEvent;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,48 +30,32 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class ConnectionState extends Observable implements Observer {
+public class CheckpointManager implements LifecycleEventObserver {
 
-  private static final Logger LOG = Logger.getLogger(ConnectionState.class.
+  private static final Logger LOG = Logger.getLogger(CheckpointManager.class.
           getName());
 
   //EventBatch callbacks are ordered by EventBatch id lexicographic comparison
   private final NavigableMap<String, EventBatch> orderedEvents = new ConcurrentSkipListMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
 
-  ConnectionState(Connection c) {
+  CheckpointManager(Connection c) {
     this.connection = c;
   }
 
-  @Override
-  public void update(Observable o, Object arg) {
-    //System.out.println("ping connectionstate");
-    try {
-      if (!(arg instanceof LifecycleEvent)) {
-        LOG.info("ConnectionState ignoring update of " + arg.getClass().
-                getName());
-        return; //ignore updates we don't care about, like those destined for LoadBalancer
-      }
 
-      LifecycleEvent es = (LifecycleEvent) arg;
+  @Override
+  public void update(LifecycleEvent e) {
+    if (e.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
+      EventBatchResponse resp = (EventBatchResponse) e;
+      String id = resp.getEvents().getId();
       /*
-      System.out.println("CONN STATE UPDATE channel=" + es.getSender().
-              getChannel());*/
-      if (es.getCurrentState() == LifecycleEvent.Type.ACK_POLL_OK) {
-        String id = es.getEvents().getId();
-        /*
         System.out.println(
                 "MAYBE CALLBACK HIGHWATER for " + id + "(ackId is " + es.
                 getEvents().getAckId() + ")");
-        */
-        acknowledgeHighwaterAndBelow(es.getEvents());
-      }
-    } catch (Exception ex) {
-      LOG.severe(ex.getMessage());
-      ex.printStackTrace();
-      throw new RuntimeException(ex.getMessage(), ex);
+       */
+      acknowledgeHighwaterAndBelow(resp.getEvents());
     }
-
   }
 
   @Override
@@ -140,31 +124,5 @@ public class ConnectionState extends Observable implements Observer {
     this.orderedEvents.put(events.getId(), events);
   }
 
-  private static class BatchCallback {
-
-    private EventBatch events;
-    private FutureCallback callback;
-
-    public BatchCallback(EventBatch events, FutureCallback callback) {
-      this.events = events;
-      this.callback = callback;
-    }
-
-    public EventBatch getEvents() {
-      return events;
-    }
-
-    public void setEvents(EventBatch events) {
-      this.events = events;
-    }
-
-    /**
-     * @return the callback
-     */
-    public FutureCallback getCallback() {
-      return callback;
-    }
-
-  }
-
+ 
 }

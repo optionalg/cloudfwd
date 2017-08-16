@@ -13,34 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd.http.lifecycle;
 
 /**
  *
  * @author ghendrey
  */
-public interface AckLifecycle {
+public abstract class LifecycleEvent {
 
-  void preEventsPost(EventBatch events);
+  public enum Type {
+	// States tied to an EventBatch object
+    PRE_EVENT_POST,
+    EVENT_POST_OK,
+    EVENT_POST_NOT_OK,
+    EVENT_POST_FAILURE,
+    PRE_ACK_POLL,
+    ACK_POLL_OK,
+    ACK_POLL_NOT_OK,
+    ACK_POLL_FAILURE,
 
-  void eventPostOK(EventBatch events);
+    // States without an EventBatch object
+    HEALTH_POLL_OK,
+    HEALTH_POLL_NOT_OK,
+    HEALTH_POLL_FAILED
+  };
 
-  void eventPostNotOK(int code, String msg, EventBatch events);
+  private final Type type;
 
-  void eventPostFailure(Exception ex);
+  public LifecycleEvent(final Type type) {
+    this.type = type;
+  }
 
-  void preAckPoll();
+  /**
+   * @return the type
+   */
+  public Type getType() {
+    return type;
+  }
 
-  void ackPollOK(EventBatch events);
 
-  void ackPollNotOK(int statusCode, String reply);
-
-  void ackPollFailed(Exception ex);
-
-  void healthPollFailed(Exception ex);
-
-  void healthPollOK();
-
-  void healthPollNotOK(int code, String msg);
 }
-

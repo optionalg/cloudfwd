@@ -15,21 +15,29 @@
  */
 package com.splunk.cloudfwd.http;
 
-import java.io.Closeable;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
+import java.util.Map;
 
 /**
  *
  * @author ghendrey
  */
-public interface Endpoints extends Closeable{
-  public void postEvents(final EventBatch events, final HttpRequest request, FutureCallback<HttpResponse> httpCallback);
-  public void pollAcks(HecIOManager ackMgr, final HttpRequest request, FutureCallback<HttpResponse> httpCallback);
-  public void pollHealth(final HttpRequest request, FutureCallback<HttpResponse> httpCallback);
-  @Override
-  public void close();
-  public void start();
+public class EventPostResponseValueObject {
+  private Map<String, Object> map;
+
+
+  EventPostResponseValueObject(Map<String, Object> map) {
+    this.map = map;
+  }
+  
+  
+
+  /**
+   * @return the ackId
+   */
+  public Long getAckId() {
+    return Long.parseLong(map.get("ackId").toString());
+  }
+
+
+  
 }

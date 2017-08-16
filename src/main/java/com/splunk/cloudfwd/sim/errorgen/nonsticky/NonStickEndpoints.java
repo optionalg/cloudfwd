@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.sim.errorgen.nonsticky;
 
-import com.splunk.cloudfwd.http.AckManager;
+import com.splunk.cloudfwd.http.HecIOManager;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.sim.AckEndpoint;
 import com.splunk.cloudfwd.sim.EventEndpoint;
@@ -36,8 +36,8 @@ public class NonStickEndpoints extends SimulatedHECEndpoints {
   }
   
   
-    @Override
-  public void pollAcks(AckManager ackMgr, HttpRequest request,
+  @Override
+  public void pollAcks(HecIOManager ackMgr, HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
     //we have to ask the NonStickEventEndpoint for the AckEndpoint, because it switches between 
     //more than one AckEndpoint...THAT'S THE POINT of this simulator

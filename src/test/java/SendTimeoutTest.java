@@ -14,15 +14,11 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.FutureCallback;
-import com.splunk.cloudfwd.IllegalHECAcknowledgementStateException;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.Assert;
 import org.junit.Before;

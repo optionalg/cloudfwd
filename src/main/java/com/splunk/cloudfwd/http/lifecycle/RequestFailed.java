@@ -13,31 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
-
-import java.util.Map;
+package com.splunk.cloudfwd.http.lifecycle;
 
 /**
  *
  * @author ghendrey
  */
-public class EventPostResponse {
-  private Map<String, Object> map;
+public class RequestFailed extends LifecycleEvent{
 
-
-  EventPostResponse(Map<String, Object> map) {
-    this.map = map;
+  private final Exception exception;
+  
+  public RequestFailed(Type type, Exception e) {
+    super(type);
+    this.exception = e; 
   }
-  
-  
 
   /**
-   * @return the ackId
+   * @return the exception
    */
-  public Long getAckId() {
-    return Long.parseLong(map.get("ackId").toString());
+  public Exception getException() {
+    return exception;
   }
-
-
   
 }

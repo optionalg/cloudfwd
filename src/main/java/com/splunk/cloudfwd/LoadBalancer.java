@@ -24,10 +24,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,16 +34,15 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class LoadBalancer implements Observer, Closeable {
+public class LoadBalancer implements Closeable {
 
   private int channelsPerDestination = 4;
   private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
           getName());
   /* All channels that can be used to send messages. Key is channel ID */
-  private final Map<String, LoggingChannel> channels = new ConcurrentSkipListMap<>();
-  //private final AtomicBoolean available = new AtomicBoolean(true);
+  private final Map<String, LoggingChannel> channels = new ConcurrentHashMap<>();
   private PropertiesFileHelper configuredObjectFactory;
-  private final ConnectionState connectionState; //consolidate metrics across all channels
+  private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
   private int robin; //incremented (mod channels) to perform round robin
@@ -56,18 +53,18 @@ public class LoadBalancer implements Observer, Closeable {
     this(c, new Properties());
   }
 
-  LoadBalancer(Connection c,  Properties p) {
+  LoadBalancer(Connection c, Properties p) {
     this.connection = c;
     this.configuredObjectFactory = new PropertiesFileHelper(p);
     this.channelsPerDestination = this.configuredObjectFactory.
             getChannelsPerDestination();
     this.discoverer = new IndexDiscoverer(configuredObjectFactory);
-    this.connectionState = new ConnectionState(c);
-    this.discoverer.addObserver(this);
+    this.checkpointManager = new CheckpointManager(c);
+    //this.discoverer.addObserver(this);
   }
 
+  /*
   @Override
-  /* Called when metric of a channel changes. */
   public synchronized void update(Observable o, Object arg) {
     try {
 
@@ -91,17 +88,18 @@ public class LoadBalancer implements Observer, Closeable {
     }
 
   }
-
+   */
   private void updateChannels(IndexDiscoverer.Change change) {
     System.out.println(change);
   }
 
   public synchronized void sendBatch(EventBatch events)
           throws TimeoutException {
-    if(null == this.connection.getCallbacks()){
-      throw new IllegalStateException("Connection FutureCallback has not been set.");
+    if (null == this.connection.getCallbacks()) {
+      throw new IllegalStateException(
+              "Connection FutureCallback has not been set.");
     }
-    this.connectionState.registerInFlightEvents(events);
+    this.checkpointManager.registerInFlightEvents(events);
     if (channels.isEmpty()) {
       createChannels(discoverer.getAddrs());
     }
@@ -111,27 +109,26 @@ public class LoadBalancer implements Observer, Closeable {
   @Override
   public void close() {
     this.discoveryScheduler.stop();
-    synchronized(channels){
+    synchronized (channels) {
       for (LoggingChannel c : this.channels.values()) {
         c.close();
       }
     }
     this.closed = true;
   }
-  
+
   void closeNow() {
     this.discoveryScheduler.stop();
-    synchronized(channels){
+    synchronized (channels) {
       for (LoggingChannel c : this.channels.values()) {
         c.forceClose();
       }
     }
     this.closed = true;
   }
-  
 
-  public ConnectionState getConnectionState() {
-    return this.connectionState;
+  public CheckpointManager getCheckpointManager() {
+    return this.checkpointManager;
   }
 
   private synchronized void createChannels(List<InetSocketAddress> addrs) {
@@ -149,6 +146,7 @@ public class LoadBalancer implements Observer, Closeable {
     addChannel(addr);
   }
 
+  //this method must not be synchronized it will cause deadlock
   private void addChannel(InetSocketAddress s) {
     URL url;
     try {
@@ -156,23 +154,20 @@ public class LoadBalancer implements Observer, Closeable {
       System.out.println("Trying to add URL: " + url);
       HttpEventCollectorSender sender = this.configuredObjectFactory.
               createSender(url);
-      LoggingChannel c = new LoggingChannel(this, sender);
-      sender.setChannel(c);
-      addChannel(c);     
+      
+      LoggingChannel channel = new LoggingChannel(this, sender, this.connection); 
+      channel.getChannelMetrics().addObserver(this.checkpointManager);
+      sender.setChannel(channel);       
+      LOG.log(Level.INFO, "Adding channel {0}", channel.getChannelId());
+      channels.put(channel.getChannelId(), channel);
+      //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
+
     } catch (MalformedURLException ex) {
       Logger.getLogger(LoadBalancer.class.getName()).log(Level.SEVERE, null,
               ex);
     }
   }
 
-  //this method must not be synchronized. It will deadlock with threads calling quiesce
-  protected void addChannel(LoggingChannel channel) {
-    LOG.info("Adding channel " + channel.getChannelId());
-    channels.put(channel.getChannelId(), channel);
-    //consolidated metrics (i.e. across all channels) are maintained in the connectionState
-    channel.getChannelMetrics().addObserver(this.connectionState);
-
-  }
 
   //also must not be synchronized
   void removeChannel(String channelId, boolean force) {
@@ -183,12 +178,12 @@ public class LoadBalancer implements Observer, Closeable {
       throw new RuntimeException(
               "attempt to remove unknown channel: " + channelId);
     }
-    */
+     */
     if (!force && !c.isEmpty()) {
       LOG.severe(
               "Attempt to remove non-empty channel: " + channelId + " containing " + c.
               getUnackedCount() + " unacked payloads");
-      System.out.println(this.connectionState);
+      System.out.println(this.checkpointManager);
       throw new RuntimeException(
               "Attempt to remove non-empty channel: " + channelId + " containing " + c.
               getUnackedCount() + " unacked payloads");
@@ -224,16 +219,15 @@ public class LoadBalancer implements Observer, Closeable {
         if (tryMe.send(events)) {
           break;
         }
-        if(System.currentTimeMillis()-start > Connection.DEFAULT_SEND_TIMEOUT_MS){
+        if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         }
       }
 
-    }catch(TimeoutException e){
+    } catch (TimeoutException e) {
       throw e;  //we want TimeoutExceptions handled by Caller
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
               getMessage());
       e.printStackTrace();
@@ -262,5 +256,5 @@ public class LoadBalancer implements Observer, Closeable {
   public Connection getConnection() {
     return connection;
   }
-  
+
 }

@@ -58,7 +58,6 @@ public final class HttpEventCollectorSender implements Endpoints {
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8";
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
   private static final String CookieHeader = "Cookie";
-  private final AckManager ackManager;
 
   /**
    * Recommended default values for events batching.
@@ -79,6 +78,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
   private String simulatedChannelId = java.util.UUID.randomUUID().toString();
+  private final HecIOManager hecIOManager;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -92,23 +92,28 @@ public final class HttpEventCollectorSender implements Endpoints {
     this.ackUrl = url.trim() + "/services/collector/ack";
     this.healthUrl = url.trim() + "/services/collector/health";
     this.token = token;
-    this.ackManager = new AckManager(this);
+    this.hecIOManager = new HecIOManager(this);
   }
 
   public LoggingChannel getChannel() {
+    if(null == channel){
+     String msg = "Channel is null";
+     LOG.severe(msg);
+     throw new IllegalStateException(msg);
+    }
     return channel;
   }
 
   public Connection getConnection(){
-    return channel.getConnection();
+    return this.channel.getConnection();
   }
 
-  public AckWindow getAckWindow() {
-    return ackManager.getAckWindow();
+  public AckTracker getAckWindow() {
+    return hecIOManager.getAckTracker();
   }
 
-  public AckManager getAckManager() {
-    return this.ackManager;
+  public HecIOManager getHecIOManager() {
+    return this.hecIOManager;
   }
 
   /**
@@ -147,7 +152,7 @@ public final class HttpEventCollectorSender implements Endpoints {
     if (null != eventsBatch) { //can happen if no msgs sent on this sender
       eventsBatch.close();
     }
-    this.ackManager.close();
+    this.hecIOManager.close();
     if (null != simulatedEndpoints) {
       simulatedEndpoints.close();
     }
@@ -163,7 +168,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   public ChannelMetrics getChannelMetrics() {
-    return this.ackManager.getChannelMetrics();
+    return this.channel.getChannelMetrics();
   }
 
   @Override
@@ -253,7 +258,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   @Override
-  public void pollAcks(AckManager ackMgr, final HttpRequest request,
+  public void pollAcks(HecIOManager ackMgr, final HttpRequest request,
           FutureCallback<HttpResponse> httpCallback) {
     start(); // make sure http client or simulator is started
 
@@ -345,7 +350,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   public void setChannel(LoggingChannel c) {
-    this.channel=c;
+    this.channel=c; 
   }
 
   private String getChannelId() {
