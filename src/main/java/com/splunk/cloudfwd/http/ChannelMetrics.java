@@ -92,10 +92,8 @@ public class ChannelMetrics extends Observable implements AckLifecycle {
       }
     } else {
       String msg = "no birth time recorded for ackId: " + ackId;
-      IllegalStateException e = new IllegalStateException(msg);
       LOG.severe(msg);
-      sender.getConnection().getCallbacks().failed(null, e);
-      throw e;
+      sender.getConnection().getCallbacks().failed(null, new IllegalStateException(msg));
     }
 
   }

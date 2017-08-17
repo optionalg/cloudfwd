@@ -40,6 +40,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * Container for Splunk http event collector event data
  */
 public class HttpEventCollectorEvent {
+    private static final Logger LOG = Logger.getLogger(HttpEventCollectorEvent.class.
+            getName());
     private double time; // time in fractional seconds since "unix epoch" format
     private final String severity;
     private final String message;
@@ -49,8 +51,7 @@ public class HttpEventCollectorEvent {
     private final String exception_message;
     private final Serializable marker;
     private static final ObjectMapper jsonMapper = new ObjectMapper();
-    private static final Logger LOG = Logger.getLogger(HttpEventCollectorEvent.class.
-            getName());
+
     /**
      * Create a new HttpEventCollectorEventInfo container
      * @param severity of event

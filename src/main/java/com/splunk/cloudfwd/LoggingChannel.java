@@ -103,10 +103,8 @@ public class LoggingChannel implements Closeable, Observer {
     }
     if (this.closed) {
       msg = "Attempt to send to quiesced/closed channel";
-      IllegalStateException illegalStateEx = new IllegalStateException(msg);
       LOG.severe(msg);
-      events.getCallbacks().failed(events, illegalStateEx);
-      throw illegalStateEx;
+      events.getCallbacks().failed(events, new IllegalStateException(msg));
     }
     if (this.quiesced) {
       LOG.info("Send to quiesced channel (this should happen from time to time)");

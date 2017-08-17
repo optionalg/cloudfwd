@@ -99,10 +99,8 @@ public class ConnectionState extends Observable implements Observer {
     if (!this.orderedEvents.containsKey(events.getId())) {
       String msg = "No callback registered for successfully acknowledged ackId: " + events.
               getAckId();
-      IllegalStateException e = new IllegalStateException((msg));
       LOG.severe(msg);
-      this.connection.getCallbacks().failed(events, e);
-      throw e;
+      this.connection.getCallbacks().failed(events, new IllegalStateException(msg));
     }
     FutureCallback cb = this.connection.getCallbacks();
     //todo: maybe schedule acknowledge to be async
@@ -130,9 +128,7 @@ public class ConnectionState extends Observable implements Observer {
     }
     if (null == events) {
       String msg = "Failed to move highwater mark. No events present.";
-      IllegalStateException e = new IllegalStateException(msg);
-      this.connection.getCallbacks().failed(null, e);
-      throw e;
+      this.connection.getCallbacks().failed(null, new IllegalStateException(msg));
     }
     //todo: maybe schedule checkpoint to be async
     cb.checkpoint(events); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.

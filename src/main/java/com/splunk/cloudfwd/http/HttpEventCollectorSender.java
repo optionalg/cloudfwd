@@ -113,10 +113,8 @@ public final class HttpEventCollectorSender implements Endpoints {
   public synchronized void sendBatch(EventBatch events) {
     if (events.isFlushed()) {
       String msg = "Illegal attempt to send already-flushed batch. EventBatch is not reusable.";
-      IllegalStateException e = new IllegalStateException(msg);
       LOG.severe(msg);
-      events.getCallbacks().failed(events, e);
-      throw e;
+      events.getCallbacks().failed(events, new IllegalStateException(msg));
     }
     this.eventsBatch = events;
     eventsBatch.setSender(this);

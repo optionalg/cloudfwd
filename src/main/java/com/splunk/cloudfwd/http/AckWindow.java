@@ -100,7 +100,6 @@ public class AckWindow {
           msg = "ackId mismatch key ackID=" +ackId + " recordedAckId=" + events.getAckId();
           LOG.severe(msg);
           sender.getConnection().getCallbacks().failed(null, new IllegalStateException(msg));
-          throw new IllegalStateException(msg);
         }
         if (null == events) {
           msg = "Unable to find EventBatch in buffer for successfully acknowledged ackId: " + ackId;
