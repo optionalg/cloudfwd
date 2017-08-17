@@ -1,7 +1,7 @@
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.FutureCallback;
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -32,7 +32,7 @@ import org.junit.runner.notification.Failure;
  */
 public abstract class AbstractConnectionTest {
 
-  private AckTracker ackTracker;
+  private BasicCallbacks ackTracker;
   protected Connection connection;
 
   @Before
@@ -69,8 +69,8 @@ public abstract class AbstractConnectionTest {
   protected abstract EventBatch nextEventBatch();
   protected abstract int getNumBatchesToSend();
 
-  protected AckTracker getAckTracker() {
-    return new AckTracker(getNumBatchesToSend());
+  protected BasicCallbacks getAckTracker() {
+    return new BasicCallbacks(getNumBatchesToSend());
   }
   
   protected void runTests(){

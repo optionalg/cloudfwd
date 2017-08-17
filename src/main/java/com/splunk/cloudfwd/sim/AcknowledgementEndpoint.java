@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd.sim;
 
-import com.splunk.cloudfwd.EventBatch;
-import java.io.Closeable;
+import com.splunk.cloudfwd.http.HecIOManager;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -24,11 +23,19 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public interface Endpoints extends Closeable{
-  public void postEvents(final EventBatch events,FutureCallback<HttpResponse> httpCallback);    
-  public void pollAcks(HecIOManager ackMgr,FutureCallback<HttpResponse> httpCallback);
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback);
+public interface AcknowledgementEndpoint extends Endpoint {
+
   @Override
-  public void close();
-  public void start();
+  void close();
+
+  long nextAckId();
+
+  void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb);
+
+  //start periodically flipping ackIds from false to true. This simulated event batches getting indexed.
+  //To mimick the observed behavior of splunk, we flip the lowest unacknowledge ackId before
+  //any higher ackId
+  @Override
+  void start();
+  
 }

@@ -17,7 +17,7 @@ package com.splunk.cloudfwd.sim;
 
 import com.splunk.cloudfwd.http.HecIOManager;
 import com.splunk.cloudfwd.http.Endpoints;
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -26,7 +26,7 @@ import org.apache.http.concurrent.FutureCallback;
  * @author ghendrey
  */
 public class SimulatedHECEndpoints implements Endpoints{
-  protected AckEndpoint ackEndpoint;
+  protected AcknowledgementEndpoint ackEndpoint;
   protected EventEndpoint eventEndpoint;
   protected HealthEndpoint healthEndpoint;
   private boolean started;
@@ -82,7 +82,7 @@ public class SimulatedHECEndpoints implements Endpoints{
     started = true;
   }
 
-  protected AckEndpoint createAckEndpoint() {
+  protected AcknowledgementEndpoint createAckEndpoint() {
     return new AckEndpoint();
   }
 

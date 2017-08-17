@@ -17,9 +17,9 @@ package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
-import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.PollScheduler;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
@@ -35,9 +35,9 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class LoggingChannel implements Closeable, LifecycleEventObserver {
+public class HecChannel implements Closeable, LifecycleEventObserver {
 
-  private static final Logger LOG = Logger.getLogger(LoggingChannel.class.
+  private static final Logger LOG = Logger.getLogger(HecChannel.class.
           getName());
   private final HttpEventCollectorSender sender;
   private static final int FULL = 10000; //FIXME TODO set to reasonable value, configurable?
@@ -47,12 +47,15 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
   private volatile boolean quiesced;
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
+  private final AtomicInteger ackedCount = new AtomicInteger(0);
   private final StickySessionEnforcer stickySessionEnforcer = new StickySessionEnforcer();
   private volatile boolean started;
   private final String channelId;
   private final ChannelMetrics channelMetrics;
+  private DeadChannelDetector deadChannelDetector;
 
-  public LoggingChannel(LoadBalancer b, HttpEventCollectorSender sender, Connection c) {
+  public HecChannel(LoadBalancer b, HttpEventCollectorSender sender,
+          Connection c) {
     this.loadBalancer = b;
     this.sender = sender;
     this.channelId = newChannelId();
@@ -89,6 +92,11 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
     reaperScheduler.schedule(() -> {
       closeAndReplace();
     }, LIFESPAN, TimeUnit.SECONDS);
+    long decomMS = loadBalancer.getPropertiesFileHelper().getUnresponsiveChannelDecomMS();
+    if(decomMS > 0){
+      deadChannelDetector = new DeadChannelDetector(decomMS);
+    }
+    deadChannelDetector.start();
     started = true;
   }
 
@@ -105,7 +113,8 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
               "Attempt to send to quiesced/closed channel");
     }
     if (this.quiesced) {
-      LOG.info("Send to quiesced channel (this should happen from time to time)");
+      LOG.
+              info("Send to quiesced channel (this should happen from time to time)");
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
     if (unackedCount.get() == FULL) {
@@ -119,7 +128,7 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
           wait(Connection.DEFAULT_SEND_TIMEOUT_MS);
           System.out.println("UNBLOCKED");
         } catch (InterruptedException ex) {
-          Logger.getLogger(LoggingChannel.class.getName()).
+          Logger.getLogger(HecChannel.class.getName()).
                   log(Level.SEVERE, null, ex);
         }
         if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
@@ -140,8 +149,9 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
     //System.out.println("channel=" + getChannelId() + " unack-count=" + count);
-    if(!sender.getChannel().equals(this)){
-      String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.getChannel().getChannelId();
+    if (!sender.getChannel().equals(this)) {
+      String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
+              getChannel().getChannelId();
       LOG.severe(msg);
       throw new IllegalStateException(msg);
     }
@@ -165,39 +175,9 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
     }
   }
 
-  /*
-  @Override
-  public synchronized void update(Observable o, Object arg) {
-    LifecycleEvent lifecycleEvent = null;
-    try {
-      lifecycleEvent = (LifecycleEvent) arg;
-      LifecycleEvent.Type eventType = ((LifecycleEvent) arg).getType();
-      switch (eventType) {
-        case ACK_POLL_OK: {
-          ackReceived(lifecycleEvent);
-          notifyAll();
-          break;
-        }
-        case EVENT_POST_OK: {
-          //System.out.println("OBSERVED EVENT_POST_OK");
-          checkForStickySessionViolation(lifecycleEvent);
-          break;
-        }
-      }
-    } catch (Exception e) {
-      LOG.log(Level.SEVERE, e.getMessage(), e);
-      FutureCallback c = this.loadBalancer.getConnection().getCallbacks();
-      EventBatch events = lifecycleEvent == null ? null : ((EventBatchResponse) lifecycleEvent).
-              getEvents();
-      new Thread(() -> {//FIXME TODO - usea thread pool
-        c.failed(events, e); //FIXME TODO -- there are many places where we should be calling failed. 
-      }).start();
-
-    }
-  }
-   */
   private void ackReceived(LifecycleEvent s) throws RuntimeException {
     int count = unackedCount.decrementAndGet();
+    ackedCount.incrementAndGet();
     /*
     System.out.
             println("channel=" + getChannelId() + " unacked-count-post-decr=" + count + " seqno=" + s.
@@ -240,8 +220,17 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
     pollAcks();//so we don't have to wait for the next ack polling interval
   }
 
+  synchronized void forceCloseAndReplace() {
+    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+    doForceClose();
+  }
+
   synchronized void forceClose() {
     LOG.log(Level.INFO, "FORCE CLOSING CHANNEL  {0}", getChannelId());
+    doForceClose();
+  }
+
+  private void doForceClose() {
     try {
       this.sender.close();
     } catch (Exception e) {
@@ -254,9 +243,8 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
   @Override
   public synchronized void close() {
     if (closed) {
-      LOG.severe("LoggingChannel already closed.");
+      LOG.info("LoggingChannel already closed.");
       return;
-      //throw new IllegalStateException("LoggingChannel already closed.");
     }
     LOG.log(Level.INFO, "CLOSE {0}", getChannelId());
     if (!isEmpty()) {
@@ -264,13 +252,7 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
       return;
     }
 
-    try {
-      this.sender.close();
-    } catch (Exception e) {
-      LOG.log(Level.SEVERE, e.getMessage(), e);
-    }
-    this.loadBalancer.removeChannel(getChannelId(), false);
-    finishClose();
+    forceClose();
   }
 
   private synchronized void finishClose() {
@@ -278,6 +260,9 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
     this.closed = true;
     if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();
+    }
+    if(null != deadChannelDetector){
+      deadChannelDetector.close();
     }
     notifyAll();
 
@@ -342,6 +327,64 @@ public class LoggingChannel implements Closeable, LifecycleEventObserver {
         }
       }
     }
+  }
+
+  private class DeadChannelDetector implements Closeable {
+
+    private PollScheduler deadChannelChecker = new PollScheduler(
+            "ChannelDeathChecker", 0);
+    private int lastCountOfAcked;
+    private int lastCountOfUnacked;
+    private boolean started;
+    private long intervalMS;
+    
+    public DeadChannelDetector(long intervalMS){
+      this.intervalMS = intervalMS;
+    }
+
+    public synchronized void start() {
+      if (started) {
+        return;
+      }
+      started = true;
+      Runnable r = () -> {
+        //we here check to see of there has been any activity on the channel since
+        //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
+        if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
+                && lastCountOfUnacked == unackedCount.get()) {
+          LOG.severe(
+                  "Dead channel detected. Resending messages and force closing channel");
+          forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
+          resendInFlightEvents();
+        } else { //channel was not 'frozen'
+          lastCountOfAcked = ackedCount.get();
+          lastCountOfUnacked = unackedCount.get();
+        }
+      };
+      deadChannelChecker.start(r, intervalMS, TimeUnit.MILLISECONDS);
+    }
+
+    public void close() {
+      deadChannelChecker.stop();
+    }
+
+    //take messages out of the jammed-up/dead channel and resend them to other channels
+    private void resendInFlightEvents() {
+      sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
+        try {
+          e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
+          //we must force messages to be sent because the connection could have been gracefully closed
+          //already, in which case sendRoundRobbin will just ignore the sent messages
+          boolean forced = true;
+          loadBalancer.sendRoundRobin(e, forced);
+        } catch (TimeoutException ex) {
+          LOG.severe("timed out trying to resend EventBatch with ID " + e.
+                  getId() + " on channel " + getChannelId());
+        }
+      });
+
+    }
+
   }
 
 }

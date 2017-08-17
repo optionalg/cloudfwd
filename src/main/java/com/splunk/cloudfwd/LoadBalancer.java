@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
@@ -39,9 +38,8 @@ public class LoadBalancer implements Closeable {
   private int channelsPerDestination = 4;
   private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
           getName());
-  /* All channels that can be used to send messages. Key is channel ID */
-  private final Map<String, LoggingChannel> channels = new ConcurrentHashMap<>();
-  private PropertiesFileHelper configuredObjectFactory;
+  private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
+  private PropertiesFileHelper propertiesFileHelper;
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -55,40 +53,14 @@ public class LoadBalancer implements Closeable {
 
   LoadBalancer(Connection c, Properties p) {
     this.connection = c;
-    this.configuredObjectFactory = new PropertiesFileHelper(p);
-    this.channelsPerDestination = this.configuredObjectFactory.
+    this.propertiesFileHelper = new PropertiesFileHelper(p);
+    this.channelsPerDestination = this.propertiesFileHelper.
             getChannelsPerDestination();
-    this.discoverer = new IndexDiscoverer(configuredObjectFactory);
+    this.discoverer = new IndexDiscoverer(propertiesFileHelper);
     this.checkpointManager = new CheckpointManager(c);
     //this.discoverer.addObserver(this);
   }
 
-  /*
-  @Override
-  public synchronized void update(Observable o, Object arg) {
-    try {
-
-      System.out.println("LB observed an update of " + arg.getClass().getName());
-
-      if (arg instanceof IndexDiscoverer.Change) {
-        updateChannels((IndexDiscoverer.Change) arg);
-        return;
-      }
-
-      Logger.getLogger(getClass().getName()).log(Level.SEVERE,
-              "Unhandled update from: {0} with arg: {1}", new Object[]{o.
-                getClass().getCanonicalName(), arg.getClass().getName()});
-      throw new RuntimeException("Unhandled update from: " + o.getClass().
-              getCanonicalName() + " with arg: " + arg.getClass().getName());
-    } catch (Exception e) {
-      LOG.severe(e.getMessage());
-      throw new RuntimeException(e.getMessage(), e);
-    } catch (Throwable t) {
-      System.out.println("shit");
-    }
-
-  }
-   */
   private void updateChannels(IndexDiscoverer.Change change) {
     System.out.println(change);
   }
@@ -110,7 +82,7 @@ public class LoadBalancer implements Closeable {
   public void close() {
     this.discoveryScheduler.stop();
     synchronized (channels) {
-      for (LoggingChannel c : this.channels.values()) {
+      for (HecChannel c : this.channels.values()) {
         c.close();
       }
     }
@@ -120,7 +92,7 @@ public class LoadBalancer implements Closeable {
   void closeNow() {
     this.discoveryScheduler.stop();
     synchronized (channels) {
-      for (LoggingChannel c : this.channels.values()) {
+      for (HecChannel c : this.channels.values()) {
         c.forceClose();
       }
     }
@@ -152,10 +124,10 @@ public class LoadBalancer implements Closeable {
     try {
       url = new URL("https://" + s.getHostName() + ":" + s.getPort());
       System.out.println("Trying to add URL: " + url);
-      HttpEventCollectorSender sender = this.configuredObjectFactory.
+      HttpEventCollectorSender sender = this.propertiesFileHelper.
               createSender(url);
       
-      LoggingChannel channel = new LoggingChannel(this, sender, this.connection); 
+      HecChannel channel = new HecChannel(this, sender, this.connection); 
       channel.getChannelMetrics().addObserver(this.checkpointManager);
       sender.setChannel(channel);       
       LOG.log(Level.INFO, "Adding channel {0}", channel.getChannelId());
@@ -171,7 +143,7 @@ public class LoadBalancer implements Closeable {
 
   //also must not be synchronized
   void removeChannel(String channelId, boolean force) {
-    LoggingChannel c = this.channels.remove(channelId);
+    HecChannel c = this.channels.remove(channelId);
     /*
     if (c == null) {
       LOG.severe("attempt to remove unknown channel: " + channelId);
@@ -193,23 +165,27 @@ public class LoadBalancer implements Closeable {
   }
 
   private synchronized void sendRoundRobin(EventBatch events) throws TimeoutException {
+    sendRoundRobin(events, false);
+  }
+  
+  synchronized void sendRoundRobin(EventBatch events, boolean forced) throws TimeoutException {
     try {
       if (channels.isEmpty()) {
         throw new IllegalStateException(
                 "attempt to sendRoundRobin but no channel available.");
       }
-      LoggingChannel tryMe = null;
+      HecChannel tryMe = null;
       int tryCount = 0;
       //round robin until either A) we find an available channel
       long start = System.currentTimeMillis();
-      while (true && !closed) {
+      while (!closed || forced) {
         //note: the channelsSnapshot must be refreshed each time through this loop
         //or newly added channels won't be seen, and eventually you will just have a list
         //consisting of closed channels. Also, it must be a snapshot, not use the live
         //list of channels. Becuase the channelIdx could wind up pointing past the end
         //of the live list, due to fact that this.removeChannel is not synchronized (and
         //must not be do avoid deadlocks).
-        List<LoggingChannel> channelsSnapshot = new ArrayList<>(this.channels.
+        List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.
                 values());
         if (channelsSnapshot.isEmpty()) {
           continue; //keep going until a channel is added
@@ -217,6 +193,7 @@ public class LoadBalancer implements Closeable {
         int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         if (tryMe.send(events)) {
+          //System.out.println("sent id "+events.getId() +" on " + tryMe.getChannelId());
           break;
         }
         if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
@@ -255,6 +232,13 @@ public class LoadBalancer implements Closeable {
    */
   public Connection getConnection() {
     return connection;
+  }
+
+  /**
+   * @return the propertiesFileHelper
+   */
+  public PropertiesFileHelper getPropertiesFileHelper() {
+    return propertiesFileHelper;
   }
 
 }

@@ -1,6 +1,6 @@
 
 import com.splunk.cloudfwd.FutureCallback;
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
@@ -26,27 +26,31 @@ import org.junit.Assert;
  *
  * @author ghendrey
  */
-public class AckTracker implements FutureCallback {
+public class BasicCallbacks implements FutureCallback {
 
   private int expectedAckCount;
   protected final CountDownLatch latch;
   private final Set<String> acknowledgedBatches = new ConcurrentSkipListSet<>();
   private boolean failed;
+  private Comparable lastId;
 
-  public AckTracker(int expected) {
+  public BasicCallbacks(int expected) {
     this.expectedAckCount = expected;
     this.latch = new CountDownLatch(1);
   }
 
   @Override
   public void acknowledged(EventBatch events) {
-    /*
+    if(null != lastId && lastId.compareTo(events.getId())>=0){
+      Assert.fail("checkpoints received out of order. " + lastId + " before " + events.getId());
+    }
+    
     if (!acknowledgedBatches.add(events.getId())) {
       Assert.fail(
               "Received duplicate acknowledgement for event batch:" + events.
               getId());
     }
-    */
+    
   }
 
   @Override

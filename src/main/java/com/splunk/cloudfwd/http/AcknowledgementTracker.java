@@ -15,12 +15,15 @@
  */
 package com.splunk.cloudfwd.http;
 
+import com.splunk.cloudfwd.EventBatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -34,16 +37,17 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class AckTracker {
+public class AcknowledgementTracker {
 
-  private static final Logger LOG = Logger.getLogger(AckTracker.class.getName());
+  private static final Logger LOG = Logger.getLogger(
+          AcknowledgementTracker.class.getName());
 
   private final static ObjectMapper jsonMapper = new ObjectMapper();
   private final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
   private final Map<String, EventBatch> postedEventBatches = new ConcurrentHashMap<>();//key EventBatch ID
   private final HttpEventCollectorSender sender;
 
-  AckTracker(HttpEventCollectorSender sender) {
+  AcknowledgementTracker(HttpEventCollectorSender sender) {
     this.sender = sender;
   }
 
@@ -52,17 +56,18 @@ public class AckTracker {
 
     try {
       Map json = new HashMap();
-      json.put("acks", polledAcks.keySet()); //{"acks":[1,2,3...]}
+      json.put("acks", polledAcks.keySet()); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
       return jsonMapper.writeValueAsString(json); //this class itself marshals out to {"acks":[id,id,id]}
     } catch (JsonProcessingException ex) {
-      Logger.getLogger(AckTracker.class.getName()).log(Level.SEVERE, null, ex);
+      Logger.getLogger(AcknowledgementTracker.class.getName()).log(Level.SEVERE,
+              null, ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
 
   }
 
-  public boolean isEmpty() {    
-    return this.sender.getChannel().isEmpty();//.getChannelMetrics().isChannelEmpty();//polledAcks.isEmpty() && postedEventBatches.isEmpty();
+  public boolean isEmpty() {
+    return this.sender.getChannel().isEmpty();
   }
 
   public void preEventPost(EventBatch batch) {
@@ -74,7 +79,7 @@ public class AckTracker {
     Long ackId = epr.getAckId();
     //System.out.println("handler event post response for ack " + ackId);
     EventBatch removed = postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
-    if(null == removed){
+    if (null == removed) {
       String msg = "failed to track event batch " + events.getId();
       LOG.severe(msg);
       throw new RuntimeException(msg);
@@ -95,8 +100,9 @@ public class AckTracker {
       for (long ackId : succeeded) {
         events = this.polledAcks.get(ackId);
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
-        if(ackId != events.getAckId()){
-          String msg = "ackId mismatch key ackID=" +ackId + " recordedAckId=" + events.getAckId();
+        if (ackId != events.getAckId()) {
+          String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
+                  getAckId();
           LOG.severe(msg);
           throw new IllegalStateException(msg);
         }
@@ -105,8 +111,9 @@ public class AckTracker {
                   "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
                   ackId);
         }
-        
-        this.sender.getChannelMetrics().update(new EventBatchResponse(LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?", events));     
+
+        this.sender.getChannelMetrics().update(new EventBatchResponse(
+                LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?", events));
       }
       //System.out.println("polledAcks was " + polledAcks.keySet());
       polledAcks.keySet().removeAll(succeeded);
@@ -121,8 +128,16 @@ public class AckTracker {
     return this.sender.getChannelMetrics();
   }
 
-  public Collection<Long> getUnacknowleldgedEvents() {
+  public Collection<Long> getPostedButUnackedEvents() {
     return polledAcks.keySet();
+  }
+
+  //techically we need to synchronize this, and the method handleAckPollResponse
+  public Collection<EventBatch> getAllInFlightEvents() {
+    List<EventBatch> events = new ArrayList<>();
+    events.addAll(this.postedEventBatches.values());
+    events.addAll(this.polledAcks.values());
+    return events;
   }
 
 }

@@ -31,22 +31,23 @@ public class PollScheduler {
   private ScheduledExecutorService scheduler;
   private boolean started;
   private final String name;
+  private int corePoolSize = 1;
 
   public PollScheduler(String name) {
     this.name = name;
+  }
+  
+  public PollScheduler(String name, int corePoolSize){
+    this(name);
+    this.corePoolSize = corePoolSize;
   }
 
   public synchronized void start(Runnable poller, long delay, TimeUnit units) {
     if (started) {
       return;
     }
-    ThreadFactory f = new ThreadFactory() {
-      @Override
-      public Thread newThread(Runnable r) {
-        return new Thread(r, name);
-      }
-    };
-    this.scheduler = Executors.newScheduledThreadPool(0, f);
+    ThreadFactory f = (Runnable r) -> new Thread(r, name);
+    this.scheduler = Executors.newScheduledThreadPool(corePoolSize, f);
     //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
     //if the execution time of a task exceeds the period. We don't want that.
     scheduler.scheduleWithFixedDelay(poller, 0, delay, units);
@@ -62,7 +63,6 @@ public class PollScheduler {
   public synchronized void stop() {
     System.out.println("SHUTTING DOWN POLLER:  " + name);
     if (null != scheduler) {
-      //scheduler.shutdown();
       scheduler.shutdownNow();
     }
     scheduler = null;

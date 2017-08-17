@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.PollScheduler;
 import java.util.Iterator;
 import java.util.Map;

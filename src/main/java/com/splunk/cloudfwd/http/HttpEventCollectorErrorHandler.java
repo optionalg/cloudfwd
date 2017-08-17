@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.http;
  * under the License.
  */
 
+import com.splunk.cloudfwd.EventBatch;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import java.util.List;

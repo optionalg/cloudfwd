@@ -17,7 +17,6 @@ package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
-import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -42,7 +41,9 @@ public class PropertiesFileHelper {
   public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
   public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
   public static final String MOCK_HTTP_KEY = "mock_http";
-  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";  
+  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
+  public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
+  
 
   private Properties defaultProps = new Properties();
 
@@ -87,7 +88,12 @@ public class PropertiesFileHelper {
 
   public int getChannelsPerDestination() {
     return Integer.parseInt(defaultProps.getProperty(
-            CHANNELS_PER_DESTINATION_KEY, "8"));
+            CHANNELS_PER_DESTINATION_KEY, "8").trim());
+  }
+  
+  public long getUnresponsiveChannelDecomMS(){
+        return Long.parseLong(defaultProps.getProperty(
+            UNRESPONSIVE_MS, "-1").trim());
   }
 
   public boolean isMockHttp() {

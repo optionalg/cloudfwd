@@ -3,7 +3,7 @@ package com.amazonaws.services.kinesis.samples.stocktrades.processor;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
 
 import com.splunk.cloudfwd.FutureCallback;
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

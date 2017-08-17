@@ -15,7 +15,7 @@
  */
 
 import com.splunk.cloudfwd.PropertiesFileHelper;
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
@@ -75,8 +75,8 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   }
   
   @Override
-  protected AckTracker getAckTracker() {
-    return new AckTracker(getNumBatchesToSend()) {
+  protected BasicCallbacks getAckTracker() {
+    return new BasicCallbacks(getNumBatchesToSend()) {
       @Override
       public void failed(EventBatch events, Exception e) {
         //We expect a timeout

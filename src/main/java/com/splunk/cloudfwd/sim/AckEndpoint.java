@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
@@ -40,7 +41,7 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public class AckEndpoint implements Endpoint {
+public class AckEndpoint implements AcknowledgementEndpoint {
 
   private static final Logger LOG = Logger.
           getLogger(AckEndpoint.class.getName());
@@ -64,6 +65,7 @@ public class AckEndpoint implements Endpoint {
   //start periodically flipping ackIds from false to true. This simulated event batches getting indexed.
   //To mimick the observed behavior of splunk, we flip the lowest unacknowledge ackId before
   //any higher ackId
+  @Override
   public synchronized void start() {
     if (started) {
       return;
@@ -85,6 +87,7 @@ public class AckEndpoint implements Endpoint {
     started = true;
   }
 
+  @Override
   public long nextAckId() {
     long newId = this.ackId.incrementAndGet();
     this.acksStates.put(newId, true); //mock/pretend the events got indexed
@@ -97,11 +100,11 @@ public class AckEndpoint implements Endpoint {
     return this.acksStates.remove(ackId);
   }
 
+  @Override
   public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
     try {
       //System.out.println("Server side simulation: " + this.acksStates.size() + " acks tracked on server: " + acksStates);
-      Collection<Long> unacked = ackMgr.getAckTracker().
-              getUnacknowleldgedEvents();
+      Collection<Long> unacked = ackMgr.getAcknowledgementTracker().getPostedButUnackedEvents();
       //System.out.println("Server recieved these acks to check: " + unacked);      
       SortedMap<Long, Boolean> acks = new TreeMap<>();
       for (long ackId : unacked) {
@@ -120,9 +123,15 @@ public class AckEndpoint implements Endpoint {
     }
   }
 
-  private HttpResponse getResult(Map acks) throws JsonProcessingException {
+  protected HttpResponse getResult(Map acks) {
     ObjectMapper serializer = new ObjectMapper();
-    String str = serializer.writeValueAsString(acks);
+    String str = null;
+    try {
+      str = serializer.writeValueAsString(acks);
+    } catch (JsonProcessingException ex) {
+      Logger.getLogger(AckEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+      throw new RuntimeException(str, ex);
+    }
     AckEndpointResponseEntity e = new AckEndpointResponseEntity(str);
     return new AckEndpointResponse(e);
   }

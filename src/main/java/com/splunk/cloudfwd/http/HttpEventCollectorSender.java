@@ -17,8 +17,9 @@ package com.splunk.cloudfwd.http;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.LoggingChannel;
+import com.splunk.cloudfwd.HecChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -68,7 +69,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
-  private LoggingChannel channel = null;
+  private HecChannel channel = null;
   private final String ackUrl;
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
@@ -89,7 +90,7 @@ public final class HttpEventCollectorSender implements Endpoints {
     this.hecIOManager = new HecIOManager(this);
   }
 
-  public LoggingChannel getChannel() {
+  public HecChannel getChannel() {
     if(null == channel){
      String msg = "Channel is null";
      LOG.severe(msg);
@@ -102,8 +103,8 @@ public final class HttpEventCollectorSender implements Endpoints {
     return this.channel.getConnection();
   }
 
-  public AckTracker getAckWindow() {
-    return hecIOManager.getAckTracker();
+  public AcknowledgementTracker getAcknowledgementTracker() {
+    return hecIOManager.getAcknowledgementTracker();
   }
 
   public HecIOManager getHecIOManager() {
@@ -321,7 +322,7 @@ public final class HttpEventCollectorSender implements Endpoints {
     this.simulatedEndpoints = simulatedEndpoints;
   }
 
-  public void setChannel(LoggingChannel c) {
+  public void setChannel(HecChannel c) {
     this.channel=c; 
   }
 

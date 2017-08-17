@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.sim;
 
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -33,7 +33,7 @@ public class EventEndpoint implements Endpoint{
 
   Random rand = new Random(System.currentTimeMillis());
   final ScheduledExecutorService executor;
-  private AckEndpoint ackEndpoint;
+  private AcknowledgementEndpoint ackEndpoint;
 
   protected EventEndpoint() {
     ThreadFactory f = new ThreadFactory() {
@@ -45,7 +45,7 @@ public class EventEndpoint implements Endpoint{
     executor = Executors.newScheduledThreadPool(1, f);
   }
 
-  public EventEndpoint(AckEndpoint ackEndpoint) {
+  public EventEndpoint(AcknowledgementEndpoint ackEndpoint) {
     this();
     this.ackEndpoint = ackEndpoint;
     //ackEndpoint.start();
@@ -73,7 +73,7 @@ public class EventEndpoint implements Endpoint{
   /**
    * @return the ackEndpoint
    */
-  public AckEndpoint getAckEndpoint() {
+  public AcknowledgementEndpoint getAckEndpoint() {
     return ackEndpoint;
   }
 

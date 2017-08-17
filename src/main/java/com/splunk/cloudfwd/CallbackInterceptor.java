@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.EventBatch;
 import java.util.function.Consumer;
 
 /**

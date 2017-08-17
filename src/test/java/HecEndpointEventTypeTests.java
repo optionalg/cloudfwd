@@ -15,7 +15,7 @@
  */
 
 import com.splunk.cloudfwd.PropertiesFileHelper;
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 
 import java.util.*;

@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.http;
 
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.http.lifecycle.Response;
@@ -54,12 +55,12 @@ public class HecIOManager implements Closeable {
   private final PollScheduler ackPollController = new PollScheduler("ack poller");
   private final PollScheduler healthPollController = new PollScheduler(
           "health poller");
-  private final AckTracker ackTracker;
+  private final AcknowledgementTracker ackTracker;
   private volatile boolean ackPollInProgress;
 
   HecIOManager(HttpEventCollectorSender sender) {
     this.sender = sender;
-    this.ackTracker = new AckTracker(sender);
+    this.ackTracker = new AcknowledgementTracker(sender);
   }
 
   /**
@@ -72,7 +73,7 @@ public class HecIOManager implements Closeable {
   private synchronized void startPolling() {
     if (!ackPollController.isStarted()) {
       Runnable poller = () -> {
-        if (this.getAckTracker().isEmpty()) {
+        if (this.getAcknowledgementTracker().isEmpty()) {
           System.out.println("No acks to poll for");
           return;
         } else if (this.isAckPollInProgress()) {
@@ -276,7 +277,7 @@ public class HecIOManager implements Closeable {
   /**
    * @return the ackTracker
    */
-  public AckTracker getAckTracker() {
+  public AcknowledgementTracker getAcknowledgementTracker() {
     return ackTracker;
   }
 

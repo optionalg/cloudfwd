@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd.sim.errorgen.slow;
 
 import com.splunk.cloudfwd.http.HecIOManager;
-import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;

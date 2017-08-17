@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
-import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.util.Iterator;
@@ -31,19 +30,18 @@ import java.util.logging.Logger;
  * @author ghendrey
  */
 public class CheckpointManager implements LifecycleEventObserver {
-
+  
   private static final Logger LOG = Logger.getLogger(CheckpointManager.class.
           getName());
 
   //EventBatch callbacks are ordered by EventBatch id lexicographic comparison
   private final NavigableMap<String, EventBatch> orderedEvents = new ConcurrentSkipListMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
-
+  
   CheckpointManager(Connection c) {
     this.connection = c;
   }
-
-
+  
   @Override
   public void update(LifecycleEvent e) {
     if (e.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
@@ -57,12 +55,12 @@ public class CheckpointManager implements LifecycleEventObserver {
       acknowledgeHighwaterAndBelow(resp.getEvents());
     }
   }
-
+  
   @Override
   public String toString() {
     return eventBatchWindowStateToString();
   }
-
+  
   public String eventBatchWindowStateToString() {
     StringBuilder sb = new StringBuilder();
     for (EventBatch events : this.orderedEvents.values()) {
@@ -98,7 +96,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     }
     slideHighwaterUp(cb); //might call the highwater/checkpoint callback
   }
-
+  
   private void slideHighwaterUp(FutureCallback cb) {
     EventBatch events = null;
     //walk forward in the order of EventBatches, from the tail
@@ -119,10 +117,14 @@ public class CheckpointManager implements LifecycleEventObserver {
     //todo: maybe schedule checkpoint to be async
     cb.checkpoint(events); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
   }
-
+  
   synchronized void registerInFlightEvents(EventBatch events) {
-    this.orderedEvents.put(events.getId(), events);
+    EventBatch prev = this.orderedEvents.put(events.getId(), events);
+    if (null != prev) {
+      throw new IllegalStateException(
+              "EventBatch checkpoint already tracked. EventBatch ID is " + events.
+              getId());
+    }
   }
-
- 
+  
 }

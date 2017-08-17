@@ -16,7 +16,7 @@
 
 import com.splunk.cloudfwd.IllegalHECAcknowledgementStateException;
 import com.splunk.cloudfwd.PropertiesFileHelper;
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
@@ -43,8 +43,8 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected AckTracker getAckTracker() {
-    return new AckTracker(getNumBatchesToSend()) {
+  protected BasicCallbacks getAckTracker() {
+    return new BasicCallbacks(getNumBatchesToSend()) {
       @Override
       public void failed(EventBatch events, Exception e) {
         //The point of this test is to insure that we DO get this exception...

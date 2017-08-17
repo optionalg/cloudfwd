@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
+import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.SerializedEventProducer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
@@ -67,6 +70,12 @@ public class EventBatch implements SerializedEventProducer {
     this.metadata = metadata;
   }
   
+  public synchronized void prepareToResend(){
+    this.flushed = false;
+    this.sender = null;
+    this.acknowledged = false;
+  }
+  
   public boolean isTimedOut(long timeout){
     long flightTime =System.currentTimeMillis() - creationTime;
     System.out.println("Flight time " + flightTime);
@@ -108,7 +117,7 @@ public class EventBatch implements SerializedEventProducer {
     return !flushed && (serializedCharCount() > 0);
   }
 
-  protected synchronized void flush() {
+  public synchronized void flush() {
     if (!this.flushed && this.stringBuilder.length() > 0) {
       //endpoints are either real (via the Sender) or simulated 
       this.sender.getHecIOManager().postEvents(this);
@@ -190,7 +199,7 @@ public class EventBatch implements SerializedEventProducer {
     this.ackId = ackId;
   }
 
-  void setSender(HttpEventCollectorSender sender) {
+  public void setSender(HttpEventCollectorSender sender) {
     if (null != this.sender) {
       String msg = "attempt to change the value of sender. Channel was " + this.sender.
               getChannel() + ", and attempt to change to " + sender.getChannel();
@@ -220,6 +229,7 @@ public class EventBatch implements SerializedEventProducer {
   public boolean isFlushed() {
     return flushed;
   }
+
 
   /**
    * @return the sender

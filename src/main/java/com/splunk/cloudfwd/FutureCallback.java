@@ -15,8 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.EventBatch;
-
 /**
  *
  * @author ghendrey

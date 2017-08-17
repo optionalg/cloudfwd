@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.EventBatch;
 import java.io.Closeable;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
@@ -30,6 +29,7 @@ public class Connection implements Closeable {
   private final LoadBalancer lb;
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
+  private boolean closed;
 
   public Connection(FutureCallback callbacks) {
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
@@ -55,6 +55,7 @@ public class Connection implements Closeable {
 
   @Override
   public void close() {
+    this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
     //Exception handler
@@ -65,6 +66,7 @@ public class Connection implements Closeable {
   }
 
   public void closeNow() {
+    this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when closeNow() is invoked from a callback like the
     //Exception handler
@@ -75,6 +77,9 @@ public class Connection implements Closeable {
   }
 
   public void sendBatch(EventBatch events) throws TimeoutException {
+    if(closed){
+      throw new IllegalStateException("Attempt to send on closed channel.");
+    }
     timeoutChecker.start();
     timeoutChecker.add(events);
     lb.sendBatch(events);

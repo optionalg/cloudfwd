@@ -21,7 +21,7 @@ import java.util.concurrent.TimeoutException;
 
 import com.splunk.cloudfwd.Connection;
 
-import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 
 import org.apache.commons.logging.Log;
