@@ -19,7 +19,7 @@ import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
-import com.splunk.cloudfwd.http.PollScheduler;
+import com.splunk.cloudfwd.util.PollScheduler;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
@@ -382,16 +382,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
       sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
-        try {
           e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
           //we must force messages to be sent because the connection could have been gracefully closed
           //already, in which case sendRoundRobbin will just ignore the sent messages
           boolean forced = true;
           loadBalancer.sendRoundRobin(e, forced);
-        } catch (TimeoutException ex) {
-          LOG.severe("timed out trying to resend EventBatch with ID " + e.
-                  getId() + " on channel " + getChannelId());
-        }
       });
 
     }

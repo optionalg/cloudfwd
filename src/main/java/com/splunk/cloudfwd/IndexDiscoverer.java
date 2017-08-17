@@ -45,7 +45,8 @@ class IndexDiscoverer extends Observable {
 
   IndexDiscoverer(PropertiesFileHelper f) {
     this.senderFactory = f;
-    this.mappings = getInetAddressMap(senderFactory.getUrls());
+    this.mappings = getInetAddressMap(senderFactory.getUrls(),
+        f.isForcedUrlMapToSingleAddr());
   }
   
   public List<InetSocketAddress> getInetSockAddrs(){
@@ -73,7 +74,8 @@ class IndexDiscoverer extends Observable {
   * called by IndexerDiscoveryScheduler
   */
   synchronized void discover(){
-    update(getInetAddressMap(senderFactory.getUrls()), mappings);
+    update(getInetAddressMap(senderFactory.getUrls(),
+        senderFactory.isForcedUrlMapToSingleAddr()), mappings);
   }
 
   List<Change> update(Map<String, List<InetSocketAddress>> current,
@@ -115,12 +117,18 @@ class IndexDiscoverer extends Observable {
    * @return
    */
   final static Map<String, List<InetSocketAddress>> getInetAddressMap(
-          List<URL> urls) {
+          List<URL> urls, boolean forceSingle) {
     ConcurrentSkipListMap<String, List<InetSocketAddress>> mapping = new ConcurrentSkipListMap<>();
     for (URL url : urls) {
       try {
         String host = url.getHost();
-        List<InetAddress> addrs = Arrays.asList(InetAddress.getAllByName(host));
+
+        List<InetAddress> addrs = new ArrayList<>();
+        if (forceSingle)
+          addrs.add(InetAddress.getByName(host));
+        else
+          addrs.addAll(Arrays.asList(InetAddress.getAllByName(host)));
+
         for (InetAddress iaddr : addrs) {
           InetSocketAddress sockAddr = new InetSocketAddress(iaddr, url.
                   getPort());

@@ -31,7 +31,7 @@ public class BasicCallbacks implements FutureCallback {
   private int expectedAckCount;
   protected final CountDownLatch latch;
   private final Set<String> acknowledgedBatches = new ConcurrentSkipListSet<>();
-  private boolean failed;
+  protected boolean failed;
   private Comparable lastId;
 
   public BasicCallbacks(int expected) {

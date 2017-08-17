@@ -53,6 +53,10 @@ public class Connection implements Closeable {
     this.timeoutChecker.setTimeout(ms);
   }
 
+  public long getSendTimeout() {
+    return this.timeoutChecker.getTimeout();
+  }
+
   @Override
   public void close() {
     this.closed = true;
@@ -76,8 +80,8 @@ public class Connection implements Closeable {
     }, "Connection Closer").start();
   }
 
-  public void sendBatch(EventBatch events) throws TimeoutException {
-    if(closed){
+  public void sendBatch(EventBatch events) {
+  if(closed){
       throw new IllegalStateException("Attempt to send on closed channel.");
     }
     timeoutChecker.start();

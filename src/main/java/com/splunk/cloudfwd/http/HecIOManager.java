@@ -22,6 +22,7 @@ import com.splunk.cloudfwd.http.lifecycle.Response;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchFailure;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchRequest;
+import com.splunk.cloudfwd.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.http.lifecycle.PreRequest;
@@ -217,7 +218,7 @@ public class HecIOManager implements Closeable {
 
   }
 
-  public void setChannelHealth(int statusCode, String msg) {
+  private void setChannelHealth(int statusCode, String msg) {
     // For status code anything other 200
     switch (statusCode) {
       case 200:

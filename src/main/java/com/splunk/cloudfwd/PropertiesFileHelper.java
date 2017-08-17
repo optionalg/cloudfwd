@@ -42,8 +42,8 @@ public class PropertiesFileHelper {
   public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
   public static final String MOCK_HTTP_KEY = "mock_http";
   public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
+  public static final String MOCK_FORCE_URL_MAP_TO_ONE = "mock_force_url_map_to_one";
   public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
-  
 
   private Properties defaultProps = new Properties();
 
@@ -99,6 +99,11 @@ public class PropertiesFileHelper {
   public boolean isMockHttp() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
             "false").trim());
+  }
+
+  public boolean isForcedUrlMapToSingleAddr() {
+    return Boolean.parseBoolean(this.defaultProps.getProperty(
+            MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
   }
   
   public Endpoints getSimulatedEndpoints(){

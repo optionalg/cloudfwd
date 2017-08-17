@@ -65,11 +65,9 @@ public class LoadBalancer implements Closeable {
     System.out.println(change);
   }
 
-  public synchronized void sendBatch(EventBatch events)
-          throws TimeoutException {
-    if (null == this.connection.getCallbacks()) {
-      throw new IllegalStateException(
-              "Connection FutureCallback has not been set.");
+  public synchronized void sendBatch(EventBatch events) {
+    if(null == this.connection.getCallbacks()){
+      throw new IllegalStateException("Connection FutureCallback has not been set.");
     }
     this.checkpointManager.registerInFlightEvents(events);
     if (channels.isEmpty()) {
@@ -164,11 +162,11 @@ public class LoadBalancer implements Closeable {
 
   }
 
-  private synchronized void sendRoundRobin(EventBatch events) throws TimeoutException {
+  private synchronized void sendRoundRobin(EventBatch events) {
     sendRoundRobin(events, false);
   }
   
-  synchronized void sendRoundRobin(EventBatch events, boolean forced) throws TimeoutException {
+  synchronized void sendRoundRobin(EventBatch events, boolean forced) {
     try {
       if (channels.isEmpty()) {
         throw new IllegalStateException(
@@ -182,7 +180,7 @@ public class LoadBalancer implements Closeable {
         //note: the channelsSnapshot must be refreshed each time through this loop
         //or newly added channels won't be seen, and eventually you will just have a list
         //consisting of closed channels. Also, it must be a snapshot, not use the live
-        //list of channels. Becuase the channelIdx could wind up pointing past the end
+        //list of channels. Because the channelIdx could wind up pointing past the end
         //of the live list, due to fact that this.removeChannel is not synchronized (and
         //must not be do avoid deadlocks).
         List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.
@@ -196,15 +194,16 @@ public class LoadBalancer implements Closeable {
           //System.out.println("sent id "+events.getId() +" on " + tryMe.getChannelId());
           break;
         }
-        if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
+        if(System.currentTimeMillis()-start > this.getConnection().getSendTimeout()){
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         }
       }
-
-    } catch (TimeoutException e) {
-      throw e;  //we want TimeoutExceptions handled by Caller
-    } catch (Exception e) {
+    }catch(TimeoutException e){
+      LOG.log(Level.SEVERE, e.getMessage(), e);
+      this.getConnection().getCallbacks().failed(events, e);
+    }
+    catch (Exception e) {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
               getMessage());
       e.printStackTrace();
