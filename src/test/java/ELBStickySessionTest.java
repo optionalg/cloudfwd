@@ -61,7 +61,7 @@ public class ELBStickySessionTest {
         // callback
         FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
             @Override
-            protected void completed(String reply, int code, ElbCookie cookie) {
+            public void completed(String reply, int code, ElbCookie cookie) {
                 if (code == 200) {
                     cookieValues[0] = cookie.getValue();
                     sender.getHecIOManager().consumeEventPostResponse(reply, events, cookie);
@@ -123,7 +123,7 @@ public class ELBStickySessionTest {
         // callbacks
         FutureCallback<HttpResponse> cb1 = new AbstractHttpCallback() {
             @Override
-            protected void completed(String reply, int code, ElbCookie cookie) {
+            public void completed(String reply, int code, ElbCookie cookie) {
                 if (code == 200) {
                     System.out.println("testCookieSent: first callback received");
                     sender.getHecIOManager().consumeEventPostResponse(reply, events1, cookie);
@@ -146,7 +146,7 @@ public class ELBStickySessionTest {
 
         FutureCallback<HttpResponse> cb2 = new AbstractHttpCallback() {
             @Override
-            protected void completed(String reply, int code, ElbCookie cookie) {
+            public void completed(String reply, int code, ElbCookie cookie) {
                 if (code == 200) {
                     System.out.println("testCookieSent: second callback received");
                     sender.getHecIOManager().consumeEventPostResponse(reply, events2, cookie);

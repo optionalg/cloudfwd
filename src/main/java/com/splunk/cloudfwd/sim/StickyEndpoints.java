@@ -4,7 +4,11 @@ import com.splunk.cloudfwd.http.ElbCookie;
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HecIOManager;
-import org.apache.http.*;
+import org.apache.http.HeaderIterator;
+import org.apache.http.Header;
+import org.apache.http.HeaderElement;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import sun.plugin.dom.exception.InvalidStateException;
 
@@ -40,7 +44,7 @@ public class StickyEndpoints implements Endpoints {
             SimulatedHECEndpoints indexer = indexers.get(cookieInRequest);
             indexer.postEvents(events, request, httpCallback);
         } else {
-            // Route request to a random indexer
+            // Route request to an indexer
             String setCookieValue = getNextSimulatedCookieValue();
             SimulatedHECEndpoints indexer = indexers.get(setCookieValue);
             indexer.postEventsSticky(events, httpCallback, setCookieValue);

@@ -18,13 +18,12 @@ import com.splunk.cloudfwd.IllegalHECAcknowledgementStateException;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.http.EventBatch;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  *

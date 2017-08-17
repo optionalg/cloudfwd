@@ -1,6 +1,9 @@
 package com.splunk.cloudfwd.http;
 
-import org.apache.http.*;
+import org.apache.http.HttpResponse;
+import org.apache.http.HeaderIterator;
+import org.apache.http.Header;
+import org.apache.http.HeaderElement;
 
 /**
  * Created by eprokop on 8/9/17.

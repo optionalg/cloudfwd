@@ -44,6 +44,6 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
     }
   }
 
-  protected abstract void completed(String reply, int code, ElbCookie cookie);
+  public abstract void completed(String reply, int code, ElbCookie cookie);
 
 }

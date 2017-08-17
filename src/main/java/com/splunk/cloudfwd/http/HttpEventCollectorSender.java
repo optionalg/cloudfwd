@@ -19,7 +19,6 @@ package com.splunk.cloudfwd.http;
  */
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.LoggingChannel;
-import com.splunk.cloudfwd.sim.StickyEndpoints;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
