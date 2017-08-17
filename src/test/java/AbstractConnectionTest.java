@@ -32,13 +32,13 @@ import org.junit.runner.notification.Failure;
  */
 public abstract class AbstractConnectionTest {
 
-  private BasicCallbacks ackTracker;
+  private BasicCallbacks callbacks;
   protected Connection connection;
 
   @Before
   public void setUp() {   
-    this.ackTracker = getAckTracker();
-    this.connection = new Connection((FutureCallback)ackTracker, getProps());
+    this.callbacks = getCallbacks();
+    this.connection = new Connection((FutureCallback)callbacks, getProps());
 
   }
   
@@ -48,7 +48,7 @@ public abstract class AbstractConnectionTest {
     //hang out waiting (infinitely?) for the messages to flush out before gracefully closing. So when we see
     //a failure we must use the closeNow method which closes the channel regardless of whether it has
     //messages in flight.
-    if(ackTracker.isFailed()){
+    if(callbacks.isFailed()){
       connection.closeNow();
     }
   }
@@ -62,14 +62,14 @@ public abstract class AbstractConnectionTest {
       this.connection.sendBatch(events);
     }
     connection.close(); //will flush 
-    this.ackTracker.await(10, TimeUnit.MINUTES);
+    this.callbacks.await(10, TimeUnit.MINUTES);
   }
   
   protected abstract Properties getProps();
   protected abstract EventBatch nextEventBatch();
   protected abstract int getNumBatchesToSend();
 
-  protected BasicCallbacks getAckTracker() {
+  protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumBatchesToSend());
   }
   

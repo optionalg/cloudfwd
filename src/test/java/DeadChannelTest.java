@@ -39,6 +39,6 @@ public class DeadChannelTest extends LoadBalancerTest {
 
   @Override
   protected int getNumBatchesToSend() {
-    return 100000;
+    return 1000000;
   }
 }

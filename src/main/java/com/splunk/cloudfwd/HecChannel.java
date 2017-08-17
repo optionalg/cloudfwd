@@ -92,11 +92,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     reaperScheduler.schedule(() -> {
       closeAndReplace();
     }, LIFESPAN, TimeUnit.SECONDS);
-    long decomMS = loadBalancer.getPropertiesFileHelper().getUnresponsiveChannelDecomMS();
-    if(decomMS > 0){
+    long decomMS = loadBalancer.getPropertiesFileHelper().
+            getUnresponsiveChannelDecomMS();
+    if (decomMS > 0) {
       deadChannelDetector = new DeadChannelDetector(decomMS);
+      deadChannelDetector.start();
     }
-    deadChannelDetector.start();
+
     started = true;
   }
 
@@ -222,15 +224,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   synchronized void forceCloseAndReplace() {
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-    doForceClose();
+    interalForceClose();
   }
 
   synchronized void forceClose() {
     LOG.log(Level.INFO, "FORCE CLOSING CHANNEL  {0}", getChannelId());
-    doForceClose();
+    interalForceClose();
   }
 
-  private void doForceClose() {
+  private void interalForceClose() {
     try {
       this.sender.close();
     } catch (Exception e) {
@@ -261,7 +263,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();
     }
-    if(null != deadChannelDetector){
+    if (null != deadChannelDetector) {
       deadChannelDetector.close();
     }
     notifyAll();
@@ -337,8 +339,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     private int lastCountOfUnacked;
     private boolean started;
     private long intervalMS;
-    
-    public DeadChannelDetector(long intervalMS){
+
+    public DeadChannelDetector(long intervalMS) {
       this.intervalMS = intervalMS;
     }
 
@@ -354,8 +356,17 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                 && lastCountOfUnacked == unackedCount.get()) {
           LOG.severe(
                   "Dead channel detected. Resending messages and force closing channel");
-          forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
-          resendInFlightEvents();
+          //synchronize on the load balancer so we do not allow the load balancer to be 
+          //closed between forceCloseAndReplace and resendInFlightEvents. If that
+          //could happen, then the channel we replace this one with in forceCloseAndReplace
+          //can be removed before we resendInFlightEvents
+          synchronized(loadBalancer){
+            forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
+            resendInFlightEvents();
+          }
+          if (sender.getConnection().isClosed()) {
+            loadBalancer.close();
+          }
         } else { //channel was not 'frozen'
           lastCountOfAcked = ackedCount.get();
           lastCountOfUnacked = unackedCount.get();

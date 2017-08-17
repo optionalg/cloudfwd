@@ -43,7 +43,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected BasicCallbacks getAckTracker() {
+  protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumBatchesToSend()) {
       @Override
       public void failed(EventBatch events, Exception e) {

@@ -27,8 +27,8 @@ public class Connection implements Closeable {
 
   public final static long DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
   private final LoadBalancer lb;
-  private CallbackInterceptor callbacks;
-  private TimeoutChecker timeoutChecker;
+  private final CallbackInterceptor callbacks;
+  private final TimeoutChecker timeoutChecker;
   private boolean closed;
 
   public Connection(FutureCallback callbacks) {
@@ -90,6 +90,13 @@ public class Connection implements Closeable {
    */
   public FutureCallback getCallbacks() {
     return callbacks;
+  }
+
+  /**
+   * @return the closed
+   */
+  public boolean isClosed() {
+    return closed;
   }
 
 }

@@ -30,10 +30,10 @@ public class LossyEndpoints extends SimulatedHECEndpoints{
   @Override
   protected AcknowledgementEndpoint createAckEndpoint() {
     if(0 == count.incrementAndGet()%2){ //every other created endpoint will be lossy
-      System.out.println("Add ENDPOINT LIVE");
+      System.out.println("Add ENDPOINT DEAD");
       return new AckLossyEndpoint();
     }else{
-      System.out.println("Add ENDPOINT DEAD");
+      System.out.println("Add ENDPOINT LIVE");
       return new AckEndpoint(); //normal
     }
   }

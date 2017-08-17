@@ -43,12 +43,7 @@ class IndexDiscoveryScheduler {
       return;
     }
     this.discoverer = d;
-        ThreadFactory f = new ThreadFactory(){
-      @Override
-      public Thread newThread(Runnable r) {
-        return new Thread(r, "IndexDiscovery poller");
-      }
-    };
+        ThreadFactory f = (Runnable r) -> new Thread(r, "IndexDiscovery poller");
     this.scheduler = Executors.newScheduledThreadPool(1, f);
     Runnable poller = () -> {        
           this.discoverer.discover();
