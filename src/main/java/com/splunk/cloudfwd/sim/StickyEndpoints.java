@@ -1,9 +1,9 @@
 package com.splunk.cloudfwd.sim;
 
-import com.splunk.cloudfwd.http.AckManager;
 import com.splunk.cloudfwd.http.ElbCookie;
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.EventBatch;
+import com.splunk.cloudfwd.http.HecIOManager;
 import org.apache.http.*;
 import org.apache.http.concurrent.FutureCallback;
 import sun.plugin.dom.exception.InvalidStateException;
@@ -48,7 +48,7 @@ public class StickyEndpoints implements Endpoints {
     }
 
     @Override
-    public void pollAcks(AckManager ackMgr, HttpRequest request,
+    public void pollAcks(HecIOManager ackMgr, HttpRequest request,
                          FutureCallback<HttpResponse> httpCallback) {
         String stickyCookie = extractCookie(request);
         if (stickyCookie != null) {

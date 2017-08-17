@@ -96,7 +96,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   public LoggingChannel getChannel() {
-    if(null == channel){
+    if (!isSimulated() && null == channel) {
      String msg = "Channel is null";
      LOG.severe(msg);
      throw new IllegalStateException(msg);
@@ -354,9 +354,13 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   private String getChannelId() {
-    if (isSimulated() && channel == null) {
+    if (ignoreChannelMetrics()) {
       return simulatedChannelId;
     }
     return getChannel().getChannelId();
+  }
+
+  public boolean ignoreChannelMetrics() {
+    return isSimulated() && channel == null;
   }
 }

@@ -166,9 +166,10 @@ public class HecIOManager implements Closeable {
 
     // start polling for acks
     startPolling();
-
-    sender.getChannelMetrics().update(new EventBatchResponse(
-            LifecycleEvent.Type.EVENT_POST_OK, 200, resp, events));
+    if (!sender.ignoreChannelMetrics()) {
+      sender.getChannelMetrics().update(new EventBatchResponse(
+              LifecycleEvent.Type.EVENT_POST_OK, 200, resp, events));
+    }
   }
 
   public void consumeAckPollResponse(String resp) {

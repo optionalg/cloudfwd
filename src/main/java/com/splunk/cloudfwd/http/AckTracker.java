@@ -105,8 +105,9 @@ public class AckTracker {
                   "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
                   ackId);
         }
-        
-        this.sender.getChannelMetrics().update(new EventBatchResponse(LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?", events));     
+        if (!this.sender.ignoreChannelMetrics()) {
+          this.sender.getChannelMetrics().update(new EventBatchResponse(LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?", events));
+        }
       }
       //System.out.println("polledAcks was " + polledAcks.keySet());
       polledAcks.keySet().removeAll(succeeded);

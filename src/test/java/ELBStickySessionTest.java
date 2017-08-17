@@ -30,14 +30,7 @@ public class ELBStickySessionTest {
 
     @After
     public void tearDown() {
-        // TODO
-        //in case of failure we probably have events stuck on a channel. Therefore a regular close will just
-        //hang out waiting (infinitely?) for the messages to flush out before gracefully closing. So when we see
-        //a failure we must use the closeNow method which closes the channel regardless of whether it has
-        //messages in flight.
-//        if(ackTracker.isFailed()){
-//            connection.closeNow();
-//        }
+        // TODO do whatever is relevant from Connection.close()
     }
 
     private EventBatch nextEventBatch() {
@@ -71,7 +64,7 @@ public class ELBStickySessionTest {
             protected void completed(String reply, int code, ElbCookie cookie) {
                 if (code == 200) {
                     cookieValues[0] = cookie.getValue();
-                    sender.getAckManager().consumeEventPostResponse(reply, events, cookie);
+                    sender.getHecIOManager().consumeEventPostResponse(reply, events, cookie);
                     cookieObj[0] = sender.getCookie();
                     cookieValues[1] = sender.getCookie().getValue();
                     cookieValueName[0] = sender.getCookie().getNameValuePair().split("=")[0];
@@ -93,7 +86,7 @@ public class ELBStickySessionTest {
         };
 
         // send events
-        sender.getAckManager().preEventsPost(events);
+        sender.getHecIOManager().getAckTracker().preEventPost(events);
         sender.postEvents(events, null, cb);
 
         // asserts
@@ -133,7 +126,7 @@ public class ELBStickySessionTest {
             protected void completed(String reply, int code, ElbCookie cookie) {
                 if (code == 200) {
                     System.out.println("testCookieSent: first callback received");
-                    sender.getAckManager().consumeEventPostResponse(reply, events1, cookie);
+                    sender.getHecIOManager().consumeEventPostResponse(reply, events1, cookie);
                     cookieInRequest[0] = stickyEndpoints.getCookieInRequest();
                     if (cookieInRequest[0] == null) System.out.println("good!");
                 } else {
@@ -156,7 +149,7 @@ public class ELBStickySessionTest {
             protected void completed(String reply, int code, ElbCookie cookie) {
                 if (code == 200) {
                     System.out.println("testCookieSent: second callback received");
-                    sender.getAckManager().consumeEventPostResponse(reply, events2, cookie);
+                    sender.getHecIOManager().consumeEventPostResponse(reply, events2, cookie);
                     cookieInRequest[1] = stickyEndpoints.getCookieInRequest();
                     System.out.println(cookieInRequest[1]);
                 } else {
@@ -175,7 +168,7 @@ public class ELBStickySessionTest {
         };
 
         // first batch
-        sender.getAckManager().preEventsPost(events1);
+        sender.getHecIOManager().getAckTracker().preEventPost(events1);
         sender.postEvents(events1, null, cb1);
         try {
             latch1.await();
@@ -184,7 +177,7 @@ public class ELBStickySessionTest {
         }
 
         // second batch
-        sender.getAckManager().preEventsPost(events2);
+        sender.getHecIOManager().getAckTracker().preEventPost(events2);
         sender.postEvents(events2, null, cb2);
         try {
             latch2.await();
