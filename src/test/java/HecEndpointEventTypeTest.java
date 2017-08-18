@@ -20,17 +20,12 @@ import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 
 import java.util.*;
 import org.junit.Test;
-import java.util.concurrent.TimeoutException;
-
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
 
 /**
  *
  * @author ajayaraman
  */
-public class HecEndpointEventTypeTests extends AbstractConnectionTest {
+public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   //private static Map<String, String> message;
   private EventBatch.Endpoint endpoint;
@@ -91,8 +86,9 @@ public class HecEndpointEventTypeTests extends AbstractConnectionTest {
     super.sendEvents();
 
   }
-  
+  /*
   public static void main(String[] args){
-    new HecEndpointEventTypeTests().runTests();    
+    new HecEndpointEventTypeTest().runTests();    
   }
+*/
 }
