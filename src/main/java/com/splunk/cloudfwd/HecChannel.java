@@ -120,9 +120,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
     if (unackedCount.get() == FULL
-            || (unackedCount.get() == 1 && ackedCount.get() == 0)) {
+            || isFirstBatchInFlight()) {
       //force an immediate poll for acks, rather than waiting until the next periodically 
-      //scheduled ack poll
+      //scheduled ack poll. DON'T do this if the first batch is in flight still, since
+      //we need to wait for 'Set-Cookie' in the response to come back before polling
+      //so that we are routed to the correct indexer (if using an external load balancer
+      //with sticky sessions)
       if (unackedCount.get() == FULL) {
         pollAcks();
       }
@@ -178,6 +181,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         break;
       }
     }
+  }
+
+  private boolean isFirstBatchInFlight() {
+    return (unackedCount.get() == 1 && ackedCount.get() == 0);
   }
 
   private void ackReceived(LifecycleEvent s) throws RuntimeException {
