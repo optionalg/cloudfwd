@@ -83,8 +83,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
 
   @Override
   protected EventBatch nextEventBatch() {
-    final EventBatch events = new EventBatch(EventBatch.Endpoint.event,
-            EventBatch.Eventtype.json);
+    final EventBatch events = new EventBatch(EventBatch.Endpoint.EVENT);
     events.add(new HttpEventCollectorEvent("info", "nothing to see here",
             "HEC_LOGGER",
             Thread.currentThread().getName(), new HashMap(), null, null));

@@ -30,10 +30,12 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sun.xml.internal.bind.v2.TODO;
 
 /**
  * Container for Splunk http event collector event data
@@ -48,6 +50,7 @@ public class HttpEventCollectorEvent {
     private final String exception_message;
     private final Serializable marker;
     private static final ObjectMapper jsonMapper = new ObjectMapper();
+    private EventType eventtype;
 
     /**
      * Create a new HttpEventCollectorEventInfo container
@@ -71,6 +74,18 @@ public class HttpEventCollectorEvent {
         this.properties = properties;
         this.exception_message = exception_message;
         this.marker = marker;
+        this.eventtype = determineEventType();
+    }
+
+    public enum EventType {
+        JSON, RAW
+    }
+
+    /**
+     * @return event timestamp in epoch format
+     */
+    public EventType getEventType() {
+        return this.eventtype;
     }
 
     /**
@@ -179,6 +194,19 @@ public class HttpEventCollectorEvent {
             return jsonMapper.writeValueAsString(event_node);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+            //TODO Handle Exception and Add Logger
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    public EventType determineEventType() {
+        String user_record = new String(getByteArray());
+        try {
+            JsonNode user_node = jsonMapper.readTree(user_record);
+            return EventType.JSON;
+        } catch (JsonParseException j) {
+            return EventType.RAW;
+        } catch (IOException e) {
             //TODO Handle Exception and Add Logger
             throw new RuntimeException(e.getMessage(), e);
         }

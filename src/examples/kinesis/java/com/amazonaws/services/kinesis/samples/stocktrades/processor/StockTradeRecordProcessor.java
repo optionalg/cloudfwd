@@ -45,7 +45,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
     private String kinesisShardId;
 
     private final int BATCH_SIZE = 10;
-    private EventBatch eventBatch = new EventBatch(EventBatch.Endpoint.event, EventBatch.Eventtype.json);
+    private EventBatch eventBatch = new EventBatch(EventBatch.Endpoint.EVENT);
     private Connection splunk;
     StockTradeProcessorCallback callback;
 
@@ -92,7 +92,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
                 // Implement failover strategy here, such as storing data in S3
                 LOG.error("Attempt to send events to Splunk timed out.", e);
             }
-            eventBatch = new EventBatch(EventBatch.Endpoint.event, EventBatch.Eventtype.json);
+            eventBatch = new EventBatch(EventBatch.Endpoint.EVENT);
         }
     }
 

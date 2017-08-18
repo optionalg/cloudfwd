@@ -61,8 +61,7 @@ public class SendTimeoutTest extends AbstractConnectionTest {
 
   @Override
   protected EventBatch nextEventBatch() {
-      final EventBatch events = new EventBatch(EventBatch.Endpoint.raw,
-              EventBatch.Eventtype.json);
+      final EventBatch events = new EventBatch(EventBatch.Endpoint.RAW);
       events.add(new HttpEventCollectorEvent("info", "nothing to see here",
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));

@@ -41,26 +41,19 @@ public class EventBatch implements SerializedEventProducer {
   private boolean flushed = false;
   private boolean acknowledged;
   private final long creationTime = System.currentTimeMillis();
-  
-  public enum Endpoint {
-    event, raw
-  }
-  public enum Eventtype {
-    blob, json
-  }
-
+  private Enum<HttpEventCollectorEvent.EventType> eventtype = null;
   private Endpoint endpoint;
-  private Eventtype eventtype;
-  
-  public EventBatch(){
-    this.endpoint = Endpoint.event;
-    this.eventtype = Eventtype.blob;
+  public enum Endpoint {
+    EVENT, RAW
   }
 
-  public EventBatch(Endpoint endpoint, Eventtype eventtype) {
+  public EventBatch(){
+    this.endpoint = Endpoint.EVENT;
+  }
+
+  public EventBatch(Endpoint endpoint) {
     this.sender = null;
     this.endpoint = endpoint;
-    this.eventtype = eventtype;
   }
 
   EventBatch(HttpEventCollectorSender sender, long maxEventsBatchCount,
@@ -100,9 +93,14 @@ public class EventBatch implements SerializedEventProducer {
       throw new RuntimeException("Metadata not set for events");
     }
      */
-
+    try {
+      this.eventtype = getEventType(event);
+    } catch (IllegalStateException ex) {
+      LOG.severe(ex.getMessage());
+      throw ex;
+    }
     eventsBatch.add(event);
-    if (this.endpoint == Endpoint.event) {
+    if (this.endpoint == Endpoint.EVENT) {
       stringBuilder.append(event.toEventEndpointString(metadata));
     } else {
       stringBuilder.append(event.toRawEndpointString());
@@ -135,8 +133,8 @@ public class EventBatch implements SerializedEventProducer {
 
   @Override
   public String toString() {
-    if (this.endpoint == Endpoint.raw) {
-      if (this.eventtype == Eventtype.json) {
+    if (this.endpoint == Endpoint.RAW) {
+      if (this.eventtype == HttpEventCollectorEvent.EventType.JSON) {
         List<String> myList = new ArrayList<String>(
                 Arrays.asList(this.stringBuilder.toString().split(",")));
         return myList.toString();
@@ -170,6 +168,14 @@ public class EventBatch implements SerializedEventProducer {
     return this.eventsBatch;
   }
 
+  public Enum<HttpEventCollectorEvent.EventType> getEventType(HttpEventCollectorEvent event) {
+    if ((this.eventtype == null) || (this.eventtype == event.getEventType())) {
+      return event.getEventType();
+    } else {
+      throw new IllegalStateException("EventType inconsistent == " +
+              ""+ String.valueOf(event.getEventType()));
+    }
+  }
 
   /**
    * @return the metadata

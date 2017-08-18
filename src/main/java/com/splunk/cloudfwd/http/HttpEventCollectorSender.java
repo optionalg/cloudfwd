@@ -232,7 +232,7 @@ public final class HttpEventCollectorSender implements Endpoints {
     final String encoding = "utf-8";
 
     // create http request
-    String endpointUrl = ((events.getEndpoint() == EventBatch.Endpoint.event ? eventUrl : rawUrl));
+    String endpointUrl = ((events.getEndpoint() == EventBatch.Endpoint.EVENT ? eventUrl : rawUrl));
     final HttpPost httpPost = new HttpPost(endpointUrl);
     httpPost.setHeader(
             AuthorizationHeaderTag,

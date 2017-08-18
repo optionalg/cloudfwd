@@ -20,11 +20,6 @@ import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 
 import java.util.*;
 import org.junit.Test;
-import java.util.concurrent.TimeoutException;
-
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
 
 /**
  *
@@ -32,10 +27,14 @@ import org.junit.runner.notification.Failure;
  */
 public class HecEndpointEventTypeTests extends AbstractConnectionTest {
 
-  //private static Map<String, String> message;
   private EventBatch.Endpoint endpoint;
-  private EventBatch.Eventtype eventType;
-
+  private String eventtype;
+  private String eventtype2 = null;
+  private Map<String, String> message = new HashMap<String, String>() {
+  {
+    put("json", "{\"event\":\"Json\"}");
+    put("blob", "event: Blob");
+  }};
 
   @Override
   protected int getNumBatchesToSend() {
@@ -44,55 +43,75 @@ public class HecEndpointEventTypeTests extends AbstractConnectionTest {
 
   @Override
   protected EventBatch nextEventBatch() {
-    EventBatch events = new EventBatch(this.endpoint, this.eventType);
-    events.add(new HttpEventCollectorEvent("info", "foo", "HEC_LOGGER",
-            Thread.currentThread().getName(), new HashMap(), null, null));
+    this.eventtype2 = ((this.eventtype2 == null ? this.eventtype : this.eventtype2));
+    EventBatch events = new EventBatch(this.endpoint);
+    events.add(new HttpEventCollectorEvent("info",
+            message.get(this.eventtype),
+            "HEC_LOGGER",
+            Thread.currentThread().getName(),
+            new HashMap(),
+            null,
+            null));
+        events.add(new HttpEventCollectorEvent("info",
+            message.get(this.eventtype2),
+            "HEC_LOGGER",
+            Thread.currentThread().getName(),
+            new HashMap(),
+            null,
+            null));
+
     return events;
   }
 
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     return props;
   }
 
   @Test
   public void testBlobToRaw() throws Exception {
     System.out.println("testBlobToRaw");
-    this.endpoint = EventBatch.Endpoint.raw;
-    this.eventType = EventBatch.Eventtype.blob;
+    this.eventtype = "blob";
+    this.endpoint = EventBatch.Endpoint.RAW;
     super.sendEvents();
   }
 
   @Test
   public void testJsonToRaw() throws Exception {
     System.out.println("testJsonToRaw");
-    this.endpoint = EventBatch.Endpoint.raw;
-    this.eventType = EventBatch.Eventtype.json;
+    this.eventtype = "json";
+    this.endpoint = EventBatch.Endpoint.RAW;
     super.sendEvents();
-
   }
 
   @Test
   public void testBlobToEvent() throws Exception {
     System.out.println("testBlobToEvent");
-    this.endpoint = EventBatch.Endpoint.event;
-    this.eventType = EventBatch.Eventtype.blob;
+    this.eventtype = "blob";
+    this.endpoint = EventBatch.Endpoint.EVENT;
     super.sendEvents();
-
   }
 
   @Test
   public void testJsonToEvent() throws Exception {
     System.out.println("testJsonToEvent");
-    this.endpoint = EventBatch.Endpoint.event;
-    this.eventType = EventBatch.Eventtype.json;
+    this.eventtype = "json";
+    this.endpoint = EventBatch.Endpoint.EVENT;
     super.sendEvents();
-
   }
-  
+
+  @Test(expected = IllegalStateException.class)
+  public void testThrowsJsonBlobToRaw() throws Exception {
+    System.out.println("testThrowsJsonBlobToRaw");
+    this.eventtype = "json";
+    this.eventtype2 = "blob";
+    this.endpoint = EventBatch.Endpoint.RAW;
+    super.sendEvents();
+  }
+
   public static void main(String[] args){
-    new HecEndpointEventTypeTests().runTests();    
+    new HecEndpointEventTypeTests().runTests();
   }
 }
