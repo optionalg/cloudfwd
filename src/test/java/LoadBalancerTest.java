@@ -37,11 +37,11 @@ public class LoadBalancerTest extends AbstractConnectionTest {
   public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
     super.sendEvents();
   }
-
+/*
   public static void main(String[] args) throws InterruptedException, TimeoutException {
     new LoadBalancerTest().runTests();
   }
-
+*/
   @Override
   protected Properties getProps() {
     Properties props = new Properties();

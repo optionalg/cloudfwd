@@ -313,7 +313,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
   }
 
-  private static class StickySessionEnforcer {
+  private class StickySessionEnforcer {
 
     boolean seenAckIdOne;
 
@@ -321,9 +321,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       int ackId = events.getAckId().intValue();
       if (ackId == 1) {
         if (seenAckIdOne) {
-          throw new IllegalHECAcknowledgementStateException(
+          Exception e = new IllegalHECAcknowledgementStateException(
                   "ackId " + ackId + " has already been received on channel " + events.
                   getSender().getChannel());
+          HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
+                  events, e);
         } else {
           seenAckIdOne = true;
         }

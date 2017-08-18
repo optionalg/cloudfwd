@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import java.util.HashMap;
 import java.util.Properties;
@@ -33,8 +35,8 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   public SendTimeoutTest() {
   }
 
-  @Before
   @Override
+  @Before
   public void setUp() {
     super.setUp();
     super.connection.setSendTimeout(100);

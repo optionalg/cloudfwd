@@ -33,13 +33,13 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
 
   public NonStickyDetectionTest() {
   }
-  
+
   @After
   @Override
   public void tearDown() {
     //must use closeNow, because close() waits for channels to empty. But do to the failure that we are
     //*trying* to induce with this test, the channels will never empty
-    this.connection.closeNow();     
+    this.connection.closeNow();
   }
 
   @Override
@@ -56,6 +56,14 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
         System.out.println("Got expected exception: " + e);
         latch.countDown(); //allow the test to finish
       }
+
+      @Override
+      public void checkpoint(EventBatch events) {
+        System.out.println("SUCCESS CHECKPOINT " + events.getId());
+        //do NOT count down the latch - otherwise the test ends before we have
+        //opportunity to detect the non-sticky session
+      }
+
     };
   }
 
@@ -93,11 +101,12 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
 
   @Override
   protected int getNumBatchesToSend() {
-    return 2;
+    return 1000;
   }
-  
+  /*
    public static void main(String[] args) {
     new NonStickyDetectionTest().runTests();    
   }
+   */
 
 }

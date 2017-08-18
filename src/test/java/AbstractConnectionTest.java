@@ -32,7 +32,7 @@ import org.junit.runner.notification.Failure;
  */
 public abstract class AbstractConnectionTest {
 
-  private BasicCallbacks callbacks;
+  protected BasicCallbacks callbacks;
   protected Connection connection;
 
   @Before
