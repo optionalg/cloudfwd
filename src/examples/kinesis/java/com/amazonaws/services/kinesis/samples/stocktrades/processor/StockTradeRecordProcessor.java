@@ -22,7 +22,7 @@ import java.util.concurrent.TimeoutException;
 import com.splunk.cloudfwd.Connection;
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
+import com.splunk.cloudfwd.Event;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -80,7 +80,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
             return;
         }
 
-        eventBatch.add(new HttpEventCollectorEvent("info", trade.toString(), "HEC_LOGGER",
+        eventBatch.add(new Event("info", trade.toString(), "HEC_LOGGER",
                 Thread.currentThread().getName(), new HashMap(), null, null));
         if (eventBatch.size() >= BATCH_SIZE) {
             try {

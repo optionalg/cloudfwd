@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
 import com.splunk.cloudfwd.http.HttpEventCollectorSender;
 import com.splunk.cloudfwd.http.SerializedEventProducer;
 import java.util.*;
@@ -35,7 +34,7 @@ public class EventBatch implements SerializedEventProducer {
   private Long ackId; //Will be null until we receive ackId for this batch from HEC
   private Map<String, String> metadata = new HashMap<>();
   //private final TimerTask flushTask = new ScheduledFlush();
-  private final List<HttpEventCollectorEvent> eventsBatch = new ArrayList();
+  private final List<Event> eventsBatch = new ArrayList();
   private HttpEventCollectorSender sender;
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
@@ -90,7 +89,7 @@ public class EventBatch implements SerializedEventProducer {
     this.id = seqno;
   }
 
-  public synchronized void add(HttpEventCollectorEvent event) {
+  public synchronized void add(Event event) {
     if (flushed) {
       throw new IllegalStateException(
               "Events cannot be added to a flushed EventBatch");
@@ -162,11 +161,11 @@ public class EventBatch implements SerializedEventProducer {
     return eventsBatch.size();
   }
 
-  public HttpEventCollectorEvent get(int idx) {
+  public Event get(int idx) {
     return this.eventsBatch.get(idx);
   }
 
-  public List<HttpEventCollectorEvent> getEvents() {
+  public List<Event> getEvents() {
     return this.eventsBatch;
   }
 

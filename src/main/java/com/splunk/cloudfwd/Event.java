@@ -1,4 +1,4 @@
-package com.splunk.cloudfwd.http;
+package com.splunk.cloudfwd;
 
 /**
  * @copyright
@@ -38,7 +38,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 /**
  * Container for Splunk http event collector event data
  */
-public class HttpEventCollectorEvent {
+public class Event {
     private double time; // time in fractional seconds since "unix epoch" format
     private final String severity;
     private final String message;
@@ -54,7 +54,7 @@ public class HttpEventCollectorEvent {
      * @param severity of event
      * @param message is an event content
      */
-    public HttpEventCollectorEvent(
+    public Event(
             final String severity,
             final String message,
             final String logger_name,

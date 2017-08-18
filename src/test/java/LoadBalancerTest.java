@@ -16,7 +16,7 @@
 
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
+import com.splunk.cloudfwd.Event;
 import java.util.HashMap;
 import java.util.Properties;
 import org.junit.Test;
@@ -53,7 +53,7 @@ public class LoadBalancerTest extends AbstractConnectionTest {
   protected EventBatch nextEventBatch() {
       final EventBatch events = new EventBatch(EventBatch.Endpoint.raw,
               EventBatch.Eventtype.json);
-      events.add(new HttpEventCollectorEvent("info", "nothing to see here",
+      events.add(new Event("info", "nothing to see here",
               "HEC_LOGGER",
               Thread.currentThread().getName(), new HashMap(), null, null));
       return events;

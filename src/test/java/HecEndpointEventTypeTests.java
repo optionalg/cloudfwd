@@ -16,7 +16,7 @@
 
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
+import com.splunk.cloudfwd.Event;
 
 import java.util.*;
 import org.junit.Test;
@@ -45,7 +45,7 @@ public class HecEndpointEventTypeTests extends AbstractConnectionTest {
   @Override
   protected EventBatch nextEventBatch() {
     EventBatch events = new EventBatch(this.endpoint, this.eventType);
-    events.add(new HttpEventCollectorEvent("info", "foo", "HEC_LOGGER",
+    events.add(new Event("info", "foo", "HEC_LOGGER",
             Thread.currentThread().getName(), new HashMap(), null, null));
     return events;
   }
