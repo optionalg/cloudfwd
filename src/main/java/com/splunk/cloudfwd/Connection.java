@@ -80,7 +80,7 @@ public class Connection implements Closeable {
     }, "Connection Closer").start();
   }
 
-  public void sendBatch(EventBatch events) throws TimeoutException {
+  public void sendBatch(EventBatch events) {
   if(closed){
       throw new IllegalStateException("Attempt to send on closed channel.");
     }
