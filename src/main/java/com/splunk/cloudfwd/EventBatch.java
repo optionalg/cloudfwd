@@ -93,11 +93,11 @@ public class EventBatch implements SerializedEventProducer {
       throw new RuntimeException("Metadata not set for events");
     }
      */
-    try {
-      this.eventtype = getEventType(event);
-    } catch (IllegalStateException ex) {
-      LOG.severe(ex.getMessage());
-      throw ex;
+    if ((this.eventtype == null) || (this.eventtype == event.getEventType())) {
+      this.eventtype = event.getEventType();
+    } else {
+      throw new IllegalStateException("EventType inconsistent == " +
+              ""+ String.valueOf(event.getEventType()));
     }
     eventsBatch.add(event);
     if (this.endpoint == Endpoint.EVENT) {
@@ -166,15 +166,6 @@ public class EventBatch implements SerializedEventProducer {
 
   public List<HttpEventCollectorEvent> getEvents() {
     return this.eventsBatch;
-  }
-
-  public Enum<HttpEventCollectorEvent.EventType> getEventType(HttpEventCollectorEvent event) {
-    if ((this.eventtype == null) || (this.eventtype == event.getEventType())) {
-      return event.getEventType();
-    } else {
-      throw new IllegalStateException("EventType inconsistent == " +
-              ""+ String.valueOf(event.getEventType()));
-    }
   }
 
   /**
