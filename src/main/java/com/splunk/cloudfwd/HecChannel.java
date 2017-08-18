@@ -45,6 +45,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private static final long LIFESPAN = 60; //5 min lifespan
   private volatile boolean closed;
   private volatile boolean quiesced;
+  private volatile boolean receivedFirstEventPostResponse;
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
@@ -119,10 +120,24 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
               info("Send to quiesced channel (this should happen from time to time)");
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
-    if (unackedCount.get() == FULL) {
-      //force an immediate poll for acks, rather than waiting until the next periodically 
-      //scheduled ack poll
-      pollAcks();
+    // We want to block and poll for acks if
+    // 1) the channel is full
+    // OR
+    // 2) if we have not successfully posted the first message
+    //
+    // In case of the first event in the channel, wait() call below will be interruped by
+    // notifyAll() call from this.update callback once we get EVENT_POST_OK
+    //
+    if (unackedCount.get() == FULL
+            || (unackedCount.get() != 0 && !receivedFirstEventPostResponse))  {
+      //force an immediate poll for acks, rather than waiting until the next periodically
+      //scheduled ack poll. DON'T do this if the first batch is in flight still, since
+      //we need to wait for 'Set-Cookie' in the response to come back before polling
+      //so that we are routed to the correct indexer (if using an external load balancer
+      //with sticky sessions)
+      if (unackedCount.get() == FULL) {
+        pollAcks();
+      }
       long start = System.currentTimeMillis();
       while (true) {
         try {
@@ -171,6 +186,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }
       case EVENT_POST_OK: {
         //System.out.println("OBSERVED EVENT_POST_OK");
+
+        // the below if clause is to unblock sending in the channel once we get post OK
+        // for the first event in the channel
+        if (!receivedFirstEventPostResponse) {
+          System.out.println("channel=" + getChannelId() +
+                  ", received OBSERVED EVENT_POST_OK and unblocking sending" +
+                  " for the first event in the channel");
+          notifyAll();
+          receivedFirstEventPostResponse = true;
+        }
         checkForStickySessionViolation(e);
         break;
       }

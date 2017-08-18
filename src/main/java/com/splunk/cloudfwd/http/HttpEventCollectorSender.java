@@ -21,13 +21,20 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecChannel;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.conn.util.PublicSuffixMatcher;
+import org.apache.http.conn.util.PublicSuffixMatcherLoader;
+import org.apache.http.cookie.CookieSpecProvider;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.cookie.RFC6265CookieSpecProvider;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 
@@ -176,11 +183,20 @@ public final class HttpEventCollectorSender implements Endpoints {
       // http client is already started or we don't need it because we are simulated
       return;
     }
+
+    // configure cookie parsing
+    PublicSuffixMatcher publicSuffixMatcher = PublicSuffixMatcherLoader.getDefault();
+    Registry<CookieSpecProvider> r = RegistryBuilder.<CookieSpecProvider>create()
+            .register(CookieSpecs.DEFAULT,
+                    new RFC6265CookieSpecProvider(publicSuffixMatcher))
+            .build();
+
     // limit max  number of async requests in sequential mode, 0 means "use
     // default limit"
     if (!disableCertificateValidation) {
       // create an http client that validates certificates
       httpClient = HttpAsyncClients.custom()
+              .setDefaultCookieSpecRegistry(r)
               .setMaxConnTotal(0) //parallel requests
               .build();
     } else {
@@ -196,6 +212,7 @@ public final class HttpEventCollectorSender implements Endpoints {
         sslContext = SSLContexts.custom().loadTrustMaterial(
                 null, acceptingTrustStrategy).build();
         httpClient = HttpAsyncClients.custom()
+                .setDefaultCookieSpecRegistry(r)
                 .setMaxConnTotal(0) //parallel requests
                 .setHostnameVerifier(
                         SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
