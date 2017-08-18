@@ -122,7 +122,7 @@ public class LoadBalancer implements Closeable {
   private void addChannel(InetSocketAddress s) {
     URL url;
     try {
-      url = new URL("https://" + s.getHostName() + ":" + s.getPort());
+      url = new URL("https://" + s.getAddress().getHostAddress()+ ":" + s.getPort());
       System.out.println("Trying to add URL: " + url);
       HttpEventCollectorSender sender = this.propertiesFileHelper.
               createSender(url);
@@ -193,7 +193,7 @@ public class LoadBalancer implements Closeable {
         int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         if (tryMe.send(events)) {
-          //System.out.println("sent id "+events.getId() +" on " + tryMe.getChannelId());
+          System.out.println("sent id "+events.getId() +" on " + tryMe);
           break;
         }
         if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {

@@ -77,7 +77,7 @@ public class AcknowledgementTracker {
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatch events) {
     Long ackId = epr.getAckId();
-    //System.out.println("handler event post response for ack " + ackId);
+    System.out.println("handler event post response for ack " + ackId);
     EventBatch removed = postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
     if (null == removed) {
       String msg = "failed to track event batch " + events.getId();

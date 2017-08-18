@@ -297,7 +297,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   @Override
   public String toString() {
-    return this.channelId;
+    return this.channelId + "@" + sender.getBaseUrl();
   }
 
   public Connection getConnection() {

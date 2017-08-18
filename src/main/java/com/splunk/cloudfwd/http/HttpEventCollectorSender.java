@@ -74,6 +74,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
+  private final String baseUrl;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -82,6 +83,7 @@ public final class HttpEventCollectorSender implements Endpoints {
    * @param token application token
    */
   public HttpEventCollectorSender(final String url, final String token) {
+    this.baseUrl = url;
     this.eventUrl = url.trim() + "/services/collector/event";
     this.rawUrl = url.trim() + "/services/collector/raw";
     this.ackUrl = url.trim() + "/services/collector/ack";
@@ -176,6 +178,13 @@ public final class HttpEventCollectorSender implements Endpoints {
       // http client is already started or we don't need it because we are simulated
       return;
     }
+//    System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.SimpleLog");
+//
+//System.setProperty("org.apache.commons.logging.simplelog.showdatetime", "true");
+//
+//System.setProperty("org.apache.commons.logging.simplelog.log.httpclient.wire.header", "debug");
+//
+//System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
     // limit max  number of async requests in sequential mode, 0 means "use
     // default limit"
     if (!disableCertificateValidation) {
@@ -324,6 +333,13 @@ public final class HttpEventCollectorSender implements Endpoints {
 
   public void setChannel(HecChannel c) {
     this.channel=c; 
+  }
+
+  /**
+   * @return the baseUrl
+   */
+  public String getBaseUrl() {
+    return baseUrl;
   }
 
 

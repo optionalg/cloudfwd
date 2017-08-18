@@ -121,6 +121,7 @@ class IndexDiscoverer extends Observable {
       try {
         String host = url.getHost();
         List<InetAddress> addrs = Arrays.asList(InetAddress.getAllByName(host));
+        System.out.println("HOST: " + host + " resolved to " + addrs);
         for (InetAddress iaddr : addrs) {
           InetSocketAddress sockAddr = new InetSocketAddress(iaddr, url.
                   getPort());
