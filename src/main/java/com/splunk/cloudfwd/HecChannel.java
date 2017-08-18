@@ -45,6 +45,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private static final long LIFESPAN = 60; //5 min lifespan
   private volatile boolean closed;
   private volatile boolean quiesced;
+  private volatile boolean receivedFirstEventPostResponse;
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
@@ -120,7 +121,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
     if (unackedCount.get() == FULL
-            || isFirstBatchInFlight()) {
+            || !receivedFirstEventPostResponse) {
       //force an immediate poll for acks, rather than waiting until the next periodically 
       //scheduled ack poll. DON'T do this if the first batch is in flight still, since
       //we need to wait for 'Set-Cookie' in the response to come back before polling
@@ -177,14 +178,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }
       case EVENT_POST_OK: {
         //System.out.println("OBSERVED EVENT_POST_OK");
+        receivedFirstEventPostResponse = true;
         checkForStickySessionViolation(e);
         break;
       }
     }
-  }
-
-  private boolean isFirstBatchInFlight() {
-    return (unackedCount.get() == 1 && ackedCount.get() == 0);
   }
 
   private void ackReceived(LifecycleEvent s) throws RuntimeException {
