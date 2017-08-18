@@ -83,15 +83,10 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
         eventBatch.add(new HttpEventCollectorEvent("info", trade.toString(), "HEC_LOGGER",
                 Thread.currentThread().getName(), new HashMap(), null, null));
         if (eventBatch.size() >= BATCH_SIZE) {
-            try {
-                eventBatch.setSeqNo(record.getSequenceNumber());
-                LOG.info("Sending event batch with sequenceNumber=" + eventBatch.getId());
-                callback.addCheckpointer(eventBatch.getId(), checkpointer);
-                splunk.sendBatch(eventBatch);
-            } catch(TimeoutException e) {
-                // Implement failover strategy here, such as storing data in S3
-                LOG.error("Attempt to send events to Splunk timed out.", e);
-            }
+            eventBatch.setSeqNo(record.getSequenceNumber());
+            LOG.info("Sending event batch with sequenceNumber=" + eventBatch.getId());
+            callback.addCheckpointer(eventBatch.getId(), checkpointer);
+            splunk.sendBatch(eventBatch);
             eventBatch = new EventBatch(EventBatch.Endpoint.event, EventBatch.Eventtype.json);
         }
     }
