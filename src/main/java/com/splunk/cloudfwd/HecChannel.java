@@ -146,7 +146,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           System.out.println("UNBLOCKED");
         } catch (InterruptedException ex) {
           Logger.getLogger(HecChannel.class.getName()).
-                  log(Level.SEVERE, null, ex);
+                  log(Level.SEVERE, ex.getMessage(), ex);
         }
         if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
           System.out.println("TIMEOUT EXCEEDED");
