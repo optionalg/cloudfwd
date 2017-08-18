@@ -16,7 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.Endpoints;
-import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.HttpSender;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -125,17 +125,17 @@ public class PropertiesFileHelper {
 
   }
 
-  public HttpEventCollectorSender createSender(URL url) {
+  public HttpSender createSender(URL url) {
     Properties props = new Properties(defaultProps);
     props.put("url", url.toString());
     return createSender(props);
   }
 
-  private HttpEventCollectorSender createSender(Properties props) {
+  private HttpSender createSender(Properties props) {
     try {
       String url = props.getProperty(COLLECTOR_URI).trim();
       String token = props.getProperty(TOKEN_KEY).trim();
-      HttpEventCollectorSender sender = new HttpEventCollectorSender(url, token);
+      HttpSender sender = new HttpSender(url, token);
       if (isCertValidationDisabled()) {
         sender.disableCertificateValidation();
       }
@@ -151,7 +151,7 @@ public class PropertiesFileHelper {
     }
   }
 
-  public HttpEventCollectorSender createSender() {
+  public HttpSender createSender() {
     return createSender(this.defaultProps);
   }
 

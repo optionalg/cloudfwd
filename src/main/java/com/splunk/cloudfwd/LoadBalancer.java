@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.HttpSender;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -120,9 +120,11 @@ public class LoadBalancer implements Closeable {
   private void addChannel(InetSocketAddress s) {
     URL url;
     try {
-      url = new URL("https://" + s.getHostName() + ":" + s.getPort());
+      //URLS for channel must be based on IP address not hostname since we 
+      //have many-to-one relationship between IP address and hostname via DNS records
+      url = new URL("https://" + s.getAddress().getHostAddress()+ ":" + s.getPort());
       System.out.println("Trying to add URL: " + url);
-      HttpEventCollectorSender sender = this.propertiesFileHelper.
+      HttpSender sender = this.propertiesFileHelper.
               createSender(url);
       
       HecChannel channel = new HecChannel(this, sender, this.connection); 
@@ -191,7 +193,7 @@ public class LoadBalancer implements Closeable {
         int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         if (tryMe.send(events)) {
-          //System.out.println("sent id "+events.getId() +" on " + tryMe.getChannelId());
+          System.out.println("sent EventBatch id="+events.getId() +" on " + tryMe);
           break;
         }
         if(System.currentTimeMillis()-start > this.getConnection().getSendTimeout()){

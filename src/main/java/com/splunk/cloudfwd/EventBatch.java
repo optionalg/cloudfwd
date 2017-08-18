@@ -16,7 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.HttpEventCollectorEvent;
-import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.HttpSender;
 import com.splunk.cloudfwd.http.SerializedEventProducer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,7 +36,7 @@ public class EventBatch implements SerializedEventProducer {
   private Map<String, String> metadata = new HashMap<>();
   //private final TimerTask flushTask = new ScheduledFlush();
   private final List<HttpEventCollectorEvent> eventsBatch = new ArrayList();
-  private HttpEventCollectorSender sender;
+  private HttpSender sender;
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
@@ -63,7 +63,7 @@ public class EventBatch implements SerializedEventProducer {
     this.eventtype = eventtype;
   }
 
-  EventBatch(HttpEventCollectorSender sender, long maxEventsBatchCount,
+  EventBatch(HttpSender sender, long maxEventsBatchCount,
           long maxEventsBatchSize,
           long flushInterval, Map<String, String> metadata, Timer timer) {
     this.sender = sender;
@@ -199,7 +199,7 @@ public class EventBatch implements SerializedEventProducer {
     this.ackId = ackId;
   }
 
-  public void setSender(HttpEventCollectorSender sender) {
+  public void setSender(HttpSender sender) {
     if (null != this.sender) {
       String msg = "attempt to change the value of sender. Channel was " + this.sender.
               getChannel() + ", and attempt to change to " + sender.getChannel();
@@ -234,7 +234,7 @@ public class EventBatch implements SerializedEventProducer {
   /**
    * @return the sender
    */
-  public HttpEventCollectorSender getSender() {
+  public HttpSender getSender() {
     return sender;
   }
 

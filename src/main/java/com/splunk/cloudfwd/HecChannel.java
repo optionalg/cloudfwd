@@ -18,7 +18,7 @@ package com.splunk.cloudfwd;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
-import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.HttpSender;
 import com.splunk.cloudfwd.util.PollScheduler;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.io.Closeable;
@@ -39,7 +39,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   private static final Logger LOG = Logger.getLogger(HecChannel.class.
           getName());
-  private final HttpEventCollectorSender sender;
+  private final HttpSender sender;
   private static final int FULL = 10000; //FIXME TODO set to reasonable value, configurable?
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
   private static final long LIFESPAN = 60; //5 min lifespan
@@ -55,7 +55,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final ChannelMetrics channelMetrics;
   private DeadChannelDetector deadChannelDetector;
 
-  public HecChannel(LoadBalancer b, HttpEventCollectorSender sender,
+  public HecChannel(LoadBalancer b, HttpSender sender,
           Connection c) {
     this.loadBalancer = b;
     this.sender = sender;
@@ -322,7 +322,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   @Override
   public String toString() {
-    return this.channelId;
+    return this.channelId + "@" + sender.getBaseUrl();
   }
 
   public Connection getConnection() {

@@ -48,10 +48,9 @@ import java.util.logging.Logger;
  * This is an internal helper class that sends logging events to Splunk http
  * event collector.
  */
-public final class HttpEventCollectorSender implements Endpoints {
+public final class HttpSender implements Endpoints {
 
-  private static final Logger LOG = Logger.getLogger(
-          HttpEventCollectorSender.class.getName());
+  private static final Logger LOG = Logger.getLogger(HttpSender.class.getName());
 
   public static final String MetadataTimeTag = "time";
   public static final String MetadataHostTag = "host";
@@ -81,6 +80,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
+  private final String baseUrl;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -88,7 +88,8 @@ public final class HttpEventCollectorSender implements Endpoints {
    * @param url http event collector input server
    * @param token application token
    */
-  public HttpEventCollectorSender(final String url, final String token) {
+  public HttpSender(final String url, final String token) {
+    this.baseUrl = url;
     this.eventUrl = url.trim() + "/services/collector/event";
     this.rawUrl = url.trim() + "/services/collector/raw";
     this.ackUrl = url.trim() + "/services/collector/ack";
@@ -341,6 +342,13 @@ public final class HttpEventCollectorSender implements Endpoints {
 
   public void setChannel(HecChannel c) {
     this.channel=c; 
+  }
+
+  /**
+   * @return the baseUrl
+   */
+  public String getBaseUrl() {
+    return baseUrl;
   }
 
 

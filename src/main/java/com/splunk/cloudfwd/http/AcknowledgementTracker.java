@@ -45,9 +45,9 @@ public class AcknowledgementTracker {
   private final static ObjectMapper jsonMapper = new ObjectMapper();
   private final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
   private final Map<String, EventBatch> postedEventBatches = new ConcurrentHashMap<>();//key EventBatch ID
-  private final HttpEventCollectorSender sender;
+  private final HttpSender sender;
 
-  AcknowledgementTracker(HttpEventCollectorSender sender) {
+  AcknowledgementTracker(HttpSender sender) {
     this.sender = sender;
   }
 

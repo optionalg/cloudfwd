@@ -18,11 +18,11 @@ package com.splunk.cloudfwd.http;
  * under the License.
  */
 
-import static com.splunk.cloudfwd.http.HttpEventCollectorSender.MetadataHostTag;
-import static com.splunk.cloudfwd.http.HttpEventCollectorSender.MetadataIndexTag;
-import static com.splunk.cloudfwd.http.HttpEventCollectorSender.MetadataSourceTag;
-import static com.splunk.cloudfwd.http.HttpEventCollectorSender.MetadataSourceTypeTag;
-import static com.splunk.cloudfwd.http.HttpEventCollectorSender.MetadataTimeTag;
+import static com.splunk.cloudfwd.http.HttpSender.MetadataHostTag;
+import static com.splunk.cloudfwd.http.HttpSender.MetadataIndexTag;
+import static com.splunk.cloudfwd.http.HttpSender.MetadataSourceTag;
+import static com.splunk.cloudfwd.http.HttpSender.MetadataSourceTypeTag;
+import static com.splunk.cloudfwd.http.HttpSender.MetadataTimeTag;
 
 import java.io.IOException;
 import java.io.Serializable;
