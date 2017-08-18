@@ -25,7 +25,7 @@ import org.junit.Test;
  *
  * @author ajayaraman
  */
-public class HecEndpointEventTypeTests extends AbstractConnectionTest {
+public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   private EventBatch.Endpoint endpoint;
   private String eventtype;
@@ -112,6 +112,6 @@ public class HecEndpointEventTypeTests extends AbstractConnectionTest {
   }
 
   public static void main(String[] args){
-    new HecEndpointEventTypeTests().runTests();
+    new HecEndpointEventTypeTest().runTests();
   }
 }
