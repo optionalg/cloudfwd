@@ -119,10 +119,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
               info("Send to quiesced channel (this should happen from time to time)");
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
-    if (unackedCount.get() == FULL) {
+    if (unackedCount.get() == FULL
+            || (unackedCount.get() == 1 && ackedCount.get() == 0)) {
       //force an immediate poll for acks, rather than waiting until the next periodically 
       //scheduled ack poll
-      pollAcks();
+      if (unackedCount.get() == FULL) {
+        pollAcks();
+      }
       long start = System.currentTimeMillis();
       while (true) {
         try {

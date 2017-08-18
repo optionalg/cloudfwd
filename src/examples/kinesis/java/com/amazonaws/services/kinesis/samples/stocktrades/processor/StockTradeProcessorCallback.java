@@ -35,7 +35,7 @@ public class StockTradeProcessorCallback implements FutureCallback{
 
     @Override
     public void failed(EventBatch events, Exception ex) {
-        // TODO: do something else on failure?
+        // TODO: show how to handle different types of exceptions
         LOG.warn("Sending failed for event batch with sequenceNumber="
                 + events.getId()
                 + " (shardId=" + shardId + "): "
