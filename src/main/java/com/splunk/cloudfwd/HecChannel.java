@@ -18,8 +18,8 @@ package com.splunk.cloudfwd;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
-import com.splunk.cloudfwd.http.HttpEventCollectorSender;
-import com.splunk.cloudfwd.http.PollScheduler;
+import com.splunk.cloudfwd.http.HttpSender;
+import com.splunk.cloudfwd.util.PollScheduler;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
@@ -39,12 +39,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   private static final Logger LOG = Logger.getLogger(HecChannel.class.
           getName());
-  private final HttpEventCollectorSender sender;
+  private final HttpSender sender;
   private static final int FULL = 10000; //FIXME TODO set to reasonable value, configurable?
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
   private static final long LIFESPAN = 60; //5 min lifespan
   private volatile boolean closed;
   private volatile boolean quiesced;
+  private volatile boolean receivedFirstEventPostResponse;
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
@@ -54,7 +55,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final ChannelMetrics channelMetrics;
   private DeadChannelDetector deadChannelDetector;
 
-  public HecChannel(LoadBalancer b, HttpEventCollectorSender sender,
+  public HecChannel(LoadBalancer b, HttpSender sender,
           Connection c) {
     this.loadBalancer = b;
     this.sender = sender;
@@ -119,10 +120,24 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
               info("Send to quiesced channel (this should happen from time to time)");
     }
     //System.out.println("Sending to channel: " + sender.getChannel());
-    if (unackedCount.get() == FULL) {
-      //force an immediate poll for acks, rather than waiting until the next periodically 
-      //scheduled ack poll
-      pollAcks();
+    // We want to block and poll for acks if
+    // 1) the channel is full
+    // OR
+    // 2) if we have not successfully posted the first message
+    //
+    // In case of the first event in the channel, wait() call below will be interruped by
+    // notifyAll() call from this.update callback once we get EVENT_POST_OK
+    //
+    if (unackedCount.get() == FULL
+            || (unackedCount.get() != 0 && !receivedFirstEventPostResponse))  {
+      //force an immediate poll for acks, rather than waiting until the next periodically
+      //scheduled ack poll. DON'T do this if the first batch is in flight still, since
+      //we need to wait for 'Set-Cookie' in the response to come back before polling
+      //so that we are routed to the correct indexer (if using an external load balancer
+      //with sticky sessions)
+      if (unackedCount.get() == FULL) {
+        pollAcks();
+      }
       long start = System.currentTimeMillis();
       while (true) {
         try {
@@ -131,7 +146,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           System.out.println("UNBLOCKED");
         } catch (InterruptedException ex) {
           Logger.getLogger(HecChannel.class.getName()).
-                  log(Level.SEVERE, null, ex);
+                  log(Level.SEVERE, ex.getMessage(), ex);
         }
         if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
           System.out.println("TIMEOUT EXCEEDED");
@@ -171,6 +186,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }
       case EVENT_POST_OK: {
         //System.out.println("OBSERVED EVENT_POST_OK");
+
+        // the below if clause is to unblock sending in the channel once we get post OK
+        // for the first event in the channel
+        if (!receivedFirstEventPostResponse) {
+          System.out.println("channel=" + getChannelId() +
+                  ", received OBSERVED EVENT_POST_OK and unblocking sending" +
+                  " for the first event in the channel");
+          notifyAll();
+          receivedFirstEventPostResponse = true;
+        }
         checkForStickySessionViolation(e);
         break;
       }
@@ -297,7 +322,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   @Override
   public String toString() {
-    return this.channelId;
+    return this.channelId + "@" + sender.getBaseUrl();
   }
 
   public Connection getConnection() {
@@ -313,7 +338,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
   }
 
-  private static class StickySessionEnforcer {
+  private class StickySessionEnforcer {
 
     boolean seenAckIdOne;
 
@@ -321,9 +346,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       int ackId = events.getAckId().intValue();
       if (ackId == 1) {
         if (seenAckIdOne) {
-          throw new IllegalHECAcknowledgementStateException(
+          Exception e = new IllegalHECAcknowledgementStateException(
                   "ackId " + ackId + " has already been received on channel " + events.
                   getSender().getChannel());
+          HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
+                  events, e);
         } else {
           seenAckIdOne = true;
         }
@@ -382,16 +409,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
       sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
-        try {
           e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
           //we must force messages to be sent because the connection could have been gracefully closed
           //already, in which case sendRoundRobbin will just ignore the sent messages
           boolean forced = true;
           loadBalancer.sendRoundRobin(e, forced);
-        } catch (TimeoutException ex) {
-          LOG.severe("timed out trying to resend EventBatch with ID " + e.
-                  getId() + " on channel " + getChannelId());
-        }
       });
 
     }

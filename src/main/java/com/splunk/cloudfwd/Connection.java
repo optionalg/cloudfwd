@@ -17,7 +17,6 @@ package com.splunk.cloudfwd;
 
 import java.io.Closeable;
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 
 /**
  *
@@ -26,35 +25,64 @@ import java.util.concurrent.TimeoutException;
 public class Connection implements Closeable {
 
   public final static long DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
+
+  /**
+   * @return the charBufferSize
+   */
+  public int getCharBufferSize() {
+    return charBufferSize;
+  }
+
+  /**
+   * @param charBufferSize the charBufferSize to set
+   */
+  public void setCharBufferSize(int charBufferSize) {
+    this.charBufferSize = charBufferSize;
+  }
+
+  public static enum HecEndpoint {
+    STRUCTURED_EVENTS_ENDPOINT, RAW_EVENTS_ENDPOINT
+  };
   private final LoadBalancer lb;
-  private final CallbackInterceptor callbacks;
-  private final TimeoutChecker timeoutChecker;
+  private CallbackInterceptor callbacks;
+  private TimeoutChecker timeoutChecker;
   private boolean closed;
+  private HecEndpoint hecEndpointType;
+  private EventBatch events; //default EventBatch used if send(event) is called
+  private int charBufferSize;
 
   public Connection(FutureCallback callbacks) {
+    init(callbacks);
+    this.lb = new LoadBalancer(this);
+  }
+
+  public Connection(FutureCallback callbacks, Properties settings) {
+    init(callbacks);
+    this.lb = new LoadBalancer(this, settings);
+  }
+
+  private void init(FutureCallback callbacks) {
+    this.events = new EventBatch();
+    this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
     //the EventBatch that succeeded or failed from the timoutChecker
     this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
     this.callbacks = new CallbackInterceptor(callbacks,
             timeoutChecker::removeEvents);
     this.timeoutChecker.setInterceptor(this.callbacks);
-    this.lb = new LoadBalancer(this);
-  }
-
-  public Connection(FutureCallback callbacks, Properties settings) {
-    this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
-    this.callbacks = new CallbackInterceptor(callbacks,
-            timeoutChecker::removeEvents);
-    this.timeoutChecker.setInterceptor(this.callbacks);
-    this.lb = new LoadBalancer(this, settings);
   }
 
   public synchronized void setSendTimeout(long ms) {
     this.timeoutChecker.setTimeout(ms);
   }
 
+  public long getSendTimeout() {
+    return this.timeoutChecker.getTimeout();
+  }
+
   @Override
   public void close() {
+    flush();
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
@@ -76,13 +104,31 @@ public class Connection implements Closeable {
     }, "Connection Closer").start();
   }
 
-  public void sendBatch(EventBatch events) throws TimeoutException {
-    if(closed){
+  public synchronized void send(Event event) {
+    if (null == this.events) {
+      this.events = new EventBatch();
+    }
+    this.events.add(event);
+    if (this.events.isFlushable(charBufferSize)) {
+      sendBatch(events);
+    }
+
+  }
+
+  public synchronized void sendBatch(EventBatch events) {
+    if (closed) {
       throw new IllegalStateException("Attempt to send on closed channel.");
     }
     timeoutChecker.start();
     timeoutChecker.add(events);
     lb.sendBatch(events);
+    this.events = null; //batch is in flight, null it out
+  }
+
+  public synchronized void flush() {
+    if(null != events){
+      sendBatch(events);
+    }
   }
 
   /**
@@ -97,6 +143,21 @@ public class Connection implements Closeable {
    */
   public boolean isClosed() {
     return closed;
+  }
+
+  /**
+   * @return the hecEndpointType
+   */
+  public HecEndpoint getHecEndpointType() {
+    return hecEndpointType;
+  }
+
+  /**
+   * @param hecEndpointType the hecEndpointType to set
+   */
+  public void setHecEndpointType(
+          HecEndpoint hecEndpointType) {
+    this.hecEndpointType = hecEndpointType;
   }
 
 }

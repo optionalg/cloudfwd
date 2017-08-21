@@ -15,26 +15,23 @@
 
 package com.amazonaws.services.kinesis.samples.stocktrades.processor;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 import com.splunk.cloudfwd.Connection;
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.Event;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.samples.stocktrades.model.StockTrade;
+import com.splunk.cloudfwd.EventWithMetadata;
 
 /**
  * Processes records retrieved from stock trades stream.
@@ -45,7 +42,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
     private String kinesisShardId;
 
     private final int BATCH_SIZE = 10;
-    private EventBatch eventBatch = new EventBatch(EventBatch.Endpoint.event, EventBatch.Eventtype.json);
+    private EventBatch eventBatch = new EventBatch();
     private Connection splunk;
     StockTradeProcessorCallback callback;
 
@@ -58,6 +55,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
         callback = new StockTradeProcessorCallback(shardId);
         try {
             splunk = new Connection(callback);
+            splunk.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         } catch (RuntimeException e) {
             LOG.error("Unable to connect to Splunk.", e);
             System.exit(1);
@@ -80,19 +78,12 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
             return;
         }
 
-        eventBatch.add(new Event("info", trade.toString(), "HEC_LOGGER",
-                Thread.currentThread().getName(), new HashMap(), null, null));
-        if (eventBatch.size() >= BATCH_SIZE) {
-            try {
-                eventBatch.setSeqNo(record.getSequenceNumber());
-                LOG.info("Sending event batch with sequenceNumber=" + eventBatch.getId());
-                callback.addCheckpointer(eventBatch.getId(), checkpointer);
-                splunk.sendBatch(eventBatch);
-            } catch(TimeoutException e) {
-                // Implement failover strategy here, such as storing data in S3
-                LOG.error("Attempt to send events to Splunk timed out.", e);
-            }
-            eventBatch = new EventBatch(EventBatch.Endpoint.event, EventBatch.Eventtype.json);
+        eventBatch.add(new EventWithMetadata(trade.toString(), record.getSequenceNumber()));
+        if (eventBatch.getNumEvents()  >= BATCH_SIZE) {
+            LOG.info("Sending event batch with sequenceNumber=" + eventBatch.getId());
+            callback.addCheckpointer((String)eventBatch.getId(), checkpointer);
+            splunk.sendBatch(eventBatch);
+            eventBatch = new EventBatch();
         }
     }
 

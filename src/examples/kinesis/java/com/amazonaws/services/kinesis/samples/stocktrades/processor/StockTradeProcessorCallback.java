@@ -35,7 +35,7 @@ public class StockTradeProcessorCallback implements FutureCallback{
 
     @Override
     public void failed(EventBatch events, Exception ex) {
-        // TODO: do something else on failure?
+        // TODO: show how to handle different types of exceptions
         LOG.warn("Sending failed for event batch with sequenceNumber="
                 + events.getId()
                 + " (shardId=" + shardId + "): "
@@ -44,7 +44,7 @@ public class StockTradeProcessorCallback implements FutureCallback{
 
     @Override
     public void checkpoint(EventBatch events) {
-        String sequenceNumber = events.getId(); // highest sequence number in the event batch
+        String sequenceNumber = (String)events.getId(); // highest sequence number in the event batch
         try {
             LOG.info("Checkpointing at sequenceNumber="
                     + sequenceNumber

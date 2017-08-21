@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.Event;
-import java.util.HashMap;
+import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Assert;
@@ -33,8 +33,8 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   public SendTimeoutTest() {
   }
 
-  @Before
   @Override
+  @Before
   public void setUp() {
     super.setUp();
     super.connection.setSendTimeout(100);
@@ -60,23 +60,18 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected EventBatch nextEventBatch() {
-      final EventBatch events = new EventBatch(EventBatch.Endpoint.raw,
-              EventBatch.Eventtype.json);
-      events.add(new Event("info", "nothing to see here",
-              "HEC_LOGGER",
-              Thread.currentThread().getName(), new HashMap(), null, null));
-      return events;
+  protected Event nextEvent(int seqno) {
+    return RawEvent.fromText("nothing to see here.", seqno);
   }
-  
+
   @Override
-  protected int getNumBatchesToSend() {
+  protected int getNumEventsToSend() {
     return 1;
   }
-  
+
   @Override
   protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumBatchesToSend()) {
+    return new BasicCallbacks(getNumEventsToSend()) {
       @Override
       public void failed(EventBatch events, Exception e) {
         //We expect a timeout

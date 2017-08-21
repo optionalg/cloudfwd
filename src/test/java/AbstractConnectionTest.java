@@ -1,5 +1,6 @@
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.EventBatch;
 import java.util.Properties;
@@ -32,7 +33,7 @@ import org.junit.runner.notification.Failure;
  */
 public abstract class AbstractConnectionTest {
 
-  private BasicCallbacks callbacks;
+  protected BasicCallbacks callbacks;
   protected Connection connection;
 
   @Before
@@ -54,32 +55,23 @@ public abstract class AbstractConnectionTest {
   }
   
   protected void sendEvents() throws TimeoutException, InterruptedException{
-    int expected = getNumBatchesToSend();
+    int expected = getNumEventsToSend();
      for (int i = 0; i < expected; i++) {
-      final EventBatch events =nextEventBatch();
-      events.setSeqNo(i+1); //1-based sequence numbers
-      System.out.println("Send batch: " + events.getId() + " i=" + i);
-      this.connection.sendBatch(events);
+      ///final EventBatch events =nextEventBatch(i+1);
+      Event event = nextEvent(i+1);
+      System.out.println("Send event: " + event.getId() + " i=" + i);
+      this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
     }
     connection.close(); //will flush 
     this.callbacks.await(10, TimeUnit.MINUTES);
   }
   
   protected abstract Properties getProps();
-  protected abstract EventBatch nextEventBatch();
-  protected abstract int getNumBatchesToSend();
+  protected abstract Event nextEvent(int eventSeqNo);
+  protected abstract int getNumEventsToSend();
 
   protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumBatchesToSend());
-  }
-  
-  protected void runTests(){
-    Result result = JUnitCore.runClasses(getClass());
-
-    for (Failure failure : result.getFailures()) {
-      System.out.println(failure.toString());
-    }
-    System.out.println(result.wasSuccessful());
+    return new BasicCallbacks(getNumEventsToSend());
   }
   
 }

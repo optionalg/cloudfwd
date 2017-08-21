@@ -22,6 +22,7 @@ import com.splunk.cloudfwd.http.lifecycle.Response;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchFailure;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchRequest;
+import com.splunk.cloudfwd.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.http.lifecycle.PreRequest;
@@ -37,7 +38,7 @@ import org.apache.http.concurrent.FutureCallback;
 /**
  * HecIOManager is the mediator between sending and receiving messages to splunk
  (as such it is the only piece of the Ack-system that touches the
- HttpEventCollectorSender). HecIOManager sends via the sender and receives and
+ HttpSender). HecIOManager sends via the sender and receives and
  unmarshals responses. From these responses it maintains the ack window by
  adding newly received ackIds to the ack window, or removing them on success.
  It also owns the AckPollScheduler which will periodically call back
@@ -51,14 +52,14 @@ public class HecIOManager implements Closeable {
   private static final Logger LOG = Logger.getLogger(HecIOManager.class.getName());
 
   private static final ObjectMapper mapper = new ObjectMapper();
-  private final HttpEventCollectorSender sender;
+  private final HttpSender sender;
   private final PollScheduler ackPollController = new PollScheduler("ack poller");
   private final PollScheduler healthPollController = new PollScheduler(
           "health poller");
   private final AcknowledgementTracker ackTracker;
   private volatile boolean ackPollInProgress;
 
-  HecIOManager(HttpEventCollectorSender sender) {
+  HecIOManager(HttpSender sender) {
     this.sender = sender;
     this.ackTracker = new AcknowledgementTracker(sender);
   }
@@ -217,7 +218,7 @@ public class HecIOManager implements Closeable {
 
   }
 
-  public void setChannelHealth(int statusCode, String msg) {
+  private void setChannelHealth(int statusCode, String msg) {
     // For status code anything other 200
     switch (statusCode) {
       case 200:
@@ -270,7 +271,7 @@ public class HecIOManager implements Closeable {
   /**
    * @return the sender
    */
-  HttpEventCollectorSender getSender() {
+  HttpSender getSender() {
     return sender;
   }
 

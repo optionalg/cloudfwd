@@ -28,10 +28,10 @@ import org.junit.Assert;
  */
 public class BasicCallbacks implements FutureCallback {
 
-  private int expectedAckCount;
+  private Integer expectedAckCount;
   protected final CountDownLatch latch;
-  private final Set<String> acknowledgedBatches = new ConcurrentSkipListSet<>();
-  private boolean failed;
+  private final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
+  protected boolean failed;
   private Comparable lastId;
 
   public BasicCallbacks(int expected) {
@@ -66,7 +66,7 @@ public class BasicCallbacks implements FutureCallback {
   @Override
   public void checkpoint(EventBatch events) {
     System.out.println("SUCCESS CHECKPOINT " + events.getId());
-    if (expectedAckCount == Long.parseLong(events.getId())) {
+    if (expectedAckCount.compareTo((Integer)events.getId())==0) {
       latch.countDown();
     }
   }

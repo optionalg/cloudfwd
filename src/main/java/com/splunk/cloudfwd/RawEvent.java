@@ -15,21 +15,78 @@
  */
 package com.splunk.cloudfwd;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+
 /**
- *
+ * Provides various static methods for obtaining a RawEvent.
  * @author ghendrey
  */
-public class RawEvent implements EventBytes{
+public class RawEvent implements Event{
+  private static final ObjectMapper jsonMapper = new ObjectMapper();
   
-  final byte[] bytes;
+  final String string;
+  private final boolean json;
+  private Comparable id;
   
-  RawEvent(byte[] event){
-    this.bytes = event;
+  /**
+   * Convenience method that will handle either bytes of a JSON object, or bytes of a UTF-8 String.
+   * The bytes are first parsed as a json object. If that fails, the bytes are parsed into a String assuming
+   * UTF-8 encoding in the bytes.
+   * @param jsonOrText
+   * @param id
+   * @return
+   * @throws UnsupportedEncodingException
+   */
+  public static RawEvent fromJsonOrUTF8StringAsBytes(byte[] jsonOrText, Comparable id) throws UnsupportedEncodingException{
+    RawEvent e;
+    try{
+        e = fromJsonAsBytes(jsonOrText, id);
+    } catch (IOException ex) {//failed to parse as json, so treat as bytes
+      e =  new RawEvent(new String(jsonOrText, "UTF-8"), id, false);
+    }
+    e.id = id;
+    return e;
+  }
+  
+  public static RawEvent fromJsonAsBytes(byte[] jsonBytes, Comparable id) throws IOException{
+    return new RawEvent(jsonMapper.readTree(jsonBytes).toString(), id,  true);
+  }
+  
+  
+  public static RawEvent fromObject(Object o, Comparable id) throws IOException{
+    return new RawEvent(jsonMapper.writeValueAsString(o), id,  true);
+  }
+    
+  public static RawEvent fromText(String text, Comparable id){
+    return new RawEvent(text, id, false);
+  }
+  
+  private RawEvent(String eventString, Comparable id,  boolean json){
+    if(eventString.endsWith("\n")){
+      this.string = eventString;
+    }else{
+      this.string = eventString + "\n"; //insure event ends in line break
+    }
+    this.json = json;
+    this.id = id;
+  }
+  
+
+  @Override
+  public String toString() {
+    return string;
   }
 
   @Override
-  public byte[] getBytes() {
-    return bytes;
+  public boolean isJson() {
+    return json;
+  }
+
+  @Override
+  public Comparable getId() {
+    return id;
   }
   
   

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.PropertiesFileHelper;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Event;
-import java.util.HashMap;
+import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
@@ -27,21 +26,28 @@ import java.util.concurrent.TimeoutException;
  * @author ghendrey
  */
 public class LoadBalancerTest extends AbstractConnectionTest {
+
   protected static int MAX = 1000000;
 
   public LoadBalancerTest() {
   }
 
-
   @Test
   public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
     super.sendEvents();
   }
+  
+  @Test
+  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, TimeoutException {
+    connection.setCharBufferSize(1024*16);
+    super.sendEvents();
+  }
 
+  /*
   public static void main(String[] args) throws InterruptedException, TimeoutException {
     new LoadBalancerTest().runTests();
   }
-
+   */
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
@@ -50,19 +56,13 @@ public class LoadBalancerTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected EventBatch nextEventBatch() {
-      final EventBatch events = new EventBatch(EventBatch.Endpoint.raw,
-              EventBatch.Eventtype.json);
-      events.add(new Event("info", "nothing to see here",
-              "HEC_LOGGER",
-              Thread.currentThread().getName(), new HashMap(), null, null));
-      return events;
+  protected Event nextEvent(int seqno) {
+    return RawEvent.fromText("nothing to see here.", seqno);
   }
 
   @Override
-  protected int getNumBatchesToSend() {
+  protected int getNumEventsToSend() {
     return MAX;
   }
-
 
 }

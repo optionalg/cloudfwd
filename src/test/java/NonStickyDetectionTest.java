@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.IllegalHECAcknowledgementStateException;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.Event;
-import java.util.HashMap;
+import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.After;
@@ -33,18 +33,18 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
 
   public NonStickyDetectionTest() {
   }
-  
+
   @After
   @Override
   public void tearDown() {
     //must use closeNow, because close() waits for channels to empty. But do to the failure that we are
     //*trying* to induce with this test, the channels will never empty
-    this.connection.closeNow();     
+    this.connection.closeNow();
   }
 
   @Override
   protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumBatchesToSend()) {
+    return new BasicCallbacks(getNumEventsToSend()) {
       @Override
       public void failed(EventBatch events, Exception e) {
         //The point of this test is to insure that we DO get this exception...
@@ -56,6 +56,14 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
         System.out.println("Got expected exception: " + e);
         latch.countDown(); //allow the test to finish
       }
+
+      @Override
+      public void checkpoint(EventBatch events) {
+        System.out.println("SUCCESS CHECKPOINT " + events.getId());
+        //do NOT count down the latch - otherwise the test ends before we have
+        //opportunity to detect the non-sticky session
+      }
+
     };
   }
 
@@ -82,22 +90,18 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected EventBatch nextEventBatch() {
-    final EventBatch events = new EventBatch(EventBatch.Endpoint.event,
-            EventBatch.Eventtype.json);
-    events.add(new Event("info", "nothing to see here",
-            "HEC_LOGGER",
-            Thread.currentThread().getName(), new HashMap(), null, null));
-    return events;
+  protected Event nextEvent(int seqno) {
+    return RawEvent.fromText("nothing to see here", seqno);
   }
 
   @Override
-  protected int getNumBatchesToSend() {
-    return 2;
+  protected int getNumEventsToSend() {
+    return 1000;
   }
-  
+  /*
    public static void main(String[] args) {
     new NonStickyDetectionTest().runTests();    
   }
+   */
 
 }

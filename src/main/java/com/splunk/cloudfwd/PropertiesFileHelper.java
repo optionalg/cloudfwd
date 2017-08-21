@@ -16,7 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.Endpoints;
-import com.splunk.cloudfwd.http.HttpEventCollectorSender;
+import com.splunk.cloudfwd.http.HttpSender;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -42,8 +42,8 @@ public class PropertiesFileHelper {
   public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
   public static final String MOCK_HTTP_KEY = "mock_http";
   public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
+  public static final String MOCK_FORCE_URL_MAP_TO_ONE = "mock_force_url_map_to_one";
   public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
-  
 
   private Properties defaultProps = new Properties();
 
@@ -100,6 +100,11 @@ public class PropertiesFileHelper {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
             "false").trim());
   }
+
+  public boolean isForcedUrlMapToSingleAddr() {
+    return Boolean.parseBoolean(this.defaultProps.getProperty(
+            MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
+  }
   
   public Endpoints getSimulatedEndpoints(){
     String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,"com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
@@ -120,17 +125,17 @@ public class PropertiesFileHelper {
 
   }
 
-  public HttpEventCollectorSender createSender(URL url) {
+  public HttpSender createSender(URL url) {
     Properties props = new Properties(defaultProps);
     props.put("url", url.toString());
     return createSender(props);
   }
 
-  private HttpEventCollectorSender createSender(Properties props) {
+  private HttpSender createSender(Properties props) {
     try {
       String url = props.getProperty(COLLECTOR_URI).trim();
       String token = props.getProperty(TOKEN_KEY).trim();
-      HttpEventCollectorSender sender = new HttpEventCollectorSender(url, token);
+      HttpSender sender = new HttpSender(url, token);
       if (isCertValidationDisabled()) {
         sender.disableCertificateValidation();
       }
@@ -146,7 +151,7 @@ public class PropertiesFileHelper {
     }
   }
 
-  public HttpEventCollectorSender createSender() {
+  public HttpSender createSender() {
     return createSender(this.defaultProps);
   }
 

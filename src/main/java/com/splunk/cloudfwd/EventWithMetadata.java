@@ -15,13 +15,11 @@
  */
 package com.splunk.cloudfwd;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,42 +28,69 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class EventWithMetadata extends RawEvent {
+public class EventWithMetadata implements Event {
 
-  public static final String EventsEndpointTimeFieldname = "time";
-  public static final String EventsEndpointHostFieldname = "host";
-  public static final String EventsEndpointIndexFieldname = "index";
-  public static final String EventsEndpointSourceFieldname = "source";
-  public static final String EventsEndpointSourcetypeFieldname = "sourcetype";
+  private static final ObjectMapper jsonMapper = new ObjectMapper();
+
+  public static final String TIME = "time";
+  public static final String HOST = "host";
+  public static final String INDEX = "index";
+  public static final String SOURCE = "source";
+  public static final String SOURCETYPE = "sourcetype";
+  public static final String EVENT = "event";
   private String source;
   private String sourceType;
   private String host;
   private String index;
-  long time;
-  private static ObjectMapper jsonMapper;
+  private long time = -1;
+  private final Object event;
+  private Comparable id;
 
-  public EventWithMetadata(byte[] event) {
-    super(event);
+  /**
+   * Allows caller to provide a HEC /event endpoint JSON document as byte array
+   *
+   * @param eventWithMetadata
+   * @param id
+   * @return
+   * @throws IOException
+   */
+  public static EventWithMetadata fromJsonAsBytes(byte[] eventWithMetadata,
+          Comparable id) throws IOException {
+    EventWithMetadata e = jsonMapper.readValue(eventWithMetadata,
+            EventWithMetadata.class);
+    e.id = id;
+    return e;
+  }
+
+  public EventWithMetadata(Object event, Comparable id) {
+    if (null == event) {
+      throw new IllegalArgumentException("event cannot be null");
+    }
+    this.event = event;
+    this.id = id;
   }
 
   @Override
-  public byte[] getBytes() {
-    Map event = new LinkedHashMap();
+  public String toString() {
+    Map eventJSON = new LinkedHashMap();
 
-    putIfPresent(event, EventsEndpointTimeFieldname, String.format(Locale.US,
-            "%.3f", getTime()));
+    putIfPresent(eventJSON, TIME, formatTime(time));
+    putIfPresent(eventJSON, INDEX, index);
+    putIfPresent(eventJSON, HOST, host);
+    putIfPresent(eventJSON, SOURCETYPE, sourceType);
+    putIfPresent(eventJSON, SOURCE, source);
+    eventJSON.put(EVENT, this.event);
 
-    ObjectNode eventNode = (ObjectNode) jsonMapper.valueToTree(event);
+    ObjectNode eventNode = (ObjectNode) jsonMapper.valueToTree(eventJSON);
     try {
-      return jsonMapper.writeValueAsString(eventNode).getBytes("UTF-8");
-    } catch (Exception e) {
+      return jsonMapper.writeValueAsString(eventNode);
+    } catch (Exception ex) {
       Logger.getLogger(EventWithMetadata.class.getName()).
-              log(Level.SEVERE, null, e);
-      throw new RuntimeException(e.getMessage(), e);
+              log(Level.SEVERE, null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
     }
   }
 
-  @SuppressWarnings("unchecked")
   private static void putIfPresent(Map collection, String tag,
           String value) {
     if (value != null && !value.isEmpty()) {
@@ -141,4 +166,23 @@ public class EventWithMetadata extends RawEvent {
     return time;
   }
 
+  private String formatTime(Long time) {
+    if (time >= 0) {
+      return String.valueOf(time);
+    }
+    return null;
+  }
+
+  @Override
+  public boolean isJson() {
+    return true;
+  }
+
+  /**
+   * @return the id
+   */
+  @Override
+  public Comparable getId() {
+    return id;
+  }
 }

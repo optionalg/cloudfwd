@@ -1,9 +1,9 @@
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 
 /*
@@ -32,7 +32,7 @@ public class SuperSimpleExample {
       @Override
       public void acknowledged(EventBatch events) {
         System.out.println(
-                "EventBatch " + events.getId() + " was indexed by Splunk.");
+                "EventBatch  " + events.getId() + " has been index-acknowledged by Splunk.");
       }
 
       @Override
@@ -47,28 +47,27 @@ public class SuperSimpleExample {
 
       @Override
       public void checkpoint(EventBatch events) {
-        System.out.println("CHECKPOINT: " + events.getId());
+        System.out.println("CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
       }
     }; //end callback
-    
+
     //overide defaults in lb.properties
     Properties customization = new Properties();
-    customization.put(PropertiesFileHelper.COLLECTOR_URI, "https://127.0.0.1:8088");
-    customization.put(PropertiesFileHelper.TOKEN_KEY, "dab493e1-26aa-4916-9570-c7a169a2e433");
+    customization.put(PropertiesFileHelper.COLLECTOR_URI,
+            "https://127.0.0.1:8088");
+    customization.put(PropertiesFileHelper.TOKEN_KEY,
+            "dab493e1-26aa-4916-9570-c7a169a2e433");
     customization.put(PropertiesFileHelper.UNRESPONSIVE_MS, "5000");
     //use a simulated Splunk HEC
     customization.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
-    
-    Connection c = new Connection(callback, customization);
-    for(long i=0;i<1000;i++){
-      EventBatch events = new EventBatch(EventBatch.Endpoint.event, EventBatch.Eventtype.blob);
-      events.setSeqNo(i);
-      for(int j=0;j<10;j++){
-        Event e = new Event
+
+    try (Connection c = new Connection(callback, customization);) {
+      c.setCharBufferSize(1024 * 16); //16kB send buffering
+      for (long i = 0; i < 100000; i++) {
+        c.send(RawEvent.fromText("nothing to see here.", i));
       }
     }
-    
-  
+
   }
 
 }

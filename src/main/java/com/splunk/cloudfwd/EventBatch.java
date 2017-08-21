@@ -15,105 +15,68 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.http.HttpEventCollectorSender;
-import com.splunk.cloudfwd.http.SerializedEventProducer;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
+import com.splunk.cloudfwd.http.HttpSender;
 import java.util.logging.Logger;
 
 /**
  *
  * @author ghendrey
  */
-public class EventBatch implements SerializedEventProducer {
+public class EventBatch {
 
   private static final Logger LOG = Logger.getLogger(EventBatch.class.getName());
-  private static AtomicLong batchIdGenerator = new AtomicLong(0);
-  // TODO: clarify and clean up the API for event batch IDs/sequence numbers (method and variable names as well as proper usage)
-  private String id = String.format("%019d", batchIdGenerator.incrementAndGet()); // must generate this batch's ID before posting events, since it's string and strings compare lexicographically we should zero pad to 19 digits (max long value)
+  private Comparable id; //will be set to the id of the last (most recent) Event added to the batch
   private Long ackId; //Will be null until we receive ackId for this batch from HEC
-  private Map<String, String> metadata = new HashMap<>();
-  //private final TimerTask flushTask = new ScheduledFlush();
-  private final List<Event> eventsBatch = new ArrayList();
-  private HttpEventCollectorSender sender;
+  //private final List<Event> eventsBatch = new ArrayList();
+  private HttpSender sender;
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
   private final long creationTime = System.currentTimeMillis();
-  
-  public enum Endpoint {
-    event, raw
-  }
-  public enum Eventtype {
-    blob, json
+  private int numEvents;
+
+  public EventBatch() {
+
   }
 
-  private Endpoint endpoint;
-  private Eventtype eventtype;
-  
-  public EventBatch(){
-    this.endpoint = Endpoint.event;
-    this.eventtype = Eventtype.blob;
-  }
-
-  public EventBatch(Endpoint endpoint, Eventtype eventtype) {
-    this.sender = null;
-    this.endpoint = endpoint;
-    this.eventtype = eventtype;
-  }
-
-  EventBatch(HttpEventCollectorSender sender, long maxEventsBatchCount,
-          long maxEventsBatchSize,
-          long flushInterval, Map<String, String> metadata, Timer timer) {
-    this.sender = sender;
-    this.metadata = metadata;
-  }
-  
-  public synchronized void prepareToResend(){
+  public synchronized void prepareToResend() {
     this.flushed = false;
     this.sender = null;
     this.acknowledged = false;
   }
-  
-  public boolean isTimedOut(long timeout){
-    long flightTime =System.currentTimeMillis() - creationTime;
+
+  public boolean isTimedOut(long timeout) {
+    long flightTime = System.currentTimeMillis() - creationTime;
     System.out.println("Flight time " + flightTime);
-    return  flightTime>= timeout;
+    return flightTime >= timeout;
   }
-  
-  public void setSeqNo(long seqno){
+
+  /*
+  public void setSeqNo(long seqno) {
     this.id = String.format("%019d", seqno);
   }
 
   public void setSeqNo(String seqno) {
     this.id = seqno;
   }
-
+*/
   public synchronized void add(Event event) {
     if (flushed) {
       throw new IllegalStateException(
               "Events cannot be added to a flushed EventBatch");
     }
-    /*
-    if (null == this.metadata) {
-      throw new RuntimeException("Metadata not set for events");
-    }
-     */
 
-    eventsBatch.add(event);
-    if (this.endpoint == Endpoint.event) {
-      stringBuilder.append(event.toEventEndpointString(metadata));
-    } else {
-      stringBuilder.append(event.toRawEndpointString());
-    }
+    //eventsBatch.add(event);
+    this.stringBuilder.append(event);
+    this.id = event.getId();
   }
 
-  protected synchronized boolean isFlushable() {
+  protected synchronized boolean isFlushable(int charBufferLen) {
     //technically the serialized size that we compate to maxEventsBatchSize should take into account
     //the character encoding. it's very difficult to compute statically. We use the stringBuilder length
     //which is a character count. Will be same as serialized size only for single-byte encodings like
     //US-ASCII of ISO-8859-1    
-    return !flushed && (serializedCharCount() > 0);
+    return !flushed && (stringBuilder.length() > charBufferLen);
   }
 
   public synchronized void flush() {
@@ -134,53 +97,21 @@ public class EventBatch implements SerializedEventProducer {
 
   @Override
   public String toString() {
-    if (this.endpoint == Endpoint.raw) {
-      if (this.eventtype == Eventtype.json) {
-        List<String> myList = new ArrayList<String>(
-                Arrays.asList(this.stringBuilder.toString().split(",")));
-        return myList.toString();
-      }
-    }
     return this.stringBuilder.toString();
   }
 
-  @Override
-  public void setEventMetadata(Map<String, String> metadata) {
-    this.metadata = metadata;
+  public int getNumEvents() {
+    return numEvents;
   }
 
-  int serializedCharCount() {
+  public int getCharCount() {
     return stringBuilder.length();
-  }
-
-  int getNumEvents() {
-    return eventsBatch.size();
-  }
-
-  public int size() {
-    return eventsBatch.size();
-  }
-
-  public Event get(int idx) {
-    return this.eventsBatch.get(idx);
-  }
-
-  public List<Event> getEvents() {
-    return this.eventsBatch;
-  }
-
-
-  /**
-   * @return the metadata
-   */
-  public Map<String, String> getMetadata() {
-    return metadata;
   }
 
   /**
    * @return the id
    */
-  public String getId() {
+  public Comparable getId() {
     return id;
   }
 
@@ -198,7 +129,7 @@ public class EventBatch implements SerializedEventProducer {
     this.ackId = ackId;
   }
 
-  public void setSender(HttpEventCollectorSender sender) {
+  public void setSender(HttpSender sender) {
     if (null != this.sender) {
       String msg = "attempt to change the value of sender. Channel was " + this.sender.
               getChannel() + ", and attempt to change to " + sender.getChannel();
@@ -229,23 +160,11 @@ public class EventBatch implements SerializedEventProducer {
     return flushed;
   }
 
-
   /**
    * @return the sender
    */
-  public HttpEventCollectorSender getSender() {
+  public HttpSender getSender() {
     return sender;
-  }
-
-  public Enum<Endpoint> getEndpoint() {return endpoint;}
-
-  private class ScheduledFlush extends TimerTask {
-
-    @Override
-    public void run() {
-      flush();
-    }
-
   }
 
 }

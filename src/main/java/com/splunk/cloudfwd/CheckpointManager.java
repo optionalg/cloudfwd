@@ -34,8 +34,7 @@ public class CheckpointManager implements LifecycleEventObserver {
   private static final Logger LOG = Logger.getLogger(CheckpointManager.class.
           getName());
 
-  //EventBatch callbacks are ordered by EventBatch id lexicographic comparison
-  private final NavigableMap<String, EventBatch> orderedEvents = new ConcurrentSkipListMap<>(); //key EventBatch.id, value is EventBatch
+  private final NavigableMap<Comparable, EventBatch> orderedEvents = new ConcurrentSkipListMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
   
   CheckpointManager(Connection c) {
@@ -46,8 +45,8 @@ public class CheckpointManager implements LifecycleEventObserver {
   public void update(LifecycleEvent e) {
     if (e.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
       EventBatchResponse resp = (EventBatchResponse) e;
-      String id = resp.getEvents().getId();
       /*
+      Comparable id = resp.getEvents().getId();      
         System.out.println(
                 "MAYBE CALLBACK HIGHWATER for " + id + "(ackId is " + es.
                 getEvents().getAckId() + ")");
@@ -100,9 +99,9 @@ public class CheckpointManager implements LifecycleEventObserver {
   private void slideHighwaterUp(FutureCallback cb) {
     EventBatch events = null;
     //walk forward in the order of EventBatches, from the tail
-    for (Iterator<Map.Entry<String, EventBatch>> iter = this.orderedEvents.
+    for (Iterator<Map.Entry<Comparable, EventBatch>> iter = this.orderedEvents.
             entrySet().iterator(); iter.hasNext();) {
-      Map.Entry<String, EventBatch> e = iter.next();
+      Map.Entry<Comparable, EventBatch> e = iter.next();
       events = e.getValue();
       if (events.isAcknowledged()) { //this causes us to remove all *consecutive* acknowledged EventBatch, forward from the tail
         iter.remove(); //remove the callback (we are going to call it now, so no need to track it any longer)

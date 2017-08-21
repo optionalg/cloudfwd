@@ -21,13 +21,20 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecChannel;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.conn.util.PublicSuffixMatcher;
+import org.apache.http.conn.util.PublicSuffixMatcherLoader;
+import org.apache.http.cookie.CookieSpecProvider;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.cookie.RFC6265CookieSpecProvider;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 
@@ -41,10 +48,9 @@ import java.util.logging.Logger;
  * This is an internal helper class that sends logging events to Splunk http
  * event collector.
  */
-public final class HttpEventCollectorSender implements Endpoints {
+public final class HttpSender implements Endpoints {
 
-  private static final Logger LOG = Logger.getLogger(
-          HttpEventCollectorSender.class.getName());
+  private static final Logger LOG = Logger.getLogger(HttpSender.class.getName());
 
   public static final String MetadataTimeTag = "time";
   public static final String MetadataHostTag = "host";
@@ -74,6 +80,7 @@ public final class HttpEventCollectorSender implements Endpoints {
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
+  private final String baseUrl;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -81,7 +88,8 @@ public final class HttpEventCollectorSender implements Endpoints {
    * @param url http event collector input server
    * @param token application token
    */
-  public HttpEventCollectorSender(final String url, final String token) {
+  public HttpSender(final String url, final String token) {
+    this.baseUrl = url;
     this.eventUrl = url.trim() + "/services/collector/event";
     this.rawUrl = url.trim() + "/services/collector/raw";
     this.ackUrl = url.trim() + "/services/collector/ack";
@@ -91,15 +99,15 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   public HecChannel getChannel() {
-    if(null == channel){
-     String msg = "Channel is null";
-     LOG.severe(msg);
-     throw new IllegalStateException(msg);
+    if (null == channel) {
+      String msg = "Channel is null";
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
     }
     return channel;
   }
 
-  public Connection getConnection(){
+  public Connection getConnection() {
     return this.channel.getConnection();
   }
 
@@ -176,11 +184,22 @@ public final class HttpEventCollectorSender implements Endpoints {
       // http client is already started or we don't need it because we are simulated
       return;
     }
+
+    // configure cookie parsing
+    PublicSuffixMatcher publicSuffixMatcher = PublicSuffixMatcherLoader.
+            getDefault();
+    Registry<CookieSpecProvider> r = RegistryBuilder.
+            <CookieSpecProvider>create()
+            .register(CookieSpecs.DEFAULT,
+                    new RFC6265CookieSpecProvider(publicSuffixMatcher))
+            .build();
+
     // limit max  number of async requests in sequential mode, 0 means "use
     // default limit"
     if (!disableCertificateValidation) {
       // create an http client that validates certificates
       httpClient = HttpAsyncClients.custom()
+              .setDefaultCookieSpecRegistry(r)
               .setMaxConnTotal(0) //parallel requests
               .build();
     } else {
@@ -196,6 +215,7 @@ public final class HttpEventCollectorSender implements Endpoints {
         sslContext = SSLContexts.custom().loadTrustMaterial(
                 null, acceptingTrustStrategy).build();
         httpClient = HttpAsyncClients.custom()
+                .setDefaultCookieSpecRegistry(r)
                 .setMaxConnTotal(0) //parallel requests
                 .setHostnameVerifier(
                         SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
@@ -232,7 +252,8 @@ public final class HttpEventCollectorSender implements Endpoints {
     final String encoding = "utf-8";
 
     // create http request
-    String endpointUrl = ((events.getEndpoint() == EventBatch.Endpoint.event ? eventUrl : rawUrl));
+    String endpointUrl = getConnection().getHecEndpointType() == 
+            Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT ? eventUrl : rawUrl;
     final HttpPost httpPost = new HttpPost(endpointUrl);
     httpPost.setHeader(
             AuthorizationHeaderTag,
@@ -323,8 +344,14 @@ public final class HttpEventCollectorSender implements Endpoints {
   }
 
   public void setChannel(HecChannel c) {
-    this.channel=c; 
+    this.channel = c;
   }
 
+  /**
+   * @return the baseUrl
+   */
+  public String getBaseUrl() {
+    return baseUrl;
+  }
 
 }
