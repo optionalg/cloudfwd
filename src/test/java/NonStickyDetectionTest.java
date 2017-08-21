@@ -71,6 +71,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   public void checkNonStickyChannelDetected() throws InterruptedException {
 
     try {
+      super.eventType = EventType.TEXT;
       super.sendEvents();
     } catch (TimeoutException e) {
       System.out.println(
@@ -87,11 +88,6 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
     props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
             "com.splunk.cloudfwd.sim.errorgen.nonsticky.NonStickEndpoints");
     return props;
-  }
-
-  @Override
-  protected Event nextEvent(int seqno) {
-    return RawEvent.fromText("nothing to see here", seqno);
   }
 
   @Override

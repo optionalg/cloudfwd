@@ -18,12 +18,8 @@ import com.splunk.cloudfwd.Connection.HecEndpoint;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.RawEvent;
-import java.io.IOException;
 
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.Test;
 
 /**
@@ -32,43 +28,12 @@ import org.junit.Test;
  */
 public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
-  protected enum EventType {
-    TEXT, JSON
-  }
-  protected EventType eventType;
-
   @Override
   protected int getNumEventsToSend() {
     return 1;
   }
 
-  @Override
-  protected Event nextEvent(int seqno) {
-    switch (this.eventType) {
-      case TEXT: {
-        if (connection.getHecEndpointType() == HecEndpoint.RAW_EVENTS_ENDPOINT) {
-          return RawEvent.fromText("nothing to see here.", seqno);
-        } else {
-          return new EventWithMetadata("nothing to see here.", seqno);
-        }
-      }
-      case JSON: {
-        if (connection.getHecEndpointType() == HecEndpoint.RAW_EVENTS_ENDPOINT) {
-          try {
-            return RawEvent.fromObject(getStructuredEvent(), seqno);
-          } catch (IOException ex) {
-            Logger.getLogger(HecEndpointEventTypeTest.class.getName()).
-                    log(Level.SEVERE, null, ex);
-            throw new RuntimeException(ex.getMessage(), ex);
-          }
-        } else {
-          return new EventWithMetadata(getStructuredEvent(), seqno);
-        }
-      }
-    }
-    throw new RuntimeException("Unknown event type in test");
-  }
-
+ 
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
@@ -96,7 +61,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
   @Test
   public void testTextToEvent() throws Exception {
     System.out.println("testBlobToEvent");
-    this.eventType=EventType.TEXT;
+    this.eventType = EventType.TEXT;
     setEndpointType(HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.sendEvents();
 
@@ -113,13 +78,6 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   private void setEndpointType(HecEndpoint type) {
     super.connection.setHecEndpointType(type);
-  }
-
-  private Object getStructuredEvent() {
-    Map map = new LinkedHashMap();
-    map.put("foo", "bar");
-    map.put("baz", "nothing to see here");
-    return map;
   }
 
 }

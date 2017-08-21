@@ -66,7 +66,7 @@ public class SuperSimpleExample {
       for (long i = 0; i < 100000; i++) {
         c.send(RawEvent.fromText("nothing to see here.", i));
       }
-    }
+    }//autoclose will flush buffers and deliver events
 
   }
 

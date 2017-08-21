@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.PropertiesFileHelper;
-import com.splunk.cloudfwd.RawEvent;
-import java.util.Date;
 import java.util.Properties;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
@@ -28,22 +26,43 @@ import java.util.concurrent.TimeoutException;
  */
 public class LoadBalancerTest extends AbstractConnectionTest {
 
-  protected static int MAX = 1000000;
+  protected int numToSend = 1000000;
 
   public LoadBalancerTest() {
   }
 
   
   @Test
-  public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
+  public void sendWithoutBatching() throws InterruptedException, TimeoutException {
+    connection.setCharBufferSize(0);
     super.sendEvents();
   }
   
   @Test
-  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, TimeoutException {
+  public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
+    connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.sendEvents();
   }
+
+  
+  
+  @Test
+  public void sendTextToEventsEndpointBuffering() throws InterruptedException, TimeoutException {
+    connection.setCharBufferSize(1024*16);
+    connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    super.sendEvents();
+  }  
+
+  
+    @Test
+  public void sendJsonToEventsEndpointBuffering() throws InterruptedException, TimeoutException {
+    connection.setCharBufferSize(1024*16);
+    connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    super.eventType = EventType.JSON;
+    super.sendEvents();
+  }  
+
 
   @Override
   protected Properties getProps() {
@@ -52,14 +71,10 @@ public class LoadBalancerTest extends AbstractConnectionTest {
     return props;
   }
 
-  @Override
-  protected Event nextEvent(int seqno) {
-    return RawEvent.fromText(super.dateFormat.format(new Date())+" nothing to see here", seqno);
-  }
 
   @Override
   protected int getNumEventsToSend() {
-    return MAX;
+    return numToSend;
   }
 
 }

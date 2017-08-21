@@ -17,7 +17,6 @@
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Assert;
@@ -43,6 +42,7 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   @Test
   public void testTimeout() throws InterruptedException {
     try {
+      super.eventType = EventType.TEXT;
       super.sendEvents();
     } catch (TimeoutException ex) {
 
@@ -57,11 +57,6 @@ public class SendTimeoutTest extends AbstractConnectionTest {
     props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
             "com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints");
     return props;
-  }
-
-  @Override
-  protected Event nextEvent(int seqno) {
-    return RawEvent.fromText("nothing to see here.", seqno);
   }
 
   @Override

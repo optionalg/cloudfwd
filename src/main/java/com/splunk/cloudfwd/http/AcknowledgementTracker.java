@@ -99,17 +99,17 @@ public class AcknowledgementTracker {
 
       for (long ackId : succeeded) {
         events = this.polledAcks.get(ackId);
+        if (null == events) {
+          Logger.getLogger(getClass().getName()).log(Level.SEVERE,
+                  "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
+                  ackId);
+        }
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
         if (ackId != events.getAckId()) {
           String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
                   getAckId();
           LOG.severe(msg);
           throw new IllegalStateException(msg);
-        }
-        if (null == events) {
-          Logger.getLogger(getClass().getName()).log(Level.SEVERE,
-                  "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
-                  ackId);
         }
 
         this.sender.getChannelMetrics().update(new EventBatchResponse(
