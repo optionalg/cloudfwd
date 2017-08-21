@@ -79,11 +79,9 @@ public class LoadBalancer implements Closeable {
   @Override
   public synchronized void close() {
     this.discoveryScheduler.stop();
-    //synchronized (channels) {
       for (HecChannel c : this.channels.values()) {
         c.close();
       }
-    //}
     this.closed = true;
   }
 

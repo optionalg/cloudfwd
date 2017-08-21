@@ -17,6 +17,7 @@
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertiesFileHelper;
 import com.splunk.cloudfwd.RawEvent;
+import java.util.Date;
 import java.util.Properties;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
@@ -32,6 +33,7 @@ public class LoadBalancerTest extends AbstractConnectionTest {
   public LoadBalancerTest() {
   }
 
+  
   @Test
   public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
     super.sendEvents();
@@ -43,11 +45,6 @@ public class LoadBalancerTest extends AbstractConnectionTest {
     super.sendEvents();
   }
 
-  /*
-  public static void main(String[] args) throws InterruptedException, TimeoutException {
-    new LoadBalancerTest().runTests();
-  }
-   */
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
@@ -57,7 +54,7 @@ public class LoadBalancerTest extends AbstractConnectionTest {
 
   @Override
   protected Event nextEvent(int seqno) {
-    return RawEvent.fromText("nothing to see here.", seqno);
+    return RawEvent.fromText(super.dateFormat.format(new Date())+" nothing to see here", seqno);
   }
 
   @Override

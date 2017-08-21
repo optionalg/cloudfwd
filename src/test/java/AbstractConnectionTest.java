@@ -3,6 +3,7 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.EventBatch;
+import java.text.SimpleDateFormat;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -35,6 +36,7 @@ public abstract class AbstractConnectionTest {
 
   protected BasicCallbacks callbacks;
   protected Connection connection;
+  protected SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   @Before
   public void setUp() {   
