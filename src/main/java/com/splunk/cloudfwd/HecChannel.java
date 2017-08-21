@@ -45,6 +45,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private static final long LIFESPAN = 60; //5 min lifespan
   private volatile boolean closed;
   private volatile boolean quiesced;
+  private volatile boolean healthy = true; //responsive to indexer 503 "queue full" error
   private volatile boolean receivedFirstEventPostResponse;
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
@@ -160,7 +161,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //essentially this is a "double check" since this channel could ge closed while this
     //method was blocked. It happens.It's also why quiesced and closed must be marked volatile
     //so their values are not cached by the thread.
-    if (quiesced || closed) {
+    if (quiesced || closed || !healthy)  {
       return false;
     }
     //must increment only *after* we exit the blocking condition above
@@ -197,6 +198,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           receivedFirstEventPostResponse = true;
         }
         checkForStickySessionViolation(e);
+        break;
+      }
+      case HEALTH_POLL_NOT_OK:{
+        this.healthy = false;//see isAvailable
+        notifyAll();
+        break;
+      }
+      case HEALTH_POLL_OK:{
+        this.healthy = true; //see isAvailable
+        notifyAll();
         break;
       }
     }
@@ -317,7 +328,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   boolean isAvailable() {
     ChannelMetrics metrics = sender.getChannelMetrics();
-    return !quiesced && !closed && this.unackedCount.get() < FULL; //FIXME TODO make configurable   
+    return !quiesced && !closed && healthy && this.unackedCount.get() < FULL; //FIXME TODO make configurable   
   }
 
   @Override

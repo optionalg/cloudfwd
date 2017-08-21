@@ -16,8 +16,6 @@
 
 import com.splunk.cloudfwd.Connection.HecEndpoint;
 import com.splunk.cloudfwd.PropertiesFileHelper;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventWithMetadata;
 
 import java.util.*;
 import org.junit.Test;
