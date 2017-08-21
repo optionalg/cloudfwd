@@ -5,6 +5,7 @@ import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -12,6 +13,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.JUnitCore;
@@ -98,7 +101,13 @@ public abstract class AbstractConnectionTest {
       }
       case JSON: {
         if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
-          return getTimestampedRawEvent(seqno);
+          try {
+            return RawEvent.fromObject(getStructuredEvent(), seqno);
+          } catch (IOException ex) {
+            Logger.getLogger(AbstractConnectionTest.class.getName()).
+                    log(Level.SEVERE, null, ex);
+            throw new RuntimeException(ex.getMessage(),ex);
+          }
         } else {
           return new EventWithMetadata(getStructuredEvent(), seqno);
         }

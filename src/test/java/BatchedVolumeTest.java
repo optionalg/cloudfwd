@@ -24,44 +24,50 @@ import java.util.concurrent.TimeoutException;
  *
  * @author ghendrey
  */
-public class LoadBalancerTest extends AbstractConnectionTest {
+public class BatchedVolumeTest extends AbstractConnectionTest {
 
   protected int numToSend = 1000000;
 
-  public LoadBalancerTest() {
+  public BatchedVolumeTest() {
   }
 
   
-  @Test
-  public void sendWithoutBatching() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(0);
-    super.sendEvents();
-  }
-  
+
   @Test
   public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+    super.eventType = EventType.TEXT;    
     super.sendEvents();
   }
 
   
+    @Test
+  public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
+    connection.setCharBufferSize(1024*16);
+    connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+    super.eventType = EventType.JSON;
+    super.sendEvents();
+  }   
+    
+  
   
   @Test
-  public void sendTextToEventsEndpointBuffering() throws InterruptedException, TimeoutException {
+  public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    super.eventType = EventType.TEXT;    
     super.sendEvents();
   }  
-
   
     @Test
-  public void sendJsonToEventsEndpointBuffering() throws InterruptedException, TimeoutException {
+  public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
   }  
+
 
 
   @Override
