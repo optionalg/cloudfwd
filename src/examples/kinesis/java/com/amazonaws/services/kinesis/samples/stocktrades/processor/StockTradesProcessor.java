@@ -65,9 +65,9 @@ public class StockTradesProcessor {
         PROCESSOR_LOGGER.setLevel(Level.INFO);
     }
 
-    /*
+    /**
      * Entry point to read dummy stock trade data from a Kinesis stream and send it to Splunk.
-     * Reads Splunk HEC configuration from examples/kinesis/resources/kinesis_example_lb.properties
+     * Reads Splunk HEC configuration from examples/kinesis/resources/lb.properties
      *
      * Run with four arguments:
      *      1) application name

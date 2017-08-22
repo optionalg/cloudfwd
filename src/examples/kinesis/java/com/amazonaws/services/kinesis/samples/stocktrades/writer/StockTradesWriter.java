@@ -103,7 +103,7 @@ public class StockTradesWriter {
         }
     }
 
-    /*
+    /**
      * Entry point to write dummy stock trade data to a Kinesis stream.
      *
      * Run with three arguments:
