@@ -1,5 +1,5 @@
 
-import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import java.util.Properties;
 
 /*

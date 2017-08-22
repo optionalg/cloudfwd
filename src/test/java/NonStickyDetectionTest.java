@@ -15,8 +15,8 @@
  */
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.IllegalHECAcknowledgementStateException;
-import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.IllegalHECStateException;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
@@ -52,7 +52,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
         //appropriately.
         Assert.
                 assertTrue(e.getMessage(),
-                        e instanceof IllegalHECAcknowledgementStateException);
+                        e instanceof IllegalHECStateException);
         System.out.println("Got expected exception: " + e);
         latch.countDown(); //allow the test to finish
       }

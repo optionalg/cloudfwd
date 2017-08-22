@@ -1,10 +1,10 @@
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.FutureCallback;
-import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
+import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -28,7 +28,7 @@ import java.util.Properties;
 public class SuperSimpleExample {
 
   public static void main(String[] args) {
-    FutureCallback callback = new FutureCallback() {
+    ConnectonCallbacks callback = new ConnectonCallbacks() {
       @Override
       public void acknowledged(EventBatch events) {
         System.out.println(

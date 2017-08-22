@@ -16,12 +16,12 @@
 package com.splunk.cloudfwd.http.lifecycle;
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.EventBatch;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /**
  *
@@ -51,7 +51,7 @@ public class LifecycleEventObservable {
       });
     } catch (Exception ex) {
       LOG.log(Level.SEVERE, ex.getMessage(), ex);
-      FutureCallback c = connection.getCallbacks();
+      ConnectonCallbacks c = connection.getCallbacks();
       final EventBatch events = (ex instanceof EventBatchLifecycleEvent) ? ((EventBatchLifecycleEvent) ex).
               getEvents() : null;
       //new Thread(() -> {//FIXME TODO - usea thread pool

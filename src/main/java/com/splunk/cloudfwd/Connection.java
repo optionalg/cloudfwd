@@ -15,11 +15,14 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.util.CallbackInterceptor;
+import com.splunk.cloudfwd.util.LoadBalancer;
+import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
 import java.util.Properties;
 
 /**
- *
+ * Represents a reliable Connection to either the "event" HEC endpoint or the "raw" HEc endpoint.
  * @author ghendrey
  */
 public class Connection implements Closeable {
@@ -27,19 +30,8 @@ public class Connection implements Closeable {
   public final static long DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
 
   /**
-   * @return the charBufferSize
+   * Used to select either structured  HEC /event endpoint, or raw HEC endpoint
    */
-  public int getCharBufferSize() {
-    return charBufferSize;
-  }
-
-  /**
-   * @param charBufferSize the charBufferSize to set
-   */
-  public void setCharBufferSize(int charBufferSize) {
-    this.charBufferSize = charBufferSize;
-  }
-
   public static enum HecEndpoint {
     STRUCTURED_EVENTS_ENDPOINT, RAW_EVENTS_ENDPOINT
   };
@@ -51,17 +43,17 @@ public class Connection implements Closeable {
   private EventBatch events; //default EventBatch used if send(event) is called
   private int charBufferSize;
 
-  public Connection(FutureCallback callbacks) {
+  public Connection(ConnectonCallbacks callbacks) {
     init(callbacks);
     this.lb = new LoadBalancer(this);
   }
 
-  public Connection(FutureCallback callbacks, Properties settings) {
+  public Connection(ConnectonCallbacks callbacks, Properties settings) {
     init(callbacks);
     this.lb = new LoadBalancer(this, settings);
   }
 
-  private void init(FutureCallback callbacks) {
+  private void init(ConnectonCallbacks callbacks) {
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
@@ -134,7 +126,7 @@ public class Connection implements Closeable {
   /**
    * @return the callbacks
    */
-  public FutureCallback getCallbacks() {
+  public ConnectonCallbacks getCallbacks() {
     return callbacks;
   }
 
@@ -158,6 +150,20 @@ public class Connection implements Closeable {
   public void setHecEndpointType(
           HecEndpoint hecEndpointType) {
     this.hecEndpointType = hecEndpointType;
+  }
+  
+    /**
+   * @return the charBufferSize
+   */
+  public int getCharBufferSize() {
+    return charBufferSize;
+  }
+
+  /**
+   * @param charBufferSize the charBufferSize to set
+   */
+  public void setCharBufferSize(int charBufferSize) {
+    this.charBufferSize = charBufferSize;
   }
 
 }

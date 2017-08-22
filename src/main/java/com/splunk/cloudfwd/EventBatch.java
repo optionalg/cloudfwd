@@ -19,7 +19,9 @@ import com.splunk.cloudfwd.http.HttpSender;
 import java.util.logging.Logger;
 
 /**
- *
+ * EventBatch can be used if the caller wants a high degree of control over which Events will get sent to 
+ * HEC in a single HTTP post. Most of the time, there is no need to use an EventBatch, as it is used inside
+ * the connection to gather events together when buffering is enabled on the Connection.
  * @author ghendrey
  */
 public class EventBatch {

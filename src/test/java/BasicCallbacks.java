@@ -1,11 +1,11 @@
 
-import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.EventBatch;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
+import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -26,7 +26,7 @@ import org.junit.Assert;
  *
  * @author ghendrey
  */
-public class BasicCallbacks implements FutureCallback {
+public class BasicCallbacks implements ConnectonCallbacks {
 
   private Integer expectedAckCount;
   protected final CountDownLatch latch;

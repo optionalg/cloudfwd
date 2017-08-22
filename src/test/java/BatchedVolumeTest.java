@@ -15,7 +15,7 @@
  */
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import java.util.Properties;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;

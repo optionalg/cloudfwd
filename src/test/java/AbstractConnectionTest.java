@@ -1,7 +1,6 @@
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.FutureCallback;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
@@ -21,6 +20,7 @@ import org.junit.Before;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
+import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -57,7 +57,7 @@ public abstract class AbstractConnectionTest {
   @Before
   public void setUp() {
     this.callbacks = getCallbacks();
-    this.connection = new Connection((FutureCallback) callbacks, getProps());
+    this.connection = new Connection((ConnectonCallbacks) callbacks, getProps());
 
   }
 

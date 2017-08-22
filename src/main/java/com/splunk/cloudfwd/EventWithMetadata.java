@@ -25,7 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Provides methods for preparing  a structured event, as required by the HEC /event endpoint.
  * @author ghendrey
  */
 public class EventWithMetadata implements Event {

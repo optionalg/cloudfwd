@@ -15,7 +15,7 @@
  */
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;

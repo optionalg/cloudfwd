@@ -1,7 +1,7 @@
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.PropertiesFileHelper;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;

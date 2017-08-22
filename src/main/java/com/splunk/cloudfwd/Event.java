@@ -16,7 +16,9 @@
 package com.splunk.cloudfwd;
 
 /**
- *
+ * Event can be either a JSON document, or a blob of text. Every Event must have a Comparable id. For each
+ * Event sent to the Connection, the id must be must be greater than the previously sent id. That is, ids must
+ * be monotonically ascending. Ids can be integers, String, or any other Comparable.
  * @author ghendrey
  */
 public interface Event {
