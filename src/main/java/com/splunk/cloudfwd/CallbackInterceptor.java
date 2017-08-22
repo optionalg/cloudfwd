@@ -44,7 +44,9 @@ class CallbackInterceptor implements FutureCallback {
   public void failed(EventBatch events, Exception ex) {
     //since we cannot pre-compose these two actions, because of their different method signatures
     //we just call them in sequence
-    this.before.accept(events);
+    if(null != events){
+      this.before.accept(events);
+    }
     this.futureCallback.failed(events, ex);
   }
 

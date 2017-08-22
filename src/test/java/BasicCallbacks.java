@@ -33,6 +33,7 @@ public class BasicCallbacks implements FutureCallback {
   private final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
   private Comparable lastId;
+  private String failMsg;
 
   public BasicCallbacks(int expected) {
     this.expectedAckCount = expected;
@@ -57,10 +58,8 @@ public class BasicCallbacks implements FutureCallback {
   public void failed(EventBatch events, Exception ex) {
     failed = true;
     latch.countDown();
-    //call fail *last* in this method because it actually halts execution of the test and immediately invokes
-    //tearDown.
-    Assert.fail("EventBatch failed to send. Exception message: " + ex.
-            getMessage());
+    failMsg = "EventBatch failed to send. Exception message: " + ex.
+            getMessage();
   }
 
   @Override
@@ -87,6 +86,13 @@ public class BasicCallbacks implements FutureCallback {
    */
   public boolean isFailed() {
     return failed;
+  }
+
+  /**
+   * @return the failMsg
+   */
+  public String getFailMsg() {
+    return failMsg;
   }
 
 }

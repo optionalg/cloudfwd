@@ -32,7 +32,7 @@ public class LifecycleEventObservable {
   private static final Logger LOG = Logger.getLogger(
           LifecycleEventObservable.class.getName());
   private final List<LifecycleEventObserver> observers = new ArrayList<>();
-  private final Connection connection;
+  protected final Connection connection;
 
   public LifecycleEventObservable(Connection connection) {
     this.connection = connection;

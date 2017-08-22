@@ -129,7 +129,8 @@ public class HecIOManager implements Closeable {
             LOG.log(Level.SEVERE, null, ex);
           }
         } else {
-          LOG.log(Level.SEVERE, "server didn''t return ack ids. Response code: {0}, response: {1}", new Object[]{code, reply});
+          String msg = "HEC didn't return OK/200. Response code: "+code+", response: " + reply;
+          LOG.log(Level.SEVERE, msg);
           //eventPostNotOK(code, reply, events);
           sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply, events));

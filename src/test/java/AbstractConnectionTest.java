@@ -16,6 +16,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
@@ -81,6 +82,9 @@ public abstract class AbstractConnectionTest {
     }
     connection.close(); //will flush 
     this.callbacks.await(10, TimeUnit.MINUTES);
+    if(callbacks.isFailed()){
+      Assert.fail(callbacks.getFailMsg());
+    }
   }
 
   protected abstract Properties getProps();

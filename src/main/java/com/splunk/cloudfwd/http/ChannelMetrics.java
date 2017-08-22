@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObservable;
+import com.splunk.cloudfwd.http.lifecycle.Response;
 import java.util.logging.Logger;
 
 /**
@@ -57,30 +58,37 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
 
   private void handleLifecycleEvent(LifecycleEvent e) {
     switch (e.getType()) {
-      case EVENT_POST_OK: {;
+      case EVENT_POST_OK: {
         //System.out.println("NOTIFYING EVENT_POST_OK");
         notifyObservers(e);
-        break;
+        return;
       }
       case ACK_POLL_OK: {
         notifyObservers(e);
-        break;
+        return;
       }
 
       case HEALTH_POLL_OK: {
         lastHealthCheck = true;
         notifyObservers(e);
-        break;
+        return;
       }
       case HEALTH_POLL_NOT_OK: {
         lastHealthCheck = false;
         notifyObservers(e);
-        break;
+        return;
       }
       case HEALTH_POLL_FAILED: {
         lastHealthCheck = false;
         notifyObservers(e);
-        break;
+        return;
+      }
+    }
+    if(e instanceof Response){
+      if(((Response) e).getHttpCode()!=200){
+      Response r = (Response)e;  
+      String msg = "Server did not return OK/200. Code: " + r.getHttpCode() + ", reply:" + ((Response) e).getResp();
+      connection.getCallbacks().failed(null, new RuntimeException(msg));
       }
     }
   }
