@@ -73,9 +73,9 @@ public class StockTradesProcessor {
      *      1) application name
      *      2) stream name
      *      3) AWS region name
-     *      4) profile name
+     *      4) profile name.
      *
-     * Make sure credentials for "profile name" are provided in ~/.aws/credentials
+     * Make sure credentials for "profile name" are provided in ~/.aws/credentials.
      * For more information, see http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html
      */
     public static void main(String[] args) throws Exception {
