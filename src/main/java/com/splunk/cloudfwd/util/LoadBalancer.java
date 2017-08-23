@@ -68,8 +68,9 @@ public class LoadBalancer implements Closeable {
   }
 
   public synchronized void sendBatch(EventBatch events) {
-    if(null == this.connection.getCallbacks()){
-      throw new IllegalStateException("Connection FutureCallback has not been set.");
+    if (null == this.connection.getCallbacks()) {
+      throw new IllegalStateException(
+              "Connection FutureCallback has not been set.");
     }
     this.checkpointManager.registerInFlightEvents(events);
     if (channels.isEmpty()) {
@@ -81,18 +82,18 @@ public class LoadBalancer implements Closeable {
   @Override
   public synchronized void close() {
     this.discoveryScheduler.stop();
-      for (HecChannel c : this.channels.values()) {
-        c.close();
-      }
+    for (HecChannel c : this.channels.values()) {
+      c.close();
+    }
     this.closed = true;
   }
 
   public synchronized void closeNow() {
     this.discoveryScheduler.stop();
     //synchronized (channels) {
-      for (HecChannel c : this.channels.values()) {
-        c.forceClose();
-      }
+    for (HecChannel c : this.channels.values()) {
+      c.forceClose();
+    }
     //}
     this.closed = true;
   }
@@ -105,7 +106,7 @@ public class LoadBalancer implements Closeable {
     for (InetSocketAddress s : addrs) {
       //add multiple channels for each InetSocketAddress
       for (int i = 0; i < channelsPerDestination; i++) {
-        addChannel(s);
+        addChannel(s, false);
       }
     }
   }
@@ -113,23 +114,35 @@ public class LoadBalancer implements Closeable {
   void addChannelFromRandomlyChosenHost() {
     InetSocketAddress addr = discoverer.randomlyChooseAddr();
     LOG.log(Level.INFO, "Adding channel to {0}", addr);
-    addChannel(addr);
+    addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
   }
 
   //this method must not be synchronized it will cause deadlock
-  private void addChannel(InetSocketAddress s) {
+  private void addChannel(InetSocketAddress s, boolean force) {
+    //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
+    //we must add a new one, before we remove the old one. If we did not have the force
+    //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1, 
+    //and then the to-be-reaped channel would also be removed, leaving no channels, and
+    //send will be stuck in a spin loop with no channels to send to
+    if (!force && channels.size() >= propertiesFileHelper.getMaxTotalChannels()) {
+      LOG.info(
+              "Can't add channel (" + PropertiesFileHelper.MAX_TOTAL_CHANNELS + " set to " + propertiesFileHelper.
+              getMaxTotalChannels() + ")");
+      return;
+    }
     URL url;
     try {
       //URLS for channel must be based on IP address not hostname since we 
       //have many-to-one relationship between IP address and hostname via DNS records
-      url = new URL("https://" + s.getAddress().getHostAddress()+ ":" + s.getPort());
+      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.
+              getPort());
       System.out.println("Trying to add URL: " + url);
       HttpSender sender = this.propertiesFileHelper.
               createSender(url);
-      
-      HecChannel channel = new HecChannel(this, sender, this.connection); 
+
+      HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
-      sender.setChannel(channel);       
+      sender.setChannel(channel);
       LOG.log(Level.INFO, "Adding channel {0}", channel.getChannelId());
       channels.put(channel.getChannelId(), channel);
       //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
@@ -139,7 +152,6 @@ public class LoadBalancer implements Closeable {
               ex);
     }
   }
-
 
   //also must not be synchronized
   void removeChannel(String channelId, boolean force) {
@@ -167,7 +179,7 @@ public class LoadBalancer implements Closeable {
   private synchronized void sendRoundRobin(EventBatch events) {
     sendRoundRobin(events, false);
   }
-  
+
   synchronized void sendRoundRobin(EventBatch events, boolean forced) {
     try {
       if (channels.isEmpty()) {
@@ -178,6 +190,8 @@ public class LoadBalancer implements Closeable {
       int tryCount = 0;
       //round robin until either A) we find an available channel
       long start = System.currentTimeMillis();
+      int spinCount = 0;
+      int yieldInterval = propertiesFileHelper.getMaxTotalChannels();
       while (!closed || forced) {
         //note: the channelsSnapshot must be refreshed each time through this loop
         //or newly added channels won't be seen, and eventually you will just have a list
@@ -193,22 +207,27 @@ public class LoadBalancer implements Closeable {
         int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         if (tryMe.send(events)) {
-          System.out.println("sent EventBatch id="+events.getId() +" on " + tryMe);
+          System.out.println(
+                  "sent EventBatch id=" + events.getId() + " on " + tryMe);
           break;
         }
-        if(System.currentTimeMillis()-start > this.getConnection().getSendTimeout()){
+        if (++spinCount % yieldInterval == 0) {
+          LOG.warning("No available channel to send on. Waiting...");
+          Thread.yield(); //we are spinning waiting for available channel. Should yield CPU.
+          Thread.sleep(100); //avoid hard-spin-lock looking for available channel
+        }
+        if (System.currentTimeMillis() - start > this.getConnection().
+                getSendTimeout()) {
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");
         }
       }
-    }catch(TimeoutException e){
+    } catch (TimeoutException e) {
       LOG.log(Level.SEVERE, e.getMessage(), e);
       this.getConnection().getCallbacks().failed(events, e);
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
               getMessage());
-      e.printStackTrace();
       throw new RuntimeException(e.getMessage(), e);
     }
 

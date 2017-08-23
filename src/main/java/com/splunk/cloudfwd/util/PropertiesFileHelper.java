@@ -44,6 +44,8 @@ public class PropertiesFileHelper {
   public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
   public static final String MOCK_FORCE_URL_MAP_TO_ONE = "mock_force_url_map_to_one";
   public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
+  public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
+  public static final String MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "max_unacked_per_channel";
 
   private Properties defaultProps = new Properties();
 
@@ -90,10 +92,28 @@ public class PropertiesFileHelper {
     return Integer.parseInt(defaultProps.getProperty(
             CHANNELS_PER_DESTINATION_KEY, "8").trim());
   }
-  
-  public long getUnresponsiveChannelDecomMS(){
-        return Long.parseLong(defaultProps.getProperty(
+
+  public long getUnresponsiveChannelDecomMS() {
+    return Long.parseLong(defaultProps.getProperty(
             UNRESPONSIVE_MS, "-1").trim());
+  }
+
+  public int getMaxTotalChannels() {
+    int max = Integer.parseInt(defaultProps.getProperty(
+            MAX_TOTAL_CHANNELS, "-1").trim()); //default no limit
+    if (max < 1) {
+      max = Integer.MAX_VALUE; //effectively no limit by default
+    }
+    return max;
+  }
+
+  public int getMaxUnackedEventBatchPerChannel() {
+    int max = Integer.parseInt(defaultProps.getProperty(
+            MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "10000").trim());
+    if (max < 1) {
+      max = 10000;
+    }
+    return max;
   }
 
   public boolean isMockHttp() {
@@ -105,9 +125,10 @@ public class PropertiesFileHelper {
     return Boolean.parseBoolean(this.defaultProps.getProperty(
             MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
   }
-  
-  public Endpoints getSimulatedEndpoints(){
-    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,"com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
+
+  public Endpoints getSimulatedEndpoints() {
+    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,
+            "com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
     try {
       return (Endpoints) Class.forName(classname).newInstance();
     } catch (Exception ex) {
@@ -115,8 +136,8 @@ public class PropertiesFileHelper {
               log(Level.SEVERE, null, ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
-    
-  } 
+
+  }
 
   public boolean isCertValidationDisabled() {
     return Boolean.parseBoolean(this.defaultProps.
@@ -139,7 +160,7 @@ public class PropertiesFileHelper {
       if (isCertValidationDisabled()) {
         sender.disableCertificateValidation();
       }
-      if(isMockHttp()){
+      if (isMockHttp()) {
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
       return sender;
