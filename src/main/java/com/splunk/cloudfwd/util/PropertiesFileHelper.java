@@ -89,8 +89,12 @@ public class PropertiesFileHelper {
   }
 
   public int getChannelsPerDestination() {
-    return Integer.parseInt(defaultProps.getProperty(
+    int n = Integer.parseInt(defaultProps.getProperty(
             CHANNELS_PER_DESTINATION_KEY, "8").trim());
+    if (n < 1) {
+      n = Integer.MAX_VALUE; //effectively no limit by default
+    }
+    return n;
   }
 
   public long getUnresponsiveChannelDecomMS() {
