@@ -2,3 +2,4 @@ target
 nbproject
 .idea/*
 *.iml
+.DS_Store

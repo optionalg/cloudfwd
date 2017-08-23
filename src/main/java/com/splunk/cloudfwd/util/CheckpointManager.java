@@ -102,26 +102,28 @@ public class CheckpointManager implements LifecycleEventObserver {
   }
   
   private synchronized void slideHighwaterUp(ConnectonCallbacks cb) {
-    EventBatch events = null;
-    //walk forward in the order of EventBatches, from the tail
-    for (Iterator<Map.Entry<Comparable, EventBatch>> iter = this.orderedEvents.
-            entrySet().iterator(); iter.hasNext();) {
-      Map.Entry<Comparable, EventBatch> e = iter.next();
-
-      if (e.getValue().isAcknowledged()) { //this causes us to remove all *consecutive* acknowledged EventBatch, forward from the tail
-        iter.remove(); //remove the callback (we are going to call it now, so no need to track it any longer)
-        events = e.getValue(); //hang on to highest acknowledged batch id
-      } else {
-        break;
-      }
-    }
-    if (null == events) {
+        if (this.orderedEvents.isEmpty()) {
       String msg = "Failed to move highwater mark. No events present.";
       LOG.severe(msg);
       throw new IllegalStateException(msg);
     }
-    //todo: maybe schedule checkpoint to be async    
-    cb.checkpoint(events); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
+    EventBatch acknowledgedEvents = null;
+    //walk forward in the order of EventBatches, from the tail
+    for (Iterator<Map.Entry<Comparable, EventBatch>> iter = this.orderedEvents.
+            entrySet().iterator(); iter.hasNext();) {
+      Map.Entry<Comparable, EventBatch> e = iter.next();
+      if (e.getValue().isAcknowledged()) { //this causes us to remove all *consecutive* acknowledged EventBatch, forward from the tail
+        iter.remove(); //remove the callback (we are going to call it now, so no need to track it any longer)
+        acknowledgedEvents = e.getValue(); //hang on to highest acknowledged batch id        
+      } else {
+        break;
+      }
+    }
+
+    //todo: maybe schedule checkpoint to be async 
+    if(null != acknowledgedEvents){
+      cb.checkpoint(acknowledgedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
+    }
   }
   
   synchronized void registerInFlightEvents(EventBatch events) {
