@@ -22,11 +22,11 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.NavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.splunk.cloudfwd.ConnectonCallbacks;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  *
@@ -37,7 +37,7 @@ public class CheckpointManager implements LifecycleEventObserver {
   private static final Logger LOG = Logger.getLogger(CheckpointManager.class.
           getName());
 
-  private final NavigableMap<Comparable, EventBatch> orderedEvents = new ConcurrentSkipListMap<>(); //key EventBatch.id, value is EventBatch
+  private final SortedMap<Comparable, EventBatch> orderedEvents = new TreeMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
   
   CheckpointManager(Connection c) {
@@ -81,6 +81,8 @@ public class CheckpointManager implements LifecycleEventObserver {
   //lower unacknowledged event batches.
   private synchronized void acknowledgeHighwaterAndBelow(EventBatch events) {
     events.setAcknowledged(true);
+    //Do not under penalty of death remove ths commented sys out line below :-)
+    //very useful for debugging...
     //System.out.println("window state: " + eventBatchWindowStateToString());
     if (!this.orderedEvents.containsKey(events.getId())) {
       String msg = "No callback registered for successfully acknowledged ackId: " + events.
@@ -99,33 +101,36 @@ public class CheckpointManager implements LifecycleEventObserver {
     slideHighwaterUp(cb); //might call the highwater/checkpoint callback
   }
   
-  private void slideHighwaterUp(ConnectonCallbacks cb) {
+  private synchronized void slideHighwaterUp(ConnectonCallbacks cb) {
     EventBatch events = null;
     //walk forward in the order of EventBatches, from the tail
     for (Iterator<Map.Entry<Comparable, EventBatch>> iter = this.orderedEvents.
             entrySet().iterator(); iter.hasNext();) {
       Map.Entry<Comparable, EventBatch> e = iter.next();
-      events = e.getValue();
-      if (events.isAcknowledged()) { //this causes us to remove all *consecutive* acknowledged EventBatch, forward from the tail
+
+      if (e.getValue().isAcknowledged()) { //this causes us to remove all *consecutive* acknowledged EventBatch, forward from the tail
         iter.remove(); //remove the callback (we are going to call it now, so no need to track it any longer)
+        events = e.getValue(); //hang on to highest acknowledged batch id
       } else {
         break;
       }
     }
     if (null == events) {
-      throw new IllegalStateException(
-              "Failed to move highwater mark. No events present.");
+      String msg = "Failed to move highwater mark. No events present.";
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
     }
-    //todo: maybe schedule checkpoint to be async
+    //todo: maybe schedule checkpoint to be async    
     cb.checkpoint(events); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
   }
   
   synchronized void registerInFlightEvents(EventBatch events) {
     EventBatch prev = this.orderedEvents.put(events.getId(), events);
     if (null != prev) {
-      throw new IllegalStateException(
-              "EventBatch checkpoint already tracked. EventBatch ID is " + events.
-              getId());
+      String msg = "EventBatch checkpoint already tracked. EventBatch ID is " + events.
+              getId();
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
     }
   }
   

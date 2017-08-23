@@ -1,7 +1,6 @@
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
 import java.io.IOException;
@@ -17,9 +16,6 @@ import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
 import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /*
@@ -119,8 +115,8 @@ public abstract class AbstractConnectionTest {
     }
     throw new RuntimeException("Unknown event type in test");
   }
-  
-    protected Object getStructuredEvent() {
+ 
+  protected Object getStructuredEvent() {
     Map map = new LinkedHashMap();
     map.put("foo", "bar");
     map.put("baz", "nothing to see here");

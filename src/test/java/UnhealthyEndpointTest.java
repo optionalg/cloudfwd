@@ -1,5 +1,4 @@
 
-import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
@@ -76,6 +75,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   class UnhealthyCallbackDetector extends BasicCallbacks {
 
     boolean expectAck = true;
+    boolean done = false;
 
     public UnhealthyCallbackDetector(int expected) {
       super(expected);
@@ -83,6 +83,9 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
     @Override
     public void acknowledged(EventBatch events) {
+      if(done){
+        return;
+      }
       if (!expectAck) {
         Assert.fail(
                 "Got an ack when we expected unhealthy indexer to be blocked");
@@ -93,6 +96,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
           TriggerableUnhealthyEndpoints.healthy = false;
           Thread.sleep(2000); //make sure health poll becomes unhealthy
           connection.send(getTimestampedRawEvent(2));
+          done = true; //so we don't get in an infinite loop of sending (which would repeat message 2)
           Thread.sleep(2000); //this is definitely enough time to detect the assertion above and fail if we see it
           expectAck = true;
           TriggerableUnhealthyEndpoints.healthy = true;          

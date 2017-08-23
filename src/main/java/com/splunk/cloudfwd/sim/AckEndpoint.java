@@ -74,11 +74,13 @@ public class AckEndpoint implements AcknowledgementEndpoint {
     Runnable stateFrobber = new Runnable() {
       @Override
       public void run() {
-        Long lowestKey = acksStates.ceilingKey(0L);
-        if (null == lowestKey) {
-          return;
+        synchronized (AckEndpoint.this) {
+          Long lowestKey = acksStates.ceilingKey(0L);
+          if (null == lowestKey) {
+            return;
+          }
+          acksStates.put(lowestKey, true); //flip it
         }
-        acksStates.put(lowestKey, true); //flip it
       }
     };
     //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
@@ -88,24 +90,26 @@ public class AckEndpoint implements AcknowledgementEndpoint {
   }
 
   @Override
-  public long nextAckId() {
+  public synchronized long nextAckId() {
     long newId = this.ackId.incrementAndGet();
     this.acksStates.put(newId, true); //mock/pretend the events got indexed
     //System.out.println("ackStates: " + this.acksStates);
     return newId;
   }
 
-  private Boolean check(long ackId) {
+  private synchronized Boolean check(long ackId) {
     //System.out.println("checking " + ackId);
     return this.acksStates.remove(ackId);
   }
 
   @Override
-  public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
+  public synchronized void pollAcks(HecIOManager ackMgr,
+          FutureCallback<HttpResponse> cb) {
     try {
       //System.out.println("Server side simulation: " + this.acksStates.size() + " acks tracked on server: " + acksStates);
-      Collection<Long> unacked = ackMgr.getAcknowledgementTracker().getPostedButUnackedEvents();
-      //System.out.println("Server recieved these acks to check: " + unacked);      
+      Collection<Long> unacked = ackMgr.getAcknowledgementTracker().
+              getPostedButUnackedEvents(); 
+      //System.out.println("Channel  " +AckEndpoint.this.toString()+" recieved these acks to check: " + unacked + " and had this state " + acksStates);      
       SortedMap<Long, Boolean> acks = new TreeMap<>();
       for (long ackId : unacked) {
         Boolean was = check(ackId);

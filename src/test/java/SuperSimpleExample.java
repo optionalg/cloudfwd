@@ -5,6 +5,11 @@ import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import com.splunk.cloudfwd.ConnectonCallbacks;
+import com.splunk.cloudfwd.EventWithMetadata;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -28,7 +33,9 @@ import com.splunk.cloudfwd.ConnectonCallbacks;
 public class SuperSimpleExample {
 
   public static void main(String[] args) {
-    ConnectonCallbacks callback = new ConnectonCallbacks() {
+    final int numEvents = 1000;
+    
+    ConnectonCallbacks callbacks = new ConnectonCallbacks() {
       @Override
       public void acknowledged(EventBatch events) {
         System.out.println(
@@ -47,27 +54,68 @@ public class SuperSimpleExample {
 
       @Override
       public void checkpoint(EventBatch events) {
-        System.out.println("CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
+        if(events.getId().compareTo(new Integer(numEvents))==0){
+        System.out.println(
+                "CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");          
+        }
+
       }
-    }; //end callback
+    }; //end callbacks
 
     //overide defaults in lb.properties
     Properties customization = new Properties();
     customization.put(PropertiesFileHelper.COLLECTOR_URI,
             "https://127.0.0.1:8088");
     customization.put(PropertiesFileHelper.TOKEN_KEY,
-            "dab493e1-26aa-4916-9570-c7a169a2e433");
-    customization.put(PropertiesFileHelper.UNRESPONSIVE_MS, "5000");
-    //use a simulated Splunk HEC
+            "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
+    customization.put(PropertiesFileHelper.UNRESPONSIVE_MS, "100000");//100 sec - Kill unresponsive channel
     customization.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
 
-    try (Connection c = new Connection(callback, customization);) {
-      c.setCharBufferSize(1024 * 16); //16kB send buffering
-      for (long i = 0; i < 100000; i++) {
-        c.send(RawEvent.fromText("nothing to see here.", i));
-      }
-    }//autoclose will flush buffers and deliver events
+    Connection c = new Connection(callbacks, customization);
 
+    c.setCharBufferSize(1024 * 16); //16kB send buffering
+    c.setSendTimeout(10000); //10 sec
+
+    //date formatter for sending 'raw' event 
+    SimpleDateFormat dateFormat = new SimpleDateFormat(
+            "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
+
+    //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT  
+    try {
+      for (int seqno = 1; seqno <= numEvents; seqno++) {
+        //generate a 'raw' text event looking like "2017-08-10 11:21:04 foo bar baz"
+        String eventData = dateFormat.format(new Date()) + " foo bar baz";
+        RawEvent event = RawEvent.fromText(eventData, seqno);
+        c.send(event);
+      }
+    } finally {
+      c.close();
+    }
+   
+    //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
+    c = new Connection(callbacks, customization);
+    c.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+    c.setCharBufferSize(1024 * 16); //16kB send buffering
+    c.setSendTimeout(10000); //10 sec        
+    c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+
+    try {
+      for (int seqno = 1; seqno <= numEvents; seqno++) {
+        EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),
+                seqno);
+        c.send(event);
+      }
+    } finally {
+      c.close();
+    }
+
+  }
+
+  static Object getStructuredEvent() {
+    Map map = new LinkedHashMap();
+    map.put("foo", "bar");
+    map.put("baz", "nothing to see here");
+    return map;
   }
 
 }
