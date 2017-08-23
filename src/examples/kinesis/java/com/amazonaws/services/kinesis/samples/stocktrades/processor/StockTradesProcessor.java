@@ -65,17 +65,17 @@ public class StockTradesProcessor {
         PROCESSOR_LOGGER.setLevel(Level.INFO);
     }
 
-    /*
+    /**
      * Entry point to read dummy stock trade data from a Kinesis stream and send it to Splunk.
-     * Reads Splunk HEC configuration from examples/kinesis/resources/kinesis_example_lb.properties
+     * Reads Splunk HEC configuration from examples/kinesis/resources/lb.properties
      *
      * Run with four arguments:
      *      1) application name
      *      2) stream name
      *      3) AWS region name
-     *      4) profile name
+     *      4) profile name.
      *
-     * Make sure credentials for "profile name" are provided in ~/.aws/credentials
+     * Make sure credentials for "profile name" are provided in ~/.aws/credentials.
      * For more information, see http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html
      */
     public static void main(String[] args) throws Exception {

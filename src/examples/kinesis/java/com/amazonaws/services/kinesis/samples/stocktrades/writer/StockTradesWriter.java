@@ -103,15 +103,15 @@ public class StockTradesWriter {
         }
     }
 
-    /*
+    /**
      * Entry point to write dummy stock trade data to a Kinesis stream.
      *
      * Run with three arguments:
      *      1) stream name
      *      2) AWS region name
-     *      3) profile name
+     *      3) profile name.
      *
-     * Make sure credentials for "profile name" are provided in ~/.aws/credentials
+     * Make sure credentials for "profile name" are provided in a stanza in  ~/.aws/credentials.
      * For more information, see http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html
      */
     public static void main(String[] args) throws Exception {

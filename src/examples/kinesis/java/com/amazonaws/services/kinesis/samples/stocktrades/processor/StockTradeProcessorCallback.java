@@ -15,7 +15,8 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /**
- * Created by eprokop on 8/8/17.
+ * Example implementation of ConnectionCallback interface for use in a Kinesis Streams
+ * consumer application.
  */
 public class StockTradeProcessorCallback implements ConnectonCallbacks{
     private static final Log LOG = LogFactory.getLog(StockTradeProcessorCallback.class);
@@ -64,6 +65,13 @@ public class StockTradeProcessorCallback implements ConnectonCallbacks{
         }
     }
 
+    /**
+     * Stores a checkpointer function associated with a given sequence number so that the callback
+     * can call the right checkpointer function when the batch is acknowledged by Splunk.
+     * Should be called right before sending an event batch to Splunk.
+     * @param sequenceNumber the highest (last) sequence number in the event batch to be sent
+     * @param checkpointer the checkpointer function passed to ProcessRecords
+     */
     public void addCheckpointer(String sequenceNumber, IRecordProcessorCheckpointer checkpointer) {
         checkpointerMap.put(sequenceNumber, checkpointer);
     }
