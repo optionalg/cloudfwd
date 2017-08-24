@@ -267,7 +267,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  synchronized void forceClose() {
+  synchronized void forceClose() { //wraps internalForceClose in a log messages
     LOG.log(Level.INFO, "FORCE CLOSING CHANNEL  {0}", getChannelId());
     interalForceClose();
   }
@@ -294,7 +294,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return;
     }
 
-    forceClose();
+    interalForceClose();
   }
 
   private synchronized void finishClose() {

@@ -33,8 +33,8 @@ import java.util.Map;
 public class SuperSimpleExample {
 
   public static void main(String[] args) {
-    final int numEvents = 1000;
-    
+    final int numEvents = 10000;
+
     ConnectonCallbacks callbacks = new ConnectonCallbacks() {
       @Override
       public void acknowledged(EventBatch events) {
@@ -54,10 +54,10 @@ public class SuperSimpleExample {
 
       @Override
       public void checkpoint(EventBatch events) {
-        if(events.getId().compareTo(new Integer(numEvents))==0){
-        System.out.println(
-                "CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");          
-        }
+       // if (events.getId().compareTo(new Integer(numEvents)) == 0) {
+          System.out.println(
+                  "CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
+        //}
 
       }
     }; //end callbacks
@@ -70,43 +70,34 @@ public class SuperSimpleExample {
             "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
     customization.put(PropertiesFileHelper.UNRESPONSIVE_MS, "100000");//100 sec - Kill unresponsive channel
     customization.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
-
-    Connection c = new Connection(callbacks, customization);
-
-    c.setCharBufferSize(1024 * 16); //16kB send buffering
-    c.setSendTimeout(10000); //10 sec
+    customization.put(PropertiesFileHelper.MAX_TOTAL_CHANNELS, "1"); //increase this to increase parallelism 
 
     //date formatter for sending 'raw' event 
     SimpleDateFormat dateFormat = new SimpleDateFormat(
             "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
 
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT  
-    try {
-      for (int seqno = 1; seqno <= numEvents; seqno++) {
+    try (Connection c = new Connection(callbacks, customization);) {
+      c.setCharBufferSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
+      c.setSendTimeout(10000); //10 sec
+      for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object
         //generate a 'raw' text event looking like "2017-08-10 11:21:04 foo bar baz"
         String eventData = dateFormat.format(new Date()) + " foo bar baz";
         RawEvent event = RawEvent.fromText(eventData, seqno);
         c.send(event);
       }
-    } finally {
-      c.close();
-    }
-   
-    //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
-    c = new Connection(callbacks, customization);
-    c.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-    c.setCharBufferSize(1024 * 16); //16kB send buffering
-    c.setSendTimeout(10000); //10 sec        
-    c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    } //safely autocloses Connection, no event loss. (use Connection.closeNow() if you want to *lose* in-flight events)
 
-    try {
+    //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
+    try (Connection c = new Connection(callbacks, customization);) {
+      c.setCharBufferSize(1024 * 16); //16kB send buffering
+      c.setSendTimeout(10000); //10 sec        
+      c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       for (int seqno = 1; seqno <= numEvents; seqno++) {
         EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),
                 seqno);
         c.send(event);
       }
-    } finally {
-      c.close();
     }
 
   }
