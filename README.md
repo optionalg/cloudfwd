@@ -1,6 +1,6 @@
 # Cloud forwarder
 
-Use Cloudfwd to capture and ingest data from external sources directly into Splunk indexers. 
+Use Cloudfwd to reliably send data to Splunk Http Event Collector (HEC) with indexer acknowledgments enabled. 
 
 ## Getting Started
 
@@ -20,7 +20,7 @@ Make sure that you have the necessary prerequisites before setting up the Cloud 
 3. In resources > lb.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas. 
 4. In resources > lb. properties, input your generated HEC token.
 ```
-url=https://127.0.0.1:8088
+url=https://127.0.0.1:8088, lhttps://localhost:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 5. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
@@ -29,7 +29,13 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 
 You can now search on your ingested data in your Splunk instance.
 
+## Connection API Documentation
+[com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
+
 ## Examples
+
+### Super Simple Example
+[SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/SuperSimpleExample.java)
 
 ### Getting data from Amazon Kinesis Streams into Splunk using Cloud forwarder
 This example will use the same configurations set up in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html) from the AWS website. We have provided the Java code in the /examples/ folder, but you will need to go through the Kinesis Stream tutorial to setup Kinesis Streams, DynamoDB, and your IAM role. 
@@ -64,7 +70,7 @@ After a minute, you should see Splunk output stock trade events.
 
 ## Versioning
 
-Version 1.0 
+BETA 1
 
 
 ## License
