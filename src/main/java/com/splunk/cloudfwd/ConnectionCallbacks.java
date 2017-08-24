@@ -22,7 +22,7 @@ package com.splunk.cloudfwd;
  *
  * @author ghendrey
  */
-public interface ConnectonCallbacks {
+public interface ConnectionCallbacks {
 
   /**
    * Will be called once for each EventBatch that is acknowledged (has been

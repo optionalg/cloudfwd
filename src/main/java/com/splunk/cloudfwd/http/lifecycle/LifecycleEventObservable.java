@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.splunk.cloudfwd.ConnectonCallbacks;
+import com.splunk.cloudfwd.ConnectionCallbacks;
 
 /**
  *
@@ -38,8 +38,8 @@ public class LifecycleEventObservable {
     this.connection = connection;
   }
 
-  
-  
+
+
   public void addObserver(LifecycleEventObserver o) {
     this.observers.add(o);
   }
@@ -51,11 +51,11 @@ public class LifecycleEventObservable {
       });
     } catch (Exception ex) {
       LOG.log(Level.SEVERE, ex.getMessage(), ex);
-      ConnectonCallbacks c = connection.getCallbacks();
+      ConnectionCallbacks c = connection.getCallbacks();
       final EventBatch events = (ex instanceof EventBatchLifecycleEvent) ? ((EventBatchLifecycleEvent) ex).
               getEvents() : null;
       //new Thread(() -> {//FIXME TODO - usea thread pool
-        c.failed(events, ex); //FIXME TODO -- there are many places where we should be calling failed. 
+        c.failed(events, ex); //FIXME TODO -- there are many places where we should be calling failed.
       //}).start();
     }
 

@@ -1,10 +1,10 @@
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
-import com.splunk.cloudfwd.ConnectonCallbacks;
 import com.splunk.cloudfwd.EventWithMetadata;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -35,7 +35,7 @@ public class SuperSimpleExample {
   public static void main(String[] args) {
     final int numEvents = 10000;
 
-    ConnectonCallbacks callbacks = new ConnectonCallbacks() {
+    ConnectionCallbacks callbacks = new ConnectionCallbacks() {
       @Override
       public void acknowledged(EventBatch events) {
         System.out.println(
@@ -58,7 +58,6 @@ public class SuperSimpleExample {
           System.out.println(
                   "CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
         //}
-
       }
     }; //end callbacks
 
@@ -70,13 +69,13 @@ public class SuperSimpleExample {
             "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
     customization.put(PropertiesFileHelper.UNRESPONSIVE_MS, "100000");//100 sec - Kill unresponsive channel
     customization.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
-    customization.put(PropertiesFileHelper.MAX_TOTAL_CHANNELS, "1"); //increase this to increase parallelism 
+    customization.put(PropertiesFileHelper.MAX_TOTAL_CHANNELS, "1"); //increase this to increase parallelism
 
-    //date formatter for sending 'raw' event 
+    //date formatter for sending 'raw' event
     SimpleDateFormat dateFormat = new SimpleDateFormat(
             "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
 
-    //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT  
+    //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
     try (Connection c = new Connection(callbacks, customization);) {
       c.setCharBufferSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
       c.setSendTimeout(10000); //10 sec
@@ -91,7 +90,7 @@ public class SuperSimpleExample {
     //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
     try (Connection c = new Connection(callbacks, customization);) {
       c.setCharBufferSize(1024 * 16); //16kB send buffering
-      c.setSendTimeout(10000); //10 sec        
+      c.setSendTimeout(10000); //10 sec
       c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       for (int seqno = 1; seqno <= numEvents; seqno++) {
         EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),

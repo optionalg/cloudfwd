@@ -48,17 +48,17 @@ public class Connection implements Closeable {
   private EventBatch events; //default EventBatch used if send(event) is called
   private int charBufferSize;
 
-  public Connection(ConnectonCallbacks callbacks) {
+  public Connection(ConnectionCallbacks callbacks) {
     init(callbacks);
     this.lb = new LoadBalancer(this);
   }
 
-  public Connection(ConnectonCallbacks callbacks, Properties settings) {
+  public Connection(ConnectionCallbacks callbacks, Properties settings) {
     init(callbacks);
     this.lb = new LoadBalancer(this, settings);
   }
 
-  private void init(ConnectonCallbacks callbacks) {
+  private void init(ConnectionCallbacks callbacks) {
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
@@ -145,7 +145,7 @@ public class Connection implements Closeable {
   /**
    * @return the callbacks
    */
-  public ConnectonCallbacks getCallbacks() {
+  public ConnectionCallbacks getCallbacks() {
     return callbacks;
   }
 

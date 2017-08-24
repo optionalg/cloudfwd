@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
-import com.splunk.cloudfwd.ConnectonCallbacks;
+import com.splunk.cloudfwd.ConnectionCallbacks;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -26,7 +26,7 @@ import com.splunk.cloudfwd.ConnectonCallbacks;
  *
  * @author ghendrey
  */
-public class BasicCallbacks implements ConnectonCallbacks {
+public class BasicCallbacks implements ConnectionCallbacks {
 
   private Integer expectedAckCount;
   protected final CountDownLatch latch;
@@ -45,19 +45,20 @@ public class BasicCallbacks implements ConnectonCallbacks {
     if(null != lastId && lastId.compareTo(events.getId())>=0){
       Assert.fail("checkpoints received out of order. " + lastId + " before " + events.getId());
     }
-    
+
     if (!acknowledgedBatches.add(events.getId())) {
       Assert.fail(
               "Received duplicate acknowledgement for event batch:" + events.
               getId());
     }
-    
+
   }
 
   @Override
   public void failed(EventBatch events, Exception ex) {
     failed = true;
     latch.countDown();
+    ex.printStackTrace();
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
   }

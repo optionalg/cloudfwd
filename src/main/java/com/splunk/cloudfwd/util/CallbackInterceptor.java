@@ -15,25 +15,25 @@
  */
 package com.splunk.cloudfwd.util;
 
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
 import java.util.function.Consumer;
-import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /**
  *
  * @author ghendrey
  */
-public class CallbackInterceptor implements ConnectonCallbacks {
+public class CallbackInterceptor implements ConnectionCallbacks {
 
-  ConnectonCallbacks futureCallback;
+  ConnectionCallbacks futureCallback;
   private final Consumer<EventBatch> wrappedAcknowledged;
   private final Consumer<EventBatch> before;
 
-  public CallbackInterceptor(ConnectonCallbacks futureCallback,
+  public CallbackInterceptor(ConnectionCallbacks futureCallback,
           Consumer<EventBatch> before) {
     this.futureCallback = futureCallback;
     //it's possible to pre-compose the wrappedAcknowledged function
-    this.wrappedAcknowledged = before.andThen(futureCallback::acknowledged);    
+    this.wrappedAcknowledged = before.andThen(futureCallback::acknowledged);
     this.before = before;
   }
 
@@ -57,7 +57,7 @@ public class CallbackInterceptor implements ConnectonCallbacks {
     futureCallback.checkpoint(events); //we don't need to wrap checkpoint at present
   }
 
-  ConnectonCallbacks unwrap() {
+  ConnectionCallbacks unwrap() {
     return this.futureCallback;
   }
 

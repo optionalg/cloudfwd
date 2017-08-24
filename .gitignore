@@ -1,5 +1,5 @@
 target
 nbproject
-.idea/*
+.idea
 *.iml
 .DS_Store

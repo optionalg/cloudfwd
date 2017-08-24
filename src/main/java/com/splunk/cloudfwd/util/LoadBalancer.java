@@ -121,7 +121,7 @@ public class LoadBalancer implements Closeable {
   private void addChannel(InetSocketAddress s, boolean force) {
     //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
     //we must add a new one, before we remove the old one. If we did not have the force
-    //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1, 
+    //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
     //and then the to-be-reaped channel would also be removed, leaving no channels, and
     //send will be stuck in a spin loop with no channels to send to
     if (!force && channels.size() >= propertiesFileHelper.getMaxTotalChannels()) {
@@ -131,14 +131,18 @@ public class LoadBalancer implements Closeable {
       return;
     }
     URL url;
+    String host;
     try {
-      //URLS for channel must be based on IP address not hostname since we 
+      //URLS for channel must be based on IP address not hostname since we
       //have many-to-one relationship between IP address and hostname via DNS records
-      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.
-              getPort());
-      System.out.println("Trying to add URL: " + url);
+      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.getPort());
+      //We should provide a hostname for http client, so it can properly set Host header
+      //this host is required for many proxy server and virtual servers implementations
+      //https://tools.ietf.org/html/rfc7230#section-5.4
+      host = s.getHostName() + ":" + s.getPort();
+
       HttpSender sender = this.propertiesFileHelper.
-              createSender(url);
+              createSender(url, host);
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
