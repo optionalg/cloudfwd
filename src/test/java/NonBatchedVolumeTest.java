@@ -26,7 +26,7 @@ import org.junit.Test;
  * @author ghendrey
  */
 public class NonBatchedVolumeTest extends AbstractConnectionTest{
-  
+
   protected int numToSend = 1000000;
 
   @Test

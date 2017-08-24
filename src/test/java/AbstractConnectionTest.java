@@ -1,9 +1,8 @@
-
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
+
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -17,10 +16,7 @@ import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
-import com.splunk.cloudfwd.ConnectonCallbacks;
+import com.splunk.cloudfwd.ConnectionCallbacks;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -57,7 +53,7 @@ public abstract class AbstractConnectionTest {
   @Before
   public void setUp() {
     this.callbacks = getCallbacks();
-    this.connection = new Connection((ConnectonCallbacks) callbacks, getProps());
+    this.connection = new Connection((ConnectionCallbacks) callbacks, getProps());
 
   }
 
@@ -80,7 +76,7 @@ public abstract class AbstractConnectionTest {
 //      System.out.println("Send event: " + event.getId() + " i=" + i);
       this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
     }
-    connection.close(); //will flush 
+    connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);
     if(callbacks.isFailed()){
       Assert.fail(callbacks.getFailMsg());
@@ -90,7 +86,7 @@ public abstract class AbstractConnectionTest {
   protected abstract Properties getProps();
 
   /**
-   * Default implementation will return the 
+   * Default implementation will return the
    * @param seqno
    * @return
    */
@@ -119,8 +115,8 @@ public abstract class AbstractConnectionTest {
     }
     throw new RuntimeException("Unknown event type in test");
   }
-  
-    protected Object getStructuredEvent() {
+
+  protected Object getStructuredEvent() {
     Map map = new LinkedHashMap();
     map.put("foo", "bar");
     map.put("baz", "nothing to see here");

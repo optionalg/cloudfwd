@@ -21,10 +21,14 @@ import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
 import java.util.Properties;
-import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Represents a reliable Connection to either the "event" HEC endpoint or the "raw" HEc endpoint.
+ * Represents a reliable Connection to either the "event" HEC endpoint or the
+ * "raw" HEc endpoint.
+ *
  * @author ghendrey
  */
 public class Connection implements Closeable {
@@ -32,7 +36,7 @@ public class Connection implements Closeable {
   public final static long DEFAULT_SEND_TIMEOUT_MS = 5 * 60 * 1000;
 
   /**
-   * Used to select either structured  HEC /event endpoint, or raw HEC endpoint
+   * Used to select either structured HEC /event endpoint, or raw HEC endpoint
    */
   public static enum HecEndpoint {
     STRUCTURED_EVENTS_ENDPOINT, RAW_EVENTS_ENDPOINT
@@ -51,17 +55,17 @@ public class Connection implements Closeable {
   private String testId;
   /* *********************** /METRICS ************************ */
 
-  public Connection(ConnectonCallbacks callbacks) {
+  public Connection(ConnectionCallbacks callbacks) {
     init(callbacks);
     this.lb = new LoadBalancer(this);
   }
 
-  public Connection(ConnectonCallbacks callbacks, Properties settings) {
+  public Connection(ConnectionCallbacks callbacks, Properties settings) {
     init(callbacks);
     this.lb = new LoadBalancer(this, settings);
   }
 
-  private void init(ConnectonCallbacks callbacks) {
+  private void init(ConnectionCallbacks callbacks) {
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
@@ -87,10 +91,17 @@ public class Connection implements Closeable {
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
     //Exception handler
+    CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.close();
       timeoutChecker.stop();
+      latch.countDown();
     }, "Connection Closer").start();
+    try {
+      latch.await();
+    } catch (InterruptedException ex) {
+      Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, null, ex);
+    }
   }
 
   public void closeNow() {
@@ -98,10 +109,17 @@ public class Connection implements Closeable {
     //we must close asynchronously to prevent deadlocking
     //when closeNow() is invoked from a callback like the
     //Exception handler
+    CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.closeNow();
       timeoutChecker.stop();
+      latch.countDown();
     }, "Connection Closer").start();
+    try {
+      latch.await();
+    } catch (InterruptedException ex) {
+      Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, null, ex);
+    }
   }
 
   public synchronized void send(Event event) {
@@ -126,7 +144,7 @@ public class Connection implements Closeable {
   }
 
   public synchronized void flush() {
-    if(null != events){
+    if (null != events) {
       sendBatch(events);
     }
   }
@@ -134,7 +152,7 @@ public class Connection implements Closeable {
   /**
    * @return the callbacks
    */
-  public ConnectonCallbacks getCallbacks() {
+  public ConnectionCallbacks getCallbacks() {
     return callbacks;
   }
 
@@ -159,8 +177,8 @@ public class Connection implements Closeable {
           HecEndpoint hecEndpointType) {
     this.hecEndpointType = hecEndpointType;
   }
-  
-    /**
+
+  /**
    * @return the charBufferSize
    */
   public int getCharBufferSize() {

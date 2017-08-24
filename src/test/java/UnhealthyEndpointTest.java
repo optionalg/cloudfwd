@@ -1,5 +1,4 @@
 
-import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
@@ -37,9 +36,9 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   public UnhealthyEndpointTest() {
     customCallback = new UnhealthyCallbackDetector(getNumEventsToSend());
   }
-  
+
   @Test
-  public void testHealthyThenUnhealthyThenHealthy() throws TimeoutException, InterruptedException{
+  public void testHealthyThenUnhealthyThenHealthy() throws TimeoutException, InterruptedException {
     sendEvents();
   }
 
@@ -76,6 +75,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   class UnhealthyCallbackDetector extends BasicCallbacks {
 
     boolean expectAck = true;
+    boolean done = false;
 
     public UnhealthyCallbackDetector(int expected) {
       super(expected);
@@ -83,19 +83,23 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
     @Override
     public void acknowledged(EventBatch events) {
+      if (done) {
+        return;
+      }
       if (!expectAck) {
         Assert.fail(
                 "Got an ack when we expected unhealthy indexer to be blocked");
-      }else{
-            expectAck = false;
+      } else {
         try {
+          expectAck = false;//any acknowledged received will cause test fail
           //MAKE UNhealthy then send a second message
           TriggerableUnhealthyEndpoints.healthy = false;
-          Thread.sleep(2000); //make sure health poll becomes unhealthy
+          Thread.sleep(2000); //make sure health poll becomes unhealthy (poll has interval so we must wait)
           connection.send(getTimestampedRawEvent(2));
-          Thread.sleep(2000); //this is definitely enough time to detect the assertion above and fail if we see it
-          expectAck = true;
-          TriggerableUnhealthyEndpoints.healthy = true;          
+          Thread.sleep(2000); //this is definitely enough time to detect the assertion above and fail if we see it         
+          done = true; //so we don't get in an infinite loop of sending (which would repeat message 2)
+          TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll  
+          //...which will cause acknowledged to be invoked again, but now done=true so test will end.
         } catch (InterruptedException ex) {
           Logger.getLogger(UnhealthyEndpointTest.class.getName()).
                   log(Level.SEVERE, null, ex);

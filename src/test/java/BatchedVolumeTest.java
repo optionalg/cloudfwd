@@ -50,7 +50,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   public BatchedVolumeTest() {
   }
 
-  
+
 
   @Test
   public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
@@ -61,7 +61,6 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     sendWithMetrics();
   }
 
-  
     @Test
   public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
@@ -69,9 +68,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     super.eventType = EventType.JSON;
     configureConnectionForMetrics(connection);
     sendWithMetrics();
-  }   
-    
-  
+  }
 
   @Test
   public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
@@ -81,7 +78,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     configureConnectionForMetrics(connection);
     sendWithMetrics();
   }  
-  
+
     @Test
   public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
@@ -89,7 +86,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     super.eventType = EventType.JSON;
     configureConnectionForMetrics(connection);
     sendWithMetrics();
-  }  
+  }
 
   private void logResults(long start, long end) {
     System.out.println(

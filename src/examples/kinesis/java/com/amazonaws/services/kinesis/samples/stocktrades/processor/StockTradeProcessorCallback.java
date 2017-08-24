@@ -2,6 +2,7 @@ package com.amazonaws.services.kinesis.samples.stocktrades.processor;
 
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
 
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -12,13 +13,12 @@ import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingExcepti
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
-import com.splunk.cloudfwd.ConnectonCallbacks;
 
 /**
  * Example implementation of ConnectionCallback interface for use in a Kinesis Streams
  * consumer application.
  */
-public class StockTradeProcessorCallback implements ConnectonCallbacks{
+public class StockTradeProcessorCallback implements ConnectionCallbacks {
     private static final Log LOG = LogFactory.getLog(StockTradeProcessorCallback.class);
     private final Map<String, IRecordProcessorCheckpointer> checkpointerMap = new ConcurrentSkipListMap<>(); // event batch highest seq. no -> checkpointer fn
     private final String shardId;

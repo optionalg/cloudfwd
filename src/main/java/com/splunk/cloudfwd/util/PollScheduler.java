@@ -36,10 +36,14 @@ public class PollScheduler {
   public PollScheduler(String name) {
     this.name = name;
   }
-  
-  public PollScheduler(String name, int corePoolSize){
+
+  public PollScheduler(String name, int corePoolSize) {
     this(name);
     this.corePoolSize = corePoolSize;
+    if (corePoolSize == 0) {
+      throw new RuntimeException(
+              "Core pool size of zero is dissallowed to do bug https://bugs.openjdk.java.net/browse/JDK-8129861");
+    }
   }
 
   public synchronized void start(Runnable poller, long delay, TimeUnit units) {

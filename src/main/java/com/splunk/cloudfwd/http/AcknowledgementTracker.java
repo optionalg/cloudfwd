@@ -22,6 +22,7 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,10 +42,8 @@ public class AcknowledgementTracker {
 
   private static final Logger LOG = Logger.getLogger(
           AcknowledgementTracker.class.getName());
-
   private final static ObjectMapper jsonMapper = new ObjectMapper();
-  private final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
-  private final Map<Comparable, EventBatch> postedEventBatches = new ConcurrentHashMap<>();//key EventBatch ID
+  private final IdTracker idTracker = new IdTracker();
   private final HttpSender sender;
 
   AcknowledgementTracker(HttpSender sender) {
@@ -56,7 +55,7 @@ public class AcknowledgementTracker {
 
     try {
       Map json = new HashMap();
-      json.put("acks", polledAcks.keySet()); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
+      json.put("acks", Collections.unmodifiableSet(idTracker.polledAcks.keySet())); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
       return jsonMapper.writeValueAsString(json); //this class itself marshals out to {"acks":[id,id,id]}
     } catch (JsonProcessingException ex) {
       Logger.getLogger(AcknowledgementTracker.class.getName()).log(Level.SEVERE,
@@ -71,21 +70,27 @@ public class AcknowledgementTracker {
   }
 
   public void preEventPost(EventBatch batch) {
-    postedEventBatches.put(batch.getId(), batch);  //track what we attempt to post, so in case fail we can try again  
+    //cannot be synchrnoized! Will deadlock. Fortunately does no harm not 
+    //to synchronize
+    //synchronized (idTracker) {
+      this.idTracker.postedEventBatches.put(batch.getId(), batch);  //track what we attempt to post, so in case fail we can try again  
+    //}
   }
 
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatch events) {
     Long ackId = epr.getAckId();
     //System.out.println("handler event post response for ack " + ackId);
-    EventBatch removed = postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
-    if (null == removed) {
-      String msg = "failed to track event batch " + events.getId();
-      LOG.severe(msg);
-      throw new RuntimeException(msg);
+    synchronized (idTracker) {
+      EventBatch removed = idTracker.postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
+      if (null == removed) {
+        String msg = "failed to track event batch " + events.getId();
+        LOG.severe(msg);
+        throw new RuntimeException(msg);
+      }
+      idTracker.polledAcks.put(ackId, events);
     }
-    polledAcks.put(ackId, events);
-    //System.out.println("Tracked ackIDs on client now: " + polledAcks.keySet());
+    //System.out.println("Tracked ackIDs on client "+this.hashCode()+": "+polledAcks.keySet());
   }
 
   public void handleAckPollResponse(AckPollResponseValueObject apr) {
@@ -96,28 +101,30 @@ public class AcknowledgementTracker {
       if (succeeded.isEmpty()) {
         return;
       }
+      synchronized (idTracker) {
+        for (long ackId : succeeded) {
+          events = idTracker.polledAcks.get(ackId);
+          if (null == events) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE,
+                    "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
+                    ackId);
+          }
+          //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
+          if (ackId != events.getAckId()) {
+            String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
+                    getAckId();
+            LOG.severe(msg);
+            throw new IllegalStateException(msg);
+          }
 
-      for (long ackId : succeeded) {
-        events = this.polledAcks.get(ackId);
-        if (null == events) {
-          Logger.getLogger(getClass().getName()).log(Level.SEVERE,
-                  "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
-                  ackId);
+          this.sender.getChannelMetrics().update(new EventBatchResponse(
+                  LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?",
+                  events));
         }
-        //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
-        if (ackId != events.getAckId()) {
-          String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
-                  getAckId();
-          LOG.severe(msg);
-          throw new IllegalStateException(msg);
-        }
-
-        this.sender.getChannelMetrics().update(new EventBatchResponse(
-                LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?", events));
+        //System.out.println("polledAcks was " + polledAcks.keySet());
+        idTracker.polledAcks.keySet().removeAll(succeeded);
+        //System.out.println("polledAcks now " + polledAcks.keySet());
       }
-      //System.out.println("polledAcks was " + polledAcks.keySet());
-      polledAcks.keySet().removeAll(succeeded);
-      //System.out.println("polledAcks now " + polledAcks.keySet());
     } catch (Exception e) {
       LOG.severe("caught exception in handleAckPollResponse: " + e.getMessage());
       sender.getConnection().getCallbacks().failed(events, e);
@@ -129,15 +136,24 @@ public class AcknowledgementTracker {
   }
 
   public Collection<Long> getPostedButUnackedEvents() {
-    return polledAcks.keySet();
+    return Collections.unmodifiableSet(idTracker.polledAcks.keySet());
   }
 
   //techically we need to synchronize this, and the method handleAckPollResponse
   public Collection<EventBatch> getAllInFlightEvents() {
     List<EventBatch> events = new ArrayList<>();
-    events.addAll(this.postedEventBatches.values());
-    events.addAll(this.polledAcks.values());
+    synchronized (idTracker) {
+      events.addAll(idTracker.postedEventBatches.values());
+      events.addAll(idTracker.polledAcks.values());
+    }
     return events;
+  }
+
+  private static class IdTracker {
+
+    public final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
+    public final Map<Comparable, EventBatch> postedEventBatches = new ConcurrentHashMap<>();//key EventBatch ID
+
   }
 
 }
