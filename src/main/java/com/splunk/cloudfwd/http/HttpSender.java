@@ -17,31 +17,21 @@ package com.splunk.cloudfwd.http;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.util.HecChannel;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.config.Registry;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLContexts;
-import org.apache.http.conn.ssl.TrustStrategy;
-import org.apache.http.conn.util.PublicSuffixMatcher;
-import org.apache.http.conn.util.PublicSuffixMatcherLoader;
-import org.apache.http.cookie.CookieSpecProvider;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.cookie.RFC6265CookieSpecProvider;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
-import org.apache.http.impl.nio.client.HttpAsyncClients;
 
-import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.security.cert.X509Certificate;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -61,6 +51,7 @@ public final class HttpSender implements Endpoints {
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8";
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
+  private static final String Host = "Host";
 
   /**
    * Recommended default values for events batching.
@@ -72,6 +63,8 @@ public final class HttpSender implements Endpoints {
   private final String eventUrl;
   private final String rawUrl;
   private final String token;
+  private final String cert;
+  private final String host;
   private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
@@ -85,16 +78,23 @@ public final class HttpSender implements Endpoints {
   /**
    * Initialize HttpEventCollectorSender
    *
-   * @param url http event collector input server
+   * @param url http event collector input server.
    * @param token application token
+   * @param disableCertificateValidation disables Certificate Validation
+   * @param cert SSL Certificate Authority Public key to verify TLS with Self-Signed SSL Certificate chain
+   * @param host Hostname to use in HTTP requests. It is needed when we use IP addresses in url by RFC
    */
-  public HttpSender(final String url, final String token) {
+  public HttpSender(final String url, final String token, final boolean disableCertificateValidation,
+                    final String cert, final String host) {
     this.baseUrl = url;
+    this.host = host;
     this.eventUrl = url.trim() + "/services/collector/event";
     this.rawUrl = url.trim() + "/services/collector/raw";
     this.ackUrl = url.trim() + "/services/collector/ack";
     this.healthUrl = url.trim() + "/services/collector/health";
     this.token = token;
+    this.cert = cert;
+    this.disableCertificateValidation = disableCertificateValidation;
     this.hecIOManager = new HecIOManager(this);
   }
 
@@ -174,58 +174,42 @@ public final class HttpSender implements Endpoints {
     return this.channel.getChannelMetrics();
   }
 
-  @Override
-  public synchronized void start() {
+  /**
+   * Validate if http client started, call failed callback in case of an error
+   * @return true if started, false otherwise
+   */
+  public synchronized boolean started() {
     if (isSimulated()) {
       simulatedEndpoints.start();
+      return true;
     }
 
     if (httpClient != null) {
-      // http client is already started or we don't need it because we are simulated
-      return;
+      // http client is already started
+      return true;
     }
+    return false;
+  }
 
-    // configure cookie parsing
-    PublicSuffixMatcher publicSuffixMatcher = PublicSuffixMatcherLoader.
-            getDefault();
-    Registry<CookieSpecProvider> r = RegistryBuilder.
-            <CookieSpecProvider>create()
-            .register(CookieSpecs.DEFAULT,
-                    new RFC6265CookieSpecProvider(publicSuffixMatcher))
-            .build();
-
-    // limit max  number of async requests in sequential mode, 0 means "use
-    // default limit"
-    if (!disableCertificateValidation) {
-      // create an http client that validates certificates
-      httpClient = HttpAsyncClients.custom()
-              .setDefaultCookieSpecRegistry(r)
-              .setMaxConnTotal(0) //parallel requests
-              .build();
-    } else {
-      // create strategy that accepts all certificates
-      TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
-        public boolean isTrusted(X509Certificate[] certificate,
-                String type) {
-          return true;
-        }
-      };
-      SSLContext sslContext = null;
-      try {
-        sslContext = SSLContexts.custom().loadTrustMaterial(
-                null, acceptingTrustStrategy).build();
-        httpClient = HttpAsyncClients.custom()
-                .setDefaultCookieSpecRegistry(r)
-                .setMaxConnTotal(0) //parallel requests
-                .setHostnameVerifier(
-                        SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
-                .setSSLContext(sslContext)
-                .build();
-      } catch (Exception e) {
-        LOG.severe(e.getMessage());
-        e.printStackTrace(); //fixme TODO
-      }
+  /**
+   * attempts to create and start HttpClient or calls failure callback otherwise
+   * @param events - events to report as failed
+   */
+  private synchronized void start(EventBatch events) {
+    // attempt to create and start an http client
+    try {
+      httpClient = new HttpClientFactory(eventUrl, disableCertificateValidation, cert, host).build();
+      httpClient.start();
+    } catch (Exception ex) {
+      LOG.log(Level.SEVERE,"Exception building httpClient: " + ex.getMessage(), ex);
+      ConnectionCallbacks callbacks = getChannel().getCallbacks();
+      callbacks.failed(events, ex);
     }
+  }
+
+
+  @Override
+  public void start() {
     httpClient.start();
   }
 
@@ -241,10 +225,30 @@ public final class HttpSender implements Endpoints {
     }
   }
 
+
+  // set splunk specific http request headers
+  private void setHttpHeaders(HttpRequestBase r) {
+    r.setHeader(
+            AuthorizationHeaderTag,
+            String.format(AuthorizationHeaderScheme, token));
+
+    r.setHeader(
+            ChannelHeader,
+            getChannel().getChannelId());
+
+    if (host != null) {
+      r.setHeader(Host, host);
+    }
+  }
+
   @Override
   public void postEvents(final EventBatch events,
           FutureCallback<HttpResponse> httpCallback) {
-    start(); // make sure http client or simulator is started
+    // make sure http client or simulator is started
+    if(!started()) {
+      start(events);
+    }
+
     if (isSimulated()) {
       this.simulatedEndpoints.postEvents(events, httpCallback);
       return;
@@ -252,16 +256,10 @@ public final class HttpSender implements Endpoints {
     final String encoding = "utf-8";
 
     // create http request
-    String endpointUrl = getConnection().getHecEndpointType() == 
+    String endpointUrl = getConnection().getHecEndpointType() ==
             Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT ? eventUrl : rawUrl;
     final HttpPost httpPost = new HttpPost(endpointUrl);
-    httpPost.setHeader(
-            AuthorizationHeaderTag,
-            String.format(AuthorizationHeaderScheme, token));
-
-    httpPost.setHeader(
-            ChannelHeader,
-            getChannel().getChannelId());
+    setHttpHeaders(httpPost);
 
     StringEntity entity = new StringEntity(eventsBatch.toString(),//eventsBatchString.toString(),
             encoding);
@@ -273,24 +271,17 @@ public final class HttpSender implements Endpoints {
   @Override
   public void pollAcks(HecIOManager ackMgr,
           FutureCallback<HttpResponse> httpCallback) {
-    start(); // make sure http client or simulator is started
+    if (!started()) {
+      start(null);
+    }; // make sure http client or simulator is started
     if (isSimulated()) {
       System.out.println("SIMULATED POLL ACKS");
       this.simulatedEndpoints.pollAcks(ackMgr, httpCallback);
       return;
     }
 
-    final String encoding = "utf-8";
-
-    // create http request
     final HttpPost httpPost = new HttpPost(ackUrl);
-    httpPost.setHeader(
-            AuthorizationHeaderTag,
-            String.format(AuthorizationHeaderScheme, token));
-
-    httpPost.setHeader(
-            ChannelHeader,
-            getChannel().getChannelId());
+    setHttpHeaders(httpPost);
 
     StringEntity entity;
     try {
@@ -308,7 +299,10 @@ public final class HttpSender implements Endpoints {
 
   @Override
   public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
-    start(); // make sure http client or simulator is started
+    // make sure http client or simulator is started
+    if(!started()) {
+      start(null);
+    }
     if (isSimulated()) {
       System.out.println("SIMULATED POLL HEALTH");
       this.simulatedEndpoints.pollHealth(httpCallback);
@@ -317,14 +311,7 @@ public final class HttpSender implements Endpoints {
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
     final HttpGet httpGet = new HttpGet(getUrl);
-    httpGet.setHeader(
-            AuthorizationHeaderTag,
-            String.format(AuthorizationHeaderScheme, token));
-
-    httpGet.setHeader(
-            ChannelHeader,
-            getChannel().getChannelId());
-
+    setHttpHeaders(httpGet);
     httpClient.execute(httpGet, httpCallback);
   }
 

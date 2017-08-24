@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.util;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -36,8 +37,10 @@ import java.util.logging.Logger;
  */
 class IndexDiscoverer extends Observable {
 
+  private static final Logger LOG = Logger.getLogger(IndexDiscoverer.class.getName());
+
   //note, the key is a string representation of the URL. It is critical that the String, and not the URL
-  //Object be used as the key. This is because URL implements equals based on comparing the set of 
+  //Object be used as the key. This is because URL implements equals based on comparing the set of
   //InetSocketAddresses resolved. This means that equality for URL changes based on DNS host resolution
   //and would be changing over time
   private final Map<String, List<InetSocketAddress>> mappings;
@@ -48,7 +51,7 @@ class IndexDiscoverer extends Observable {
     this.mappings = getInetAddressMap(senderFactory.getUrls(),
         f.isForcedUrlMapToSingleAddr());
   }
-  
+
   public List<InetSocketAddress> getInetSockAddrs(){
     List<InetSocketAddress> addrs = new ArrayList<>();
     for(List<InetSocketAddress> list:this.mappings.values()){
@@ -56,7 +59,29 @@ class IndexDiscoverer extends Observable {
     }
     return addrs;
   }
-  
+
+  synchronized List<URL> getUrls() {
+
+    List<URL> urls = new ArrayList<>();
+    if (senderFactory.isCloudInstance()) {
+      urls.add(senderFactory.getUrls().get(0));
+      return urls;
+    }
+    for (InetSocketAddress addr : getAddrs()) {
+      try {
+          InetAddress a = addr.getAddress();
+          urls.add(
+                  new URL("https://" +
+                          addr.getAddress().getHostAddress() +
+                          ":" + addr.getPort()));
+      } catch (MalformedURLException ex) {
+        // log exception an re-throw
+        LOG.throwing(IndexDiscoverer.class.getName(), "getUrls", ex);
+      }
+    }
+    return urls;
+  }
+
   synchronized List<InetSocketAddress> getAddrs(){
     List<InetSocketAddress> addrs = new ArrayList<>();
     for (String url : this.mappings.keySet()) {
@@ -64,12 +89,12 @@ class IndexDiscoverer extends Observable {
     }
     return addrs;
   }
-  
+
   public InetSocketAddress randomlyChooseAddr(){
     List<InetSocketAddress> addrs = getAddrs();
     return addrs.get(new Random(System.currentTimeMillis()).nextInt(addrs.size()));
   }
-  
+
   /*
   * called by IndexerDiscoveryScheduler
   */
@@ -157,7 +182,7 @@ class IndexDiscoverer extends Observable {
     }
     return changes;
   }
-  
+
   void addChange(List<Change> changes, Change change){
     changes.add(change);
     setChanged();
@@ -181,8 +206,8 @@ class IndexDiscoverer extends Observable {
     public String toString() {
       return "NETWORK: Change{" + "change=" + change + ", inetSocketAddress=" + inetSocketAddress + '}';
     }
-    
-    
+
+
 
     /**
      * @return the change

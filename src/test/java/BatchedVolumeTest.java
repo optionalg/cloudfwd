@@ -31,49 +31,49 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   public BatchedVolumeTest() {
   }
 
-  
+
 
   @Test
   public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-    super.eventType = EventType.TEXT;    
+    super.eventType = EventType.TEXT;
     super.sendEvents();
   }
 
-  
+
     @Test
   public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
-  }   
-    
-  
-  
+  }
+
+
+
   @Test
   public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-    super.eventType = EventType.TEXT;    
+    super.eventType = EventType.TEXT;
     super.sendEvents();
-  }  
-  
+  }
+
     @Test
   public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
-  }  
+  }
 
 
 
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
     return props;
   }
 
