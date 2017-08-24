@@ -1,4 +1,4 @@
-package com.amazonaws.services.kinesis.samples.logtypes.processor;
+package com.amazonaws.services.kinesis.samples.awsLogTypes.processor;
 
 import java.util.UUID;
 import java.util.logging.Level;
@@ -13,8 +13,8 @@ import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.amazonaws.services.kinesis.samples.logtypes.utils.ConfigurationUtils;
-import com.amazonaws.services.kinesis.samples.logtypes.utils.CredentialUtils;
+import com.amazonaws.services.kinesis.samples.awsLogTypes.utils.ConfigurationUtils;
+import com.amazonaws.services.kinesis.samples.awsLogTypes.utils.CredentialUtils;
 
 /**
  * Created by mhora on 8/21/17.

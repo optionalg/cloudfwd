@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazonaws.services.kinesis.samples.logtypes.processor;/*
+package com.amazonaws.services.kinesis.samples.awsLogTypes.processor;/*
 
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -30,7 +30,7 @@ package com.amazonaws.services.kinesis.samples.logtypes.processor;/*
 
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
-import com.amazonaws.services.kinesis.samples.logtypes.processor.LogRecordProcessor;
+import com.amazonaws.services.kinesis.samples.awsLogTypes.processor.LogRecordProcessor;
 
 /**
  * Used to create new stock trade record processors.

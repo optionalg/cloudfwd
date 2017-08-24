@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-package com.amazonaws.services.kinesis.samples.logtypes.writer;
+package com.amazonaws.services.kinesis.samples.awsLogTypes.writer;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
@@ -24,8 +24,8 @@ import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.PutRecordRequest;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
-import com.amazonaws.services.kinesis.samples.logtypes.utils.ConfigurationUtils;
-import com.amazonaws.services.kinesis.samples.logtypes.utils.CredentialUtils;
+import com.amazonaws.services.kinesis.samples.awsLogTypes.utils.ConfigurationUtils;
+import com.amazonaws.services.kinesis.samples.awsLogTypes.utils.CredentialUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

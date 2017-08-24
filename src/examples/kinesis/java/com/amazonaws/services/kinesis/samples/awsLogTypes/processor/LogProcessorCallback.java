@@ -1,11 +1,11 @@
-package com.amazonaws.services.kinesis.samples.logtypes.processor;
+package com.amazonaws.services.kinesis.samples.awsLogTypes.processor;
 
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.FutureCallback;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 /**
  * Created by eprokop on 8/8/17.
  */
-public class LogProcessorCallback implements FutureCallback{
+public class LogProcessorCallback implements ConnectionCallbacks {
     private static final Log LOG = LogFactory.getLog(LogProcessorCallback.class);
     private final Map<String, IRecordProcessorCheckpointer> checkpointerMap = new ConcurrentSkipListMap<>(); // event batch highest seq. no -> checkpointer fn
     private final String shardId;
