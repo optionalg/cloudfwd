@@ -145,9 +145,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       long start = System.currentTimeMillis();
       while (true) {
         try {
-          System.out.println("---BLOCKING---");
+//          System.out.println("---BLOCKING---");
           wait(Connection.DEFAULT_SEND_TIMEOUT_MS);
-          System.out.println("UNBLOCKED");
+//          System.out.println("UNBLOCKED");
         } catch (InterruptedException ex) {
           Logger.getLogger(HecChannel.class.getName()).
                   log(Level.SEVERE, ex.getMessage(), ex);
@@ -240,7 +240,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         }
       }
     }
-    System.out.println("UNBLOCK");
+//    System.out.println("UNBLOCK");
   }
 
   synchronized void closeAndReplace() {

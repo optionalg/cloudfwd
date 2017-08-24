@@ -77,7 +77,7 @@ public abstract class AbstractConnectionTest {
     for (int i = 0; i < expected; i++) {
       ///final EventBatch events =nextEventBatch(i+1);
       Event event = nextEvent(i + 1);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
+//      System.out.println("Send event: " + event.getId() + " i=" + i);
       this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
     }
     connection.close(); //will flush 

@@ -17,9 +17,11 @@ package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.util.CallbackInterceptor;
 import com.splunk.cloudfwd.util.LoadBalancer;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
 import java.util.Properties;
+import java.util.UUID;
 
 /**
  * Represents a reliable Connection to either the "event" HEC endpoint or the "raw" HEc endpoint.
@@ -27,7 +29,7 @@ import java.util.Properties;
  */
 public class Connection implements Closeable {
 
-  public final static long DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
+  public final static long DEFAULT_SEND_TIMEOUT_MS = 5 * 60 * 1000;
 
   /**
    * Used to select either structured  HEC /event endpoint, or raw HEC endpoint
@@ -42,6 +44,12 @@ public class Connection implements Closeable {
   private HecEndpoint hecEndpointType;
   private EventBatch events; //default EventBatch used if send(event) is called
   private int charBufferSize;
+
+  /* *********************** METRICS ************************ */
+  private String testName;
+  private String runId;
+  private String testId;
+  /* *********************** /METRICS ************************ */
 
   public Connection(ConnectonCallbacks callbacks) {
     init(callbacks);
@@ -166,4 +174,31 @@ public class Connection implements Closeable {
     this.charBufferSize = charBufferSize;
   }
 
+  public PropertiesFileHelper getPropertiesFileHelper() {
+    return lb.getPropertiesFileHelper();
+  }
+
+  public String getRunId() {
+    return runId;
+  }
+
+  public void setRunId(String runId) {
+    this.runId = runId;
+  }
+
+  public String getTestId() {
+    return testId;
+  }
+
+  public void setTestId(String testId) {
+    this.testId = testId;
+  }
+
+  public String getTestName() {
+    return testName;
+  }
+
+  public void setTestName(String testName) {
+    this.testName = testName;
+  }
 }

@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,6 +49,10 @@ public class LoadBalancer implements Closeable {
   private int robin; //incremented (mod channels) to perform round robin
   private final Connection connection;
   private boolean closed;
+
+  /* *********************** METRICS ************************ */
+  private AtomicInteger postCount = new AtomicInteger(0);
+  /* *********************** /METRICS ************************ */
 
   public LoadBalancer(Connection c) {
     this(c, new Properties());
@@ -74,6 +79,9 @@ public class LoadBalancer implements Closeable {
     this.checkpointManager.registerInFlightEvents(events);
     if (channels.isEmpty()) {
       createChannels(discoverer.getAddrs());
+    }
+    if (events.getConnectionPostCount() == null) {
+      events.setConnectionPostCount(postCount.incrementAndGet());
     }
     sendRoundRobin(events);
   }
@@ -107,6 +115,7 @@ public class LoadBalancer implements Closeable {
       for (int i = 0; i < channelsPerDestination; i++) {
         addChannel(s);
       }
+      break;
     }
   }
 
@@ -193,9 +202,10 @@ public class LoadBalancer implements Closeable {
         int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         if (tryMe.send(events)) {
-          System.out.println("sent EventBatch id="+events.getId() +" on " + tryMe);
+//          System.out.println("sent EventBatch id="+events.getId() +" on " + tryMe);
           break;
         }
+        Thread.sleep(100);
         if(System.currentTimeMillis()-start > this.getConnection().getSendTimeout()){
           System.out.println("TIMEOUT EXCEEDED");
           throw new TimeoutException("Send timeout exceeded.");

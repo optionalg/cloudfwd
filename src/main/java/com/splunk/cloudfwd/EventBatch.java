@@ -37,6 +37,13 @@ public class EventBatch {
   private final long creationTime = System.currentTimeMillis();
   private int numEvents;
 
+  /* *********************** METRICS ************************ */
+  // all of these should only be set once per event batch
+  private Integer channelPostCount = null;
+  private Integer connectionPostCount = null;
+  private Long postTime = null;
+  /* *********************** /METRICS ************************ */
+
   public EventBatch() {
 
   }
@@ -167,6 +174,36 @@ public class EventBatch {
    */
   public HttpSender getSender() {
     return sender;
+  }
+
+  public void setChannelPostCount(int count) {
+    if (channelPostCount == null) {
+      channelPostCount = count;
+    }
+  }
+
+  public Integer getChannelPostCount() {
+    return channelPostCount;
+  }
+
+  public void setConnectionPostCount(int count) {
+    if (connectionPostCount == null) {
+      connectionPostCount = count;
+    }
+  }
+
+  public void setPostTime(long postTime) {
+    if (this.postTime == null) {
+      this.postTime = postTime;
+    }
+  }
+
+  public long getPostTime() {
+    return postTime;
+  }
+
+  public Integer getConnectionPostCount() {
+    return connectionPostCount;
   }
 
 }

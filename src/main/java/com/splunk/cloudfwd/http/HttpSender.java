@@ -42,6 +42,7 @@ import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 /**
@@ -81,6 +82,10 @@ public final class HttpSender implements Endpoints {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl;
+
+  /* *********************** METRICS ************************ */
+  private final AtomicInteger channelPostCounter = new AtomicInteger(0);
+  /* *********************** /METRICS ************************ */
 
   /**
    * Initialize HttpEventCollectorSender
@@ -245,6 +250,11 @@ public final class HttpSender implements Endpoints {
   public void postEvents(final EventBatch events,
           FutureCallback<HttpResponse> httpCallback) {
     start(); // make sure http client or simulator is started
+
+    if (events.getChannelPostCount() == null) {
+      events.setChannelPostCount(channelPostCounter.incrementAndGet());
+    }
+
     if (isSimulated()) {
       this.simulatedEndpoints.postEvents(events, httpCallback);
       return;
@@ -267,6 +277,7 @@ public final class HttpSender implements Endpoints {
             encoding);
     entity.setContentType(HttpContentType);
     httpPost.setEntity(entity);
+    events.setPostTime(System.currentTimeMillis());
     httpClient.execute(httpPost, httpCallback);
   }
 
@@ -295,7 +306,7 @@ public final class HttpSender implements Endpoints {
     StringEntity entity;
     try {
       String req = ackMgr.getAckPollReq();
-      System.out.println("channel=" + getChannel() + " posting: " + req);
+//      System.out.println("channel=" + getChannel() + " posting: " + req);
       entity = new StringEntity(req);
     } catch (UnsupportedEncodingException ex) {
       LOG.severe(ex.getMessage());
@@ -352,6 +363,11 @@ public final class HttpSender implements Endpoints {
    */
   public String getBaseUrl() {
     return baseUrl;
+  }
+
+  public String getEndpointUrl() {
+    return getConnection().getHecEndpointType() ==
+            Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT ? eventUrl : rawUrl;
   }
 
 }

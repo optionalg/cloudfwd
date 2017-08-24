@@ -18,6 +18,9 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import java.util.Properties;
 import org.junit.Test;
+import org.junit.rules.Timeout;
+
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -28,6 +31,22 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   protected int numToSend = 1000000;
 
+  private String TEXT_TO_RAW_WITH_BUFFERING = "TEXT_TO_RAW_WITH_BUFFERING";
+  private String JSON_TO_RAW_WITH_BUFFERING = "JSON_TO_RAW_WITH_BUFFERING";
+  private String TEXT_TO_EVENTS_WITH_BUFFERING = "TEXT_TO_EVENTS_WITH_BUFFERING";
+  private String JSON_TO_EVENTS_WITH_BUFFERING = "JSON_TO_EVENTS_WITH_BUFFERING";
+
+  private String SINGLE_INSTANCE_LOCAL = "SINGLE_INSTANCE_LOCAL";
+  private String CLUSTER_LOCAL = "CLUSTER_LOCAL";
+  private String CLUSTER_CLOUD = "CLUSTER_CLOUD";
+
+  private String run_id = UUID.randomUUID().toString(); // All 4 tests in this suite will have the same run ID
+
+  /* ************************************* SETTINGS **************************************** */
+  private String splunkType = CLUSTER_LOCAL; // just a label - change this before every test run
+  private int bufferSize = 0; // 1024*16
+  /* ************************************ /SETTINGS **************************************** */
+
   public BatchedVolumeTest() {
   }
 
@@ -35,45 +54,60 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   @Test
   public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-    super.eventType = EventType.TEXT;    
-    super.sendEvents();
+    connection.setTestName(TEXT_TO_RAW_WITH_BUFFERING);
+    super.eventType = EventType.TEXT;
+    configureConnectionForMetrics(connection);
+    sendWithMetrics();
   }
 
   
     @Test
   public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+    connection.setTestName(JSON_TO_RAW_WITH_BUFFERING);
     super.eventType = EventType.JSON;
-    super.sendEvents();
+    configureConnectionForMetrics(connection);
+    sendWithMetrics();
   }   
     
   
-  
+
   @Test
   public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-    super.eventType = EventType.TEXT;    
-    super.sendEvents();
+    connection.setTestName(TEXT_TO_EVENTS_WITH_BUFFERING);
+    super.eventType = EventType.TEXT;
+    configureConnectionForMetrics(connection);
+    sendWithMetrics();
   }  
   
     @Test
   public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    connection.setTestName(JSON_TO_EVENTS_WITH_BUFFERING);
     super.eventType = EventType.JSON;
-    super.sendEvents();
+    configureConnectionForMetrics(connection);
+    sendWithMetrics();
   }  
 
-
+  private void logResults(long start, long end) {
+    System.out.println(
+            "test_id=" + connection.getTestId() +
+            " run_id=" + run_id +
+            " test_name=" + connection.getTestName() +
+            " start_time=" + start +
+            " end_time=" + end +
+            " elapsed_time_seconds=" + (end - start)/1000 +
+            " splunk_type=" + splunkType +
+            " label=PERF"
+    );
+  }
 
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
     return props;
   }
 
@@ -81,6 +115,19 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   @Override
   protected int getNumEventsToSend() {
     return numToSend;
+  }
+
+  private void sendWithMetrics() throws TimeoutException, InterruptedException {
+    long start = System.currentTimeMillis();
+    super.sendEvents();
+    long end = System.currentTimeMillis();
+    logResults(start, end);
+  }
+
+  private void configureConnectionForMetrics(Connection connection) {
+    connection.setCharBufferSize(bufferSize);
+    connection.setRunId(run_id);
+    connection.setTestId(UUID.randomUUID().toString());
   }
 
 }

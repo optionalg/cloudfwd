@@ -78,7 +78,7 @@ public class HecIOManager implements Closeable {
           System.out.println("No acks to poll for");
           return;
         } else if (this.isAckPollInProgress()) {
-          System.out.println("skipping ack poll - already have one in flight");
+//          System.out.println("skipping ack poll - already have one in flight");
           return;
         }
         this.pollAcks();
@@ -184,14 +184,14 @@ public class HecIOManager implements Closeable {
     if (this.ackTracker.isEmpty()) {
       return; //ack poll scheduled but not needed
     }
-    System.out.println("POLLING ACKS...");
+//    System.out.println("POLLING ACKS...");
     this.ackPollInProgress = true;
     sender.getChannelMetrics().update(new PreRequest(LifecycleEvent.Type.PRE_ACK_POLL));
     System.out.println("sending acks");
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
-        System.out.println("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
+//        System.out.println("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
           consumeAckPollResponse(reply);
         } else {
