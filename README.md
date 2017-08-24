@@ -20,7 +20,7 @@ Make sure that you have the necessary prerequisites before setting up the Cloud 
 3. In resources > lb.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas. 
 4. In resources > lb. properties, input your generated HEC token.
 ```
-url=https://127.0.0.1:8088, lhttps://localhost:8088
+url=https://127.0.0.1:8088, https://localhost:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 5. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
