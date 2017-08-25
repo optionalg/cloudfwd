@@ -65,37 +65,29 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
      test_id: unique ID for each @test
      run_id: unique ID that is the same across each test in the class
-     label=PERF: just a key for locating these logging lines if grepping
      num_channel_post_requests: number of event post requests for the channel
           at the time this event batch was posted(does not include retries)
      num_connection_post_requests: total number of event post requests for the
           connection at the time this event batch was posted
      ack_time_millis: time it took for this event batch to get acknowledged
-     buffer_size: size of internal buffer used by cloudfwd
-     endpoint: raw vs. event
      channel: the channel id
      url: the url this event batch was sent to
-     test_name: name of the test
-     mock: true if using mock HEC endpoint (from lb.properties)
-     channels_per_destination: # channels per IP address destination (from lb.properties)
-     url_list: all of the urls that this connection is sending to
+     ack_id: ack_id used within HEC and cloudfwd to poll for acks
+     id: id of the event batch (equivalently, id of the last event added)
+     label: a key for locating these logging lines if grepping
 
      */
     System.out.println(
         "test_id=" + c.getTestId() +
         " run_id=" + c.getRunId() +
-        " label=PERF" +
         " num_channel_post_requests=" + events.getChannelPostCount() +
         " num_connection_post_requests=" + events.getConnectionPostCount() +
         " ack_time_millis=" + (System.currentTimeMillis() - events.getPostTime()) +
-        " buffer_size=" + c.getCharBufferSize() +
-        " endpoint=" + c.getHecEndpointType() +
         " channel=" + events.getSender().getChannel().getChannelId() +
         " url=" + events.getSender().getEndpointUrl() +
-        " test_name=" + c.getTestName() +
-        " mock=" + c.getPropertiesFileHelper().isMockHttp() +
-        " channels_per_destination=" + c.getPropertiesFileHelper().getChannelsPerDestination() +
-        " url_list=" + getURLs(c)
+        " ack_id=" + events.getAckId() +
+        " id=" + events.getId() +
+        " label=ACK"
     );
   }
 
@@ -139,15 +131,6 @@ public class BasicCallbacks implements ConnectionCallbacks {
    */
   public String getFailMsg() {
     return failMsg;
-  }
-
-  private String getURLs(Connection c) {
-    List<URL> urls = c.getPropertiesFileHelper().getUrls();
-    StringBuilder urlList = new StringBuilder();
-    for (URL url : urls) {
-      urlList.append(url.toString()).append(", ");
-    }
-    return urlList.toString();
   }
 
 }

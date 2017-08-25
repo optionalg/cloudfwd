@@ -244,7 +244,7 @@ public class HecIOManager implements Closeable {
   }
 
   public void pollHealth() {
-    System.out.println("POLLING HEALTH...");
+//    System.out.println("POLLING HEALTH...");
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override

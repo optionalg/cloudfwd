@@ -225,7 +225,7 @@ public class LoadBalancer implements Closeable {
           break;
         }
         if (++spinCount % yieldInterval == 0) {
-          LOG.warning("No available channel to send on. Waiting...");
+//          LOG.warning("No available channel to send on. Waiting...");
           Thread.yield(); //we are spinning waiting for available channel. Should yield CPU.
           Thread.sleep(100); //avoid hard-spin-lock looking for available channel
         }
