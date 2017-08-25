@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.time.Instant;
@@ -83,16 +82,8 @@ public class EventWithMetadata implements Event {
     eventJSON.put(EVENT, this.event);
 
     ObjectNode eventNode = (ObjectNode) jsonMapper.valueToTree(eventJSON);
-    JsonNodeType type = eventNode.getNodeType();
     try {
-      if(type!= JsonNodeType.OBJECT && type!=JsonNodeType.ARRAY && type!=JsonNodeType.POJO) {
-        throw new IllegalStateException("Object: " + eventNode);
-      }
       return jsonMapper.writeValueAsString(eventNode);
-    } catch (IllegalStateException ex) {
-      Logger.getLogger(EventWithMetadata.class.getName()).
-              log(Level.SEVERE, "Incorrect Event type object " + type, ex);
-      throw new RuntimeException(ex.getMessage(), ex);
     } catch (Exception ex) {
       Logger.getLogger(EventWithMetadata.class.getName()).
               log(Level.SEVERE, null, ex);
