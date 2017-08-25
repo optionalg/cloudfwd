@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HttpSender;
 import java.io.Closeable;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -135,7 +136,11 @@ public class LoadBalancer implements Closeable {
     try {
       //URLS for channel must be based on IP address not hostname since we
       //have many-to-one relationship between IP address and hostname via DNS records
-      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.getPort());
+      if (s.getAddress() instanceof Inet6Address) {
+        url = new URL("https://[" + s.getAddress().getHostAddress() + "]:" + s.getPort());
+      } else {
+        url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.getPort());
+      }
       //We should provide a hostname for http client, so it can properly set Host header
       //this host is required for many proxy server and virtual servers implementations
       //https://tools.ietf.org/html/rfc7230#section-5.4
