@@ -94,6 +94,22 @@ public class BasicCallbacks implements ConnectionCallbacks {
   @Override
   public void failed(EventBatch events, Exception ex) {
     failed = true;
+
+    Connection c = events.getSender().getConnection();
+    System.out.println(
+            "test_id=" + c.getTestId() +
+            " run_id=" + c.getRunId() +
+            " num_channel_post_requests=" + events.getChannelPostCount() +
+            " num_connection_post_requests=" + events.getConnectionPostCount() +
+            " fail_time_millis=" + (System.currentTimeMillis() - events.getPostTime()) +
+            " channel=" + events.getSender().getChannel().getChannelId() +
+            " url=" + events.getSender().getEndpointUrl() +
+            " ack_id=" + events.getAckId() +
+            " id=" + events.getId() +
+            " message=" + ex.getMessage() +
+            " label=FAIL"
+    );
+
     latch.countDown();
     ex.printStackTrace();
     failMsg = "EventBatch failed to send. Exception message: " + ex.

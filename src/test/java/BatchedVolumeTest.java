@@ -34,10 +34,10 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   protected int numToSend = 1000000;
 
-  private String TEXT_TO_RAW_WITH_BUFFERING = "TEXT_TO_RAW_WITH_BUFFERING";
-  private String JSON_TO_RAW_WITH_BUFFERING = "JSON_TO_RAW_WITH_BUFFERING";
-  private String TEXT_TO_EVENTS_WITH_BUFFERING = "TEXT_TO_EVENTS_WITH_BUFFERING";
-  private String JSON_TO_EVENTS_WITH_BUFFERING = "JSON_TO_EVENTS_WITH_BUFFERING";
+  private String TEXT_TO_RAW_WITH_BUFFERING = "TEXT_TO_RAW_BATCHED_VOLUME_TEST";
+  private String JSON_TO_RAW_WITH_BUFFERING = "JSON_TO_RAW_BATCHED_VOLUME_TEST";
+  private String TEXT_TO_EVENTS_WITH_BUFFERING = "TEXT_TO_EVENTS_BATCHED_VOLUME_TEST";
+  private String JSON_TO_EVENTS_WITH_BUFFERING = "JSON_TO_EVENTS_BATCHED_VOLUME_TEST";
 
   private String SINGLE_INSTANCE_LOCAL = "SINGLE_INSTANCE_LOCAL";
   private String LOCAL_CLUSTER = "LOCAL_CLUSTER";
@@ -93,8 +93,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     sendWithMetrics();
   }
 
-  // TODO: review what fields to include in summary and ack logs
-  private void logResults(long start, long end) {
+  private void logSummary(String label, Long start, Long end) {
     /*
       Description of data:
 
@@ -106,28 +105,52 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
       endpoint: raw vs. event
       mock: true if using mock HEC endpoint (from lb.properties)
       splunk_type: description of deployment destination
-      buffer_size: size of internal buffer used by cloudfwd
+      buffer_size_bytes: size of internal buffer used by cloudfwd
+      num_to_send: the total number of POST requests supposed to be sent by this test
       url_list: all of the urls that this connection is sending to
       channels_per_destination: # channels per IP address destination (from lb.properties)
       label: a key for locating these logging lines if grepping
 
      */
-    System.out.println(
-            "test_id=" + connection.getTestId() +
-            " run_id=" + run_id +
-            " test_name=" + connection.getTestName() +
-            " endpoint=" + connection.getHecEndpointType() +
-            " mock=" + connection.getPropertiesFileHelper().isMockHttp() +
-            " splunk_type=" + splunkType +
-            " buffer_size=" + connection.getCharBufferSize() +
-            " url_list=" + getURLs(connection) +
-            " channels_per_destination=" + connection.getPropertiesFileHelper().getChannelsPerDestination() +
-            " start_time=" + start +
-            " end_time=" + end +
-            " duration_seconds=" + (end - start)/1000 +
-            " notes=" + notes +
-            " label=SUMMARY"
-    );
+    StringBuilder log = new StringBuilder();
+    log
+            .append("test_id=").append(connection.getTestId())
+            .append(" run_id=").append(run_id)
+            .append(" test_name=").append(connection.getTestName())
+            .append(" endpoint=").append(connection.getHecEndpointType())
+            .append(" mock=").append(connection.getPropertiesFileHelper().isMockHttp())
+            .append(" splunk_type=").append(splunkType)
+            .append(" buffer_size_bytes=").append(connection.getCharBufferSize())
+            .append(" num_to_send=").append(numToSend)
+            .append(" url_list=").append(getURLs(connection))
+            .append(" channels_per_destination=").append(connection.getPropertiesFileHelper().getChannelsPerDestination())
+            .append(" notes=").append(notes);
+
+            if (start != null)
+              log.append(" start_time=").append(start);
+            if (end != null) {
+              log.append(" end_time=").append(end)
+                      .append(" duration_seconds").append((end - start) / 1000);
+            }
+
+            log.append(" label=").append(label);
+
+//    System.out.println(
+//            "test_id=" + connection.getTestId() +
+//            " run_id=" + run_id +
+//            " test_name=" + connection.getTestName() +
+//            " endpoint=" + connection.getHecEndpointType() +
+//            " mock=" + connection.getPropertiesFileHelper().isMockHttp() +
+//            " splunk_type=" + splunkType +
+//            " buffer_size_bytes=" + connection.getCharBufferSize() +
+//            " url_list=" + getURLs(connection) +
+//            " channels_per_destination=" + connection.getPropertiesFileHelper().getChannelsPerDestination() +
+//            " start_time=" + start +
+//            " end_time=" + end +
+//            " duration_seconds=" + (end - start)/1000 +
+//            " notes=" + notes +
+//            " label=SUMMARY"
+//    );
   }
 
   @Override
@@ -144,10 +167,11 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   }
 
   private void sendWithMetrics() throws TimeoutException, InterruptedException {
+    logSummary("PREAMBLE", null, null);
     long start = System.currentTimeMillis();
     super.sendEvents();
     long end = System.currentTimeMillis();
-    logResults(start, end);
+    logSummary("SUMMARY", start, end);
   }
 
   private void configureConnectionForMetrics(Connection connection) {
