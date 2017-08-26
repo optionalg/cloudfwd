@@ -36,37 +36,38 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     connection.setCharBufferSize(1024*32); //32k batching batching, roughly
   }
 
+
+
   @Test
   public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-    super.eventType = EventType.TEXT;    
+    super.eventType = EventType.TEXT;
     super.sendEvents();
   }
 
-  
-  
+
     @Test
   public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
-  }   
-    
-  
-  
+  }
+
+
+
   @Test
   public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-    super.eventType = EventType.TEXT;    
+    super.eventType = EventType.TEXT;
     super.sendEvents();
-  }  
-  
+  }
+
     @Test
   public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
-  }  
+  }
 
 
 

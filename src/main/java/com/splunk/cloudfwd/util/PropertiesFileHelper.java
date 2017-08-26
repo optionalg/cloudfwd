@@ -16,7 +16,9 @@
 package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.http.Endpoints;
+
 import com.splunk.cloudfwd.http.HttpSender;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -38,10 +40,10 @@ public class PropertiesFileHelper {
 
   public static final String TOKEN_KEY = "token";
   public static final String COLLECTOR_URI = "url";
+  public static final String HOST = "host";
   public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
   public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
   public static final String MOCK_HTTP_KEY = "mock_http";
-  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
   public static final String MOCK_FORCE_URL_MAP_TO_ONE = "mock_force_url_map_to_one";
   public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
   public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
@@ -52,6 +54,11 @@ public class PropertiesFileHelper {
   public static final String HEALTH_POLL_MS = "health_poll_ms";
   public static final long MIN_HEALTH_POLL_MS = 1000;
   public static final String DEFAULT_HEALTH_POLL_MS = "1000";  
+  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
+  public static final String SSL_CERT_CONTENT_KEY = "ssl_cert_content";
+  public static final String CLOUD_SSL_CERT_CONTENT_KEY = "cloud_ssl_cert_content";
+  public static final String ENABLE_HTTP_DEBUG = "enable_http_debug";
+
 
   private Properties defaultProps = new Properties();
 
@@ -84,17 +91,18 @@ public class PropertiesFileHelper {
         URL url = new URL(urlString.trim());
         urls.add(url);
       } catch (MalformedURLException ex) {
-        Logger.getLogger(IndexDiscoverer.class.getName()).
-                log(Level.SEVERE, "Malformed URL: '" + urlString + "'");
-        Logger.getLogger(PropertiesFileHelper.class.getName()).log(
-                Level.SEVERE, null,
-                ex);
+        LOG.throwing(PropertiesFileHelper.class.getName(), "getUrls", ex);
       }
     }
     return urls;
   }
   
 
+
+  // Compares if the first URL matches Cloud>Trail domain (cloud.splunk.com)
+  public boolean isCloudInstance() {
+    return getUrls().get(0).toString().trim().matches("^.+\\.cloud\\.splunk\\.com.*$");
+  }
 
   public int getChannelsPerDestination() {
     int n = Integer.parseInt(defaultProps.getProperty(
@@ -159,6 +167,7 @@ public class PropertiesFileHelper {
   public Endpoints getSimulatedEndpoints() {
     String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,
             "com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
+
     try {
       return (Endpoints) Class.forName(classname).newInstance();
     } catch (Exception ex) {
@@ -173,24 +182,49 @@ public class PropertiesFileHelper {
     return Boolean.parseBoolean(this.defaultProps.
             getProperty(
                     DISABLE_CERT_VALIDATION_KEY, "false").trim());
-
   }
 
-  public HttpSender createSender(URL url) {
+  public boolean enabledHttpDebug() {
+    return Boolean.parseBoolean(this.defaultProps.
+            getProperty(
+                    ENABLE_HTTP_DEBUG, "false").trim());
+  }
+
+  /**
+   *
+   * @return
+   */
+  public String getSSLCertContent() {
+    if (isCloudInstance()) {
+      return defaultProps.getProperty(CLOUD_SSL_CERT_CONTENT_KEY).trim();
+    }
+    return defaultProps.getProperty(SSL_CERT_CONTENT_KEY).trim()  ;
+  }
+
+  public void enableHttpDebug() {
+    System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.SimpleLog");
+    System.setProperty("org.apache.commons.logging.simplelog.showdatetime", "true");
+    System.setProperty("org.apache.commons.logging.simplelog.log.httpclient.wire.header", "debug");
+    System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
+  }
+
+  public HttpSender createSender(URL url, String host) {
     Properties props = new Properties(defaultProps);
-    props.put("url", url.toString());
+    props.put(COLLECTOR_URI, url.toString());
+    props.put(HOST, host.toString());
     return createSender(props);
   }
 
   private HttpSender createSender(Properties props) {
     try {
+      // enable http client debugging
+      if (enabledHttpDebug()) enableHttpDebug();
       String url = props.getProperty(COLLECTOR_URI).trim();
+      String host = props.getProperty(HOST).trim();
       String token = props.getProperty(TOKEN_KEY).trim();
-      HttpSender sender = new HttpSender(url, token);
-      if (isCertValidationDisabled()) {
-        sender.disableCertificateValidation();
-      }
-      if (isMockHttp()) {
+      String cert = getSSLCertContent();
+      HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert, host);
+      if(isMockHttp()){
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
       return sender;
@@ -205,5 +239,6 @@ public class PropertiesFileHelper {
   public HttpSender createSender() {
     return createSender(this.defaultProps);
   }
+
 
 }

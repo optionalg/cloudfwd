@@ -60,19 +60,19 @@ public class Connection implements Closeable {
   private int charBufferSize;
   private PropertiesFileHelper propertiesFileHelper;
 
-  public Connection(ConnectonCallbacks callbacks) {
+  public Connection(ConnectionCallbacks callbacks) {
     init(callbacks);
     this.propertiesFileHelper = new PropertiesFileHelper();
     this.lb = new LoadBalancer(this);
   }
 
-  public Connection(ConnectonCallbacks callbacks, Properties settings) {
+  public Connection(ConnectionCallbacks callbacks, Properties settings) {
     init(callbacks);
     this.propertiesFileHelper = new PropertiesFileHelper(settings);
     this.lb = new LoadBalancer(this);
   }
 
-  private void init(ConnectonCallbacks callbacks) {
+  private void init(ConnectionCallbacks callbacks) {
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
@@ -160,7 +160,7 @@ public class Connection implements Closeable {
   /**
    * @return the callbacks
    */
-  public ConnectonCallbacks getCallbacks() {
+  public ConnectionCallbacks getCallbacks() {
     return callbacks;
   }
 

@@ -24,32 +24,32 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.splunk.cloudfwd.ConnectonCallbacks;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import com.splunk.cloudfwd.ConnectionCallbacks;
 
 /**
  *
  * @author ghendrey
  */
 public class CheckpointManager implements LifecycleEventObserver {
-  
+
   private static final Logger LOG = Logger.getLogger(CheckpointManager.class.
           getName());
 
   private final SortedMap<Comparable, EventBatch> orderedEvents = new TreeMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
-  
+
   CheckpointManager(Connection c) {
     this.connection = c;
   }
-  
+
   @Override
   public void update(LifecycleEvent e) {
     if (e.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
       EventBatchResponse resp = (EventBatchResponse) e;
       /*
-      Comparable id = resp.getEvents().getId();      
+      Comparable id = resp.getEvents().getId();
         System.out.println(
                 "MAYBE CALLBACK HIGHWATER for " + id + "(ackId is " + es.
                 getEvents().getAckId() + ")");
@@ -57,12 +57,12 @@ public class CheckpointManager implements LifecycleEventObserver {
       acknowledgeHighwaterAndBelow(resp.getEvents());
     }
   }
-  
+
   @Override
   public String toString() {
     return eventBatchWindowStateToString();
   }
-  
+
   public String eventBatchWindowStateToString() {
     StringBuilder sb = new StringBuilder();
     for (EventBatch events : this.orderedEvents.values()) {
@@ -77,7 +77,7 @@ public class CheckpointManager implements LifecycleEventObserver {
   }
 
   //if EventsBatch is the lowest (by ID) then remove it, and consecutive higher keys that have been
-  //acknowledged out of order. Return Callback from hightest EventBatch, for which there are no 
+  //acknowledged out of order. Return Callback from hightest EventBatch, for which there are no
   //lower unacknowledged event batches.
   private synchronized void acknowledgeHighwaterAndBelow(EventBatch events) {
     events.setAcknowledged(true);
@@ -90,7 +90,7 @@ public class CheckpointManager implements LifecycleEventObserver {
       Logger.getLogger(getClass().getName()).log(Level.SEVERE, msg);
       throw new IllegalStateException(msg);
     }
-    ConnectonCallbacks cb = this.connection.getCallbacks();
+    ConnectionCallbacks cb = this.connection.getCallbacks();
     //todo: maybe schedule acknowledge to be async
     cb.acknowledged(events); //hit the callback to tell the user code that the EventBatch succeeded
     if (!events.getId().equals(this.orderedEvents.firstKey())) { //if this batch isn't the highwater
@@ -100,9 +100,8 @@ public class CheckpointManager implements LifecycleEventObserver {
     }
     slideHighwaterUp(cb); //might call the highwater/checkpoint callback
   }
-  
-  private synchronized void slideHighwaterUp(ConnectonCallbacks cb) {
-        if (this.orderedEvents.isEmpty()) {
+  private synchronized void slideHighwaterUp(ConnectionCallbacks cb) {
+    if (this.orderedEvents.isEmpty()) {
       String msg = "Failed to move highwater mark. No events present.";
       LOG.severe(msg);
       throw new IllegalStateException(msg);
@@ -114,18 +113,18 @@ public class CheckpointManager implements LifecycleEventObserver {
       Map.Entry<Comparable, EventBatch> e = iter.next();
       if (e.getValue().isAcknowledged()) { //this causes us to remove all *consecutive* acknowledged EventBatch, forward from the tail
         iter.remove(); //remove the callback (we are going to call it now, so no need to track it any longer)
-        acknowledgedEvents = e.getValue(); //hang on to highest acknowledged batch id        
+        acknowledgedEvents = e.getValue(); //hang on to highest acknowledged batch id
       } else {
         break;
       }
     }
 
-    //todo: maybe schedule checkpoint to be async 
+    //todo: maybe schedule checkpoint to be async
     if(null != acknowledgedEvents){
       cb.checkpoint(acknowledgedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
     }
   }
-  
+
   synchronized void registerInFlightEvents(EventBatch events) {
     EventBatch prev = this.orderedEvents.put(events.getId(), events);
     if (null != prev) {
@@ -135,5 +134,5 @@ public class CheckpointManager implements LifecycleEventObserver {
       throw new IllegalStateException(msg);
     }
   }
-  
+
 }
