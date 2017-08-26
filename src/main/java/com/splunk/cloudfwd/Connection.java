@@ -17,6 +17,7 @@ package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.util.CallbackInterceptor;
 import com.splunk.cloudfwd.util.LoadBalancer;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
 import java.util.Properties;
@@ -32,7 +33,17 @@ import java.util.logging.Logger;
  */
 public class Connection implements Closeable {
 
+  private static final Logger LOG = Logger.getLogger(Connection.class.getName());
+
   public final static long DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
+
+  /**
+   * @return the propertiesFileHelper
+   */
+  public PropertiesFileHelper getPropertiesFileHelper() {
+    return propertiesFileHelper;
+  }
+
 
   /**
    * Used to select either structured HEC /event endpoint, or raw HEC endpoint
@@ -47,15 +58,18 @@ public class Connection implements Closeable {
   private HecEndpoint hecEndpointType;
   private EventBatch events; //default EventBatch used if send(event) is called
   private int charBufferSize;
+  private PropertiesFileHelper propertiesFileHelper;
 
   public Connection(ConnectonCallbacks callbacks) {
     init(callbacks);
+    this.propertiesFileHelper = new PropertiesFileHelper();
     this.lb = new LoadBalancer(this);
   }
 
   public Connection(ConnectonCallbacks callbacks, Properties settings) {
     init(callbacks);
-    this.lb = new LoadBalancer(this, settings);
+    this.propertiesFileHelper = new PropertiesFileHelper(settings);
+    this.lb = new LoadBalancer(this);
   }
 
   private void init(ConnectonCallbacks callbacks) {
@@ -132,6 +146,7 @@ public class Connection implements Closeable {
     }
     timeoutChecker.start();
     timeoutChecker.add(events);
+    LOG.info("sending " + events.getCharCount() + " characters.");
     lb.sendBatch(events);
     this.events = null; //batch is in flight, null it out
   }

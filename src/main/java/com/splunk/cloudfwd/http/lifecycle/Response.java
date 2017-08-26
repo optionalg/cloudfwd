@@ -30,6 +30,12 @@ public class Response extends LifecycleEvent {
     this.resp = resp;
   }
 
+  @Override
+  public String toString() {
+    return super.toString()  + " Response{" + "httpCode=" + httpCode + ", resp=" + resp + '}';
+  }
+  
+
   /**
    * @return the httpCode
    */

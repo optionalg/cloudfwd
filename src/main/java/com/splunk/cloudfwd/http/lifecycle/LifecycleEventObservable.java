@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.splunk.cloudfwd.ConnectonCallbacks;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  *
@@ -31,7 +33,7 @@ public class LifecycleEventObservable {
 
   private static final Logger LOG = Logger.getLogger(
           LifecycleEventObservable.class.getName());
-  private final List<LifecycleEventObserver> observers = new ArrayList<>();
+  private final Collection<LifecycleEventObserver> observers = new ConcurrentLinkedQueue<>();
   protected final Connection connection;
 
   public LifecycleEventObservable(Connection connection) {
@@ -43,8 +45,12 @@ public class LifecycleEventObservable {
   public void addObserver(LifecycleEventObserver o) {
     this.observers.add(o);
   }
+  
+  public void removeObserver(LifecycleEventObserver o){
+    this.observers.remove(o);
+  }
 
-  protected final synchronized void notifyObservers(LifecycleEvent event) {
+  protected final void notifyObservers(LifecycleEvent event) {
     try {
       observers.forEach((LifecycleEventObserver observer) -> {
         observer.update(event);

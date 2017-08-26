@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,7 +42,7 @@ public class LoadBalancer implements Closeable {
   private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
           getName());
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
-  private PropertiesFileHelper propertiesFileHelper;
+  //private PropertiesFileHelper propertiesFileHelper;
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -49,16 +50,12 @@ public class LoadBalancer implements Closeable {
   private final Connection connection;
   private boolean closed;
 
-  public LoadBalancer(Connection c) {
-    this(c, new Properties());
-  }
 
-  public LoadBalancer(Connection c, Properties p) {
+  public LoadBalancer(Connection c) {
     this.connection = c;
-    this.propertiesFileHelper = new PropertiesFileHelper(p);
-    this.channelsPerDestination = this.propertiesFileHelper.
+    this.channelsPerDestination = c.getPropertiesFileHelper().
             getChannelsPerDestination();
-    this.discoverer = new IndexDiscoverer(propertiesFileHelper);
+    this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper());
     this.checkpointManager = new CheckpointManager(c);
     //this.discoverer.addObserver(this);
   }
@@ -124,9 +121,10 @@ public class LoadBalancer implements Closeable {
     //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1, 
     //and then the to-be-reaped channel would also be removed, leaving no channels, and
     //send will be stuck in a spin loop with no channels to send to
-    if (!force && channels.size() >= propertiesFileHelper.getMaxTotalChannels()) {
+    PropertiesFileHelper propsHelper = this.connection.getPropertiesFileHelper();
+    if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
       LOG.info(
-              "Can't add channel (" + PropertiesFileHelper.MAX_TOTAL_CHANNELS + " set to " + propertiesFileHelper.
+              "Can't add channel (" + PropertiesFileHelper.MAX_TOTAL_CHANNELS + " set to " + propsHelper.
               getMaxTotalChannels() + ")");
       return;
     }
@@ -137,7 +135,7 @@ public class LoadBalancer implements Closeable {
       url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.
               getPort());
       System.out.println("Trying to add URL: " + url);
-      HttpSender sender = this.propertiesFileHelper.
+      HttpSender sender = this.connection.getPropertiesFileHelper().
               createSender(url);
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
@@ -191,7 +189,8 @@ public class LoadBalancer implements Closeable {
       //round robin until either A) we find an available channel
       long start = System.currentTimeMillis();
       int spinCount = 0;
-      int yieldInterval = propertiesFileHelper.getMaxTotalChannels();
+      int yieldInterval = this.connection.getPropertiesFileHelper().getMaxTotalChannels();
+      ///CountDownLatch latch = new CountDownLatch(1);
       while (!closed || forced) {
         //note: the channelsSnapshot must be refreshed each time through this loop
         //or newly added channels won't be seen, and eventually you will just have a list
@@ -207,8 +206,8 @@ public class LoadBalancer implements Closeable {
         int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         if (tryMe.send(events)) {
-          System.out.println(
-                  "sent EventBatch id=" + events.getId() + " on " + tryMe);
+          //System.out.println(
+            //      "sent EventBatch id=" + events.getId() + " on " + tryMe);
           break;
         }
         if (++spinCount % yieldInterval == 0) {
@@ -258,7 +257,7 @@ public class LoadBalancer implements Closeable {
    * @return the propertiesFileHelper
    */
   public PropertiesFileHelper getPropertiesFileHelper() {
-    return propertiesFileHelper;
+    return this.connection.getPropertiesFileHelper();
   }
 
 }

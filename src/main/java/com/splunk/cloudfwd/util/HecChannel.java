@@ -24,6 +24,7 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.HttpSender;
 import com.splunk.cloudfwd.util.PollScheduler;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
+import com.splunk.cloudfwd.http.lifecycle.Response;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -97,9 +98,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
     reaperScheduler.schedule(() -> {
       closeAndReplace();
-    }, LIFESPAN, TimeUnit.SECONDS);
+    }, LIFESPAN, TimeUnit.SECONDS); //todo make this MILLISECOND
     long decomMS = loadBalancer.getPropertiesFileHelper().
-            getUnresponsiveChannelDecomMS();
+            getUnresponsiveChannelDecomMS();    
     if (decomMS > 0) {
       deadChannelDetector = new DeadChannelDetector(decomMS);
       deadChannelDetector.start();
@@ -187,7 +188,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       case ACK_POLL_OK: {
         ackReceived(e);
         notifyAll();
-        break;
+        return;
       }
       case EVENT_POST_OK: {
         //System.out.println("OBSERVED EVENT_POST_OK");
@@ -202,17 +203,18 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           receivedFirstEventPostResponse = true;
         }
         checkForStickySessionViolation(e);
-        break;
-      }
-      case HEALTH_POLL_NOT_OK:{
-        this.healthy = false;//see isAvailable
-        notifyAll();
-        break;
+        return;
       }
       case HEALTH_POLL_OK:{
         this.healthy = true; //see isAvailable
         notifyAll();
-        break;
+        return;
+      }
+    }
+    if(e instanceof Response){
+      if(((Response) e).getHttpCode()!=200){
+        LOG.warning("Marking channel unhealthy: " + e);
+        this.healthy = false;
       }
     }
   }
@@ -279,6 +281,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       LOG.log(Level.SEVERE, e.getMessage(), e);
     }
     this.loadBalancer.removeChannel(getChannelId(), true);
+    this.channelMetrics.removeObserver(this);
     finishClose();
   }
 
@@ -417,6 +420,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       deadChannelChecker.start(r, intervalMS, TimeUnit.MILLISECONDS);
     }
 
+    @Override
     public void close() {
       deadChannelChecker.stop();
     }

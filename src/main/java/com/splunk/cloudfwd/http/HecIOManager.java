@@ -37,19 +37,20 @@ import org.apache.http.concurrent.FutureCallback;
 
 /**
  * HecIOManager is the mediator between sending and receiving messages to splunk
- (as such it is the only piece of the Ack-system that touches the
- HttpSender). HecIOManager sends via the sender and receives and
- unmarshals responses. From these responses it maintains the ack window by
- adding newly received ackIds to the ack window, or removing them on success.
- It also owns the AckPollScheduler which will periodically call back
- "pollAcks" on this, which sends the content of the ackTracker to Splunk via
- the sender, to check their status.
+ * (as such it is the only piece of the Ack-system that touches the HttpSender).
+ * HecIOManager sends via the sender and receives and unmarshals responses. From
+ * these responses it maintains the ack window by adding newly received ackIds
+ * to the ack window, or removing them on success. It also owns the
+ * AckPollScheduler which will periodically call back "pollAcks" on this, which
+ * sends the content of the ackTracker to Splunk via the sender, to check their
+ * status.
  *
  * @author ghendrey
  */
 public class HecIOManager implements Closeable {
 
-  private static final Logger LOG = Logger.getLogger(HecIOManager.class.getName());
+  private static final Logger LOG = Logger.getLogger(HecIOManager.class.
+          getName());
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpSender sender;
@@ -83,13 +84,15 @@ public class HecIOManager implements Closeable {
         }
         this.pollAcks();
       };
-      ackPollController.start(poller, 250, TimeUnit.MILLISECONDS);
+      ackPollController.start(poller, 
+              sender.getConnection().getPropertiesFileHelper().getAckPollMS(), TimeUnit.MILLISECONDS);
     }
     if (!healthPollController.isStarted()) {
       Runnable poller = () -> {
         this.pollHealth();
       };
-      healthPollController.start(poller, 5, TimeUnit.SECONDS);
+      healthPollController.start(
+              poller, sender.getConnection().getPropertiesFileHelper().getHealthPollMS(), TimeUnit.MILLISECONDS);
     }
   }
 
@@ -129,7 +132,7 @@ public class HecIOManager implements Closeable {
             LOG.log(Level.SEVERE, null, ex);
           }
         } else {
-          String msg = "HEC didn't return OK/200. Response code: "+code+", response: " + reply;
+          String msg = "HEC didn't return OK/200. Response code: " + code + ", response: " + reply;
           LOG.log(Level.SEVERE, msg);
           //eventPostNotOK(code, reply, events);
           sender.getChannelMetrics().update(new EventBatchResponse(
@@ -186,12 +189,14 @@ public class HecIOManager implements Closeable {
     }
     System.out.println("POLLING ACKS...");
     this.ackPollInProgress = true;
-    sender.getChannelMetrics().update(new PreRequest(LifecycleEvent.Type.PRE_ACK_POLL));
+    sender.getChannelMetrics().update(new PreRequest(
+            LifecycleEvent.Type.PRE_ACK_POLL));
     System.out.println("sending acks");
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
-        System.out.println("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
+        System.out.println(
+                "channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
           consumeAckPollResponse(reply);
         } else {
@@ -224,13 +229,14 @@ public class HecIOManager implements Closeable {
     switch (statusCode) {
       case 200:
         System.out.println("Health check is good");
-       sender.getChannelMetrics().update(new Response(LifecycleEvent.Type.HEALTH_POLL_OK,
+        sender.getChannelMetrics().update(new Response(
+                LifecycleEvent.Type.HEALTH_POLL_OK,
                 200, msg));
         break;
       case 503:
- 
+
         sender.getChannelMetrics().update(new Response(
-                LifecycleEvent.Type.HEALTH_POLL_NOT_OK, statusCode, msg));
+                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, statusCode, msg));
         break;
       default:
         // 400 should not be indicative of unhealthy HEC

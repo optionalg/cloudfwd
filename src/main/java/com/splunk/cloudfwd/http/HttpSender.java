@@ -20,6 +20,7 @@ package com.splunk.cloudfwd.http;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.util.HecChannel;
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.methods.HttpGet;

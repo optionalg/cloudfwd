@@ -43,6 +43,15 @@ public abstract class AbstractConnectionTest {
   protected Connection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
           "yyyy-MM-dd HH:mm:ss");
+  protected final String TEST_CLASS_INSTANCE_GUID = java.util.UUID.randomUUID().
+          toString();
+  protected String testMethodGUID;
+
+  
+  //override to do stuff like set buffering or anything else affecting connection
+  protected void configureConnection(Connection connection) {
+    //noop
+  }
 
   //used by tests that need to set eventType
   protected enum EventType {
@@ -54,6 +63,8 @@ public abstract class AbstractConnectionTest {
   public void setUp() {
     this.callbacks = getCallbacks();
     this.connection = new Connection((ConnectonCallbacks) callbacks, getProps());
+    configureConnection(connection);
+    this.testMethodGUID = java.util.UUID.randomUUID().toString();
 
   }
 
@@ -69,6 +80,9 @@ public abstract class AbstractConnectionTest {
   }
 
   protected void sendEvents() throws TimeoutException, InterruptedException {
+    System.out.println(
+            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID +
+                    "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
       ///final EventBatch events =nextEventBatch(i+1);
@@ -78,7 +92,7 @@ public abstract class AbstractConnectionTest {
     }
     connection.close(); //will flush 
     this.callbacks.await(10, TimeUnit.MINUTES);
-    if(callbacks.isFailed()){
+    if (callbacks.isFailed()) {
       Assert.fail(callbacks.getFailMsg());
     }
   }
@@ -86,7 +100,8 @@ public abstract class AbstractConnectionTest {
   protected abstract Properties getProps();
 
   /**
-   * Default implementation will return the 
+   * Default implementation will return the
+   *
    * @param seqno
    * @return
    */
@@ -96,30 +111,37 @@ public abstract class AbstractConnectionTest {
         if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
           return getTimestampedRawEvent(seqno);
         } else {
-          return new EventWithMetadata("nothing to see here.", seqno);
+          return new EventWithMetadata(
+                  "TEXT FOR /events endpoint 'event' field with " + getEventTracingInfo(),
+                  seqno);
         }
       }
       case JSON: {
         if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
           try {
-            return RawEvent.fromObject(getStructuredEvent(), seqno);
+            Map m = getStructuredEvent();
+            m.put("where_to", "/raw");
+            return RawEvent.fromObject(m, seqno);
           } catch (IOException ex) {
             Logger.getLogger(AbstractConnectionTest.class.getName()).
                     log(Level.SEVERE, null, ex);
-            throw new RuntimeException(ex.getMessage(),ex);
+            throw new RuntimeException(ex.getMessage(), ex);
           }
         } else {
-          return new EventWithMetadata(getStructuredEvent(), seqno);
+          Map m = getStructuredEvent();
+          m.put("where_to", "/events");
+          return new EventWithMetadata(m, seqno);
         }
       }
     }
     throw new RuntimeException("Unknown event type in test");
   }
- 
-  protected Object getStructuredEvent() {
+
+  protected Map getStructuredEvent() {
     Map map = new LinkedHashMap();
     map.put("foo", "bar");
-    map.put("baz", "nothing to see here");
+    map.put("baz", "yeah I am json field");
+    map.put("trace", getEventTracingInfo());
     return map;
   }
 
@@ -130,8 +152,13 @@ public abstract class AbstractConnectionTest {
   }
 
   protected RawEvent getTimestampedRawEvent(int seqno) {
-    return RawEvent.fromText(
-            dateFormat.format(new Date()) + " nothing to see here", seqno);
+    return RawEvent.fromText(//dateFormat.format(new Date()) + " TEXT FOR /raw ENDPOINT", seqno);
+            "TEXT FOR /raw ENDPOINT with " + getEventTracingInfo(),
+            seqno);
+  }
+
+  protected String getEventTracingInfo() {
+    return "GUID=" + TEST_CLASS_INSTANCE_GUID + " testMethod GUID= "+testMethodGUID; 
   }
 
 }

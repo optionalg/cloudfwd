@@ -32,7 +32,7 @@ public class PollScheduler {
   private boolean started;
   private final String name;
   private int corePoolSize = 1;
-
+ 
   public PollScheduler(String name) {
     this.name = name;
   }
@@ -56,7 +56,7 @@ public class PollScheduler {
     //if the execution time of a task exceeds the period. We don't want that.
     scheduler.scheduleWithFixedDelay(poller, 0, delay, units);
     this.started = true;
-    System.out.println("STARTED POLLING: " + name);
+    System.out.println("STARTED POLLING: " + name + " with interval " + delay + " ms");
 
   }
 

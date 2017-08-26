@@ -46,6 +46,12 @@ public class PropertiesFileHelper {
   public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
   public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
   public static final String MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "max_unacked_per_channel";
+  public static final String ACK_POLL_MS = "ack_poll_ms";
+  public static final long MIN_ACK_POLL_MS = 250;
+  public static final String DEFAULT_ACK_POLL_MS = "1000";
+  public static final String HEALTH_POLL_MS = "health_poll_ms";
+  public static final long MIN_HEALTH_POLL_MS = 1000;
+  public static final String DEFAULT_HEALTH_POLL_MS = "1000";  
 
   private Properties defaultProps = new Properties();
 
@@ -87,6 +93,8 @@ public class PropertiesFileHelper {
     }
     return urls;
   }
+  
+
 
   public int getChannelsPerDestination() {
     int n = Integer.parseInt(defaultProps.getProperty(
@@ -101,6 +109,24 @@ public class PropertiesFileHelper {
     return Long.parseLong(defaultProps.getProperty(
             UNRESPONSIVE_MS, "-1").trim());
   }
+  
+  public long getAckPollMS() {
+    long interval = Long.parseLong(defaultProps.getProperty(ACK_POLL_MS, DEFAULT_ACK_POLL_MS).trim());
+    if (interval <= 0) {
+      interval = MIN_ACK_POLL_MS;
+    }
+    return interval;
+    
+  }  
+  
+  public long getHealthPollMS() {
+        long interval = Long.parseLong(defaultProps.getProperty(HEALTH_POLL_MS, DEFAULT_HEALTH_POLL_MS).trim());
+    if (interval <= 0) {
+      interval = MIN_HEALTH_POLL_MS;
+    }
+    return interval;
+  }
+  
 
   public int getMaxTotalChannels() {
     int max = Integer.parseInt(defaultProps.getProperty(
