@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.sim;
 
+import com.splunk.cloudfwd.http.AcknowledgementTracker;
 import com.splunk.cloudfwd.http.HecIOManager;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;

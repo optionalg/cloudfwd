@@ -25,10 +25,13 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,10 +40,10 @@ import java.util.logging.Logger;
  * @author ghendrey
  */
 public class LoadBalancer implements Closeable {
-
-  private int channelsPerDestination = 4;
+  
   private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
           getName());
+  private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
   //private PropertiesFileHelper propertiesFileHelper;
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
@@ -49,7 +52,9 @@ public class LoadBalancer implements Closeable {
   private int robin; //incremented (mod channels) to perform round robin
   private final Connection connection;
   private boolean closed;
-
+  private volatile CountDownLatch latch;
+  //private final ReentrantLock lock = new ReentrantLock();
+  //private final Condition condition = lock.newCondition(); //used for blocking/waiting in sendRountRobin
 
   public LoadBalancer(Connection c) {
     this.connection = c;
@@ -59,11 +64,11 @@ public class LoadBalancer implements Closeable {
     this.checkpointManager = new CheckpointManager(c);
     //this.discoverer.addObserver(this);
   }
-
+  
   private void updateChannels(IndexDiscoverer.Change change) {
     System.out.println(change);
   }
-
+  
   public synchronized void sendBatch(EventBatch events) {
     if (null == this.connection.getCallbacks()) {
       throw new IllegalStateException(
@@ -75,7 +80,7 @@ public class LoadBalancer implements Closeable {
     }
     sendRoundRobin(events);
   }
-
+  
   @Override
   public synchronized void close() {
     this.discoveryScheduler.stop();
@@ -84,7 +89,7 @@ public class LoadBalancer implements Closeable {
     }
     this.closed = true;
   }
-
+  
   public synchronized void closeNow() {
     this.discoveryScheduler.stop();
     //synchronized (channels) {
@@ -94,11 +99,11 @@ public class LoadBalancer implements Closeable {
     //}
     this.closed = true;
   }
-
+  
   public CheckpointManager getCheckpointManager() {
     return this.checkpointManager;
   }
-
+  
   private synchronized void createChannels(List<InetSocketAddress> addrs) {
     for (InetSocketAddress s : addrs) {
       //add multiple channels for each InetSocketAddress
@@ -107,7 +112,7 @@ public class LoadBalancer implements Closeable {
       }
     }
   }
-
+  
   void addChannelFromRandomlyChosenHost() {
     InetSocketAddress addr = discoverer.randomlyChooseAddr();
     LOG.log(Level.INFO, "Adding channel to {0}", addr);
@@ -134,17 +139,17 @@ public class LoadBalancer implements Closeable {
       //URLS for channel must be based on IP address not hostname since we
       //have many-to-one relationship between IP address and hostname via DNS records
 
-      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.getPort());
+      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.
+              getPort());
       System.out.println("Trying to add URL: " + url);
       //We should provide a hostname for http client, so it can properly set Host header
       //this host is required for many proxy server and virtual servers implementations
       //https://tools.ietf.org/html/rfc7230#section-5.4
       host = s.getHostName() + ":" + s.getPort();
-
+      
       HttpSender sender = this.connection.getPropertiesFileHelper().
               createSender(url, host);
-
-
+      
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
       sender.setChannel(channel);
@@ -176,17 +181,19 @@ public class LoadBalancer implements Closeable {
       throw new RuntimeException(
               "Attempt to remove non-empty channel: " + channelId + " containing " + c.
               getUnackedCount() + " unacked payloads");
-
+      
     }
-
+    
   }
-
+  
   private synchronized void sendRoundRobin(EventBatch events) {
     sendRoundRobin(events, false);
   }
-
+  
   synchronized void sendRoundRobin(EventBatch events, boolean forced) {
     try {
+      //lock.lock();
+      latch = new CountDownLatch(1);
       if (channels.isEmpty()) {
         throw new IllegalStateException(
                 "attempt to sendRoundRobin but no channel available.");
@@ -196,7 +203,8 @@ public class LoadBalancer implements Closeable {
       //round robin until either A) we find an available channel
       long start = System.currentTimeMillis();
       int spinCount = 0;
-      int yieldInterval = this.connection.getPropertiesFileHelper().getMaxTotalChannels();
+      int yieldInterval = this.connection.getPropertiesFileHelper().
+              getMaxTotalChannels();
       ///CountDownLatch latch = new CountDownLatch(1);
       while (!closed || forced) {
         //note: the channelsSnapshot must be refreshed each time through this loop
@@ -214,13 +222,15 @@ public class LoadBalancer implements Closeable {
         tryMe = channelsSnapshot.get(channelIdx);
         if (tryMe.send(events)) {
           //System.out.println(
-            //      "sent EventBatch id=" + events.getId() + " on " + tryMe);
+          //      "sent EventBatch id=" + events.getId() + " on " + tryMe);
           break;
         }
         if (++spinCount % yieldInterval == 0) {
-          LOG.warning("No available channel to send on. Waiting...");
-          Thread.yield(); //we are spinning waiting for available channel. Should yield CPU.
-          Thread.sleep(100); //avoid hard-spin-lock looking for available channel
+          LOG.info("Waiting for available channel...");
+          //condition.await(10, TimeUnit.MINUTES);
+          latch.await(1, TimeUnit.SECONDS);
+          latch = new CountDownLatch(1);
+          //LOG.info("Woke up by a channel...");
         }
         if (System.currentTimeMillis() - start > this.getConnection().
                 getSendTimeout()) {
@@ -235,8 +245,24 @@ public class LoadBalancer implements Closeable {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
               getMessage());
       throw new RuntimeException(e.getMessage(), e);
+    } finally {
+      //lock.unlock();
     }
-
+    
+  }
+  
+  void wakeUp() {
+    //if (lock.isLocked() && lock.hasWaiters(condition)) {
+    try{
+      if(null != latch){
+        latch.countDown();
+      }
+      //lock.lock();
+      //condition.signalAll();
+    }finally{
+      //lock.unlock();
+    }
+    //}
   }
 
   /**
@@ -266,5 +292,5 @@ public class LoadBalancer implements Closeable {
   public PropertiesFileHelper getPropertiesFileHelper() {
     return this.connection.getPropertiesFileHelper();
   }
-
+  
 }

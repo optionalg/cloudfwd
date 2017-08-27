@@ -36,7 +36,7 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   @Before
   public void setUp() {
     super.setUp();
-    super.connection.setSendTimeout(100);
+    super.connection.setEventAcknowledgementTimeout(100);
   }
 
   @Test

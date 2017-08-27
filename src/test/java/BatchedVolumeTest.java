@@ -33,11 +33,11 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   @Override
   protected void configureConnection(Connection connection) {
-    connection.setCharBufferSize(1024*32); //32k batching batching, roughly
+    //connection.setCharBufferSize(1024*32); //32k batching batching, roughly
   }
 
 
-
+/*
   @Test
   public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
@@ -52,7 +52,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     super.eventType = EventType.JSON;
     super.sendEvents();
   }
-
+*/
 
 
   @Test
@@ -61,20 +61,20 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     super.eventType = EventType.TEXT;
     super.sendEvents();
   }
-
+/*
     @Test
   public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
   }
-
+*/
 
 
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
     return props;
   }
 
