@@ -43,6 +43,7 @@ public abstract class AbstractConnectionTest {
   protected Connection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
           "yyyy-MM-dd HH:mm:ss");
+  protected Integer bufferSize;
 
   //used by tests that need to set eventType
   protected enum EventType {
@@ -54,6 +55,13 @@ public abstract class AbstractConnectionTest {
   public void setUp() {
     this.callbacks = getCallbacks();
     this.connection = new Connection((ConnectionCallbacks) callbacks, getProps());
+
+    // get buffer size from command line. Example:
+    // mvn -f /Users/eprokop/dev/firehose/cloudfwd -Dtest=BatchedVolumeTest#sendTextToEventsEndpointWithBuffering -DargLine="-DbufferSize=0" test
+    Integer bufferSizeArg = Integer.valueOf(System.getProperty("bufferSize"));
+    if (bufferSizeArg != null) {
+      this.bufferSize = bufferSizeArg;
+    }
 
   }
 

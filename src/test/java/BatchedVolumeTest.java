@@ -47,9 +47,9 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   private String run_id = UUID.randomUUID().toString(); // All 4 tests in this suite will have the same run ID
 
   /* ************************************* SETTINGS **************************************** */
-  private String splunkType = CLOUD_CLUSTER_DIRECT_TO_INDEXERS; // just a label - change this before every test run
-  private String notes = "null"; // e.g. replication factor of 3
-  private int bufferSize = 0; // 1024*16
+  private String splunkType = LOCAL_CLUSTER; // just a label - change this before every test run
+  private String notes = "\"Rep Factor=3. 6 addresses total: each url resolves to 2 addresses (IPv4 and IPv6)\""; // e.g. replication factor of 3
+//  private int bufferSize = 1024*1024; // uncomment this if you're not passing buffer size by command line
   /* ************************************ /SETTINGS **************************************** */
 
   public BatchedVolumeTest() {
@@ -109,6 +109,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
       num_to_send: the total number of POST requests supposed to be sent by this test
       url_list: all of the urls that this connection is sending to
       channels_per_destination: # channels per IP address destination (from lb.properties)
+      max_unacked_per_channel: max # of unacked event batches before a channel is considered "full"
       label: a key for locating these logging lines if grepping
 
      */
@@ -124,16 +125,19 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
             .append(" num_to_send=").append(numToSend)
             .append(" url_list=").append(getURLs(connection))
             .append(" channels_per_destination=").append(connection.getPropertiesFileHelper().getChannelsPerDestination())
+            .append(" max_unacked_per_channel=").append(connection.getPropertiesFileHelper().getMaxUnackedEventBatchPerChannel())
             .append(" notes=").append(notes);
 
             if (start != null)
               log.append(" start_time=").append(start);
             if (end != null) {
               log.append(" end_time=").append(end)
-                      .append(" duration_seconds").append((end - start) / 1000);
+                      .append(" duration_seconds=").append((end - start) / 1000);
             }
 
             log.append(" label=").append(label);
+
+    System.out.println(log.toString());
 
 //    System.out.println(
 //            "test_id=" + connection.getTestId() +
@@ -160,7 +164,6 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
     return props;
   }
 
-
   @Override
   protected int getNumEventsToSend() {
     return numToSend;
@@ -182,11 +185,11 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   private String getURLs(Connection c) {
     List<URL> urls = c.getPropertiesFileHelper().getUrls();
-    StringBuilder urlList = new StringBuilder();
+    StringBuilder urlList = new StringBuilder().append("\"");
     for (URL url : urls) {
       urlList.append(url.toString()).append(", ");
     }
-    return urlList.toString();
+    return urlList.append("\"").toString();
   }
 
 }
