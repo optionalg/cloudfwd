@@ -1,6 +1,9 @@
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import java.util.Properties;
+import java.util.concurrent.TimeoutException;
+import org.junit.Test;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -21,7 +24,7 @@ import java.util.Properties;
  *
  * @author ghendrey
  */
-public class DeadChannelTest extends BatchedVolumeTest {
+public class DeadChannelTest extends AbstractConnectionTest {
 /*
   public static void main(String[] args) throws InterruptedException, TimeoutException {
     new DeadChannelTest().runTests();
@@ -30,16 +33,26 @@ public class DeadChannelTest extends BatchedVolumeTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
             "com.splunk.cloudfwd.sim.errorgen.ackslost.LossyEndpoints");
     props.put(PropertiesFileHelper.UNRESPONSIVE_MS,
-            "1000"); //set dead channel detector to detect at 1 second    
+            "5000"); //set dead channel detector to detect at 1 second    
+        props.put(PropertiesFileHelper.MAX_TOTAL_CHANNELS,
+            "2");
     return props;
   }
-
+  @Override
+  protected void configureConnection(Connection connection) {
+    connection.setCharBufferSize(0);
+  }
   @Override
   protected int getNumEventsToSend() {
     return 10;
+  }
+  
+  @Test
+  public void testDeadChannel() throws TimeoutException, InterruptedException{
+    super.sendEvents();
   }
 }

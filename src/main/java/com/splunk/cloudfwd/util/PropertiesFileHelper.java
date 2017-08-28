@@ -50,7 +50,7 @@ public class PropertiesFileHelper {
   public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
   public static final String MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "max_unacked_per_channel";
   public static final String EVENT_BATCH_SIZE = "event_batch_size";
-  public static final int MIN_EVENT_BATCH_SIZE = 32768;
+  public static final int MIN_EVENT_BATCH_SIZE = 0;
   public static final String DEFAULT_EVENT_BATCH_SIZE = "32768";
   public static final String ACK_POLL_MS = "ack_poll_ms";
   public static final long MIN_ACK_POLL_MS = 250;
@@ -192,7 +192,6 @@ public class PropertiesFileHelper {
             ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
     if (timeout < MIN_ACK_TIMEOUT_MS) {
       LOG.warning("Ignoring setting for " + MIN_ACK_TIMEOUT_MS + " because it is less than minimum acceptable value: " + MIN_ACK_TIMEOUT_MS);
-      timeout= MIN_ACK_TIMEOUT_MS;
     }
     return timeout;
   }    

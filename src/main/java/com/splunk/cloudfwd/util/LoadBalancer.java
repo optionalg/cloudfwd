@@ -40,7 +40,7 @@ import java.util.logging.Logger;
  * @author ghendrey
  */
 public class LoadBalancer implements Closeable {
-  
+
   private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
           getName());
   private int channelsPerDestination;
@@ -64,11 +64,11 @@ public class LoadBalancer implements Closeable {
     this.checkpointManager = new CheckpointManager(c);
     //this.discoverer.addObserver(this);
   }
-  
+
   private void updateChannels(IndexDiscoverer.Change change) {
     System.out.println(change);
   }
-  
+
   public synchronized void sendBatch(EventBatch events) {
     if (null == this.connection.getCallbacks()) {
       throw new IllegalStateException(
@@ -80,7 +80,7 @@ public class LoadBalancer implements Closeable {
     }
     sendRoundRobin(events);
   }
-  
+
   @Override
   public synchronized void close() {
     this.discoveryScheduler.stop();
@@ -89,7 +89,7 @@ public class LoadBalancer implements Closeable {
     }
     this.closed = true;
   }
-  
+
   public synchronized void closeNow() {
     this.discoveryScheduler.stop();
     //synchronized (channels) {
@@ -99,11 +99,11 @@ public class LoadBalancer implements Closeable {
     //}
     this.closed = true;
   }
-  
+
   public CheckpointManager getCheckpointManager() {
     return this.checkpointManager;
   }
-  
+
   private synchronized void createChannels(List<InetSocketAddress> addrs) {
     for (InetSocketAddress s : addrs) {
       //add multiple channels for each InetSocketAddress
@@ -112,7 +112,7 @@ public class LoadBalancer implements Closeable {
       }
     }
   }
-  
+
   void addChannelFromRandomlyChosenHost() {
     InetSocketAddress addr = discoverer.randomlyChooseAddr();
     LOG.log(Level.INFO, "Adding channel to {0}", addr);
@@ -146,10 +146,10 @@ public class LoadBalancer implements Closeable {
       //this host is required for many proxy server and virtual servers implementations
       //https://tools.ietf.org/html/rfc7230#section-5.4
       host = s.getHostName() + ":" + s.getPort();
-      
+
       HttpSender sender = this.connection.getPropertiesFileHelper().
               createSender(url, host);
-      
+
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
       sender.setChannel(channel);
@@ -181,18 +181,17 @@ public class LoadBalancer implements Closeable {
       throw new RuntimeException(
               "Attempt to remove non-empty channel: " + channelId + " containing " + c.
               getUnackedCount() + " unacked payloads");
-      
+
     }
-    
+
   }
-  
+
   private synchronized void sendRoundRobin(EventBatch events) {
     sendRoundRobin(events, false);
   }
-  
+
   synchronized void sendRoundRobin(EventBatch events, boolean forced) {
     try {
-      //lock.lock();
       latch = new CountDownLatch(1);
       if (channels.isEmpty()) {
         throw new IllegalStateException(
@@ -228,9 +227,14 @@ public class LoadBalancer implements Closeable {
         if (++spinCount % yieldInterval == 0) {
           LOG.info("Waiting for available channel...");
           //condition.await(10, TimeUnit.MINUTES);
-          latch.await(1, TimeUnit.SECONDS);
-          latch = new CountDownLatch(1);
-          //LOG.info("Woke up by a channel...");
+          try {
+            latch.await(1, TimeUnit.SECONDS);
+          } catch (InterruptedException e) {
+            LOG.severe(
+                    "LoadBalancer caught InterruptedException and resumed. Interruption message was: " + e.
+                    getMessage());
+          }
+          latch = new CountDownLatch(1); //replace the finished countdown latch
         }
         if (System.currentTimeMillis() - start > this.getConnection().
                 getSendTimeout()) {
@@ -245,24 +249,14 @@ public class LoadBalancer implements Closeable {
       LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
               getMessage());
       throw new RuntimeException(e.getMessage(), e);
-    } finally {
-      //lock.unlock();
-    }
-    
+    } 
+
   }
-  
+
   void wakeUp() {
-    //if (lock.isLocked() && lock.hasWaiters(condition)) {
-    try{
-      if(null != latch){
-        latch.countDown();
-      }
-      //lock.lock();
-      //condition.signalAll();
-    }finally{
-      //lock.unlock();
+    if (null != latch) {
+      latch.countDown();
     }
-    //}
   }
 
   /**
@@ -292,5 +286,5 @@ public class LoadBalancer implements Closeable {
   public PropertiesFileHelper getPropertiesFileHelper() {
     return this.connection.getPropertiesFileHelper();
   }
-  
+
 }

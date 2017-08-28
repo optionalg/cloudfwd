@@ -53,7 +53,7 @@ public class SslCertTestManualCloudTrial extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
     props.put(PropertiesFileHelper.COLLECTOR_URI, "https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
     props.put(PropertiesFileHelper.TOKEN_KEY, "6F339C3C-9658-4347-9DCA-A171E32072AF");
     props.put(PropertiesFileHelper.DISABLE_CERT_VALIDATION_KEY, "false");

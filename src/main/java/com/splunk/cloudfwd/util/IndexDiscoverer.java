@@ -44,11 +44,11 @@ class IndexDiscoverer extends Observable {
   //InetSocketAddresses resolved. This means that equality for URL changes based on DNS host resolution
   //and would be changing over time
   private final Map<String, List<InetSocketAddress>> mappings;
-  private PropertiesFileHelper senderFactory = new PropertiesFileHelper();
+  private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
 
   IndexDiscoverer(PropertiesFileHelper f) {
-    this.senderFactory = f;
-    this.mappings = getInetAddressMap(senderFactory.getUrls(),
+    this.propertiesFileHelper = f;
+    this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
         f.isForcedUrlMapToSingleAddr());
   }
 
@@ -63,8 +63,8 @@ class IndexDiscoverer extends Observable {
   synchronized List<URL> getUrls() {
 
     List<URL> urls = new ArrayList<>();
-    if (senderFactory.isCloudInstance()) {
-      urls.add(senderFactory.getUrls().get(0));
+    if (propertiesFileHelper.isCloudInstance()) {
+      urls.add(propertiesFileHelper.getUrls().get(0));
       return urls;
     }
     for (InetSocketAddress addr : getAddrs()) {
@@ -99,8 +99,8 @@ class IndexDiscoverer extends Observable {
   * called by IndexerDiscoveryScheduler
   */
   synchronized void discover(){
-    update(getInetAddressMap(senderFactory.getUrls(),
-        senderFactory.isForcedUrlMapToSingleAddr()), mappings);
+    update(getInetAddressMap(propertiesFileHelper.getUrls(),
+        propertiesFileHelper.isForcedUrlMapToSingleAddr()), mappings);
   }
 
   List<Change> update(Map<String, List<InetSocketAddress>> current,

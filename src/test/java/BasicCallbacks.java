@@ -36,6 +36,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   private String failMsg;
 
   public BasicCallbacks(int expected) {
+    System.out.println("Constructing BasicCallbacks");
     this.expectedAckCount = expected;
     this.latch = new CountDownLatch(1);
   }
