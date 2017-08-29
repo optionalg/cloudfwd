@@ -181,17 +181,22 @@ public class HecIOManager implements Closeable {
     }
 
   }
+  
+  public AcknowledgementTracker.AckRequest getAckPollRequest(){
+    return ackTracker.getAckRequest();
+  }
+  
+  public void setAckPollInProgress(boolean prog){
+    this.ackPollInProgress = prog;
+  }
 
   //called by the AckPollScheduler
   public void pollAcks() {
-    if (this.ackTracker.isEmpty()) {
-      return; //ack poll scheduled but not needed
-    }
+
     System.out.println("POLLING ACKS...");
-    this.ackPollInProgress = true;
     sender.getChannelMetrics().update(new PreRequest(
             LifecycleEvent.Type.PRE_ACK_POLL));
-    System.out.println("sending acks");
+    
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
@@ -203,7 +208,7 @@ public class HecIOManager implements Closeable {
           sender.getChannelMetrics().update(new Response(
                   LifecycleEvent.Type.ACK_POLL_NOT_OK, code, reply));
         }
-        HecIOManager.this.ackPollInProgress = false;
+        setAckPollInProgress(false);
       }
 
       @Override
@@ -212,16 +217,16 @@ public class HecIOManager implements Closeable {
         //AckManager.this.ackPollFailed(ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.ACK_POLL_FAILURE, ex));
-        HecIOManager.this.ackPollInProgress = false;
+        setAckPollInProgress(false);
       }
 
       @Override
       public void cancelled() {
+        setAckPollInProgress(false);
         LOG.severe("ack poll cancelled.");
       }
     };
-    sender.pollAcks(this, cb);
-
+    sender.pollAcks(this, cb);  
   }
 
   private void setChannelHealth(int statusCode, String msg) {

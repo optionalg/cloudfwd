@@ -1,3 +1,4 @@
+
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventWithMetadata;
@@ -14,6 +15,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import java.io.InputStream;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -46,7 +48,6 @@ public abstract class AbstractConnectionTest {
   protected String testMethodGUIDKey = "testMethodGUID";
   protected List<Event> events;
 
-  
   //override to do stuff like set buffering or anything else affecting connection
   protected void configureConnection(Connection connection) {
     //noop
@@ -61,11 +62,13 @@ public abstract class AbstractConnectionTest {
   @Before
   public void setUp() {
     this.callbacks = getCallbacks();
-    this.connection = new Connection((ConnectionCallbacks) callbacks, getProps());
+    Properties props = new Properties();
+    props.putAll(getTestProps());
+    props.putAll(getProps());
+    this.connection = new Connection((ConnectionCallbacks) callbacks, props);
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();
-
   }
 
   @After
@@ -81,8 +84,8 @@ public abstract class AbstractConnectionTest {
 
   protected void sendEvents() throws TimeoutException, InterruptedException {
     System.out.println(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID +
-                    "And test method GUID " + testMethodGUID);
+            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+            + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
       ///final EventBatch events =nextEventBatch(i+1);
@@ -97,10 +100,53 @@ public abstract class AbstractConnectionTest {
     }
   }
 
-  protected abstract Properties getProps();
+  /**
+   * test should override this to add properties on top of lb.properties+test.properties
+   * @return
+   */
+  protected Properties getProps(){
+    return new Properties(); //default behavior is no "hard coded" test-specific properties
+  }
+  
+  /**
+   * reads default test properties out of test_defaults.properties (these overlay on top
+   * of lb.properties)
+   * @return
+   */
+  protected Properties getTestProps() {
+    Properties props = new Properties();
+    try (InputStream is = getClass().getResourceAsStream(
+            getTestPropertiesFileName());) {
+      if (null != is) {
+        props.load(is);
+      } else {
+        System.out.println("No test_defaults.properties found on classpath");
+      }
+    } catch (IOException ex) {
+      Logger.getLogger(AbstractConnectionTest.class.getName()).
+              log(Level.SEVERE, null, ex);
+    }
+    if(Boolean.parseBoolean(props.getProperty("enabled", "false"))){
+      return props;
+    }else{
+      Logger.getLogger(AbstractConnectionTest.class.getName()).
+              log(Level.WARNING, "test.properties disabled, using lb.properties only");
+      return new Properties(); //ignore test.properties
+    }
+  }
+  
+  /**
+   * test can override this if a test requires its own .properties file to slap on top of
+   * lb.properties (instead of slapping test.properties on top of lb.properties)
+   * @return
+   */
+  protected String getTestPropertiesFileName(){
+    return "test.properties";
+  }
 
   /**
    * Default implementation will return the
+   *
    * @param seqno
    * @return
    */

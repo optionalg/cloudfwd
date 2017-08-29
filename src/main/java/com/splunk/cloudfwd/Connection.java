@@ -35,8 +35,6 @@ public class Connection implements Closeable {
 
   private static final Logger LOG = Logger.getLogger(Connection.class.getName());
 
-  public final static long DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
-
   /**
    * @return the propertiesFileHelper
    */
@@ -61,29 +59,29 @@ public class Connection implements Closeable {
   private PropertiesFileHelper propertiesFileHelper;
 
   public Connection(ConnectionCallbacks callbacks) {
-    init(callbacks);
-    this.propertiesFileHelper = new PropertiesFileHelper();
-    this.lb = new LoadBalancer(this);
+    this(callbacks, new Properties());
   }
 
   public Connection(ConnectionCallbacks callbacks, Properties settings) {
-    init(callbacks);
     this.propertiesFileHelper = new PropertiesFileHelper(settings);
+    init(callbacks, propertiesFileHelper);
     this.lb = new LoadBalancer(this);
   }
 
-  private void init(ConnectionCallbacks callbacks) {
+  private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
+    this.charBufferSize = propertiesFileHelper.getMinEventBatchSize();
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
     //the EventBatch that succeeded or failed from the timoutChecker
-    this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
+    this.timeoutChecker = new TimeoutChecker(propertiesFileHelper.getAckTimeoutMS());
     this.callbacks = new CallbackInterceptor(callbacks,
             timeoutChecker::removeEvents);
     this.timeoutChecker.setInterceptor(this.callbacks);
+    
   }
 
-  public synchronized void setSendTimeout(long ms) {
+  public synchronized void setEventAcknowledgementTimeout(long ms) {
     this.timeoutChecker.setTimeout(ms);
   }
 

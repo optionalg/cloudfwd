@@ -46,7 +46,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final HttpSender sender;
   private final int full;
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
-  private static final long LIFESPAN = 60; //5 min lifespan
   private volatile boolean closed;
   private volatile boolean quiesced;
   private volatile boolean healthy = true; //responsive to indexer 503 "queue full" error
@@ -67,7 +66,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.channelId = newChannelId();
     this.channelMetrics = new ChannelMetrics(c);
     this.channelMetrics.addObserver(this);
-    this.full = loadBalancer.getPropertiesFileHelper().getMaxUnackedEventBatchPerChannel();
+    this.full = loadBalancer.getPropertiesFileHelper().
+            getMaxUnackedEventBatchPerChannel();
   }
 
   private static String newChannelId() {
@@ -80,7 +80,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //is also trying to acquire the lock on this object. So deadlock.
   synchronized void pollAcks() {
     new Thread(sender.getHecIOManager()::pollAcks // poll for acks right now
-            , "Ack Kicker");
+            , "Ack Kicker").start();
   }
 
   public synchronized void start() {
@@ -95,14 +95,17 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }
     };
 
-    reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
-    reaperScheduler.schedule(() -> {
-      closeAndReplace();
-    }, LIFESPAN, TimeUnit.SECONDS); //todo make this MILLISECOND
-    long decomMS = loadBalancer.getPropertiesFileHelper().
-            getUnresponsiveChannelDecomMS();    
-    if (decomMS > 0) {
-      deadChannelDetector = new DeadChannelDetector(decomMS);
+    long decomMs = loadBalancer.getPropertiesFileHelper().getChannelDecomMS();
+    if (decomMs > 0) {
+      reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
+      reaperScheduler.schedule(() -> {
+        closeAndReplace();
+      }, decomMs, TimeUnit.MILLISECONDS);
+    }
+    long unresponsiveDecomMS = loadBalancer.getPropertiesFileHelper().
+            getUnresponsiveChannelDecomMS();
+    if (unresponsiveDecomMS > 0) {
+      deadChannelDetector = new DeadChannelDetector(unresponsiveDecomMS);
       deadChannelDetector.start();
     }
 
@@ -116,59 +119,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (!started) {
       start();
     }
-    if (this.closed) {
-      LOG.severe("Attempt to send to closed channel");
-      throw new IllegalStateException(
-              "Attempt to send to quiesced/closed channel");
-    }
-    if (this.quiesced) {
-      LOG.
-              info("Send to quiesced channel (this should happen from time to time)");
-    }
-    //System.out.println("Sending to channel: " + sender.getChannel());
-    // We want to block and poll for acks if
-    // 1) the channel is full
-    // OR
-    // 2) if we have not successfully posted the first message
-    //
-    // In case of the first event in the channel, wait() call below will be interruped by
-    // notifyAll() call from this.update callback once we get EVENT_POST_OK
-    //
-    if (unackedCount.get() == full
-            || (unackedCount.get() != 0 && !receivedFirstEventPostResponse))  {
-      //force an immediate poll for acks, rather than waiting until the next periodically
-      //scheduled ack poll. DON'T do this if the first batch is in flight still, since
-      //we need to wait for 'Set-Cookie' in the response to come back before polling
-      //so that we are routed to the correct indexer (if using an external load balancer
-      //with sticky sessions)
-      if (unackedCount.get() == full) {
-        pollAcks();
-      }
-      long start = System.currentTimeMillis();
-      while (true) {
-        try {
-          System.out.println("---BLOCKING---");
-          wait(Connection.DEFAULT_SEND_TIMEOUT_MS);
-          System.out.println("UNBLOCKED");
-        } catch (InterruptedException ex) {
-          Logger.getLogger(HecChannel.class.getName()).
-                  log(Level.SEVERE, ex.getMessage(), ex);
-        }
-        if (System.currentTimeMillis() - start > Connection.DEFAULT_SEND_TIMEOUT_MS) {
-          System.out.println("TIMEOUT EXCEEDED");
-          throw new TimeoutException("Send timeout exceeded.");
-        } else {
-          System.out.println("---NO TIMEOUT--");
-          break;
-        }
-      }
-    }
-    //essentially this is a "double check" since this channel could ge closed while this
-    //method was blocked. It happens.It's also why quiesced and closed must be marked volatile
-    //so their values are not cached by the thread.
-    if (quiesced || closed || !healthy)  {
-      return false;
-    }
+
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
     //System.out.println("channel=" + getChannelId() + " unack-count=" + count);
@@ -179,6 +130,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       throw new IllegalStateException(msg);
     }
     sender.sendBatch(events);
+    if (unackedCount.get() == full) {
+      pollAcks();
+    }
     return true;
   }
 
@@ -187,8 +141,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     switch (e.getType()) {
       case ACK_POLL_OK: {
         ackReceived(e);
-        notifyAll();
-        return;
+        break;
       }
       case EVENT_POST_OK: {
         //System.out.println("OBSERVED EVENT_POST_OK");
@@ -196,26 +149,27 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         // the below if clause is to unblock sending in the channel once we get post OK
         // for the first event in the channel
         if (!receivedFirstEventPostResponse) {
-          System.out.println("channel=" + getChannelId() +
-                  ", received OBSERVED EVENT_POST_OK and unblocking sending" +
-                  " for the first event in the channel");
-          notifyAll();
-          receivedFirstEventPostResponse = true;
+          System.out.println("channel=" + getChannelId()
+                  + ", received OBSERVED EVENT_POST_OK and unblocking sending"
+                  + " for the first event in the channel");
+          receivedFirstEventPostResponse = true;//must be set *before* notify
         }
         checkForStickySessionViolation(e);
-        return;
+        break;
       }
-      case HEALTH_POLL_OK:{
+      case HEALTH_POLL_OK: {
         this.healthy = true; //see isAvailable
-        notifyAll();
-        return;
+        break;
       }
     }
-    if(e instanceof Response){
-      if(((Response) e).getHttpCode()!=200){
+    if (e instanceof Response) {
+      if (((Response) e).getHttpCode() != 200) {
         LOG.warning("Marking channel unhealthy: " + e);
         this.healthy = false;
       }
+    }
+    if (isAvailable()) {
+      loadBalancer.wakeUp();
     }
   }
 
@@ -243,7 +197,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         }
       }
     }
-    System.out.println("UNBLOCK");
   }
 
   synchronized void closeAndReplace() {
@@ -264,17 +217,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     pollAcks();//so we don't have to wait for the next ack polling interval
   }
 
-  synchronized void forceCloseAndReplace() {
-    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-    interalForceClose();
-  }
-
   synchronized void forceClose() { //wraps internalForceClose in a log messages
     LOG.log(Level.INFO, "FORCE CLOSING CHANNEL  {0}", getChannelId());
     interalForceClose();
   }
 
-  private void interalForceClose() {
+  protected void interalForceClose() {
     try {
       this.sender.close();
     } catch (Exception e) {
@@ -301,7 +249,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   private synchronized void finishClose() {
-    System.out.println("TRYING TO UNBLOCK");
     this.closed = true;
     if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();
@@ -309,8 +256,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (null != deadChannelDetector) {
       deadChannelDetector.close();
     }
-    notifyAll();
-
   }
 
   /**
@@ -334,8 +279,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   boolean isAvailable() {
-    ChannelMetrics metrics = sender.getChannelMetrics();
-    return !quiesced && !closed && healthy && this.unackedCount.get() < full; //FIXME TODO make configurable
+    return !quiesced && !closed && healthy && this.unackedCount.get() < full && (unackedCount.
+            get() == 0 || receivedFirstEventPostResponse);
   }
 
   @Override
@@ -409,9 +354,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           //closed between forceCloseAndReplace and resendInFlightEvents. If that
           //could happen, then the channel we replace this one with in forceCloseAndReplace
           //can be removed before we resendInFlightEvents
-          synchronized(loadBalancer){
-            forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
+          synchronized (loadBalancer) {
+            loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+            //forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
             resendInFlightEvents();
+            interalForceClose();//don't force close until after events resent. If you do, you will interrupt this very thread and the events will never send
           }
           if (sender.getConnection().isClosed()) {
             loadBalancer.close();
@@ -432,11 +379,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
       sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
-          e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
-          //we must force messages to be sent because the connection could have been gracefully closed
-          //already, in which case sendRoundRobbin will just ignore the sent messages
-          boolean forced = true;
-          loadBalancer.sendRoundRobin(e, forced);
+        e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
+        //we must force messages to be sent because the connection could have been gracefully closed
+        //already, in which case sendRoundRobbin will just ignore the sent messages
+        boolean forced = true;
+        loadBalancer.sendRoundRobin(e, forced);
       });
 
     }

@@ -52,8 +52,8 @@ public class SslCertTestManualCloudClusterELBSelfSigned extends AbstractConnecti
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
-    props.put(PropertiesFileHelper.COLLECTOR_URI, "https://pr16-kimono-indexers-1352118867.us-east-1.elb.amazonaws.com:443");
+    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    //props.put(PropertiesFileHelper.COLLECTOR_URI, "https://pr16-kimono-indexers-1352118867.us-east-1.elb.amazonaws.com:443");
     props.put(PropertiesFileHelper.TOKEN_KEY, "6AFC4B90-5974-478C-9EC6-5F586CDD2F46");
     props.put(PropertiesFileHelper.DISABLE_CERT_VALIDATION_KEY, "true");
     return props;
