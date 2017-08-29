@@ -32,7 +32,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class BatchedVolumeTest extends AbstractConnectionTest {
 
-  protected int numToSend = 1000000;
+  protected int numToSend = 10000000;
 
   private String TEXT_TO_RAW_WITH_BUFFERING = "TEXT_TO_RAW_BATCHED_VOLUME_TEST";
   private String JSON_TO_RAW_WITH_BUFFERING = "JSON_TO_RAW_BATCHED_VOLUME_TEST";
@@ -47,8 +47,8 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   private String run_id = UUID.randomUUID().toString(); // All 4 tests in this suite will have the same run ID
 
   /* ************************************* SETTINGS **************************************** */
-  private String splunkType = LOCAL_CLUSTER; // just a label - change this before every test run
-  private String notes = "\"Rep Factor=3. 6 addresses total: each url resolves to 2 addresses (IPv4 and IPv6)\""; // e.g. replication factor of 3
+  private String splunkType = CLOUD_CLUSTER_DIRECT_TO_INDEXERS; // just a label - change this before every test run
+  private String notes = "\"Rep Factor=3\""; // e.g. replication factor of 3
 //  private int bufferSize = 1024*1024; // uncomment this if you're not passing buffer size by command line
   /* ************************************ /SETTINGS **************************************** */
 
@@ -57,7 +57,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   @Override
   protected void configureConnection(Connection connection) {
-    connection.setCharBufferSize(1024*32); //32k batching batching, roughly
+//    connection.setCharBufferSize(1024*32); //32k batching batching, roughly
   }
 
 
