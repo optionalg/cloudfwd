@@ -1,9 +1,10 @@
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import static com.splunk.cloudfwd.PropertyKeys.*;
+import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -48,15 +49,13 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     Properties props = new Properties();
     //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     //simulate a non-sticky endpoint
-    props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
+    props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
-    props.put(PropertiesFileHelper.MAX_TOTAL_CHANNELS, "1");
-    props.
-            put(PropertiesFileHelper.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,
-                    "1000");
-    props.put(PropertiesFileHelper.ACK_POLL_MS, "250");
-    props.put(PropertiesFileHelper.HEALTH_POLL_MS, "250");
-    props.put(PropertiesFileHelper.UNRESPONSIVE_MS, "-1"); //disable dead channel removel
+    props.put(MAX_TOTAL_CHANNELS, "1");
+    props.put(MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,"1000");
+    props.put(ACK_POLL_MS, "250");
+    props.put(HEALTH_POLL_MS, "250");
+    props.put(UNRESPONSIVE_MS, "-1"); //disable dead channel removel
 
     return props;
   }
@@ -70,7 +69,13 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   protected void sendEvents() throws TimeoutException, InterruptedException {
     int expected = getNumEventsToSend();
     TriggerableUnhealthyEndpoints.healthy = true;
-    connection.send(getTimestampedRawEvent(1)); //shoud acknowledge
+    try {
+      connection.send(getTimestampedRawEvent(1)); //shoud acknowledge
+    } catch (HecConnectionTimeoutException ex) {
+      Logger.getLogger(UnhealthyEndpointTest.class.getName()).
+              log(Level.SEVERE, null, ex);
+      Assert.fail();
+    }
     this.callbacks.await(10, TimeUnit.MINUTES); //wait for both messages to ack
     connection.close(); //will flush 
   }
@@ -109,7 +114,13 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
         //must send from another thread
         new Thread(() -> {
           long start = System.currentTimeMillis();
-          connection.send(getTimestampedRawEvent(2));
+          try {
+            connection.send(getTimestampedRawEvent(2));
+          } catch (HecConnectionTimeoutException ex) {
+            Logger.getLogger(UnhealthyEndpointTest.class.getName()).
+                    log(Level.SEVERE, null, ex);
+            Assert.fail();
+          }
           long blockedOnUnhealthyChannelTime = System.currentTimeMillis() - start;
           Assert.assertTrue(
                   "Message only blocked for " + blockedOnUnhealthyChannelTime + " ms. Expected at least 4000 ms.",

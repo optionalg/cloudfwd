@@ -1,7 +1,4 @@
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
-import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
 
@@ -22,31 +19,19 @@ import org.junit.Test;
  */
 
 /**
- *
+ * Assumes lb.properties sets event_batch_size to 4M or something large
  * @author ghendrey
  */
-public class NonBatchedVolumeTest extends AbstractConnectionTest{
-
-  protected int numToSend = 1000000;
-
-  @Test
-  public void sendWithoutBatching() throws InterruptedException, TimeoutException {
-    connection.setEventBatchSize(0);
-    super.sendEvents();
-  }
-
-
-  @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
-    return props;
-  }
-
+public class LargeBatchTest extends AbstractConnectionTest {
 
   @Override
   protected int getNumEventsToSend() {
-    return numToSend;
+    return 1000000;
   }
-
+  
+  @Test
+  public void sendLots() throws TimeoutException, InterruptedException{
+    super.sendEvents();
+  }
+  
 }

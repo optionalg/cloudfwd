@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
+import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import org.junit.Test;
 
 import java.util.Properties;
@@ -39,7 +39,7 @@ public class SslCertTestManualCloudClusterDirect extends AbstractConnectionTest 
 
   @Test
   public void sendLotsOfMessagesWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
+    connection.setEventBatchSize(1024*16);
     super.sendEvents();
   }
 
@@ -51,10 +51,9 @@ public class SslCertTestManualCloudClusterDirect extends AbstractConnectionTest 
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
-    props.put(PropertiesFileHelper.COLLECTOR_URI, "https://inputs1.kinesis1.splunkcloud.com:8088");
-    props.put(PropertiesFileHelper.TOKEN_KEY, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(PropertiesFileHelper.DISABLE_CERT_VALIDATION_KEY, "true");
+    props.put(COLLECTOR_URI, "https://inputs1.kinesis1.splunkcloud.com:8088");
+    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
+    props.put(DISABLE_CERT_VALIDATION, "true");
     return props;
   }
 

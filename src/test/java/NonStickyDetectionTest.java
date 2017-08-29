@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.IllegalHECStateException;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
+import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
@@ -84,16 +85,15 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     //simulate a non-sticky endpoint
-    props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
+    props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.errorgen.nonsticky.NonStickEndpoints");
     return props;
   }
   
   @Override
   protected void configureConnection(Connection connection) {
-    connection.setCharBufferSize(0);
+    connection.setEventBatchSize(0);
   }  
 
   @Override

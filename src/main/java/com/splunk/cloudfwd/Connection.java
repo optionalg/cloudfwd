@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.util.CallbackInterceptor;
 import com.splunk.cloudfwd.util.LoadBalancer;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
@@ -55,7 +56,7 @@ public class Connection implements Closeable {
   private boolean closed;
   private HecEndpoint hecEndpointType;
   private EventBatch events; //default EventBatch used if send(event) is called
-  private int charBufferSize;
+  //private int charBufferSize;
   private PropertiesFileHelper propertiesFileHelper;
 
   public Connection(ConnectionCallbacks callbacks) {
@@ -69,7 +70,6 @@ public class Connection implements Closeable {
   }
 
   private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
-    this.charBufferSize = propertiesFileHelper.getMinEventBatchSize();
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
@@ -81,17 +81,21 @@ public class Connection implements Closeable {
     
   }
 
-  public synchronized void setEventAcknowledgementTimeout(long ms) {
-    this.timeoutChecker.setTimeout(ms);
+  public synchronized void setEventAcknowledgementTimeoutMS(long ms) {
+    this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
   }
-
-  public long getSendTimeout() {
-    return this.timeoutChecker.getTimeout();
+  
+  public synchronized void setBlockingTimeoutMS(long ms){
+    this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.valueOf(ms));
   }
 
   @Override
   public void close() {
-    flush();
+    try {
+      flush();
+    } catch (HecConnectionTimeoutException ex) {
+      throw new RuntimeException(ex.getMessage(),ex);
+    }
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
@@ -127,18 +131,18 @@ public class Connection implements Closeable {
     }
   }
 
-  public synchronized void send(Event event) {
+  public synchronized void send(Event event) throws HecConnectionTimeoutException {
     if (null == this.events) {
       this.events = new EventBatch();
     }
     this.events.add(event);
-    if (this.events.isFlushable(charBufferSize)) {
+    if (this.events.isFlushable(getEventBatchSize())) {
       sendBatch(events);
     }
 
   }
 
-  public synchronized void sendBatch(EventBatch events) {
+  public synchronized void sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (closed) {
       throw new IllegalStateException("Attempt to send on closed channel.");
     }
@@ -149,7 +153,7 @@ public class Connection implements Closeable {
     this.events = null; //batch is in flight, null it out
   }
 
-  public synchronized void flush() {
+  public synchronized void flush() throws HecConnectionTimeoutException {
     if (null != events) {
       sendBatch(events);
     }
@@ -185,17 +189,21 @@ public class Connection implements Closeable {
   }
 
   /**
-   * @return the charBufferSize
+   * @return the desired size of an EventBatch, in characters (not bytes)
    */
-  public int getCharBufferSize() {
-    return charBufferSize;
+  public int getEventBatchSize() {
+    return propertiesFileHelper.getEventBatchSize();
   }
 
   /**
-   * @param charBufferSize the charBufferSize to set
+   * @param numChars the size of the EventBatch in characters (not bytes)
    */
-  public void setCharBufferSize(int charBufferSize) {
-    this.charBufferSize = charBufferSize;
+  public void setEventBatchSize(int numChars) {
+    propertiesFileHelper.putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.valueOf(numChars));
+  }
+  
+  public long getBlockingTimeoutMS(){
+    return propertiesFileHelper.getBlockingTimeoutMS();
   }
 
 }

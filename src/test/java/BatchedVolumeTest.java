@@ -33,7 +33,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   @Override
   protected void configureConnection(Connection connection) {
-    connection.setCharBufferSize(1024*32); //32k batching batching, roughly
+    connection.setEventBatchSize(1024*32); //32k batching batching, roughly
   }
 
 
