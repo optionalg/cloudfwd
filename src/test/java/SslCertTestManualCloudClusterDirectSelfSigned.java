@@ -52,7 +52,7 @@ public class SslCertTestManualCloudClusterDirectSelfSigned extends AbstractConne
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
     props.put(PropertiesFileHelper.COLLECTOR_URI, "https://inputs1.pr16-kimono.splunkcloud.com:8088");
     props.put(PropertiesFileHelper.TOKEN_KEY, "6AFC4B90-5974-478C-9EC6-5F586CDD2F46");
     props.put(PropertiesFileHelper.DISABLE_CERT_VALIDATION_KEY, "true");

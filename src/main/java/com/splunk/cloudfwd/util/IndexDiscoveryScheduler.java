@@ -50,7 +50,7 @@ class IndexDiscoveryScheduler {
     };
     //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
     //if the execution time of a task exceeds the period. We don't want that.
-    scheduler.scheduleWithFixedDelay(poller, 0, 1, TimeUnit.SECONDS);
+    scheduler.scheduleWithFixedDelay(poller, 0, 1, TimeUnit.SECONDS); //TODO MAKE THIS MILLISECONDS
     this.started = true;
     System.out.println("STARTED INDEX DISCOVERY POLLING");
 

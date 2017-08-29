@@ -23,6 +23,7 @@ public abstract class LifecycleEvent {
 
   public enum Type {
 	// States tied to an EventBatch object
+// States tied to an EventBatch object
     PRE_EVENT_POST,
     EVENT_POST_OK,
     EVENT_POST_NOT_OK,
@@ -34,7 +35,7 @@ public abstract class LifecycleEvent {
 
     // States without an EventBatch object
     HEALTH_POLL_OK,
-    HEALTH_POLL_NOT_OK,
+    HEALTH_POLL_INDEXER_BUSY,
     HEALTH_POLL_FAILED
   };
 
@@ -50,6 +51,13 @@ public abstract class LifecycleEvent {
   public Type getType() {
     return type;
   }
+
+  @Override
+  public String toString() {
+    return "LifecycleEvent{" + "type=" + type + '}';
+  }
+  
+  
 
 
 }

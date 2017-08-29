@@ -24,8 +24,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,19 +52,12 @@ public class AcknowledgementTracker {
     this.sender = sender;
   }
 
-  @Override
-  public String toString() {
-
-    try {
-      Map json = new HashMap();
-      json.put("acks", Collections.unmodifiableSet(idTracker.polledAcks.keySet())); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
-      return jsonMapper.writeValueAsString(json); //this class itself marshals out to {"acks":[id,id,id]}
-    } catch (JsonProcessingException ex) {
-      Logger.getLogger(AcknowledgementTracker.class.getName()).log(Level.SEVERE,
-              null, ex);
-      throw new RuntimeException(ex.getMessage(), ex);
-    }
-
+  /**
+   * Returns the request whose string is posted to acks endpoint. But caller should check AckRequest.isEmpty first
+   * @return
+   */
+  public AckRequest getAckRequest() {
+    return new AckRequest(idTracker.polledAcks.keySet());
   }
 
   public boolean isEmpty() {
@@ -99,6 +94,10 @@ public class AcknowledgementTracker {
       Collection<Long> succeeded = apr.getSuccessIds();
       System.out.println("success acked ids: " + succeeded);
       if (succeeded.isEmpty()) {
+        /*
+        this.sender.getChannelMetrics().update(new EventBatchResponse(
+                  LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?",
+                  events));*/
         return;
       }
       synchronized (idTracker) {
@@ -154,6 +153,40 @@ public class AcknowledgementTracker {
     public final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
     public final Map<Comparable, EventBatch> postedEventBatches = new ConcurrentHashMap<>();//key EventBatch ID
 
+  }
+  
+  public static class AckRequest{
+    Set<Long> ackIds = new LinkedHashSet<>();
+
+    public AckRequest(Set<Long> ackIds) {
+      //take a copy, otherwise the ack id set can empty before we post it and post empty ack set is illegal
+      this.ackIds.addAll(ackIds); 
+    }
+
+    /**
+     * @return the empty
+     */
+    public boolean isEmpty() {
+      return ackIds.isEmpty();
+    }
+
+    /**
+     * @return the request POST content for ack polling like {"acks":[1,2,3]}
+     */
+    @Override
+    public String toString() {
+    try {
+      Map json = new HashMap();
+      json.put("acks", this.ackIds); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
+      return jsonMapper.writeValueAsString(json);
+    } catch (JsonProcessingException ex) {
+      Logger.getLogger(AcknowledgementTracker.class.getName()).log(Level.SEVERE,
+              null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+    }
+    
+    
   }
 
 }

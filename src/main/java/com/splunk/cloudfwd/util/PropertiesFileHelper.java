@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.datatype.DatatypeConstants;
 
 /**
  *
@@ -48,10 +49,26 @@ public class PropertiesFileHelper {
   public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
   public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
   public static final String MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "max_unacked_per_channel";
+  public static final String EVENT_BATCH_SIZE = "event_batch_size";
+  public static final int MIN_EVENT_BATCH_SIZE = 0;
+  public static final String DEFAULT_EVENT_BATCH_SIZE = "32768";
+  public static final String ACK_POLL_MS = "ack_poll_ms";
+  public static final long MIN_ACK_POLL_MS = 250;
+  public static final String DEFAULT_ACK_POLL_MS = "1000";
+  public static final String HEALTH_POLL_MS = "health_poll_ms";
+  public static final long MIN_HEALTH_POLL_MS = 1000;
+  public static final String DEFAULT_HEALTH_POLL_MS = "1000";  
+  public static final String CHANNEL_DECOM_MS = "channel_decom_ms";
+  public static final long MIN_DECOM_MS = 60000;
+  public static final String DEFAULT_DECOM_MS = "600000";   //10 min
+  public static final String ACK_TIMEOUT_MS = "ack_timeout_ms";
+  public static final String DEFAULT_ACK_TIMEOUT_MS = "300000"; //5 min
+  public static final long MIN_ACK_TIMEOUT_MS = 60000;  //60 sec
   public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
   public static final String SSL_CERT_CONTENT_KEY = "ssl_cert_content";
   public static final String CLOUD_SSL_CERT_CONTENT_KEY = "cloud_ssl_cert_content";
   public static final String ENABLE_HTTP_DEBUG = "enable_http_debug";
+
 
   private Properties defaultProps = new Properties();
 
@@ -84,11 +101,14 @@ public class PropertiesFileHelper {
         URL url = new URL(urlString.trim());
         urls.add(url);
       } catch (MalformedURLException ex) {
-        LOG.throwing(PropertiesFileHelper.class.getName(), "getUrls", ex);
+        LOG.severe(ex.getMessage());
+        throw new RuntimeException(ex);
       }
     }
     return urls;
   }
+  
+
 
   // Compares if the first URL matches Cloud>Trail domain (cloud.splunk.com)
   public boolean isCloudInstance() {
@@ -108,6 +128,24 @@ public class PropertiesFileHelper {
     return Long.parseLong(defaultProps.getProperty(
             UNRESPONSIVE_MS, "-1").trim());
   }
+  
+  public long getAckPollMS() {
+    long interval = Long.parseLong(defaultProps.getProperty(ACK_POLL_MS, DEFAULT_ACK_POLL_MS).trim());
+    if (interval <= 0) {
+      interval = MIN_ACK_POLL_MS;
+    }
+    return interval;
+    
+  }  
+  
+  public long getHealthPollMS() {
+        long interval = Long.parseLong(defaultProps.getProperty(HEALTH_POLL_MS, DEFAULT_HEALTH_POLL_MS).trim());
+    if (interval <= 0) {
+      interval = MIN_HEALTH_POLL_MS;
+    }
+    return interval;
+  }
+  
 
   public int getMaxTotalChannels() {
     int max = Integer.parseInt(defaultProps.getProperty(
@@ -126,6 +164,37 @@ public class PropertiesFileHelper {
     }
     return max;
   }
+  
+  public int getMinEventBatchSize() {
+    int max = Integer.parseInt(defaultProps.getProperty(
+            EVENT_BATCH_SIZE, DEFAULT_EVENT_BATCH_SIZE).trim());
+    if (max < 1) {
+      max = MIN_EVENT_BATCH_SIZE;
+    }
+    return max;
+  }  
+  
+  public long getChannelDecomMS() {
+    long decomMs = Long.parseLong(defaultProps.getProperty(
+            CHANNEL_DECOM_MS, DEFAULT_DECOM_MS).trim());
+    if(decomMs <= 1){
+      return -1;
+    }
+    if (decomMs < MIN_DECOM_MS) {
+      LOG.warning("Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
+      decomMs = MIN_DECOM_MS;
+    }
+    return decomMs;
+  }    
+  
+  public long getAckTimeoutMS() {
+    long timeout = Long.parseLong(defaultProps.getProperty(
+            ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
+    if (timeout < MIN_ACK_TIMEOUT_MS) {
+      LOG.warning("Ignoring setting for " + MIN_ACK_TIMEOUT_MS + " because it is less than minimum acceptable value: " + MIN_ACK_TIMEOUT_MS);
+    }
+    return timeout;
+  }    
 
   public boolean isMockHttp() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,

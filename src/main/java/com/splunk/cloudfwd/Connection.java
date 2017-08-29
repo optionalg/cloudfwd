@@ -33,7 +33,14 @@ import java.util.logging.Logger;
  */
 public class Connection implements Closeable {
 
-  public final static long DEFAULT_SEND_TIMEOUT_MS = 5 * 60 * 1000;
+  private static final Logger LOG = Logger.getLogger(Connection.class.getName());
+
+  /**
+   * @return the propertiesFileHelper
+   */
+  public PropertiesFileHelper getPropertiesFileHelper() {
+    return propertiesFileHelper;
+  }
 
   /**
    * Used to select either structured HEC /event endpoint, or raw HEC endpoint
@@ -48,6 +55,7 @@ public class Connection implements Closeable {
   private HecEndpoint hecEndpointType;
   private EventBatch events; //default EventBatch used if send(event) is called
   private int charBufferSize;
+  private PropertiesFileHelper propertiesFileHelper;
 
   /* *********************** METRICS ************************ */
   private String testName;
@@ -56,27 +64,29 @@ public class Connection implements Closeable {
   /* *********************** /METRICS ************************ */
 
   public Connection(ConnectionCallbacks callbacks) {
-    init(callbacks);
-    this.lb = new LoadBalancer(this);
+    this(callbacks, new Properties());
   }
 
   public Connection(ConnectionCallbacks callbacks, Properties settings) {
-    init(callbacks);
-    this.lb = new LoadBalancer(this, settings);
+    this.propertiesFileHelper = new PropertiesFileHelper(settings);
+    init(callbacks, propertiesFileHelper);
+    this.lb = new LoadBalancer(this);
   }
 
-  private void init(ConnectionCallbacks callbacks) {
+  private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
+    this.charBufferSize = propertiesFileHelper.getMinEventBatchSize();
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
     //the EventBatch that succeeded or failed from the timoutChecker
-    this.timeoutChecker = new TimeoutChecker(DEFAULT_SEND_TIMEOUT_MS);
+    this.timeoutChecker = new TimeoutChecker(propertiesFileHelper.getAckTimeoutMS());
     this.callbacks = new CallbackInterceptor(callbacks,
             timeoutChecker::removeEvents);
     this.timeoutChecker.setInterceptor(this.callbacks);
+    
   }
 
-  public synchronized void setSendTimeout(long ms) {
+  public synchronized void setEventAcknowledgementTimeout(long ms) {
     this.timeoutChecker.setTimeout(ms);
   }
 
@@ -139,6 +149,7 @@ public class Connection implements Closeable {
     }
     timeoutChecker.start();
     timeoutChecker.add(events);
+    LOG.info("sending " + events.getCharCount() + " characters.");
     lb.sendBatch(events);
     this.events = null; //batch is in flight, null it out
   }
@@ -190,10 +201,6 @@ public class Connection implements Closeable {
    */
   public void setCharBufferSize(int charBufferSize) {
     this.charBufferSize = charBufferSize;
-  }
-
-  public PropertiesFileHelper getPropertiesFileHelper() {
-    return lb.getPropertiesFileHelper();
   }
 
   public String getRunId() {

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.IllegalHECStateException;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
@@ -83,12 +84,17 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     //simulate a non-sticky endpoint
     props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
             "com.splunk.cloudfwd.sim.errorgen.nonsticky.NonStickEndpoints");
     return props;
   }
+  
+  @Override
+  protected void configureConnection(Connection connection) {
+    connection.setCharBufferSize(0);
+  }  
 
   @Override
   protected int getNumEventsToSend() {

@@ -3,6 +3,7 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -45,10 +46,18 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     //simulate a non-sticky endpoint
     props.put(PropertiesFileHelper.MOCK_HTTP_CLASSNAME_KEY,
             "com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
+    props.put(PropertiesFileHelper.MAX_TOTAL_CHANNELS, "1");
+    props.
+            put(PropertiesFileHelper.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,
+                    "1000");
+    props.put(PropertiesFileHelper.ACK_POLL_MS, "250");
+    props.put(PropertiesFileHelper.HEALTH_POLL_MS, "250");
+    props.put(PropertiesFileHelper.UNRESPONSIVE_MS, "-1"); //disable dead channel removel
+
     return props;
   }
 
@@ -61,7 +70,6 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   protected void sendEvents() throws TimeoutException, InterruptedException {
     int expected = getNumEventsToSend();
     TriggerableUnhealthyEndpoints.healthy = true;
-    customCallback.expectAck = true;
     connection.send(getTimestampedRawEvent(1)); //shoud acknowledge
     this.callbacks.await(10, TimeUnit.MINUTES); //wait for both messages to ack
     connection.close(); //will flush 
@@ -74,37 +82,45 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
   class UnhealthyCallbackDetector extends BasicCallbacks {
 
-    boolean expectAck = true;
-    boolean done = false;
+    long sleepTime = 3000; //3 sec
+    int count = 0;
 
     public UnhealthyCallbackDetector(int expected) {
       super(expected);
+      TriggerableUnhealthyEndpoints.healthy = true;
     }
 
     @Override
     public void acknowledged(EventBatch events) {
-      if (done) {
-        return;
+      count++;
+      if (count == 2) {
+        Assert.assertTrue("Message Failed to block on unhealthy channel",
+                TriggerableUnhealthyEndpoints.healthy);
+        return; //need one event to return so that we start polling
       }
-      if (!expectAck) {
-        Assert.fail(
-                "Got an ack when we expected unhealthy indexer to be blocked");
-      } else {
-        try {
-          expectAck = false;//any acknowledged received will cause test fail
-          //MAKE UNhealthy then send a second message
-          TriggerableUnhealthyEndpoints.healthy = false;
-          Thread.sleep(2000); //make sure health poll becomes unhealthy (poll has interval so we must wait)
-          connection.send(getTimestampedRawEvent(2));
-          Thread.sleep(2000); //this is definitely enough time to detect the assertion above and fail if we see it         
-          done = true; //so we don't get in an infinite loop of sending (which would repeat message 2)
-          TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll  
-          //...which will cause acknowledged to be invoked again, but now done=true so test will end.
-        } catch (InterruptedException ex) {
-          Logger.getLogger(UnhealthyEndpointTest.class.getName()).
-                  log(Level.SEVERE, null, ex);
-        }
 
+      try {
+        System.out.println("Got first ack");
+        //MAKE UNhealthy then send a second message
+        TriggerableUnhealthyEndpoints.healthy = false;
+        System.out.println("waiting to detect unhealthy channel");
+        Thread.sleep(sleepTime); //make sure health poll becomes unhealthy (poll has interval so we must wait)
+        System.out.println("sending event that we expect to block on send");
+        //must send from another thread
+        new Thread(() -> {
+          long start = System.currentTimeMillis();
+          connection.send(getTimestampedRawEvent(2));
+          long blockedOnUnhealthyChannelTime = System.currentTimeMillis() - start;
+          Assert.assertTrue(
+                  "Message only blocked for " + blockedOnUnhealthyChannelTime + " ms. Expected at least 4000 ms.",
+                  blockedOnUnhealthyChannelTime > sleepTime); //we must have blocked longer than the unhealthy time 
+        }).start();
+        Thread.sleep(sleepTime); //wait couple seconds to let channel become healthy
+        TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll  
+        //...which will cause acknowledged to be invoked again, but then count will be 2 so test will end.
+      } catch (InterruptedException ex) {
+        Logger.getLogger(UnhealthyEndpointTest.class.getName()).
+                log(Level.SEVERE, ex.getMessage(), ex);
       }
 
     }

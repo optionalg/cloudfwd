@@ -32,7 +32,7 @@ public class TimeoutChecker {
   private PollScheduler timoutCheckScheduler = new PollScheduler(
           "Event Timeout Scheduler");
   private final Map<Comparable, EventBatch> eventBatches = new ConcurrentHashMap<>();
-  private long timeout = Connection.DEFAULT_SEND_TIMEOUT_MS;
+  private long timeout;
   private CallbackInterceptor interceptor;
 
   public TimeoutChecker(long ms) {

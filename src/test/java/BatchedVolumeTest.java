@@ -55,6 +55,11 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   public BatchedVolumeTest() {
   }
 
+  @Override
+  protected void configureConnection(Connection connection) {
+    connection.setCharBufferSize(1024*32); //32k batching batching, roughly
+  }
+
 
 
   @Test
@@ -157,12 +162,17 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 //    );
   }
 
+/*
+>>>>>>> master
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     return props;
   }
+<<<<<<< HEAD
+=======
+*/
 
   @Override
   protected int getNumEventsToSend() {
