@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.IllegalHECStateException;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
@@ -75,7 +76,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
     try {
       super.eventType = EventType.TEXT;
       super.sendEvents();
-    } catch (TimeoutException e) {
+    } catch (HecConnectionTimeoutException e) {
       System.out.println(
               "Got expected timeout exception because all channels are broken (per test design): " + e.
               getMessage());

@@ -1,5 +1,6 @@
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
@@ -30,7 +31,7 @@ public class NonBatchedVolumeTest extends AbstractConnectionTest{
   protected int numToSend = 1000000;
 
   @Test
-  public void sendWithoutBatching() throws InterruptedException, TimeoutException {
+  public void sendWithoutBatching() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
     connection.setEventBatchSize(0);
     super.sendEvents();
   }

@@ -40,7 +40,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   }
 
   @Test
-  public void testHealthyThenUnhealthyThenHealthy() throws TimeoutException, InterruptedException {
+  public void testHealthyThenUnhealthyThenHealthy() throws HecConnectionTimeoutException, InterruptedException {
     sendEvents();
   }
 
@@ -66,7 +66,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected void sendEvents() throws TimeoutException, InterruptedException {
+  protected void sendEvents() throws HecConnectionTimeoutException, InterruptedException {
     int expected = getNumEventsToSend();
     TriggerableUnhealthyEndpoints.healthy = true;
     try {

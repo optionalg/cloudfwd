@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints;
 import java.util.Properties;
@@ -42,13 +41,11 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   }
 
   @Test
-  public void testTimeout() throws InterruptedException {
-    try {
+  public void testTimeout() throws InterruptedException, HecConnectionTimeoutException {
+    
       super.eventType = EventType.TEXT;
       super.sendEvents();
-    } catch (TimeoutException ex) {
 
-    }
   }
 
   @Override
@@ -79,7 +76,7 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   }
   
   @Override
-  protected void sendEvents() throws TimeoutException, InterruptedException {
+  protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
     super.sendEvents();
     Assert.assertTrue("didn't get expected timeout",((TimeoutCatcher)super.callbacks).gotTimeout);
   }

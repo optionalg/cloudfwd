@@ -1,4 +1,5 @@
 
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
 
@@ -30,7 +31,7 @@ public class LargeBatchTest extends AbstractConnectionTest {
   }
   
   @Test
-  public void sendLots() throws TimeoutException, InterruptedException{
+  public void sendLots() throws TimeoutException, InterruptedException, HecConnectionTimeoutException{
     super.sendEvents();
   }
   

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
 import org.junit.Test;
@@ -33,12 +34,12 @@ public class SslCertTestManualCloudClusterDirectSelfSigned extends AbstractConne
   }
 
   @Test
-  public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
+  public void sendLotsOfMessages() throws InterruptedException, HecConnectionTimeoutException {
     super.sendEvents();
   }
 
   @Test
-  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, TimeoutException {
+  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, HecConnectionTimeoutException {
     connection.setEventBatchSize(1024*16);
     super.sendEvents();
   }
