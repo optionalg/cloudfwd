@@ -101,7 +101,7 @@ public abstract class AbstractConnectionTest {
     }
   }
 
-  protected void sendCombinationEvents() throws TimeoutException, InterruptedException {
+  protected void sendCombinationEvents() throws TimeoutException, InterruptedException, HecConnectionTimeoutException {
     System.out.println(
             "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID +
                     "And test method GUID " + testMethodGUID);

@@ -17,6 +17,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.HttpClientFactory;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 
@@ -69,13 +71,8 @@ public class ReconciliationTest extends AbstractConnectionTest {
     public ReconciliationTest() {
     }
 
-    @Override
-    protected void configureConnection(Connection connection) {
-        connection.setCharBufferSize(1024*32); //32k batching batching, roughly
-    }
-
     @Test
-    public void sendTextToRawEndpoint() throws InterruptedException, TimeoutException {
+    public void sendTextToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = EventType.TEXT;
         super.sendEvents();
@@ -84,7 +81,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     }
 
     @Test
-    public void sendJsonToRawEndpoint() throws InterruptedException, TimeoutException {
+    public void sendJsonToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = EventType.JSON;
         super.sendEvents();
@@ -93,7 +90,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     }
 
     @Test
-    public void sendTextToEventsEndpoint() throws InterruptedException, TimeoutException {
+    public void sendTextToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = EventType.TEXT;
         super.sendEvents();
@@ -102,7 +99,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     }
 
     @Test
-    public void sendJsonToEventsEndpoint() throws InterruptedException, TimeoutException {
+    public void sendJsonToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = EventType.JSON;
         super.sendEvents();
@@ -111,7 +108,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     }
 
     @Test
-    public void sendTextJsonToRawEndpoint() throws InterruptedException, TimeoutException {
+    public void sendTextJsonToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.sendCombinationEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -119,7 +116,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     }
 
     @Test
-    public void sendTextJsonToEventsEndpoint() throws InterruptedException, TimeoutException {
+    public void sendTextJsonToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.sendCombinationEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -129,7 +126,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     @Override
     protected Properties getProps() {
         Properties props = new Properties();
-        props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+        props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
         return props;
     }
 
