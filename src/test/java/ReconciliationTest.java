@@ -107,6 +107,22 @@ public class ReconciliationTest extends AbstractConnectionTest {
         verifyResults(getSentEvents(), searchResults);
     }
 
+    @Test
+    public void sendTextJsonToRawEndpoint() throws InterruptedException, TimeoutException {
+        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        super.sendCombinationEvents();
+        Set<String> searchResults = getEventsFromSplunk();
+        verifyResults(getSentEvents(), searchResults);
+    }
+
+    @Test
+    public void sendTextJsonToEventsEndpoint() throws InterruptedException, TimeoutException {
+        connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        super.sendCombinationEvents();
+        Set<String> searchResults = getEventsFromSplunk();
+        verifyResults(getSentEvents(), searchResults);
+    }
+
     @Override
     protected Properties getProps() {
         Properties props = new Properties();
@@ -213,18 +229,26 @@ public class ReconciliationTest extends AbstractConnectionTest {
         }
 
         for (Event e : sentEvents) {
-            String eventText = e.toString();
-            try {
-                // extract the event text from the "event" key
-                ObjectMapper json = new ObjectMapper();
-                if (isJsonToEvent()) {
-                    eventText = json.readTree(eventText).path("event").toString();
-                } else if (isTextToEvent()) {
-                    eventText = json.readTree(eventText).path("event").asText();
+            String eventText = null;
+            ObjectMapper json = new ObjectMapper();
+            if (isEventEndpoint()) {
+                try {
+                    // extract the event text from the "event" key
+                    eventText = json.readTree(e.toString()).path("event").asText();
+                    if (eventText.isEmpty()) {
+                        try {
+                            eventText = json.readTree(e.toString()).path("event").toString();
+                        } catch (IOException e1) {
+                            Assert.fail("Could not parse 'event' key from JSON object: " + e1.getMessage());
+                        }
+                    }
+                } catch (IOException j) {
+                    Assert.fail("Could not parse 'event' key from JSON object: " + j.getMessage());
                 }
-            } catch (IOException e1) {
-                Assert.fail("Could not parse 'event' key from JSON object: " + e1.getMessage());
+            } else {
+               eventText = e.toString();
             }
+
             if (!searchResults.remove(eventText.trim())) {
                 Assert.fail("Event was not present in search results: " + e.toString());
             }
@@ -235,15 +259,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
         }
     }
 
-
-
-    private boolean isJsonToEvent() {
-        return connection.getHecEndpointType().equals(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT)
-                && eventType.equals(EventType.JSON);
-    }
-
-    private boolean isTextToEvent() {
-        return connection.getHecEndpointType().equals(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT)
-                && eventType.equals(EventType.TEXT);
+    private boolean isEventEndpoint() {
+        return connection.getHecEndpointType().equals(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     }
 }

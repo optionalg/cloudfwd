@@ -100,6 +100,29 @@ public abstract class AbstractConnectionTest {
     }
   }
 
+  protected void sendCombinationEvents() throws TimeoutException, InterruptedException {
+    System.out.println(
+            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID +
+                    "And test method GUID " + testMethodGUID);
+    int expected = getNumEventsToSend();
+    for (int i = 0; i < expected; i++) {
+      ///final EventBatch events =nextEventBatch(i+1);
+      if (i%2==1) {
+        this.eventType = EventType.TEXT;
+      } else {
+        this.eventType = EventType.JSON;
+      }
+      Event event = nextEvent(i + 1);
+      System.out.println("Send event: " + event.getId() + " i=" + i);
+      this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
+    }
+    connection.close(); //will flush
+    this.callbacks.await(10, TimeUnit.MINUTES);
+    if (callbacks.isFailed()) {
+      Assert.fail(callbacks.getFailMsg());
+    }
+  }
+
   /**
    * test should override this to add properties on top of lb.properties+test.properties
    * @return
