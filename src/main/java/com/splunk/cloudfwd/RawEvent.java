@@ -15,7 +15,10 @@
  */
 package com.splunk.cloudfwd;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
@@ -59,6 +62,7 @@ public class RawEvent implements Event{
     if(type!=JsonNodeType.OBJECT && type!=JsonNodeType.ARRAY && type!=JsonNodeType.POJO) {
       throw new IllegalStateException("Incorrect event type object: " + type);
     }
+
     return new RawEvent(jsonMapper.readTree(jsonBytes).toString(), id,  true);
   }
   
