@@ -46,7 +46,7 @@ public class LogsProcessor {
     }
 
     /*
-     * Entry point to read dummy stock trade data from a Kinesis stream and send it to Splunk.
+     * Entry point to read data from a Kinesis stream and send it to Splunk.
      * Reads Splunk HEC configuration from examples/kinesis/resources/kinesis_example_lb.properties
      *
      * Run with four arguments:

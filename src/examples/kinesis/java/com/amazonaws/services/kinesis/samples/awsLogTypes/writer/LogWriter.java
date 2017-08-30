@@ -34,7 +34,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 
 /**
- * Continuously sends simulated stock trades to Kinesis
+ * Continuously sends cloud watch events, vpc logs and sys logs from files to Kinesis
  *
  */
 public class LogWriter {
@@ -75,9 +75,9 @@ public class LogWriter {
     }
 
     /**
-     * Uses the Kinesis client to send the stock trade to the given stream.
+     * Uses the Kinesis client to send the data from log files to the given stream.
      *
-     * @param logs instance representing the stock trade
+     * @param logs files representing cloud watch logs and events
      * @param kinesisClient Amazon Kinesis client
      * @param streamName Name of stream
      */

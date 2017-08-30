@@ -33,7 +33,7 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorF
 import com.amazonaws.services.kinesis.samples.awsLogTypes.processor.LogRecordProcessor;
 
 /**
- * Used to create new stock trade record processors.
+ * Used to create new record processors.
  *
  */
 public class LogRecordProcessorFactory implements IRecordProcessorFactory {
