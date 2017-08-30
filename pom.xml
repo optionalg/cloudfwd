@@ -97,7 +97,7 @@
                     <excludePackageNames>com.splunk.cloudfwd.http:com.splunk.cloudfwd.util:com.splunk.cloudfwd.sim:com.amazonaws.services.kinesis.samples.stocktrades.model:com.amazonaws.services.kinesis.samples.stocktrades.utils</excludePackageNames>
                 </configuration>
             </plugin>
-            <plugin>
+            <!--plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
@@ -112,13 +112,11 @@
                     <executable>java</executable>
                     <arguments>
                         <argument>-classpath</argument>
-                        <!-- automatically creates the classpath using all project dependencies,
-                        also adding the project build directory -->
                         <classpath/>
                         <argument>LoadBalancerTest</argument>
                     </arguments>
                 </configuration>
-            </plugin>
+            </plugin-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -138,6 +136,16 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12.4</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/LargeBatchTest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>            
         </plugins>
     </build>  
     <licenses>

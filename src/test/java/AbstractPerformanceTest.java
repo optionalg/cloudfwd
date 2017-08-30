@@ -31,6 +31,10 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
   protected BasicCallbacks getCallbacks() {
     return new ThroughputCalculatorCallback(getNumEventsToSend());
   }
+  @Override
+    protected String getTestPropertiesFileName() {
+    return "lb.properties"; //try as hard as we can to ignore test.properties and not use it
+  }
   
   @Override
   protected Properties getProps() {
