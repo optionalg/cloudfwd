@@ -42,6 +42,10 @@ import java.io.InputStream;
  */
 public abstract class AbstractConnectionTest {
 
+  /**
+   * set enabled=false in test.properties to disable test.properties and fallback on lb.properties
+   */
+  public static final String KEY_ENABLE_TEST_PROPERTIES = "enabled"; 
   protected BasicCallbacks callbacks;
   protected Connection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -158,7 +162,7 @@ public abstract class AbstractConnectionTest {
    * @param seqno
    * @return
    */
-  private Event nextEvent(int seqno) {
+  protected Event nextEvent(int seqno) {
     switch (this.eventType) {
       case TEXT: {
         if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
