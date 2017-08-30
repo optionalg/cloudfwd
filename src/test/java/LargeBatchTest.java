@@ -1,3 +1,8 @@
+
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import java.util.concurrent.TimeoutException;
+import org.junit.Test;
+
 /*
  * Copyright 2017 Splunk, Inc..
  *
@@ -13,40 +18,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http.lifecycle;
 
 /**
- *
+ * Assumes lb.properties sets event_batch_size to 4M or something large
  * @author ghendrey
  */
-public class Response extends LifecycleEvent {
-
-  private final int httpCode;
-  private final String resp;
-
-  public Response(final Type type, int httpCode, String resp) {
-    super(type);
-    this.httpCode = httpCode;
-    this.resp = resp;
-  }
+public class LargeBatchTest extends AbstractConnectionTest {
 
   @Override
-  public String toString() {
-    return super.toString()  + " Response{" + "httpCode=" + httpCode + ", resp=" + resp + '}';
+  protected int getNumEventsToSend() {
+    return 1000000;
   }
   
-
-  /**
-   * @return the httpCode
-   */
-  public int getHttpCode() {
-    return httpCode;
+  @Test
+  public void sendLots() throws TimeoutException, InterruptedException, HecConnectionTimeoutException{
+    super.sendEvents();
   }
-
-  /**
-   * @return the resp
-   */
-  public String getResp() {
-    return resp;
-  }
+  
 }

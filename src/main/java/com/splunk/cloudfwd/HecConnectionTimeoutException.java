@@ -13,40 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http.lifecycle;
+package com.splunk.cloudfwd;
 
 /**
  *
  * @author ghendrey
  */
-public class Response extends LifecycleEvent {
+public class HecConnectionTimeoutException extends Exception{
 
-  private final int httpCode;
-  private final String resp;
-
-  public Response(final Type type, int httpCode, String resp) {
-    super(type);
-    this.httpCode = httpCode;
-    this.resp = resp;
-  }
-
-  @Override
-  public String toString() {
-    return super.toString()  + " Response{" + "httpCode=" + httpCode + ", resp=" + resp + '}';
+  public HecConnectionTimeoutException(String message) {
+    super(message);
   }
   
-
-  /**
-   * @return the httpCode
-   */
-  public int getHttpCode() {
-    return httpCode;
-  }
-
-  /**
-   * @return the resp
-   */
-  public String getResp() {
-    return resp;
-  }
 }

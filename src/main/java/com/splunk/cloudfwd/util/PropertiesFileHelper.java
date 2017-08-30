@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import static com.splunk.cloudfwd.PropertyKeys.*;
 /**
  *
  * @author ghendrey
@@ -38,20 +38,8 @@ public class PropertiesFileHelper {
   private static final Logger LOG = Logger.getLogger(PropertiesFileHelper.class.
           getName());
 
-  public static final String TOKEN_KEY = "token";
-  public static final String COLLECTOR_URI = "url";
-  public static final String HOST = "host";
-  public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
-  public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
-  public static final String MOCK_HTTP_KEY = "mock_http";
-  public static final String MOCK_FORCE_URL_MAP_TO_ONE = "mock_force_url_map_to_one";
-  public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
-  public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
-  public static final String MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "max_unacked_per_channel";
-  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
-  public static final String SSL_CERT_CONTENT_KEY = "ssl_cert_content";
-  public static final String CLOUD_SSL_CERT_CONTENT_KEY = "cloud_ssl_cert_content";
-  public static final String ENABLE_HTTP_DEBUG = "enable_http_debug";
+  
+
 
   private Properties defaultProps = new Properties();
 
@@ -75,6 +63,10 @@ public class PropertiesFileHelper {
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
+  
+  public void putProperty(String k, String v){
+    this.defaultProps.put(k, v);
+  }
 
   public List<URL> getUrls() {
     List<URL> urls = new ArrayList<>();
@@ -84,11 +76,14 @@ public class PropertiesFileHelper {
         URL url = new URL(urlString.trim());
         urls.add(url);
       } catch (MalformedURLException ex) {
-        LOG.throwing(PropertiesFileHelper.class.getName(), "getUrls", ex);
+        LOG.severe(ex.getMessage());
+        throw new RuntimeException(ex);
       }
     }
     return urls;
   }
+  
+
 
   // Compares if the first URL matches Cloud>Trail domain (cloud.splunk.com)
   public boolean isCloudInstance() {
@@ -96,8 +91,7 @@ public class PropertiesFileHelper {
   }
 
   public int getChannelsPerDestination() {
-    int n = Integer.parseInt(defaultProps.getProperty(
-            CHANNELS_PER_DESTINATION_KEY, "8").trim());
+    int n = Integer.parseInt(defaultProps.getProperty(CHANNELS_PER_DESTINATION, "8").trim());
     if (n < 1) {
       n = Integer.MAX_VALUE; //effectively no limit by default
     }
@@ -108,6 +102,24 @@ public class PropertiesFileHelper {
     return Long.parseLong(defaultProps.getProperty(
             UNRESPONSIVE_MS, "-1").trim());
   }
+  
+  public long getAckPollMS() {
+    long interval = Long.parseLong(defaultProps.getProperty(ACK_POLL_MS, DEFAULT_ACK_POLL_MS).trim());
+    if (interval <= 0) {
+      interval = MIN_ACK_POLL_MS;
+    }
+    return interval;
+    
+  }  
+  
+  public long getHealthPollMS() {
+        long interval = Long.parseLong(defaultProps.getProperty(HEALTH_POLL_MS, DEFAULT_HEALTH_POLL_MS).trim());
+    if (interval <= 0) {
+      interval = MIN_HEALTH_POLL_MS;
+    }
+    return interval;
+  }
+  
 
   public int getMaxTotalChannels() {
     int max = Integer.parseInt(defaultProps.getProperty(
@@ -126,6 +138,46 @@ public class PropertiesFileHelper {
     }
     return max;
   }
+  
+  public int getEventBatchSize() {
+    int max = Integer.parseInt(defaultProps.getProperty(
+            EVENT_BATCH_SIZE, DEFAULT_EVENT_BATCH_SIZE).trim());
+    if (max < 1) {
+      max = MIN_EVENT_BATCH_SIZE;
+    }
+    return max;
+  }  
+  
+  public long getChannelDecomMS() {
+    long decomMs = Long.parseLong(defaultProps.getProperty(
+            CHANNEL_DECOM_MS, DEFAULT_DECOM_MS).trim());
+    if(decomMs <= 1){
+      return -1;
+    }
+    if (decomMs < MIN_DECOM_MS) {
+      LOG.warning("Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
+      decomMs = MIN_DECOM_MS;
+    }
+    return decomMs;
+  }    
+  
+  public long getAckTimeoutMS() {
+    long timeout = Long.parseLong(defaultProps.getProperty(
+            ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
+    if (timeout < MIN_ACK_TIMEOUT_MS) {
+      LOG.warning(ACK_TIMEOUT_MS+ " was set to a potentially too-low value: " + timeout);
+    }
+    return timeout;
+  }    
+  
+  public long getBlockingTimeoutMS() {
+    long timeout = Long.parseLong(defaultProps.getProperty(
+            BLOCKING_TIMEOUT_MS, DEFAULT_BLOCKING_TIMEOUT_MS).trim());
+    if (timeout < 0) {
+      throw new IllegalArgumentException(BLOCKING_TIMEOUT_MS + " must be positive.");
+    }
+    return timeout;
+  }     
 
   public boolean isMockHttp() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
@@ -138,7 +190,7 @@ public class PropertiesFileHelper {
   }
 
   public Endpoints getSimulatedEndpoints() {
-    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,
+    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
 
     try {
@@ -153,8 +205,7 @@ public class PropertiesFileHelper {
 
   public boolean isCertValidationDisabled() {
     return Boolean.parseBoolean(this.defaultProps.
-            getProperty(
-                    DISABLE_CERT_VALIDATION_KEY, "false").trim());
+            getProperty(DISABLE_CERT_VALIDATION, "false").trim());
   }
 
   public boolean enabledHttpDebug() {
@@ -169,9 +220,9 @@ public class PropertiesFileHelper {
    */
   public String getSSLCertContent() {
     if (isCloudInstance()) {
-      return defaultProps.getProperty(CLOUD_SSL_CERT_CONTENT_KEY).trim();
+      return defaultProps.getProperty(CLOUD_SSL_CERT_CONTENT).trim();
     }
-    return defaultProps.getProperty(SSL_CERT_CONTENT_KEY).trim()  ;
+    return defaultProps.getProperty(SSL_CERT_CONTENT).trim()  ;
   }
 
   public void enableHttpDebug() {
@@ -194,7 +245,7 @@ public class PropertiesFileHelper {
       if (enabledHttpDebug()) enableHttpDebug();
       String url = props.getProperty(COLLECTOR_URI).trim();
       String host = props.getProperty(HOST).trim();
-      String token = props.getProperty(TOKEN_KEY).trim();
+      String token = props.getProperty(TOKEN).trim();
       String cert = getSSLCertContent();
       HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert, host);
       if(isMockHttp()){

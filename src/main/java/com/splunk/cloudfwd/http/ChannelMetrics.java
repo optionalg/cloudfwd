@@ -42,7 +42,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
    */
 
   // health-related
-  private boolean lastHealthCheck;
+  //private boolean lastHealthCheck;
   // private long healthPollOKCount;
   // private long healthPollNotOKCount;
   // private long healthPollFailureCount;
@@ -58,37 +58,20 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
 
   private void handleLifecycleEvent(LifecycleEvent e) {
     switch (e.getType()) {
-      case EVENT_POST_OK: {
-        //System.out.println("NOTIFYING EVENT_POST_OK");
-        notifyObservers(e);
-        return;
-      }
-      case ACK_POLL_OK: {
-        notifyObservers(e);
-        return;
-      }
-
-      case HEALTH_POLL_OK: {
-        lastHealthCheck = true;
-        notifyObservers(e);
-        return;
-      }
-      case HEALTH_POLL_NOT_OK: {
-        lastHealthCheck = false;
-        notifyObservers(e);
-        return;
-      }
-      case HEALTH_POLL_FAILED: {
-        lastHealthCheck = false;
+      case EVENT_POST_OK: 
+      case ACK_POLL_OK: 
+      case HEALTH_POLL_OK:
+      case HEALTH_POLL_INDEXER_BUSY:{ //INDEXER_BUSY is a normal operating condition, not a failure
         notifyObservers(e);
         return;
       }
     }
     if(e instanceof Response){
       if(((Response) e).getHttpCode()!=200){
-      Response r = (Response)e;  
-      String msg = "Server did not return OK/200. Code: " + r.getHttpCode() + ", reply:" + ((Response) e).getResp();
-      connection.getCallbacks().failed(null, new RuntimeException(msg));
+        Response r = (Response)e;  
+        String msg = "Server did not return OK/200 in state "+e.getType().name()+". HTTP code: " + r.getHttpCode() + ", reply:" + ((Response) e).getResp();
+        connection.getCallbacks().failed(null, new RuntimeException(msg));
+        notifyObservers(e); //might as well tell everyone there was a problem
       }
     }
   }

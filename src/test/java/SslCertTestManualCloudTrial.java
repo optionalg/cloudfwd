@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
 import org.junit.Test;
 
-import java.util.Date;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
@@ -35,13 +34,13 @@ public class SslCertTestManualCloudTrial extends AbstractConnectionTest {
   }
 
   @Test
-  public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
+  public void sendLotsOfMessages() throws InterruptedException, HecConnectionTimeoutException {
     super.sendEvents();
   }
 
   @Test
-  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
+  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, HecConnectionTimeoutException {
+    connection.setEventBatchSize(1024*16);
     super.sendEvents();
   }
 
@@ -53,10 +52,9 @@ public class SslCertTestManualCloudTrial extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
-    props.put(PropertiesFileHelper.COLLECTOR_URI, "https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
-    props.put(PropertiesFileHelper.TOKEN_KEY, "6F339C3C-9658-4347-9DCA-A171E32072AF");
-    props.put(PropertiesFileHelper.DISABLE_CERT_VALIDATION_KEY, "false");
+    props.put(COLLECTOR_URI, "https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
+    props.put(TOKEN, "6F339C3C-9658-4347-9DCA-A171E32072AF");
+    props.put(DISABLE_CERT_VALIDATION, "false");
     return props;
   }
 

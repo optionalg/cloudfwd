@@ -32,6 +32,9 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.samples.stocktrades.model.StockTrade;
 import com.splunk.cloudfwd.EventWithMetadata;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Processes records retrieved from stock trades stream.
@@ -82,7 +85,12 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
         if (eventBatch.getNumEvents()  >= BATCH_SIZE) {
             LOG.info("Sending event batch with sequenceNumber=" + eventBatch.getId());
             callback.addCheckpointer((String)eventBatch.getId(), checkpointer);
+          try {
             splunk.sendBatch(eventBatch);
+          } catch (HecConnectionTimeoutException ex) {
+            Logger.getLogger(StockTradeRecordProcessor.class.getName()).
+                    log(Level.SEVERE, null, ex);
+          }
             eventBatch = new EventBatch();
         }
     }

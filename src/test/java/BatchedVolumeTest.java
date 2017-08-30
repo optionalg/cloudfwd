@@ -15,6 +15,7 @@
  */
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import java.util.Properties;
 import org.junit.Test;
@@ -31,11 +32,15 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   public BatchedVolumeTest() {
   }
 
+  @Override
+  protected void configureConnection(Connection connection) {
+    connection.setEventBatchSize(1024*32); //32k batching batching, roughly
+  }
+
 
 
   @Test
-  public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
+  public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.eventType = EventType.TEXT;
     super.sendEvents();
@@ -43,8 +48,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
 
     @Test
-  public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
+  public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
@@ -53,30 +57,28 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
 
   @Test
-  public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
+  public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = EventType.TEXT;
     super.sendEvents();
   }
 
     @Test
-  public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
+  public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = EventType.JSON;
     super.sendEvents();
   }
 
 
-
+/*
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     return props;
   }
-
+*/
 
   @Override
   protected int getNumEventsToSend() {

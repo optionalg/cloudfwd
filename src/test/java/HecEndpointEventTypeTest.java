@@ -35,7 +35,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
     return props;
   }
 

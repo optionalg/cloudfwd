@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.http.HecIOManager;
 import com.splunk.cloudfwd.sim.AckEndpoint;
 import com.splunk.cloudfwd.sim.AcknowledgementEndpoint;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
@@ -44,7 +45,7 @@ public class AckLossyEndpoint extends AckEndpoint implements AcknowledgementEndp
   public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
     //when we poll for acks, we will always return no ackIDs. Models an indexer that takes forever to
     //index events
-    Map resp = Collections.EMPTY_MAP;
+    Map resp = new HashMap();
     resp.put("acks", Collections.EMPTY_MAP);
     cb.completed(getResult(resp));
   }

@@ -2,14 +2,17 @@
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import com.splunk.cloudfwd.EventWithMetadata;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import static com.splunk.cloudfwd.PropertyKeys.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -54,22 +57,20 @@ public class SuperSimpleExample {
 
       @Override
       public void checkpoint(EventBatch events) {
-       // if (events.getId().compareTo(new Integer(numEvents)) == 0) {
-          System.out.println(
-                  "CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
+        // if (events.getId().compareTo(new Integer(numEvents)) == 0) {
+        System.out.println(
+                "CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
         //}
       }
     }; //end callbacks
 
     //overide defaults in lb.properties
     Properties customization = new Properties();
-    customization.put(PropertiesFileHelper.COLLECTOR_URI,
-            "https://127.0.0.1:8088");
-    customization.put(PropertiesFileHelper.TOKEN_KEY,
-            "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
-    customization.put(PropertiesFileHelper.UNRESPONSIVE_MS, "100000");//100 sec - Kill unresponsive channel
-    customization.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
-    customization.put(PropertiesFileHelper.MAX_TOTAL_CHANNELS, "1"); //increase this to increase parallelism
+    customization.put(COLLECTOR_URI, "https://127.0.0.1:8088");
+    customization.put(TOKEN, "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
+    customization.put(UNRESPONSIVE_MS, "100000");//100 sec - Kill unresponsive channel
+    customization.put(MOCK_HTTP_KEY, "true");
+    customization.put(MAX_TOTAL_CHANNELS, "1"); //increase this to increase parallelism
 
     //date formatter for sending 'raw' event
     SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -77,25 +78,38 @@ public class SuperSimpleExample {
 
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
     try (Connection c = new Connection(callbacks, customization);) {
-      c.setCharBufferSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
-      c.setSendTimeout(10000); //10 sec
+      c.setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
+      c.setEventAcknowledgementTimeoutMS(10000); //10 sec
       for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object
         //generate a 'raw' text event looking like "2017-08-10 11:21:04 foo bar baz"
         String eventData = dateFormat.format(new Date()) + " foo bar baz";
         RawEvent event = RawEvent.fromText(eventData, seqno);
-        c.send(event);
+        try {
+          c.send(event);
+        } catch (HecConnectionTimeoutException ex) {
+          //it's up to you to decide how to deal with timeouts. See PropertyKeys.BLOCKING_TIMEOUT_MS
+          Logger.getLogger(SuperSimpleExample.class.getName()).
+                  log(Level.SEVERE, ex.getMessage(), ex);
+        }
+
       }
     } //safely autocloses Connection, no event loss. (use Connection.closeNow() if you want to *lose* in-flight events)
 
     //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
     try (Connection c = new Connection(callbacks, customization);) {
-      c.setCharBufferSize(1024 * 16); //16kB send buffering
-      c.setSendTimeout(10000); //10 sec
+      c.setEventBatchSize(1024 * 16); //16kB send buffering
+      c.setEventAcknowledgementTimeoutMS(10000); //10 sec
       c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       for (int seqno = 1; seqno <= numEvents; seqno++) {
         EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),
                 seqno);
-        c.send(event);
+        try {
+          c.send(event);
+        } catch (HecConnectionTimeoutException ex) {
+          //it's not a failiure if the connection times out
+          Logger.getLogger(SuperSimpleExample.class.getName()).
+                  log(Level.SEVERE, ex.getMessage(), ex);
+        }
       }
     }
 

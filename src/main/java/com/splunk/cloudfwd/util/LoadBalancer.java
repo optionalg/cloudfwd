@@ -17,6 +17,8 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.http.HttpSender;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
@@ -25,9 +27,13 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,28 +43,23 @@ import java.util.logging.Logger;
  */
 public class LoadBalancer implements Closeable {
 
-  private int channelsPerDestination = 4;
   private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
           getName());
+  private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
-  private PropertiesFileHelper propertiesFileHelper;
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
   private int robin; //incremented (mod channels) to perform round robin
   private final Connection connection;
   private boolean closed;
+  private volatile CountDownLatch latch;
 
   public LoadBalancer(Connection c) {
-    this(c, new Properties());
-  }
-
-  public LoadBalancer(Connection c, Properties p) {
     this.connection = c;
-    this.propertiesFileHelper = new PropertiesFileHelper(p);
-    this.channelsPerDestination = this.propertiesFileHelper.
+    this.channelsPerDestination = c.getPropertiesFileHelper().
             getChannelsPerDestination();
-    this.discoverer = new IndexDiscoverer(propertiesFileHelper);
+    this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper());
     this.checkpointManager = new CheckpointManager(c);
     //this.discoverer.addObserver(this);
   }
@@ -67,7 +68,7 @@ public class LoadBalancer implements Closeable {
     System.out.println(change);
   }
 
-  public synchronized void sendBatch(EventBatch events) {
+  public synchronized void sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (null == this.connection.getCallbacks()) {
       throw new IllegalStateException(
               "Connection FutureCallback has not been set.");
@@ -124,9 +125,10 @@ public class LoadBalancer implements Closeable {
     //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
     //and then the to-be-reaped channel would also be removed, leaving no channels, and
     //send will be stuck in a spin loop with no channels to send to
-    if (!force && channels.size() >= propertiesFileHelper.getMaxTotalChannels()) {
+    PropertiesFileHelper propsHelper = this.connection.getPropertiesFileHelper();
+    if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
       LOG.info(
-              "Can't add channel (" + PropertiesFileHelper.MAX_TOTAL_CHANNELS + " set to " + propertiesFileHelper.
+              "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
               getMaxTotalChannels() + ")");
       return;
     }
@@ -135,13 +137,16 @@ public class LoadBalancer implements Closeable {
     try {
       //URLS for channel must be based on IP address not hostname since we
       //have many-to-one relationship between IP address and hostname via DNS records
-      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.getPort());
+
+      url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.
+              getPort());
+      System.out.println("Trying to add URL: " + url);
       //We should provide a hostname for http client, so it can properly set Host header
       //this host is required for many proxy server and virtual servers implementations
       //https://tools.ietf.org/html/rfc7230#section-5.4
       host = s.getHostName() + ":" + s.getPort();
 
-      HttpSender sender = this.propertiesFileHelper.
+      HttpSender sender = this.connection.getPropertiesFileHelper().
               createSender(url, host);
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
@@ -180,61 +185,67 @@ public class LoadBalancer implements Closeable {
 
   }
 
-  private synchronized void sendRoundRobin(EventBatch events) {
+  private synchronized void sendRoundRobin(EventBatch events) throws HecConnectionTimeoutException {
     sendRoundRobin(events, false);
   }
 
-  synchronized void sendRoundRobin(EventBatch events, boolean forced) {
-    try {
-      if (channels.isEmpty()) {
-        throw new IllegalStateException(
-                "attempt to sendRoundRobin but no channel available.");
-      }
-      HecChannel tryMe = null;
-      int tryCount = 0;
-      //round robin until either A) we find an available channel
-      long start = System.currentTimeMillis();
-      int spinCount = 0;
-      int yieldInterval = propertiesFileHelper.getMaxTotalChannels();
-      while (!closed || forced) {
-        //note: the channelsSnapshot must be refreshed each time through this loop
-        //or newly added channels won't be seen, and eventually you will just have a list
-        //consisting of closed channels. Also, it must be a snapshot, not use the live
-        //list of channels. Because the channelIdx could wind up pointing past the end
-        //of the live list, due to fact that this.removeChannel is not synchronized (and
-        //must not be do avoid deadlocks).
-        List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.
-                values());
-        if (channelsSnapshot.isEmpty()) {
-          continue; //keep going until a channel is added
-        }
-        int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
-        tryMe = channelsSnapshot.get(channelIdx);
-        if (tryMe.send(events)) {
-          System.out.println(
-                  "sent EventBatch id=" + events.getId() + " on " + tryMe);
-          break;
-        }
-        if (++spinCount % yieldInterval == 0) {
-          LOG.warning("No available channel to send on. Waiting...");
-          Thread.yield(); //we are spinning waiting for available channel. Should yield CPU.
-          Thread.sleep(100); //avoid hard-spin-lock looking for available channel
-        }
-        if (System.currentTimeMillis() - start > this.getConnection().
-                getSendTimeout()) {
-          System.out.println("TIMEOUT EXCEEDED");
-          throw new TimeoutException("Send timeout exceeded.");
-        }
-      }
-    } catch (TimeoutException e) {
-      LOG.log(Level.SEVERE, e.getMessage(), e);
-      this.getConnection().getCallbacks().failed(events, e);
-    } catch (Exception e) {
-      LOG.log(Level.SEVERE, "Exception caught in sendRountRobin: {0}", e.
-              getMessage());
-      throw new RuntimeException(e.getMessage(), e);
+  synchronized void sendRoundRobin(EventBatch events, boolean forced) throws HecConnectionTimeoutException {
+    latch = new CountDownLatch(1);
+    if (channels.isEmpty()) {
+      throw new IllegalStateException(
+              "attempt to sendRoundRobin but no channel available.");
     }
+    HecChannel tryMe = null;
+    int tryCount = 0;
+    //round robin until either A) we find an available channel
+    long start = System.currentTimeMillis();
+    int spinCount = 0;
+    int yieldInterval = this.connection.getPropertiesFileHelper().
+            getMaxTotalChannels();
+    ///CountDownLatch latch = new CountDownLatch(1);
+    while (!closed || forced) {
+      //note: the channelsSnapshot must be refreshed each time through this loop
+      //or newly added channels won't be seen, and eventually you will just have a list
+      //consisting of closed channels. Also, it must be a snapshot, not use the live
+      //list of channels. Because the channelIdx could wind up pointing past the end
+      //of the live list, due to fact that this.removeChannel is not synchronized (and
+      //must not be do avoid deadlocks).
+      List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.
+              values());
+      if (channelsSnapshot.isEmpty()) {
+        continue; //keep going until a channel is added
+      }
+      int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
+      tryMe = channelsSnapshot.get(channelIdx);
+      if (tryMe.send(events)) {
+        //System.out.println(
+        //      "sent EventBatch id=" + events.getId() + " on " + tryMe);
+        break;
+      }
+      if (++spinCount % yieldInterval == 0) {
+        LOG.info("Waiting for available channel...");
+        //condition.await(10, TimeUnit.MINUTES);
+        try {
+          latch.await(1, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+          LOG.severe(
+                  "LoadBalancer caught InterruptedException and resumed. Interruption message was: " + e.
+                  getMessage());
+        }
+        latch = new CountDownLatch(1); //replace the finished countdown latch
+      }
+      if (System.currentTimeMillis() - start > this.getConnection().
+              getBlockingTimeoutMS()) {
+        System.out.println("TIMEOUT EXCEEDED");
+        throw new HecConnectionTimeoutException("Send timeout exceeded.");
+      }
+    }
+  }
 
+  void wakeUp() {
+    if (null != latch) {
+      latch.countDown();
+    }
   }
 
   /**
@@ -262,7 +273,7 @@ public class LoadBalancer implements Closeable {
    * @return the propertiesFileHelper
    */
   public PropertiesFileHelper getPropertiesFileHelper() {
-    return propertiesFileHelper;
+    return this.connection.getPropertiesFileHelper();
   }
 
 }

@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import org.junit.Test;
 
 import java.util.Properties;
@@ -33,13 +34,13 @@ public class SslCertTestManualCloudClusterELB extends AbstractConnectionTest {
   }
 
   @Test
-  public void sendLotsOfMessages() throws InterruptedException, TimeoutException {
+  public void sendLotsOfMessages() throws InterruptedException, HecConnectionTimeoutException {
     super.sendEvents();
   }
 
   @Test
-  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, TimeoutException {
-    connection.setCharBufferSize(1024*16);
+  public void sendLotsOfMessagesWithBuffering() throws InterruptedException, HecConnectionTimeoutException {
+    connection.setEventBatchSize(1024*16);
     super.sendEvents();
   }
 
@@ -51,11 +52,10 @@ public class SslCertTestManualCloudClusterELB extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
-    props.put(PropertiesFileHelper.COLLECTOR_URI, "https://http-inputs-kinesis1.splunkcloud.com:443");
-    props.put(PropertiesFileHelper.TOKEN_KEY, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(PropertiesFileHelper.DISABLE_CERT_VALIDATION_KEY, "false");
-    props.put(PropertiesFileHelper.ENABLE_HTTP_DEBUG, "true");
+    props.put(COLLECTOR_URI, "https://http-inputs-kinesis1.splunkcloud.com:443");
+    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
+    props.put(DISABLE_CERT_VALIDATION, "false");
+    props.put(ENABLE_HTTP_DEBUG, "true");
     return props;
   }
 
