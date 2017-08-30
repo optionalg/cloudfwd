@@ -47,18 +47,21 @@ import org.apache.http.*;
  * NOTES:
  * - Each event sent in a test MUST have unique content for the test to pass,
  *      (add a sequence number in the event text).
- * - Configure the sourcetype in Splunk to break on every newline.
+ * - Configure the sourcetype in Splunk to break on every newline so events are
+ *      indexed properly (SHOULD_LINEMERGE=false in props.conf)
+ * - Make sure the configuration (below) is synced to the Splunk search head – otherwise
+ *      search results will be empty and the test will fail.
  *
  * @author eprokop
  */
 public class ReconciliationTest extends AbstractConnectionTest {
 
     /* ************ CONFIGURABLE ************ */
-    // change these settings based the Splunk instance you're sending data to
     protected int numToSend = 10;
+    // change these settings based on the Splunk search head you want the test to search on:
     private String splunkHost = "localhost";
     private String mgmtPort = "8089"; // management port on the Splunk search head
-    private String index = "dummydata"; // where the data is indexed
+    private String index = "main"; // where the data is indexed – this is the index that will be searched
     private String user = "admin"; // a Splunk user that has permissions to search in <index>
     private String password = "a";
     /* ************ /CONFIGURABLE ************ */
@@ -232,18 +235,16 @@ public class ReconciliationTest extends AbstractConnectionTest {
             String eventText = null;
             ObjectMapper json = new ObjectMapper();
             if (isEventEndpoint()) {
+                // extract the event text from the "event" key
                 try {
-                    // extract the event text from the "event" key
+                    // "event" key contains raw text
                     eventText = json.readTree(e.toString()).path("event").asText();
                     if (eventText.isEmpty()) {
-                        try {
-                            eventText = json.readTree(e.toString()).path("event").toString();
-                        } catch (IOException e1) {
-                            Assert.fail("Could not parse 'event' key from JSON object: " + e1.getMessage());
-                        }
+                        // "event" key contains JSON
+                        eventText = json.readTree(e.toString()).path("event").toString();
                     }
-                } catch (IOException j) {
-                    Assert.fail("Could not parse 'event' key from JSON object: " + j.getMessage());
+                } catch (IOException e1) {
+                    Assert.fail("Could not parse 'event' key from JSON object: " + e1.getMessage());
                 }
             } else {
                eventText = e.toString();
