@@ -132,7 +132,7 @@ public final class HttpClientFactory {
      * @throws NoSuchAlgorithmException
      * @throws KeyManagementException
      */
-    public final SSLContext build_ssl_context_allow_all() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    public static final SSLContext build_ssl_context_allow_all() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
             public boolean isTrusted(X509Certificate[] certificate,
                                      String type) {

@@ -6,10 +6,7 @@ import com.splunk.cloudfwd.RawEvent;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -49,6 +46,8 @@ public abstract class AbstractConnectionTest {
   protected final String TEST_CLASS_INSTANCE_GUID = java.util.UUID.randomUUID().
           toString();
   protected String testMethodGUID;
+  protected String testMethodGUIDKey = "testMethodGUID";
+  protected List<Event> events;
 
   //override to do stuff like set buffering or anything else affecting connection
   protected void configureConnection(Connection connection) {
@@ -70,7 +69,7 @@ public abstract class AbstractConnectionTest {
     this.connection = new Connection((ConnectionCallbacks) callbacks, props);
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
-
+    this.events = new ArrayList<>();
   }
 
   @After
@@ -94,6 +93,29 @@ public abstract class AbstractConnectionTest {
       Event event = nextEvent(i + 1);
       System.out.println("Send event: " + event.getId() + " i=" + i);
       connection.send(event);     
+    }
+    connection.close(); //will flush
+    this.callbacks.await(10, TimeUnit.MINUTES);
+    if (callbacks.isFailed()) {
+      Assert.fail(callbacks.getFailMsg());
+    }
+  }
+
+  protected void sendCombinationEvents() throws TimeoutException, InterruptedException, HecConnectionTimeoutException {
+    System.out.println(
+            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID +
+                    "And test method GUID " + testMethodGUID);
+    int expected = getNumEventsToSend();
+    for (int i = 0; i < expected; i++) {
+      ///final EventBatch events =nextEventBatch(i+1);
+      if (i%2==1) {
+        this.eventType = EventType.TEXT;
+      } else {
+        this.eventType = EventType.JSON;
+      }
+      Event event = nextEvent(i + 1);
+      System.out.println("Send event: " + event.getId() + " i=" + i);
+      this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
     }
     connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);
@@ -159,14 +181,19 @@ public abstract class AbstractConnectionTest {
    * @return
    */
   private Event nextEvent(int seqno) {
+    Event event;
     switch (this.eventType) {
       case TEXT: {
         if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
-          return getTimestampedRawEvent(seqno);
+          event = getTimestampedRawEvent(seqno);
+          if (shouldCacheEvents()) events.add(event);
+          return event;
         } else {
-          return new EventWithMetadata(
-                  "TEXT FOR /events endpoint 'event' field with " + getEventTracingInfo(),
+          event = new EventWithMetadata("TEXT FOR /events endpoint 'event' field with "
+                          + getEventTracingInfo() + " seqno=" + seqno,
                   seqno);
+          if (shouldCacheEvents()) events.add(event);
+          return event;
         }
       }
       case JSON: {
@@ -174,7 +201,10 @@ public abstract class AbstractConnectionTest {
           try {
             Map m = getStructuredEvent();
             m.put("where_to", "/raw");
-            return RawEvent.fromObject(m, seqno);
+            m.put("seqno", Integer.toString(seqno));
+            event = RawEvent.fromObject(m, seqno);
+            if (shouldCacheEvents()) events.add(event);
+            return event;
           } catch (IOException ex) {
             Logger.getLogger(AbstractConnectionTest.class.getName()).
                     log(Level.SEVERE, null, ex);
@@ -183,7 +213,10 @@ public abstract class AbstractConnectionTest {
         } else {
           Map m = getStructuredEvent();
           m.put("where_to", "/events");
-          return new EventWithMetadata(m, seqno);
+          m.put("seqno", Integer.toString(seqno));
+          event = new EventWithMetadata(m, seqno);
+          if (shouldCacheEvents()) events.add(event);
+          return event;
         }
       }
     }
@@ -195,6 +228,7 @@ public abstract class AbstractConnectionTest {
     map.put("foo", "bar");
     map.put("baz", "yeah I am json field");
     map.put("trace", getEventTracingInfo());
+    map.put(testMethodGUIDKey, testMethodGUID);
     return map;
   }
 
@@ -206,12 +240,24 @@ public abstract class AbstractConnectionTest {
 
   protected RawEvent getTimestampedRawEvent(int seqno) {
     return RawEvent.fromText(//dateFormat.format(new Date()) + " TEXT FOR /raw ENDPOINT", seqno);
-            "TEXT FOR /raw ENDPOINT with " + getEventTracingInfo(),
+            "TEXT FOR /raw ENDPOINT with " + getEventTracingInfo() + " seqno=" + seqno,
             seqno);
   }
 
   protected String getEventTracingInfo() {
-    return "GUID=" + TEST_CLASS_INSTANCE_GUID + " testMethod GUID= " + testMethodGUID;
+    return "GUID=" + TEST_CLASS_INSTANCE_GUID + " " + testMethodGUIDKey + "=" + testMethodGUID;
+  }
+
+  // override if you need to access the events you send
+  protected boolean shouldCacheEvents() {
+    return false;
+  }
+
+  protected List<Event> getSentEvents() {
+    if (!shouldCacheEvents()) {
+      throw new RuntimeException("Events were not cached. Override shouldCacheEvents() to store sent events.");
+    }
+    return events;
   }
 
 }
