@@ -22,10 +22,7 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorC
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -84,7 +81,11 @@ public class LogRecordProcessor implements IRecordProcessor {
         }
         LOG.info("Sending event batch with sequenceNumber=" + eventBatch.getId());
         callback.addCheckpointer((String)eventBatch.getId(), checkpointer);
-        splunk.sendBatch(eventBatch);
+        try {
+            splunk.sendBatch(eventBatch);
+        } catch (HecConnectionTimeoutException e) {
+            e.printStackTrace();
+        }
         eventBatch = new EventBatch();
     }
 
