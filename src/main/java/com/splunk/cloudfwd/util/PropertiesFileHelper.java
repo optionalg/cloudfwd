@@ -28,8 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.datatype.DatatypeConstants;
-
+import static com.splunk.cloudfwd.PropertyKeys.*;
 /**
  *
  * @author ghendrey
@@ -39,35 +38,7 @@ public class PropertiesFileHelper {
   private static final Logger LOG = Logger.getLogger(PropertiesFileHelper.class.
           getName());
 
-  public static final String TOKEN_KEY = "token";
-  public static final String COLLECTOR_URI = "url";
-  public static final String HOST = "host";
-  public static final String DISABLE_CERT_VALIDATION_KEY = "disableCertificateValidation";
-  public static final String CHANNELS_PER_DESTINATION_KEY = "channels_per_dest";
-  public static final String MOCK_HTTP_KEY = "mock_http";
-  public static final String MOCK_FORCE_URL_MAP_TO_ONE = "mock_force_url_map_to_one";
-  public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
-  public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
-  public static final String MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "max_unacked_per_channel";
-  public static final String EVENT_BATCH_SIZE = "event_batch_size";
-  public static final int MIN_EVENT_BATCH_SIZE = 0;
-  public static final String DEFAULT_EVENT_BATCH_SIZE = "32768";
-  public static final String ACK_POLL_MS = "ack_poll_ms";
-  public static final long MIN_ACK_POLL_MS = 250;
-  public static final String DEFAULT_ACK_POLL_MS = "1000";
-  public static final String HEALTH_POLL_MS = "health_poll_ms";
-  public static final long MIN_HEALTH_POLL_MS = 1000;
-  public static final String DEFAULT_HEALTH_POLL_MS = "1000";  
-  public static final String CHANNEL_DECOM_MS = "channel_decom_ms";
-  public static final long MIN_DECOM_MS = 60000;
-  public static final String DEFAULT_DECOM_MS = "600000";   //10 min
-  public static final String ACK_TIMEOUT_MS = "ack_timeout_ms";
-  public static final String DEFAULT_ACK_TIMEOUT_MS = "300000"; //5 min
-  public static final long MIN_ACK_TIMEOUT_MS = 60000;  //60 sec
-  public static final String MOCK_HTTP_CLASSNAME_KEY = "mock_http_classname";
-  public static final String SSL_CERT_CONTENT_KEY = "ssl_cert_content";
-  public static final String CLOUD_SSL_CERT_CONTENT_KEY = "cloud_ssl_cert_content";
-  public static final String ENABLE_HTTP_DEBUG = "enable_http_debug";
+  
 
 
   private Properties defaultProps = new Properties();
@@ -91,6 +62,10 @@ public class PropertiesFileHelper {
       LOG.log(Level.SEVERE, "problem loading lb.properties", ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
+  }
+  
+  public void putProperty(String k, String v){
+    this.defaultProps.put(k, v);
   }
 
   public List<URL> getUrls() {
@@ -116,8 +91,7 @@ public class PropertiesFileHelper {
   }
 
   public int getChannelsPerDestination() {
-    int n = Integer.parseInt(defaultProps.getProperty(
-            CHANNELS_PER_DESTINATION_KEY, "8").trim());
+    int n = Integer.parseInt(defaultProps.getProperty(CHANNELS_PER_DESTINATION, "8").trim());
     if (n < 1) {
       n = Integer.MAX_VALUE; //effectively no limit by default
     }
@@ -165,7 +139,7 @@ public class PropertiesFileHelper {
     return max;
   }
   
-  public int getMinEventBatchSize() {
+  public int getEventBatchSize() {
     int max = Integer.parseInt(defaultProps.getProperty(
             EVENT_BATCH_SIZE, DEFAULT_EVENT_BATCH_SIZE).trim());
     if (max < 1) {
@@ -191,10 +165,19 @@ public class PropertiesFileHelper {
     long timeout = Long.parseLong(defaultProps.getProperty(
             ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
     if (timeout < MIN_ACK_TIMEOUT_MS) {
-      LOG.warning("Ignoring setting for " + MIN_ACK_TIMEOUT_MS + " because it is less than minimum acceptable value: " + MIN_ACK_TIMEOUT_MS);
+      LOG.warning(ACK_TIMEOUT_MS+ " was set to a potentially too-low value: " + timeout);
     }
     return timeout;
   }    
+  
+  public long getBlockingTimeoutMS() {
+    long timeout = Long.parseLong(defaultProps.getProperty(
+            BLOCKING_TIMEOUT_MS, DEFAULT_BLOCKING_TIMEOUT_MS).trim());
+    if (timeout < 0) {
+      throw new IllegalArgumentException(BLOCKING_TIMEOUT_MS + " must be positive.");
+    }
+    return timeout;
+  }     
 
   public boolean isMockHttp() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
@@ -207,7 +190,7 @@ public class PropertiesFileHelper {
   }
 
   public Endpoints getSimulatedEndpoints() {
-    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME_KEY,
+    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
 
     try {
@@ -222,8 +205,7 @@ public class PropertiesFileHelper {
 
   public boolean isCertValidationDisabled() {
     return Boolean.parseBoolean(this.defaultProps.
-            getProperty(
-                    DISABLE_CERT_VALIDATION_KEY, "false").trim());
+            getProperty(DISABLE_CERT_VALIDATION, "false").trim());
   }
 
   public boolean enabledHttpDebug() {
@@ -238,9 +220,9 @@ public class PropertiesFileHelper {
    */
   public String getSSLCertContent() {
     if (isCloudInstance()) {
-      return defaultProps.getProperty(CLOUD_SSL_CERT_CONTENT_KEY).trim();
+      return defaultProps.getProperty(CLOUD_SSL_CERT_CONTENT).trim();
     }
-    return defaultProps.getProperty(SSL_CERT_CONTENT_KEY).trim()  ;
+    return defaultProps.getProperty(SSL_CERT_CONTENT).trim()  ;
   }
 
   public void enableHttpDebug() {
@@ -263,7 +245,7 @@ public class PropertiesFileHelper {
       if (enabledHttpDebug()) enableHttpDebug();
       String url = props.getProperty(COLLECTOR_URI).trim();
       String host = props.getProperty(HOST).trim();
-      String token = props.getProperty(TOKEN_KEY).trim();
+      String token = props.getProperty(TOKEN).trim();
       String cert = getSSLCertContent();
       HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert, host);
       if(isMockHttp()){

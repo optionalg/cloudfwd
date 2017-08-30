@@ -15,6 +15,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import java.io.InputStream;
 
 /*
@@ -82,7 +83,7 @@ public abstract class AbstractConnectionTest {
     }
   }
 
-  protected void sendEvents() throws TimeoutException, InterruptedException {
+  protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
     System.out.println(
             "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
@@ -91,7 +92,7 @@ public abstract class AbstractConnectionTest {
       ///final EventBatch events =nextEventBatch(i+1);
       Event event = nextEvent(i + 1);
       System.out.println("Send event: " + event.getId() + " i=" + i);
-      this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
+      connection.send(event);     
     }
     connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);
@@ -124,16 +125,19 @@ public abstract class AbstractConnectionTest {
   }
 
   /**
-   * test should override this to add properties on top of lb.properties+test.properties
+   * test should override this to add properties on top of
+   * lb.properties+test.properties
+   *
    * @return
    */
-  protected Properties getProps(){
+  protected Properties getProps() {
     return new Properties(); //default behavior is no "hard coded" test-specific properties
   }
-  
+
   /**
-   * reads default test properties out of test_defaults.properties (these overlay on top
-   * of lb.properties)
+   * reads default test properties out of test_defaults.properties (these
+   * overlay on top of lb.properties)
+   *
    * @return
    */
   protected Properties getTestProps() {
@@ -149,21 +153,24 @@ public abstract class AbstractConnectionTest {
       Logger.getLogger(AbstractConnectionTest.class.getName()).
               log(Level.SEVERE, null, ex);
     }
-    if(Boolean.parseBoolean(props.getProperty("enabled", "false"))){
+    if (Boolean.parseBoolean(props.getProperty("enabled", "false"))) {
       return props;
-    }else{
+    } else {
       Logger.getLogger(AbstractConnectionTest.class.getName()).
-              log(Level.WARNING, "test.properties disabled, using lb.properties only");
+              log(Level.WARNING,
+                      "test.properties disabled, using lb.properties only");
       return new Properties(); //ignore test.properties
     }
   }
-  
+
   /**
-   * test can override this if a test requires its own .properties file to slap on top of
-   * lb.properties (instead of slapping test.properties on top of lb.properties)
+   * test can override this if a test requires its own .properties file to slap
+   * on top of lb.properties (instead of slapping test.properties on top of
+   * lb.properties)
+   *
    * @return
    */
-  protected String getTestPropertiesFileName(){
+  protected String getTestPropertiesFileName() {
     return "test.properties";
   }
 

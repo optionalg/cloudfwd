@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.util;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.IllegalHECStateException;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
@@ -112,7 +113,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     started = true;
   }
 
-  public synchronized boolean send(EventBatch events) throws TimeoutException {
+  public synchronized boolean send(EventBatch events) {
     if (!isAvailable()) {
       return false;
     }
@@ -358,7 +359,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
             //forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
             resendInFlightEvents();
-            interalForceClose();//don't force close until after events resent. If you do, you will interrupt this very thread and the events will never send
+            //don't force close until after events resent. 
+            //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
+            //and the events will never send.
+            interalForceClose();
           }
           if (sender.getConnection().isClosed()) {
             loadBalancer.close();
@@ -383,7 +387,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //we must force messages to be sent because the connection could have been gracefully closed
         //already, in which case sendRoundRobbin will just ignore the sent messages
         boolean forced = true;
-        loadBalancer.sendRoundRobin(e, forced);
+        try {
+          loadBalancer.sendRoundRobin(e, forced);
+        } catch (HecConnectionTimeoutException ex) {
+          loadBalancer.getConnection().getCallbacks().failed(e, ex);
+        }
       });
 
     }

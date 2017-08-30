@@ -32,6 +32,9 @@ You can now search on your ingested data in your Splunk instance.
 ## Connection API Documentation
 [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
 
+## Configurable Property Keys
+https://splunk.github.io/cloudfwd/apidocs/constant-values.html
+
 ## Examples
 
 ### Super Simple Example
