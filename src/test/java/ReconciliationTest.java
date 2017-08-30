@@ -168,6 +168,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     }
 
     private String getSearchString() {
+        // index=<index> | extract kvdelim="=" | search testMethodGUID=<testMethodGUID>
         return new StringBuilder()
             .append("search index=")
             .append(index)
