@@ -1,4 +1,5 @@
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
@@ -23,16 +24,17 @@ import org.junit.Test;
  * Assumes lb.properties sets event_batch_size to 4M or something large
  * @author ghendrey
  */
-public class LargeBatchTest extends AbstractConnectionTest {
+public class LargeBatchTest extends AbstractPerformanceTest {
 
   @Override
   protected int getNumEventsToSend() {
-    return 1000000;
+    return 100000000;
   }
   
+  
   @Test
-  public void sendLots() throws TimeoutException, InterruptedException, HecConnectionTimeoutException{
-    super.sendEvents();
+  public void sendLots() throws TimeoutException, InterruptedException, HecConnectionTimeoutException{       
+   super.sendEvents();
   }
   
 }

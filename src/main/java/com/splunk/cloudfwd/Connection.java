@@ -131,18 +131,19 @@ public class Connection implements Closeable {
     }
   }
 
-  public synchronized void send(Event event) throws HecConnectionTimeoutException {
+  public synchronized int send(Event event) throws HecConnectionTimeoutException {
     if (null == this.events) {
       this.events = new EventBatch();
     }
     this.events.add(event);
     if (this.events.isFlushable(getEventBatchSize())) {
-      sendBatch(events);
+      return sendBatch(events);      
     }
+    return 0;
 
   }
 
-  public synchronized void sendBatch(EventBatch events) throws HecConnectionTimeoutException {
+  public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (closed) {
       throw new IllegalStateException("Attempt to send on closed channel.");
     }
@@ -151,6 +152,8 @@ public class Connection implements Closeable {
     LOG.info("sending " + events.getCharCount() + " characters.");
     lb.sendBatch(events);
     this.events = null; //batch is in flight, null it out
+    //return the number of characters posted to HEC for the events data
+    return events.getCharCount(); 
   }
 
   public synchronized void flush() throws HecConnectionTimeoutException {
@@ -205,5 +208,5 @@ public class Connection implements Closeable {
   public long getBlockingTimeoutMS(){
     return propertiesFileHelper.getBlockingTimeoutMS();
   }
-
+   
 }
