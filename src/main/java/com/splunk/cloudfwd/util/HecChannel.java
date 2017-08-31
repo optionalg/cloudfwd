@@ -35,6 +35,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.splunk.cloudfwd.http.HttpPostable;
 
 /**
  *
@@ -113,7 +114,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     started = true;
   }
 
-  public synchronized boolean send(EventBatch events) {
+  public synchronized boolean send(HttpPostable events) {
     if (!isAvailable()) {
       return false;
     }
@@ -315,8 +316,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       if (ackId == 1) {
         if (seenAckIdOne) {
           Exception e = new IllegalHECStateException(
-                  "ackId " + ackId + " has already been received on channel " + events.
-                  getSender().getChannel());
+                  "ackId " + ackId + " has already been received on channel " + this);
           HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
                   events, e);
         } else {

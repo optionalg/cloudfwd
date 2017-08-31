@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.sim;
 import com.splunk.cloudfwd.http.HecIOManager;
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.http.HttpPostable;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -33,7 +34,7 @@ public class SimulatedHECEndpoints implements Endpoints{
   
 
   @Override
-  public void postEvents(EventBatch events,
+  public void postEvents(HttpPostable events,
           FutureCallback<HttpResponse> httpCallback) {
     eventEndpoint.post(events, httpCallback);
   }

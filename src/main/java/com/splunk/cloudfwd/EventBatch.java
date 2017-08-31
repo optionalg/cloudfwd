@@ -15,22 +15,28 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.http.HecIOManager;
 import com.splunk.cloudfwd.http.HttpSender;
 import java.util.logging.Logger;
+import org.apache.http.HttpEntity;
+import org.apache.http.entity.StringEntity;
+import com.splunk.cloudfwd.http.HttpPostable;
 
 /**
- * EventBatch can be used if the caller wants a high degree of control over which Events will get sent to 
- * HEC in a single HTTP post. Most of the time, there is no need to use an EventBatch, as it is used inside
- * the connection to gather events together when buffering is enabled on the Connection.
+ * EventBatch can be used if the caller wants a high degree of control over
+ * which Events will get sent to HEC in a single HTTP post. Most of the time,
+ * there is no need to use an EventBatch, as it is used inside the connection to
+ * gather events together when buffering is enabled on the Connection.
+ *
  * @author ghendrey
  */
-public class EventBatch {
+public class EventBatch implements HttpPostable {
 
   private static final Logger LOG = Logger.getLogger(EventBatch.class.getName());
   private Comparable id; //will be set to the id of the last (most recent) Event added to the batch
   private Long ackId; //Will be null until we receive ackId for this batch from HEC
   //private final List<Event> eventsBatch = new ArrayList();
-  private HttpSender sender;
+  //private HttpSender sender;
   private final StringBuilder stringBuilder = new StringBuilder();
   private boolean flushed = false;
   private boolean acknowledged;
@@ -43,7 +49,7 @@ public class EventBatch {
 
   public synchronized void prepareToResend() {
     this.flushed = false;
-    this.sender = null;
+    //this.sender = null;
     this.acknowledged = false;
   }
 
@@ -53,22 +59,12 @@ public class EventBatch {
     return flightTime >= timeout;
   }
 
-  /*
-  public void setSeqNo(long seqno) {
-    this.id = String.format("%019d", seqno);
-  }
-
-  public void setSeqNo(String seqno) {
-    this.id = seqno;
-  }
-*/
   public synchronized void add(Event event) {
     if (flushed) {
       throw new IllegalStateException(
               "Events cannot be added to a flushed EventBatch");
     }
 
-    //eventsBatch.add(event);
     this.stringBuilder.append(event);
     this.id = event.getId();
   }
@@ -81,20 +77,20 @@ public class EventBatch {
     return !flushed && (stringBuilder.length() > charBufferLen);
   }
 
-  public synchronized void flush() {
+  @Override
+  public synchronized void post(HecIOManager ioManager) {
     if (!this.flushed && this.stringBuilder.length() > 0) {
       //endpoints are either real (via the Sender) or simulated 
-      this.sender.getHecIOManager().postEvents(this);
+      ioManager.postEvents(this);
       flushed = true;
     }
   }
 
-  /**
-   * Close events sender
-   */
-  public synchronized void close() {
-    //send any pending events, regardless of how many or how big 
-    flush();
+  @Override
+  public HttpEntity getEntity() {
+    StringEntity e = new StringEntity(stringBuilder.toString(), "UTF-8");
+    e.setContentType("application/json; profile=urn:splunk:event:1.0; charset=utf-8"); //FIX ME application/json not all the time
+    return e;
   }
 
   @Override
@@ -131,6 +127,7 @@ public class EventBatch {
     this.ackId = ackId;
   }
 
+  /*
   public void setSender(HttpSender sender) {
     if (null != this.sender) {
       String msg = "attempt to change the value of sender. Channel was " + this.sender.
@@ -139,7 +136,7 @@ public class EventBatch {
       throw new IllegalStateException(msg);
     }
     this.sender = sender;
-  }
+  }*/
 
   /**
    * @return the acknowledged
@@ -158,15 +155,25 @@ public class EventBatch {
   /**
    * @return the flushed
    */
+  @Override
   public boolean isFlushed() {
     return flushed;
   }
 
-  /**
-   * @return the sender
-   */
-  public HttpSender getSender() {
-    return sender;
-  }
+//  /**
+//   * @return the sender
+//   */
+//  public HttpSender getSender() {
+//    return sender;
+//  }
+//
+//  /**
+//   * @param sender the sender to set
+//   */
+//  @Override
+//  public void setSender(HttpSender sender) {
+//    this.sender = sender;
+//  }
+
 
 }

@@ -66,9 +66,12 @@ public class CheckpointManager implements LifecycleEventObserver {
   public String eventBatchWindowStateToString() {
     StringBuilder sb = new StringBuilder();
     for (EventBatch events : this.orderedEvents.values()) {
+      /*
       String chan = null == events.getSender() ? "--------------------------------null" : events.
               getSender().getChannel().getChannelId();
-      sb.append("chan=").append(chan).append(", seqno=").append(events.
+      sb.append("chan=").append(chan)
+       */
+      sb.append("seqno=").append(events.
               getId()).append(", ackID=").append(events.getAckId()).append(
               ", acked=").append(events.isAcknowledged() == true ? "1" : "0").
               append("\n");
@@ -100,6 +103,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     }
     slideHighwaterUp(cb); //might call the highwater/checkpoint callback
   }
+
   private synchronized void slideHighwaterUp(ConnectionCallbacks cb) {
     if (this.orderedEvents.isEmpty()) {
       String msg = "Failed to move highwater mark. No events present.";
@@ -120,7 +124,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     }
 
     //todo: maybe schedule checkpoint to be async
-    if(null != acknowledgedEvents){
+    if (null != acknowledgedEvents) {
       cb.checkpoint(acknowledgedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
     }
   }
