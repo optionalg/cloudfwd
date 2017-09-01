@@ -170,7 +170,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
             .append("search index=")
             .append(index)
             .append(" | extract kvdelim=\"=\" | search ")
-            .append(testMethodGUIDKey)
+            .append(TEST_METHOD_GUID_KEY)
             .append("=")
             .append(testMethodGUID)
             .toString();

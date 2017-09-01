@@ -43,6 +43,8 @@ public abstract class AbstractConnectionTest {
    * set enabled=false in test.properties to disable test.properties and fallback on lb.properties
    */
   public static final String KEY_ENABLE_TEST_PROPERTIES = "enabled"; 
+  public static final String TEST_METHOD_GUID_KEY = "testMethodGUID";
+  
   protected BasicCallbacks callbacks;
   protected Connection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -50,7 +52,6 @@ public abstract class AbstractConnectionTest {
   protected final String TEST_CLASS_INSTANCE_GUID = java.util.UUID.randomUUID().
           toString();
   protected String testMethodGUID;
-  protected String testMethodGUIDKey = "testMethodGUID";
   protected List<Event> events;
 
   //override to do stuff like set buffering or anything else affecting connection
@@ -232,7 +233,7 @@ public abstract class AbstractConnectionTest {
     map.put("foo", "bar");
     map.put("baz", "yeah I am json field");
     map.put("trace", getEventTracingInfo());
-    map.put(testMethodGUIDKey, testMethodGUID);
+    map.put(TEST_METHOD_GUID_KEY, testMethodGUID);
     return map;
   }
 
@@ -249,7 +250,7 @@ public abstract class AbstractConnectionTest {
   }
 
   protected String getEventTracingInfo() {
-    return "GUID=" + TEST_CLASS_INSTANCE_GUID + " " + testMethodGUIDKey + "=" + testMethodGUID;
+    return "GUID=" + TEST_CLASS_INSTANCE_GUID + " " + TEST_METHOD_GUID_KEY + "=" + testMethodGUID;
   }
 
   // override if you need to access the events you send

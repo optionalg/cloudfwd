@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.HecIOManager;
-import com.splunk.cloudfwd.http.HttpSender;
 import java.util.logging.Logger;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.StringEntity;
