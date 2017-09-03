@@ -30,7 +30,7 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
 
   Map<Comparable, Long> batchSizes = new ConcurrentHashMap<>();
   long ackedSize = 0;
-  int failedCount = 0;
+  long failedCount = 0;
 
   public long getAcknowledgedSize() {
     return ackedSize;
@@ -52,9 +52,6 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
         throw new RuntimeException("negative size:" + size);
       }
       ackedSize += size;
-      if (ackedSize < 0) {
-        throw new RuntimeException("negative size:" + ackedSize);
-      }
     } else {
       //no-op. acknowledgements happen for batches that were sent during the perf test warmup period
       //during which we would not have recorded the batch via deferCountUntilAck

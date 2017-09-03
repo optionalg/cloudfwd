@@ -39,6 +39,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
 
 /**
  * This is an internal helper class that sends logging events to Splunk http
@@ -55,7 +57,7 @@ public final class HttpSender implements Endpoints {
   public static final String MetadataSourceTypeTag = "sourcetype";
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
-  private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8";
+  private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8"; //FIX ME application/json not all the time
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
   private static final String Host = "Host";
 
@@ -71,7 +73,7 @@ public final class HttpSender implements Endpoints {
   private final String token;
   private final String cert;
   private final String host;
-  private EventBatch eventsBatch;// = new EventBatch();
+  //private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
@@ -80,6 +82,7 @@ public final class HttpSender implements Endpoints {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl;
+
 
   /**
    * Initialize HttpEventCollectorSender
@@ -131,22 +134,18 @@ public final class HttpSender implements Endpoints {
   /**
    * Immediately send the EventBatch
    *
-   * @param events the batch of events to immediately send
+   * 
+   * @param eventsBatch
    */
-  public synchronized void sendBatch(EventBatch events) {
-    if (events.isFlushed()) {
+  public synchronized void sendBatch(HttpPostable eventsBatch) {
+    if (eventsBatch.isFlushed()) {
       String msg = "Illegal attempt to send already-flushed batch. EventBatch is not reusable.";
       LOG.severe(msg);
       throw new IllegalStateException(msg);
     }
-    this.eventsBatch = events;
-    eventsBatch.setSender(this);
-    /*
-    if (isSimulated()) {
-      eventsBatch.setSimulatedEndpoints(this.simulatedEndpoints);
-    }*/
-    
-    eventsBatch.flush();
+
+    eventsBatch.post(this.hecIOManager);
+
   }
 
   /**
@@ -161,9 +160,9 @@ public final class HttpSender implements Endpoints {
    */
   @Override
   public void close() {
-    if (null != eventsBatch) { //can happen if no msgs sent on this sender
-      eventsBatch.close();
-    }
+//    if (null != eventsBatch) { //can happen if no msgs sent on this sender
+//      eventsBatch.close();
+//    }
     this.hecIOManager.close();
     if (null != simulatedEndpoints) {
       simulatedEndpoints.close();
@@ -201,12 +200,8 @@ public final class HttpSender implements Endpoints {
     return false;
   }
 
-  /**
-   * attempts to create and start HttpClient or calls failure callback otherwise
-   *
-   * @param events - events to report as failed
-   */
-  private synchronized void start(EventBatch events) {
+  @Override
+  public void start() {
     // attempt to create and start an http client
     try {
       httpClient = new HttpClientFactory(eventUrl, disableCertificateValidation,
@@ -216,13 +211,8 @@ public final class HttpSender implements Endpoints {
       LOG.log(Level.SEVERE, "Exception building httpClient: " + ex.getMessage(),
               ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
-      callbacks.failed(events, ex);
+      callbacks.failed(null, ex);
     }
-  }
-  
-  @Override
-  public void start() {
-    httpClient.start();
   }
 
   // Currently we never close http client. This method is added for symmetry
@@ -253,11 +243,11 @@ public final class HttpSender implements Endpoints {
   }
   
   @Override
-  public void postEvents(final EventBatch events,
+  public void postEvents(final HttpPostable events,
           FutureCallback<HttpResponse> httpCallback) {
     // make sure http client or simulator is started
     if (!started()) {
-      start(events);
+      start();
     }
     
     if (isSimulated()) {
@@ -272,10 +262,7 @@ public final class HttpSender implements Endpoints {
     final HttpPost httpPost = new HttpPost(endpointUrl);
     setHttpHeaders(httpPost);
     
-    StringEntity entity = new StringEntity(eventsBatch.toString(),//eventsBatchString.toString(),
-            encoding);
-    entity.setContentType(HttpContentType);
-    httpPost.setEntity(entity);
+    httpPost.setEntity(events.getEntity());
     httpClient.execute(httpPost, httpCallback);
   }
   
@@ -283,7 +270,7 @@ public final class HttpSender implements Endpoints {
   public void pollAcks(HecIOManager hecIoMgr,
           FutureCallback<HttpResponse> httpCallback) {
     if (!started()) {
-      start(null);
+      start();
     }; // make sure http client or simulator is started
     AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();
     try {
@@ -320,7 +307,7 @@ public final class HttpSender implements Endpoints {
   public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
     // make sure http client or simulator is started
     if (!started()) {
-      start(null);
+      start();
     }
     if (isSimulated()) {
       System.out.println("SIMULATED POLL HEALTH");

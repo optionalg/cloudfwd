@@ -15,22 +15,16 @@
  */
 package com.splunk.cloudfwd.http;
 
-import com.splunk.cloudfwd.EventBatch;
-import java.io.Closeable;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.HttpEntity;
 
 /**
  *
  * @author ghendrey
  */
-public interface Endpoints extends Closeable{
-  public void postEvents(final HttpPostable events,FutureCallback<HttpResponse> httpCallback);
-  public void pollAcks(HecIOManager ackMgr,FutureCallback<HttpResponse> httpCallback);
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback);
-  public void preFlightCheck(FutureCallback<HttpResponse> httpCallback);
-  @Override
-  public void close();
-  public void start();
+public interface HttpPostable {
+  //public void setSender(HttpSender sender);
+  public void post(HecIOManager ioManager);
+  public boolean isFlushed();
+  public HttpEntity getEntity();
+  
 }

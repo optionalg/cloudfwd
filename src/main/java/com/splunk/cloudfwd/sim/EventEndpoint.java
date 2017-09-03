@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.sim;
 
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.http.HttpPostable;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,7 +52,7 @@ public class EventEndpoint implements Endpoint{
     //ackEndpoint.start();
   }
 
-  public void post(EventBatch events, FutureCallback<HttpResponse> cb) {
+  public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
     Runnable respond = () -> {
       cb.completed(new EventPostResponse(
               new AckIdRespEntity(nextAckId())
