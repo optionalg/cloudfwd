@@ -20,6 +20,8 @@ package com.splunk.cloudfwd.http;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.sim.CannedEntity;
+import com.splunk.cloudfwd.sim.CannedOKHttpResponse;
 import com.splunk.cloudfwd.util.HecChannel;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import org.apache.http.HttpResponse;
@@ -32,6 +34,9 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -327,6 +332,36 @@ public final class HttpSender implements Endpoints {
     final HttpGet httpGet = new HttpGet(getUrl);
     setHttpHeaders(httpGet);
     httpClient.execute(httpGet, httpCallback);
+  }
+
+  @Override
+  public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+    if (!started()) {
+      start(null);
+    }
+    if (isSimulated()) {
+      this.simulatedEndpoints.preFlightCheck(httpCallback);
+      return;
+    }
+    Set<Long> dummyAckId = new HashSet<>();
+    dummyAckId.add(0L);
+    AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);
+
+    try {
+      final HttpPost httpPost = new HttpPost(ackUrl);
+      setHttpHeaders(httpPost);
+
+      StringEntity entity;
+
+      String req = dummyAckReq.toString();
+      entity = new StringEntity(req);
+      entity.setContentType(HttpContentType);
+      httpPost.setEntity(entity);
+      httpClient.execute(httpPost, httpCallback);
+    } catch (Exception ex) {
+      LOG.severe(ex.getMessage());
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
   }
 
   /**

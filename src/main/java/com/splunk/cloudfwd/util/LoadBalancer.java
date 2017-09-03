@@ -151,7 +151,6 @@ public class LoadBalancer implements Closeable {
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
-      sender.setChannel(channel);
       LOG.log(Level.INFO, "Adding channel {0}", channel.getChannelId());
       channels.put(channel.getChannelId(), channel);
       //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
