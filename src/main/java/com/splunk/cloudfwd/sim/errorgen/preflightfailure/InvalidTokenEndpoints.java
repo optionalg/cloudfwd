@@ -2,11 +2,13 @@ package com.splunk.cloudfwd.sim.errorgen.preflightfailure;
 
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HecIOManager;
+import com.splunk.cloudfwd.http.HttpPostable;
 import com.splunk.cloudfwd.sim.CannedEntity;
 import com.splunk.cloudfwd.sim.ForbiddenStatusLine;
 import com.splunk.cloudfwd.sim.HecErrorResponse;
 import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
 import sun.plugin.dom.exception.InvalidStateException;
 
@@ -17,7 +19,7 @@ import sun.plugin.dom.exception.InvalidStateException;
  */
 public class InvalidTokenEndpoints extends SimulatedHECEndpoints {
     @Override
-    public void postEvents(EventBatch events,
+    public void postEvents(HttpPostable events,
                            FutureCallback<HttpResponse> httpCallback) {
         throw new InvalidStateException("We should fail before trying to post events.");
     }

@@ -2,6 +2,7 @@ package com.splunk.cloudfwd.sim.errorgen.preflightfailure;
 
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HecIOManager;
+import com.splunk.cloudfwd.http.HttpPostable;
 import com.splunk.cloudfwd.sim.BadRequestStatusLine;
 import com.splunk.cloudfwd.sim.CannedEntity;
 import com.splunk.cloudfwd.sim.HecErrorResponse;
@@ -17,7 +18,7 @@ import sun.plugin.dom.exception.InvalidStateException;
  */
 public class AckDisabledEndpoints extends SimulatedHECEndpoints {
     @Override
-    public void postEvents(EventBatch events,
+    public void postEvents(HttpPostable events,
                            FutureCallback<HttpResponse> httpCallback) {
         throw new InvalidStateException("We should fail before trying to post events.");
     }

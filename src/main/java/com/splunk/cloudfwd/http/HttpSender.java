@@ -324,7 +324,7 @@ public final class HttpSender implements Endpoints {
   @Override
   public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
     if (!started()) {
-      start(null);
+      start();
     }
     if (isSimulated()) {
       this.simulatedEndpoints.preFlightCheck(httpCallback);
