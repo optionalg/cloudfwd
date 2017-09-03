@@ -15,7 +15,7 @@ import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
  *
  * Created by eprokop on 9/1/17.
  */
-public class InitialConfigurationErrorTest extends AbstractConnectionTest {
+public class InitialConfigErrorTest extends AbstractConnectionTest {
     private int numEvents = 10;
     private enum ConfigError {
         ACKS_DISABLED,
