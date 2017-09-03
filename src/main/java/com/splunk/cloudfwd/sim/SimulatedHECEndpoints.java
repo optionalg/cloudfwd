@@ -51,6 +51,13 @@ public class SimulatedHECEndpoints implements Endpoints{
   }
 
   @Override
+  public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+    httpCallback.completed(
+      new CannedOKHttpResponse(
+        new CannedEntity("Simulated pre-flight check OK")));
+  }
+
+  @Override
   public final void close()  {
     if(null != ackEndpoint){
       ackEndpoint.close();

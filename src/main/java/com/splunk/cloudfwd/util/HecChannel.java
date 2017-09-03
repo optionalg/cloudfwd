@@ -50,8 +50,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
   private volatile boolean closed;
   private volatile boolean quiesced;
-  private volatile boolean healthy = true; //responsive to indexer 503 "queue full" error
-  private volatile boolean receivedFirstEventPostResponse;
+  private volatile boolean healthy = false; // Responsive to indexer 503 "queue full" error.
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
@@ -70,6 +69,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.channelMetrics.addObserver(this);
     this.full = loadBalancer.getPropertiesFileHelper().
             getMaxUnackedEventBatchPerChannel();
+    sender.setChannel(this);
+    sender.getHecIOManager().preFlightCheck();
   }
 
   private static String newChannelId() {
@@ -147,18 +148,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }
       case EVENT_POST_OK: {
         //System.out.println("OBSERVED EVENT_POST_OK");
-
-        // the below if clause is to unblock sending in the channel once we get post OK
-        // for the first event in the channel
-        if (!receivedFirstEventPostResponse) {
-          System.out.println("channel=" + getChannelId()
-                  + ", received OBSERVED EVENT_POST_OK and unblocking sending"
-                  + " for the first event in the channel");
-          receivedFirstEventPostResponse = true;//must be set *before* notify
-        }
         checkForStickySessionViolation(e);
         break;
       }
+      case PREFLIGHT_CHECK_OK:
       case HEALTH_POLL_OK: {
         this.healthy = true; //see isAvailable
         break;
@@ -281,8 +274,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   boolean isAvailable() {
-    return !quiesced && !closed && healthy && this.unackedCount.get() < full && (unackedCount.
-            get() == 0 || receivedFirstEventPostResponse);
+    return !quiesced && !closed && healthy && this.unackedCount.get() < full;
   }
 
   @Override

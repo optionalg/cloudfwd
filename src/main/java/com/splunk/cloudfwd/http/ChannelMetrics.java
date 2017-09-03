@@ -61,6 +61,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
       case EVENT_POST_OK: 
       case ACK_POLL_OK: 
       case HEALTH_POLL_OK:
+      case PREFLIGHT_CHECK_OK:
       case HEALTH_POLL_INDEXER_BUSY:{ //INDEXER_BUSY is a normal operating condition, not a failure
         notifyObservers(e);
         return;
