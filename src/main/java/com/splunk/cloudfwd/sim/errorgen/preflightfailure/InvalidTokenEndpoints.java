@@ -10,7 +10,6 @@ import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
-import sun.plugin.dom.exception.InvalidStateException;
 
 
 /**
@@ -21,18 +20,18 @@ public class InvalidTokenEndpoints extends SimulatedHECEndpoints {
     @Override
     public void postEvents(HttpPostable events,
                            FutureCallback<HttpResponse> httpCallback) {
-        throw new InvalidStateException("We should fail before trying to post events.");
+        throw new IllegalStateException("We should fail before trying to post events.");
     }
 
     @Override
     public void pollAcks(HecIOManager ackMgr,
                          FutureCallback<HttpResponse> httpCallback) {
-        throw new InvalidStateException("We should fail before trying to poll for acks.");
+        throw new IllegalStateException("We should fail before trying to poll for acks.");
     }
 
     @Override
     public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
-        throw new InvalidStateException("We should fail before trying to poll for health.");
+        throw new IllegalStateException("We should fail before trying to poll for health.");
     }
 
     @Override
