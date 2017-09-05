@@ -6,7 +6,7 @@ Use Cloudfwd to reliably send data to Splunk Http Event Collector (HEC) with ind
 
 ### Prerequisites
 
-1. Splunk 6.4+
+1. An external Splunk Enterprise or Splunk Cloud 6.x deployment configured with a HTTP Event Collector token to receive data.
 2. [Maven](https://maven.apache.org/index.html)
 3. [Java 8](http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html)
 4. [HEC Token](http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector)
@@ -14,7 +14,7 @@ Use Cloudfwd to reliably send data to Splunk Http Event Collector (HEC) with ind
 
 ### Installation
 
-Make sure that you have the necessary prerequisites before setting up the Cloud forwarder. 
+Make sure that you have the necessary prerequisites before setting up Cloudfwd. 
 
 1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
 3. In resources > lb.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas. 
@@ -25,7 +25,8 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 5. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 6. Save your changes.
-7. Add information on API calls that the customer will need to set up in order to access classes from Cloudfwd. 
+7. Use the Cloudfwd API to send events into HEC. 
+	a. See [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
 
 You can now search on your ingested data in your Splunk instance.
 
@@ -40,7 +41,7 @@ https://splunk.github.io/cloudfwd/apidocs/constant-values.html
 ### Super Simple Example
 [SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/SuperSimpleExample.java)
 
-### Getting data from Amazon Kinesis Streams into Splunk using Cloud forwarder
+### Getting data from Amazon Kinesis Streams into Splunk using Cloudfwd
 This example will use the same configurations set up in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html) from the AWS website. We have provided the Java code in the /examples/ folder, but you will need to go through the Kinesis Stream tutorial to setup Kinesis Streams, DynamoDB, and your IAM role. 
 
 ### Prerequisites
@@ -63,7 +64,7 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 10. Switch the time range picker to All time(real-time).
 11. Run 'index=*' in Splunk search. 
 
-After a minute, you should see Splunk output stock trade events.
+After a minute, you should see stock trade events in the Splunk UI.
 
 ## Built With
 
