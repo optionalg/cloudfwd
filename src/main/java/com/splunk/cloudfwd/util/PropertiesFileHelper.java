@@ -99,8 +99,13 @@ public class PropertiesFileHelper {
   }
 
   public long getUnresponsiveChannelDecomMS() {
-    return Long.parseLong(defaultProps.getProperty(
-            UNRESPONSIVE_MS, "-1").trim());
+    long t =  Long.parseLong(defaultProps.getProperty(
+            UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS).trim());
+    if (t < 1) {
+      LOG.info(UNRESPONSIVE_MS +  ": unlimited");
+      t = Integer.MAX_VALUE;
+    }
+    return t;
   }
   
   public long getAckPollMS() {
@@ -132,8 +137,8 @@ public class PropertiesFileHelper {
 
   public int getMaxUnackedEventBatchPerChannel() {
     int max = Integer.parseInt(defaultProps.getProperty(
-            MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "10000").trim());
-    if (max < 1) {
+            MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL).trim());
+    if (max < MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL) {
       max = 10000;
     }
     return max;
@@ -262,6 +267,16 @@ public class PropertiesFileHelper {
 
   public HttpSender createSender() {
     return createSender(this.defaultProps);
+  }
+
+  int getMaxRetries() {
+    int max = Integer.parseInt(defaultProps.getProperty(
+            RETRIES, DEFAULT_RETRIES).trim());
+    if (max < 1) {
+      LOG.info(RETRIES +  ": unlimited");
+      max = Integer.MAX_VALUE;
+    }
+    return max;
   }
 
 

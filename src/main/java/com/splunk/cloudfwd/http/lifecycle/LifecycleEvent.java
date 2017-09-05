@@ -36,7 +36,9 @@ public abstract class LifecycleEvent {
     // States without an EventBatch object
     HEALTH_POLL_OK,
     HEALTH_POLL_INDEXER_BUSY,
-    HEALTH_POLL_FAILED
+    HEALTH_POLL_FAILED,
+    PREFLIGHT_CHECK_FAILED,
+    PREFLIGHT_CHECK_OK
   };
 
   private final Type type;

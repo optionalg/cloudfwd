@@ -1,11 +1,11 @@
 
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,7 +28,7 @@ import org.junit.Test;
  *
  * @author ghendrey
  */
-public class ConnectionTimeoutTest extends AbstractConnectionTest {
+public class MaxRetriesTest extends AbstractConnectionTest {
 
   @Override
   protected Properties getProps() {
@@ -44,51 +44,35 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
     props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
     props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
     props.put(PropertyKeys.ACK_POLL_MS, "250");
+    props.put(PropertyKeys.RETRIES, "2");
+    props.put(PropertyKeys.UNRESPONSIVE_MS, "250"); //for this test, le't QUICKLY determine the channel is dead
     return props;
   }
+  
 
   @Override
   protected void sendEvents() throws InterruptedException {
     if (getNumEventsToSend() > 1) {
       throw new RuntimeException(
               "This test uses close(), not closeNow(), so don't jam it up with more than one Batch to test on "
-                      + "a jammed up channel. It will take too long to be practical.");
+              + "a jammed up channel. It will take too long to be practical.");
     }
     System.out.println(
             "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     try {
-      //send a first message to block the channel (we are using the slowendpoints to jam up the channel, see getProps)
-      connection.send(nextEvent(0));
+      connection.send(nextEvent(1));
     } catch (HecConnectionTimeoutException ex) {
       Assert.fail(
               "The first message should send - but we got an HecConnectionTimeoutException");
     }
-    //it will take about 10 seconds for the SlowEndpoints to ack, and unjam the channel
-    int expected = getNumEventsToSend();
-    for (int i = 0; i < expected; i++) {
-      Event event = nextEvent(i + 1);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
-      int connTimeoutCount = 0;
-      while (true) {
-        try {
-          connection.send(event);
-          break;
-        } catch (HecConnectionTimeoutException e) {
-          if (connTimeoutCount++ > 20) {
-            Assert.fail("Too many HecConnectionTimeouts");
-            return;
-          }
-        }
-      }
-      Assert.assertTrue("Did not get any HecConnectionTimeouts",
-              connTimeoutCount != 0);
-    }
     connection.close();
-    this.callbacks.await(10, TimeUnit.MINUTES);
-    if (callbacks.isFailed()) {
-      Assert.fail(callbacks.getFailMsg());
-    }
+    this.callbacks.await(1, TimeUnit.MINUTES);
+    //we set this test up to detect too many retries by DeadChannelDetector
+    Assert.assertTrue("Did not get expected HecMaxRetrriesException FAILURE",
+            super.callbacks.failed);
+    Assert.assertTrue("Did not get expected HecMaxRetrriesException FAILURE",
+            super.callbacks.getException() instanceof HecMaxRetriesException);
   }
 
   @Override
@@ -97,8 +81,18 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
   }
 
   @Test
-  public void testHecConnectionTimeout() throws InterruptedException {
+  public void testMaxRetries() throws InterruptedException {
     sendEvents();
+  }
+  
+  @Override
+  public BasicCallbacks getCallbacks(){
+    return new BasicCallbacks(0){
+       @Override
+       protected boolean isFailureExpected(){
+         return true;
+       }       
+    };
   }
 
 }

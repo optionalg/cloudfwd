@@ -19,7 +19,9 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.IllegalHECStateException;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
@@ -49,8 +51,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
   private volatile boolean closed;
   private volatile boolean quiesced;
-  private volatile boolean healthy = true; //responsive to indexer 503 "queue full" error
-  private volatile boolean receivedFirstEventPostResponse;
+  private volatile boolean healthy = false; // Responsive to indexer 503 "queue full" error.
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
@@ -69,6 +70,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.channelMetrics.addObserver(this);
     this.full = loadBalancer.getPropertiesFileHelper().
             getMaxUnackedEventBatchPerChannel();
+    sender.setChannel(this);
+    sender.getHecIOManager().preFlightCheck();
   }
 
   private static String newChannelId() {
@@ -123,7 +126,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
-    //System.out.println("channel=" + getChannelId() + " unack-count=" + count);
+    System.out.println("channel=" + getChannelId() + " unack-count=" + count);
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();
@@ -146,18 +149,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }
       case EVENT_POST_OK: {
         //System.out.println("OBSERVED EVENT_POST_OK");
-
-        // the below if clause is to unblock sending in the channel once we get post OK
-        // for the first event in the channel
-        if (!receivedFirstEventPostResponse) {
-          System.out.println("channel=" + getChannelId()
-                  + ", received OBSERVED EVENT_POST_OK and unblocking sending"
-                  + " for the first event in the channel");
-          receivedFirstEventPostResponse = true;//must be set *before* notify
-        }
         checkForStickySessionViolation(e);
         break;
       }
+      case PREFLIGHT_CHECK_OK:
       case HEALTH_POLL_OK: {
         this.healthy = true; //see isAvailable
         break;
@@ -280,8 +275,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   boolean isAvailable() {
-    return !quiesced && !closed && healthy && this.unackedCount.get() < full && (unackedCount.
-            get() == 0 || receivedFirstEventPostResponse);
+    return !quiesced && !closed && healthy && this.unackedCount.get() < full;
   }
 
   @Override
@@ -351,12 +345,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           LOG.severe(
                   "Dead channel detected. Resending messages and force closing channel");
           //synchronize on the load balancer so we do not allow the load balancer to be
-          //closed between forceCloseAndReplace and resendInFlightEvents. If that
-          //could happen, then the channel we replace this one with in forceCloseAndReplace
+          //closed before  resendInFlightEvents. If that
+          //could happen, then the channel we replace this one with
           //can be removed before we resendInFlightEvents
           synchronized (loadBalancer) {
             loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-            //forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
             resendInFlightEvents();
             //don't force close until after events resent. 
             //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
@@ -382,14 +375,29 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
       sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
+        loadBalancer.getCheckpointManager().deRegisterInFlightEvents(e); //effectively cancels the tracking of the event
         e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
         //we must force messages to be sent because the connection could have been gracefully closed
         //already, in which case sendRoundRobbin will just ignore the sent messages
         boolean forced = true;
-        try {
-          loadBalancer.sendRoundRobin(e, forced);
-        } catch (HecConnectionTimeoutException ex) {
-          loadBalancer.getConnection().getCallbacks().failed(e, ex);
+        int maxRetries = loadBalancer.getPropertiesFileHelper().getMaxRetries();
+        int i = 0;
+        for (;; i++) { //try to resend the message up to N times
+          try {
+            if (e.getNumTries() > maxRetries) {
+              String msg = "Tried to send event id=" + e.
+                              getId() + " " + e.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
+              LOG.warning(msg);
+              loadBalancer.getConnection().getCallbacks().failed(e,
+                      new HecMaxRetriesException(msg));
+            } else {
+              LOG.info("retrying send on event id= "+e.getId());
+              loadBalancer.sendRoundRobin(e, forced);
+            }
+            break;
+          } catch (HecConnectionTimeoutException ex) {
+            //noop
+          }
         }
       });
 

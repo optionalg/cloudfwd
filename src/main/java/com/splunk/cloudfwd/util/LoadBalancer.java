@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.util;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.http.HttpSender;
 import java.io.Closeable;
@@ -73,7 +74,6 @@ public class LoadBalancer implements Closeable {
       throw new IllegalStateException(
               "Connection FutureCallback has not been set.");
     }
-    this.checkpointManager.registerInFlightEvents(events);
     if (channels.isEmpty()) {
       createChannels(discoverer.getAddrs());
     }
@@ -151,7 +151,6 @@ public class LoadBalancer implements Closeable {
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
-      sender.setChannel(channel);
       LOG.log(Level.INFO, "Adding channel {0}", channel.getChannelId());
       channels.put(channel.getChannelId(), channel);
       //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
@@ -203,6 +202,9 @@ public class LoadBalancer implements Closeable {
     int yieldInterval = this.connection.getPropertiesFileHelper().
             getMaxTotalChannels();
     ///CountDownLatch latch = new CountDownLatch(1);
+    if(!closed || forced){
+          this.checkpointManager.registerInFlightEvents(events);
+    }
     while (!closed || forced) {
       //note: the channelsSnapshot must be refreshed each time through this loop
       //or newly added channels won't be seen, and eventually you will just have a list
@@ -219,12 +221,11 @@ public class LoadBalancer implements Closeable {
       tryMe = channelsSnapshot.get(channelIdx);
       if (tryMe.send(events)) {
         //System.out.println(
-        //      "sent EventBatch id=" + events.getId() + " on " + tryMe);
+        //      "sent EventBatch id=" + events.getId() + " on " + tryMe);        
         break;
       }
       if (++spinCount % yieldInterval == 0) {
         LOG.info("Waiting for available channel...");
-        //condition.await(10, TimeUnit.MINUTES);
         try {
           latch.await(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
@@ -234,9 +235,10 @@ public class LoadBalancer implements Closeable {
         }
         latch = new CountDownLatch(1); //replace the finished countdown latch
       }
-      if (System.currentTimeMillis() - start > this.getConnection().
-              getBlockingTimeoutMS()) {
-        System.out.println("TIMEOUT EXCEEDED");
+      long timeout = this.getConnection(). getBlockingTimeoutMS();
+      if (System.currentTimeMillis() - start >= timeout) {
+        LOG.warning(PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.getId());
+        this.checkpointManager.deRegisterInFlightEvents(events);
         throw new HecConnectionTimeoutException("Send timeout exceeded.");
       }
     }

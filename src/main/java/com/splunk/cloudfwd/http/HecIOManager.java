@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.http;
 
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecErrorResponseException;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.http.lifecycle.Response;
@@ -278,6 +279,54 @@ public class HecIOManager implements Closeable {
 
     };
     sender.pollHealth(cb);
+  }
+
+  /**
+   * Hits the /ack endpoint to check for a valid HEC token with acknowledgements enabled
+   */
+  public void preFlightCheck() {
+    System.out.println("PRE-FLIGHT CHECK...");
+
+    FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
+      @Override
+      public void failed(Exception ex) {
+        LOG.log(Level.SEVERE, "failed to perform pre-flight check", ex);
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.PREFLIGHT_CHECK_FAILED, ex));
+      }
+
+      @Override
+      public void cancelled() {
+        sender.getConnection().getCallbacks().failed(null, new Exception(
+                "HEC pre-flight check request cancelled."));
+      }
+
+      @Override
+      public void completed(String reply, int code) {
+        if (code == 200) {
+          System.out.println("PRE-FLIGHT CHECK OK");
+          sender.getChannelMetrics().update(
+                  new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code, reply));
+        } else {
+          handlePreFlightCheckFailure(reply, code);
+        }
+      }
+    };
+
+    sender.preFlightCheck(cb);
+  }
+
+  private void handlePreFlightCheckFailure(String reply, int httpCode) {
+    PreflightFailureResponseValueObject preFlightResp;
+    try {
+      preFlightResp = mapper.readValue(reply, PreflightFailureResponseValueObject.class);
+    } catch (IOException ex) {
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+    LOG.severe("Error from HEC endpoint on channel: " + sender.getChannel().toString());
+    Exception ex = new HecErrorResponseException(
+            preFlightResp.getText(), preFlightResp.getCode(), sender.getBaseUrl());
+    sender.getChannel().getCallbacks().failed(null, ex);
   }
 
   /**

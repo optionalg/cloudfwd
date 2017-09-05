@@ -34,6 +34,8 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected boolean failed;
   private Comparable lastId;
   private String failMsg;
+  private Exception exception;
+  
 
   public BasicCallbacks(int expected) {
     System.out.println("Constructing BasicCallbacks");
@@ -41,10 +43,20 @@ public class BasicCallbacks implements ConnectionCallbacks {
     this.latch = new CountDownLatch(1);
   }
 
+  /**
+   * Sublcasses can override to return true if expecting an exception (to suppress printing of stacktrace).
+   * @return
+   */
+  protected boolean isFailureExpected(){
+    return false;
+  }
+  
   @Override
   public void acknowledged(EventBatch events) {
-    if(null != lastId && lastId.compareTo(events.getId())>=0){
-      Assert.fail("checkpoints received out of order. " + lastId + " before " + events.getId());
+    if (null != lastId && lastId.compareTo(events.getId()) >= 0) {
+      Assert.fail(
+              "checkpoints received out of order. " + lastId + " before " + events.
+              getId());
     }
 
     if (!acknowledgedBatches.add(events.getId())) {
@@ -57,17 +69,22 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   @Override
   public void failed(EventBatch events, Exception ex) {
-    failed = true;
-    latch.countDown();
-    ex.printStackTrace();
+    failed = true;   
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
+    exception = ex;
+    if(!isFailureExpected()){
+      ex.printStackTrace(); //print the stack trace if we were not expecting failure
+    }
+    //make sure we set the failed, failMsg and Exception *before* we unlatch    
+    latch.countDown();
+
   }
 
   @Override
   public void checkpoint(EventBatch events) {
     System.out.println("SUCCESS CHECKPOINT " + events.getId());
-    if (expectedAckCount.compareTo((Integer)events.getId())==0) {
+    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
       latch.countDown();
     }
   }
@@ -95,6 +112,13 @@ public class BasicCallbacks implements ConnectionCallbacks {
    */
   public String getFailMsg() {
     return failMsg;
+  }
+
+  /**
+   * @return the exception
+   */
+  public Exception getException() {
+    return exception;
   }
 
 }

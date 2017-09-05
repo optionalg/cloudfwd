@@ -41,6 +41,7 @@ public class EventBatch implements HttpPostable {
   private boolean acknowledged;
   private final long creationTime = System.currentTimeMillis();
   private int numEvents;
+  private int numTries; //events are resent by DeadChannelDetector
 
   public EventBatch() {
 
@@ -82,6 +83,7 @@ public class EventBatch implements HttpPostable {
       //endpoints are either real (via the Sender) or simulated 
       ioManager.postEvents(this);
       flushed = true;
+      numTries++;
     }
   }
 
@@ -173,6 +175,13 @@ public class EventBatch implements HttpPostable {
 //  public void setSender(HttpSender sender) {
 //    this.sender = sender;
 //  }
+
+  /**
+   * @return the numTries
+   */
+  public int getNumTries() {
+    return numTries;
+  }
 
 
 }

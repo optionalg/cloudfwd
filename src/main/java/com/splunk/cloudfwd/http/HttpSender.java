@@ -29,22 +29,19 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * This is an internal helper class that sends logging events to Splunk http
+ * This class performs the actually HTTP send to HEC
  * event collector.
  */
 public final class HttpSender implements Endpoints {
   
   private static final Logger LOG = Logger.getLogger(HttpSender.class.getName());
   
-  public static final String MetadataTimeTag = "time";
-  public static final String MetadataHostTag = "host";
-  public static final String MetadataIndexTag = "index";
-  public static final String MetadataSourceTag = "source";
-  public static final String MetadataSourceTypeTag = "sourcetype";
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8"; //FIX ME application/json not all the time
@@ -56,7 +53,6 @@ public final class HttpSender implements Endpoints {
   private final String token;
   private final String cert;
   private final String host;
-  //private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
@@ -302,6 +298,36 @@ public final class HttpSender implements Endpoints {
     final HttpGet httpGet = new HttpGet(getUrl);
     setHttpHeaders(httpGet);
     httpClient.execute(httpGet, httpCallback);
+  }
+
+  @Override
+  public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+    if (!started()) {
+      start();
+    }
+    if (isSimulated()) {
+      this.simulatedEndpoints.preFlightCheck(httpCallback);
+      return;
+    }
+    Set<Long> dummyAckId = new HashSet<>();
+    dummyAckId.add(0L);
+    AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);
+
+    try {
+      final HttpPost httpPost = new HttpPost(ackUrl);
+      setHttpHeaders(httpPost);
+
+      StringEntity entity;
+
+      String req = dummyAckReq.toString();
+      entity = new StringEntity(req);
+      entity.setContentType(HttpContentType);
+      httpPost.setEntity(entity);
+      httpClient.execute(httpPost, httpCallback);
+    } catch (Exception ex) {
+      LOG.severe(ex.getMessage());
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
   }
 
   /**
