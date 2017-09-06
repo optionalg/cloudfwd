@@ -1,8 +1,5 @@
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.*;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -14,8 +11,7 @@ import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+
 import java.io.InputStream;
 
 /*
@@ -46,7 +42,7 @@ public abstract class AbstractConnectionTest {
   public static final String TEST_METHOD_GUID_KEY = "testMethodGUID";
   
   protected BasicCallbacks callbacks;
-  protected Connection connection;
+  protected IConnection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
           "yyyy-MM-dd HH:mm:ss");
   protected final static String TEST_CLASS_INSTANCE_GUID = java.util.UUID.randomUUID().
@@ -54,8 +50,8 @@ public abstract class AbstractConnectionTest {
   protected String testMethodGUID;
   protected List<Event> events;
 
-  //override to do stuff like set buffering or anything else affecting connection
-  protected void configureConnection(Connection connection) {
+  //override to do stuff like se buffering or anything else affecting connection
+  protected void configureConnection(IConnection connection) {
     //noop
   }
 
@@ -71,7 +67,8 @@ public abstract class AbstractConnectionTest {
     Properties props = new Properties();
     props.putAll(getTestProps());
     props.putAll(getProps());
-    this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+   // this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+    this.connection = Connection.createConnection((ConnectionCallbacks) callbacks, props);
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();

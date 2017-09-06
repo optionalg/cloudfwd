@@ -21,6 +21,9 @@ import com.splunk.cloudfwd.util.LoadBalancer;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
@@ -32,7 +35,7 @@ import java.util.logging.Logger;
  *
  * @author ghendrey
  */
-public class Connection implements Closeable {
+public class Connection implements IConnection {
 
   private static final Logger LOG = Logger.getLogger(Connection.class.getName());
 
@@ -207,5 +210,26 @@ public class Connection implements Closeable {
   public long getBlockingTimeoutMS(){
     return propertiesFileHelper.getBlockingTimeoutMS();
   }
-   
+
+  public static IConnection createConnection(ConnectionCallbacks callbacks) {
+    return ConnectionProxy.newInstance(callbacks);
+  }
+
+  public static IConnection createConnection(ConnectionCallbacks callbacks, Properties settings) {
+    return ConnectionProxy.newInstance(callbacks, settings);
+  }
+
+  //    public Connection createConnection(ConnectionCallbacks callbacks, Properties settings) {
+//        activeConnection = new Connection(callbacks, settings);
+//        this.callbacks = callbacks;
+//        return createProxy();
+//    }
+
+//  private static IConnection createProxy() {
+//    handler = new ConnectionInvocationHandler(activeConnection,);
+//    proxy = (IConnection) Proxy.newProxyInstance(activeConnection.getClass().getClassLoader(),
+//            new Class<?>[] { IConnection.class, Closeable.class }, handler);
+//    return proxy;
+//  }
+
 }

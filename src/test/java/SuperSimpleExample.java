@@ -1,12 +1,9 @@
 
+import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.RawEvent;
+
 import java.util.Properties;
-import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -78,7 +75,7 @@ public class SuperSimpleExample {
             "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
 
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
-    try (Connection c = new Connection(callbacks, customization);) {
+    try (IConnection c = Connection.createConnection(callbacks, customization);) {
       c.setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
       c.setEventAcknowledgementTimeoutMS(10000); //10 sec
       for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object
@@ -97,7 +94,7 @@ public class SuperSimpleExample {
     } //safely autocloses Connection, no event loss. (use Connection.closeNow() if you want to *lose* in-flight events)
 
     //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
-    try (Connection c = new Connection(callbacks, customization);) {
+    try (IConnection c = Connection.createConnection(callbacks, customization);) {
       c.setEventBatchSize(1024 * 16); //16kB send buffering
       c.setEventAcknowledgementTimeoutMS(10000); //10 sec
       c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);

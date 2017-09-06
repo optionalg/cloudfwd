@@ -16,8 +16,7 @@
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
-import java.util.Properties;
+import com.splunk.cloudfwd.IConnection;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
 
@@ -33,7 +32,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected void configureConnection(Connection connection) {
+  protected void configureConnection(IConnection connection) {
     connection.setEventBatchSize(1024*32); //32k batching batching, roughly
   }
 

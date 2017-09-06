@@ -83,7 +83,7 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
         Properties props = new Properties();
         props.putAll(getTestProps());
         props.putAll(getProps());
-        this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+        this.connection = Connection.createConnection((ConnectionCallbacks) callbacks, props);
         configureConnection(connection);
     }
 
