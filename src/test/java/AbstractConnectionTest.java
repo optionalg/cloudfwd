@@ -49,7 +49,7 @@ public abstract class AbstractConnectionTest {
   protected Connection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
           "yyyy-MM-dd HH:mm:ss");
-  protected final String TEST_CLASS_INSTANCE_GUID = java.util.UUID.randomUUID().
+  protected final static String TEST_CLASS_INSTANCE_GUID = java.util.UUID.randomUUID().
           toString();
   protected String testMethodGUID;
   protected List<Event> events;
@@ -102,7 +102,7 @@ public abstract class AbstractConnectionTest {
     connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);
     if (callbacks.isFailed()) {
-      Assert.fail(callbacks.getFailMsg());
+      Assert.fail("There was a failure callback with exception class  " + callbacks.getException() + " and message " + callbacks.getFailMsg());
     }
   }
 

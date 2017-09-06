@@ -1,5 +1,6 @@
 
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.EventBatch;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;

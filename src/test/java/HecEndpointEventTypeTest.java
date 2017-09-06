@@ -15,27 +15,28 @@
  */
 
 import com.splunk.cloudfwd.Connection.HecEndpoint;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 
 import java.util.*;
 import org.junit.Test;
 
 /**
- *
+ *Note this test is excluded by default in maven pom.xml
  * @author ajayaraman
  */
 public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   @Override
   protected int getNumEventsToSend() {
-    return 1;
+    return 2;
   }
 
  
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "false");
+    props.put(PropertyKeys.MOCK_HTTP_KEY, "true");
     return props;
   }
 

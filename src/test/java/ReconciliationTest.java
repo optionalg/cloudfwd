@@ -63,9 +63,9 @@ public class ReconciliationTest extends AbstractConnectionTest {
     // change these settings based on the Splunk search head you want the test to search on:
     private String splunkHost = "localhost";
     private String mgmtPort = "8089"; // management port on the Splunk search head
-    private String index = "main"; // where the data is indexed – this is the index that will be searched
+    private String index = "firehose"; // where the data is indexed – this is the index that will be searched
     private String user = "admin"; // a Splunk user that has permissions to search in <index>
-    private String password = "a";
+    private String password = "changeme";
     /* ************ /CONFIGURABLE ************ */
 
     public ReconciliationTest() {
@@ -212,9 +212,13 @@ public class ReconciliationTest extends AbstractConnectionTest {
         HttpResponse getResponse = httpClient.execute(httpget);
 
         String getReply = EntityUtils.toString(getResponse.getEntity(), "utf-8");
-        ObjectMapper json = new ObjectMapper();
-        JsonNode resultsNode = json.readTree(getReply).path("results");
-        for (JsonNode node : resultsNode) {
+        ObjectMapper mapper = new ObjectMapper();
+        
+        JsonNode n = mapper.readTree(getReply);
+        if(getReply.toLowerCase().contains("unauthorized")){
+          throw new RuntimeException(getReply);
+        }
+        for (JsonNode node : n.path("results")) {
             boolean success = results.add(node.path("_raw").asText());
             if (!success) {
                 throw new RuntimeException("Events sent to Splunk were not unique.");

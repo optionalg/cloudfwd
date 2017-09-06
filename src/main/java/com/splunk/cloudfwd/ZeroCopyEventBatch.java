@@ -16,18 +16,21 @@
 package com.splunk.cloudfwd;
 
 import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
+import com.splunk.cloudfwd.http.HecIOManager;
+import com.splunk.cloudfwd.http.HttpPostable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.entity.AbstractHttpEntity;
 
 /**
  *
  * @author ghendrey
  */
-public class ZeroCopyEventBatch {
+public class ZeroCopyEventBatch implements HttpPostable{
 
   private final ByteBuffer buf;
 
@@ -42,6 +45,21 @@ public class ZeroCopyEventBatch {
 
   public long getContentLength() {
     return buf.limit();
+  }
+
+  @Override
+  public void post(HecIOManager ioManager) {
+    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+  }
+
+  @Override
+  public boolean isFlushed() {
+    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+  }
+
+  @Override
+  public HttpEntity getEntity() {
+    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
   }
 
   private class ByteBufferHttpEntity extends AbstractHttpEntity{

@@ -15,9 +15,13 @@
  */
 package com.splunk.cloudfwd;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -45,6 +49,8 @@ public class EventWithMetadata implements Event {
   private long time = -1;
   private final Object event;
   private Comparable id;
+  @JsonIgnore
+  private byte[] bytes; //for memo-izing the bytes...not part of what gets marshalled to json
 
   /**
    * Allows caller to provide a HEC /event endpoint JSON document as byte array
@@ -56,6 +62,7 @@ public class EventWithMetadata implements Event {
    */
   public static EventWithMetadata fromJsonAsBytes(byte[] eventWithMetadata,
           Comparable id) throws IOException {
+    //validate by parsing in the eventWithMetadata
     EventWithMetadata e = jsonMapper.readValue(eventWithMetadata,
             EventWithMetadata.class);
     e.id = id;
@@ -72,23 +79,49 @@ public class EventWithMetadata implements Event {
 
   @Override
   public String toString() {
-    Map eventJSON = new LinkedHashMap();
+    try {
+      return jsonMapper.writeValueAsString(getJsonNode());
+    } catch (Exception ex) {
+      Logger.getLogger(EventWithMetadata.class.getName()).
+              log(Level.SEVERE, null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+  }
+  
+  /**
+   * WARNING! This method is memo-ized. Any changes to field of this object will not be reflected in getBytes() nor writeTo()
+   * subsequent to the first invocation of either.
+   * @return
+   */
+  @Override
+  public byte[] getBytes() {
+    try {
+      if(null == this.bytes){
+        this.bytes = jsonMapper.writeValueAsBytes(getJsonNode()); //MEMO-IZE
+      }
+      return this.bytes;
+    } catch (Exception ex) {
+      Logger.getLogger(EventWithMetadata.class.getName()).
+              log(Level.SEVERE, null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+  }  
+  
+    @Override
+  public void writeTo(OutputStream out) throws IOException{
+    out.write(getBytes());
+  }
 
+  private ObjectNode getJsonNode() throws IllegalArgumentException {
+    Map eventJSON = new LinkedHashMap();
     putIfPresent(eventJSON, TIME, formatTime(time));
     putIfPresent(eventJSON, INDEX, index);
     putIfPresent(eventJSON, HOST, host);
     putIfPresent(eventJSON, SOURCETYPE, sourceType);
     putIfPresent(eventJSON, SOURCE, source);
     eventJSON.put(EVENT, this.event);
-
     ObjectNode eventNode = (ObjectNode) jsonMapper.valueToTree(eventJSON);
-    try {
-      return jsonMapper.writeValueAsString(eventNode);
-    } catch (Exception ex) {
-      Logger.getLogger(EventWithMetadata.class.getName()).
-              log(Level.SEVERE, null, ex);
-      throw new RuntimeException(ex.getMessage(), ex);
-    }
+    return eventNode;
   }
 
   private static void putIfPresent(Map collection, String tag,
@@ -173,10 +206,6 @@ public class EventWithMetadata implements Event {
     return null;
   }
 
-  @Override
-  public boolean isJson() {
-    return true;
-  }
 
   /**
    * @return the id
@@ -184,5 +213,24 @@ public class EventWithMetadata implements Event {
   @Override
   public Comparable getId() {
     return id;
+  }
+
+  @Override
+  public Connection.HecEndpoint getTarget() {
+    return Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT;
+  }
+
+  @Override
+  public Type getType() {
+    if(event instanceof String){
+      return Event.Type.TEXT;
+    }else{
+      return Event.Type.JSON;
+    }
+  }
+
+  @Override
+  public InputStream getInputStream() {
+    return new ByteArrayInputStream(getBytes());
   }
 }

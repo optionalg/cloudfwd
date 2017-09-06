@@ -1,3 +1,6 @@
+com.amazonaws.services.kinesis.samples.awsLogTypes.processor
+com.amazonaws.services.kinesis.samples.awsLogTypes.utils
+com.amazonaws.services.kinesis.samples.awsLogTypes.writer
 com.amazonaws.services.kinesis.samples.stocktrades.processor
 com.amazonaws.services.kinesis.samples.stocktrades.writer
 com.splunk.cloudfwd

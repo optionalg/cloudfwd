@@ -15,6 +15,10 @@
  */
 package com.splunk.cloudfwd;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 /**
  * Event can be either a JSON document, or a blob of text. Every Event must have a Comparable id. For each
  * Event sent to the Connection, the id must be must be greater than the previously sent id. That is, ids must
@@ -22,8 +26,11 @@ package com.splunk.cloudfwd;
  * @author ghendrey
  */
 public interface Event {
-  @Override
-  public String toString();
-  public boolean isJson();
+  public enum Type{TEXT, JSON, UNKNOWN}
   public Comparable getId();
+  public byte[] getBytes();
+  public InputStream getInputStream();
+  public void writeTo(OutputStream out) throws IOException;
+  public Connection.HecEndpoint getTarget();
+  public Type getType();
 }
