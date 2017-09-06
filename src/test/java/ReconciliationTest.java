@@ -74,7 +74,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     @Test
     public void sendTextToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-        super.eventType = EventType.TEXT;
+        super.eventType = Event.Type.TEXT;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
@@ -83,7 +83,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     @Test
     public void sendJsonToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-        super.eventType = EventType.JSON;
+        super.eventType = Event.Type.JSON;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
@@ -92,7 +92,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     @Test
     public void sendTextToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-        super.eventType = EventType.TEXT;
+        super.eventType = Event.Type.TEXT;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
@@ -101,7 +101,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     @Test
     public void sendJsonToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-        super.eventType = EventType.JSON;
+        super.eventType = Event.Type.JSON;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
@@ -127,6 +127,7 @@ public class ReconciliationTest extends AbstractConnectionTest {
     protected Properties getProps() {
         Properties props = new Properties();
         props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
+        props.put(PropertyKeys.EVENT_BATCH_SIZE,  "16000");
         return props;
     }
 
