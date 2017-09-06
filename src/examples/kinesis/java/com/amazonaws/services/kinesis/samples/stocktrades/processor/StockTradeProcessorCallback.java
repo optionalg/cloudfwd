@@ -3,13 +3,13 @@ package com.amazonaws.services.kinesis.samples.stocktrades.processor;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.EventBatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
+import com.splunk.cloudfwd.EventBatch;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;

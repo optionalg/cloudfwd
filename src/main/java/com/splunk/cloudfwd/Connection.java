@@ -56,7 +56,6 @@ public class Connection implements Closeable {
   private boolean closed;
   private HecEndpoint hecEndpointType;
   private EventBatch events; //default EventBatch used if send(event) is called
-  //private int charBufferSize;
   private PropertiesFileHelper propertiesFileHelper;
 
   public Connection(ConnectionCallbacks callbacks) {
@@ -149,11 +148,11 @@ public class Connection implements Closeable {
     }
     timeoutChecker.start();
     timeoutChecker.add(events);
-    LOG.info("sending " + events.getCharCount() + " characters.");
+    LOG.info("sending " + events.getLength() + " characters.");
     lb.sendBatch(events);
     this.events = null; //batch is in flight, null it out
     //return the number of characters posted to HEC for the events data
-    return events.getCharCount(); 
+    return events.getLength(); 
   }
 
   public synchronized void flush() throws HecConnectionTimeoutException {

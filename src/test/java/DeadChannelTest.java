@@ -41,7 +41,7 @@ public class DeadChannelTest extends AbstractConnectionTest {
     props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.errorgen.ackslost.LossyEndpoints");
     props.put(UNRESPONSIVE_MS,
-            "5000"); //set dead channel detector to detect at 1 second    
+            "5000"); //set dead channel detector to detect at 5 second    
         props.put(MAX_TOTAL_CHANNELS,
             "2");
     return props;

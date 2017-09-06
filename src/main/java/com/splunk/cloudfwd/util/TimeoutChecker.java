@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.util;
 
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventBatch;
 import java.util.Iterator;
 import java.util.Map;

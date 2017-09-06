@@ -18,12 +18,8 @@ package com.splunk.cloudfwd.http;
  * the License.
  */
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.sim.CannedEntity;
-import com.splunk.cloudfwd.sim.CannedOKHttpResponse;
 import com.splunk.cloudfwd.util.HecChannel;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -33,47 +29,30 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
 
 /**
- * This is an internal helper class that sends logging events to Splunk http
+ * This class performs the actually HTTP send to HEC
  * event collector.
  */
 public final class HttpSender implements Endpoints {
   
   private static final Logger LOG = Logger.getLogger(HttpSender.class.getName());
   
-  public static final String MetadataTimeTag = "time";
-  public static final String MetadataHostTag = "host";
-  public static final String MetadataIndexTag = "index";
-  public static final String MetadataSourceTag = "source";
-  public static final String MetadataSourceTypeTag = "sourcetype";
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8"; //FIX ME application/json not all the time
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
   private static final String Host = "Host";
 
-  /**
-   * Recommended default values for events batching.
-   */
-  public static final int DefaultBatchInterval = 10 * 1000; // 10 seconds
-  public static final int DefaultBatchSize = 10 * 1024; // 10KB
-  public static final int DefaultBatchCount = 10; // 10 events
-
   private final String eventUrl;
   private final String rawUrl;
   private final String token;
   private final String cert;
   private final String host;
-  //private EventBatch eventsBatch;// = new EventBatch();
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;

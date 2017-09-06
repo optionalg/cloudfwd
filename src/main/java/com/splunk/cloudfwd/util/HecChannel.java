@@ -15,11 +15,14 @@
  */
 package com.splunk.cloudfwd.util;
 
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.IllegalHECStateException;
+import com.splunk.cloudfwd.HecMaxRetriesException;
+import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
@@ -31,7 +34,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -125,7 +127,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
-    //System.out.println("channel=" + getChannelId() + " unack-count=" + count);
+    System.out.println("channel=" + getChannelId() + " unack-count=" + count);
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();
@@ -307,8 +309,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       int ackId = events.getAckId().intValue();
       if (ackId == 1) {
         if (seenAckIdOne) {
-          Exception e = new IllegalHECStateException(
-                  "ackId " + ackId + " has already been received on channel " + this);
+          Exception e = new HecIllegalStateException(
+                  "ackId " + ackId + " has already been received on channel " + this,
+                  HecIllegalStateException.Type.STICKY_SESSION_VIOLATION);
           HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
                   events, e);
         } else {
@@ -344,12 +347,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           LOG.severe(
                   "Dead channel detected. Resending messages and force closing channel");
           //synchronize on the load balancer so we do not allow the load balancer to be
-          //closed between forceCloseAndReplace and resendInFlightEvents. If that
-          //could happen, then the channel we replace this one with in forceCloseAndReplace
+          //closed before  resendInFlightEvents. If that
+          //could happen, then the channel we replace this one with
           //can be removed before we resendInFlightEvents
           synchronized (loadBalancer) {
             loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-            //forceCloseAndReplace();  //we kill this dead channel but must replace it with a new channel
             resendInFlightEvents();
             //don't force close until after events resent. 
             //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
@@ -375,14 +377,29 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
       sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
+        loadBalancer.getCheckpointManager().deRegisterInFlightEvents(e); //effectively cancels the tracking of the event
         e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
         //we must force messages to be sent because the connection could have been gracefully closed
         //already, in which case sendRoundRobbin will just ignore the sent messages
         boolean forced = true;
-        try {
-          loadBalancer.sendRoundRobin(e, forced);
-        } catch (HecConnectionTimeoutException ex) {
-          loadBalancer.getConnection().getCallbacks().failed(e, ex);
+        int maxRetries = loadBalancer.getPropertiesFileHelper().getMaxRetries();
+        int i = 0;
+        for (;; i++) { //try to resend the message up to N times
+          try {
+            if (e.getNumTries() > maxRetries) {
+              String msg = "Tried to send event id=" + e.
+                      getId() + " " + e.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
+              LOG.warning(msg);
+              loadBalancer.getConnection().getCallbacks().failed(e,
+                      new HecMaxRetriesException(msg));
+            } else {
+              LOG.info("retrying send on event id= " + e.getId());
+              loadBalancer.sendRoundRobin(e, forced);
+            }
+            break;
+          } catch (HecConnectionTimeoutException ex) {
+            //noop
+          }
         }
       });
 

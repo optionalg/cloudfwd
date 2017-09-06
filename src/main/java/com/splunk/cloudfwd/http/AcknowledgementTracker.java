@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.http;
 import com.splunk.cloudfwd.EventBatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import java.util.ArrayList;

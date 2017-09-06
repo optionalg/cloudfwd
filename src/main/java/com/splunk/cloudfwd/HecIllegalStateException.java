@@ -20,10 +20,20 @@ package com.splunk.cloudfwd;
  * balancer to provide stickiness.
  * @author ghendrey
  */
-public class IllegalHECStateException extends IllegalStateException{
+public class HecIllegalStateException extends IllegalStateException{
+  public enum Type{STICKY_SESSION_VIOLATION, INVALID_EVENTS_FOR_ENDPOINT, MIXED_BATCH}
+  private final Type type;
 
-  public IllegalHECStateException(String s) {
+  /**
+   * @return the type
+   */
+  public Type getType() {
+    return type;
+  }
+
+  public HecIllegalStateException(String s, Type t) {
     super(s);
+    this.type = t;
   }
   
   

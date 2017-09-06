@@ -15,26 +15,32 @@
  */
 package com.splunk.cloudfwd;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 
 /**
- * Provides various static methods for obtaining a RawEvent.
+ * Provides various static methods for obtaining a RawEvent. If content is JSON it is validated. Newline is appended if
+ * not present. A RawEvent should be sent to the /raw HEC events endpoint. The event is 'raw' in the sense that includes
+ * no enclosing JSON envelope. 
  * @author ghendrey
  */
 public class RawEvent implements Event{
   private static final ObjectMapper jsonMapper = new ObjectMapper();
   
-  final String string;
-  private final boolean json;
+  final byte[] bytes;
   private Comparable id;
+  private final Event.Type type;
   
   /**
    * Convenience method that will handle either bytes of a JSON object, or bytes of a UTF-8 String.
@@ -50,9 +56,8 @@ public class RawEvent implements Event{
     try{
         e = fromJsonAsBytes(jsonOrText, id);
     } catch (IOException ex) {//failed to parse as json, so treat as bytes
-      e =  new RawEvent(new String(jsonOrText, "UTF-8"), id, false);
+      e =  new RawEvent(new String(jsonOrText, "UTF-8").getBytes(), id, Event.Type.TEXT);
     }
-    e.id = id;
     return e;
   }
   
@@ -63,42 +68,77 @@ public class RawEvent implements Event{
       throw new IllegalStateException("Incorrect event type object: " + type);
     }
 
-    return new RawEvent(jsonMapper.readTree(jsonBytes).toString(), id,  true);
+    return new RawEvent(jsonBytes, id,  Event.Type.JSON);
   }
   
   
   public static RawEvent fromObject(Object o, Comparable id) throws IOException{
-    return new RawEvent(jsonMapper.writeValueAsString(o), id,  true);
+    return new RawEvent(jsonMapper.writeValueAsBytes(o), id,  Event.Type.JSON);
   }
     
   public static RawEvent fromText(String text, Comparable id){
-    return new RawEvent(text, id, false);
-  }
-  
-  private RawEvent(String eventString, Comparable id,  boolean json){
-    if(eventString.endsWith("\n")){
-      this.string = eventString;
-    }else{
-      this.string = eventString + "\n"; //insure event ends in line break
+    try {
+      return new RawEvent(text.getBytes("UTF-8"), id, Event.Type.TEXT);
+    } catch (UnsupportedEncodingException ex) {
+      Logger.getLogger(RawEvent.class.getName()).log(Level.SEVERE, null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
     }
-    this.json = json;
-    this.id = id;
   }
   
-
-  @Override
-  public String toString() {
-    return string;
+  private RawEvent(byte[] bytes, Comparable id,  Event.Type type){
+   
+    if(endsWith(bytes, (byte)'\n')){
+      this.bytes = bytes;
+    }else{
+      this.bytes = ArrayUtils.add(bytes, (byte)'\n');
+    };
+    this.id = id;
+    this.type = type;
   }
-
-  @Override
-  public boolean isJson() {
-    return json;
+  
+  private static boolean endsWith(byte[] a, byte b){
+    return a[a.length-1] == b;
   }
+  
 
   @Override
   public Comparable getId() {
     return id;
+  }
+
+  @Override
+  public byte[] getBytes() {
+    return bytes;
+  }
+  
+  @Override
+  public String toString(){
+    try {
+      return new String(bytes, "UTF-8");
+    } catch (UnsupportedEncodingException ex) {
+      Logger.getLogger(RawEvent.class.getName()).log(Level.SEVERE, null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+  }
+
+  @Override
+  public void writeTo(OutputStream out) throws IOException {
+    out.write(bytes);
+  }
+
+  @Override
+  public Connection.HecEndpoint getTarget() {
+    return Connection.HecEndpoint.RAW_EVENTS_ENDPOINT;
+  }
+
+  @Override
+  public Type getType() {
+    return type;
+  }
+
+  @Override
+  public InputStream getInputStream() {
+    return new ByteArrayInputStream(bytes);
   }
   
   

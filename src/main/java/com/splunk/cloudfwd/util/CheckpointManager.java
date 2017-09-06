@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.util;
 
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
@@ -89,9 +90,8 @@ public class CheckpointManager implements LifecycleEventObserver {
     //System.out.println("window state: " + eventBatchWindowStateToString());
     if (!this.orderedEvents.containsKey(events.getId())) {
       String msg = "No callback registered for successfully acknowledged ackId: " + events.
-              getAckId();
-      Logger.getLogger(getClass().getName()).log(Level.SEVERE, msg);
-      throw new IllegalStateException(msg);
+              getAckId() + ". This can happen if event has been resent by DeadChannelDetector";
+      Logger.getLogger(getClass().getName()).log(Level.WARNING, msg);
     }
     ConnectionCallbacks cb = this.connection.getCallbacks();
     //todo: maybe schedule acknowledge to be async
@@ -138,5 +138,15 @@ public class CheckpointManager implements LifecycleEventObserver {
       throw new IllegalStateException(msg);
     }
   }
-
+  
+  public synchronized void deRegisterInFlightEvents(EventBatch events) {
+    EventBatch prev = this.orderedEvents.remove(events.getId());
+    if (null == prev) {
+      String msg = "Attempt to deregister unregistered EventBatch. EventBatch ID is " + events.
+              getId();
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
+    }
+  }  
+  
 }

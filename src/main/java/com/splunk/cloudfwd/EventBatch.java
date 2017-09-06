@@ -16,99 +16,103 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.HecIOManager;
-import com.splunk.cloudfwd.http.HttpSender;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.SequenceInputStream;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.logging.Logger;
 import org.apache.http.HttpEntity;
-import org.apache.http.entity.StringEntity;
-import com.splunk.cloudfwd.http.HttpPostable;
+import org.apache.http.entity.AbstractHttpEntity;
 
 /**
- * EventBatch can be used if the caller wants a high degree of control over
- * which Events will get sent to HEC in a single HTTP post. Most of the time,
- * there is no need to use an EventBatch, as it is used inside the connection to
- * gather events together when buffering is enabled on the Connection.
  *
  * @author ghendrey
  */
-public class EventBatch implements HttpPostable {
+public class EventBatch  implements IEventBatch {
 
-  private static final Logger LOG = Logger.getLogger(EventBatch.class.getName());
-  private Comparable id; //will be set to the id of the last (most recent) Event added to the batch
-  private Long ackId; //Will be null until we receive ackId for this batch from HEC
-  //private final List<Event> eventsBatch = new ArrayList();
-  //private HttpSender sender;
-  private final StringBuilder stringBuilder = new StringBuilder();
-  private boolean flushed = false;
-  private boolean acknowledged;
-  private final long creationTime = System.currentTimeMillis();
-  private int numEvents;
+  protected static final Logger LOG = Logger.getLogger(
+          EventBatch.class.getName());
+  protected Comparable id; //will be set to the id of the last (most recent) Event added to the batch
+  protected Long ackId; //Will be null until we receive ackId for this batch from HEC
+  protected boolean flushed = false;
+  protected boolean acknowledged;
+  protected final long creationTime = System.currentTimeMillis();
+  protected int numEvents;
+  protected int numTries; //events are resent by DeadChannelDetector
+  protected int length;
+  protected List<Event> events = new ArrayList<>();
+  protected Connection.HecEndpoint knownTarget;
+  protected Event.Type knownType;
 
   public EventBatch() {
-
   }
 
+  @Override
   public synchronized void prepareToResend() {
     this.flushed = false;
-    //this.sender = null;
     this.acknowledged = false;
   }
 
+  @Override
   public boolean isTimedOut(long timeout) {
     long flightTime = System.currentTimeMillis() - creationTime;
     System.out.println("Flight time " + flightTime);
     return flightTime >= timeout;
   }
 
+  @Override
   public synchronized void add(Event event) {
     if (flushed) {
       throw new IllegalStateException(
               "Events cannot be added to a flushed EventBatch");
     }
-
-    this.stringBuilder.append(event);
+    if (null != knownTarget && knownTarget != event.getTarget()) { //and it's intended endpoint target doesn't match
+      throw new HecIllegalStateException(
+              "Illegal attempt to add event with getTarget()=" + event.
+              getTarget()
+              + " to EventBatch containing Event with getTarget()=" + knownTarget,
+              HecIllegalStateException.Type.MIXED_BATCH);
+    }
+    if (event.getType() != Event.Type.UNKNOWN) {
+      knownTarget = event.getTarget();
+      knownType = event.getType();
+    }
     this.id = event.getId();
+    this.length += event.getBytes().length;
+    this.events.add(event);
+
   }
 
   protected synchronized boolean isFlushable(int charBufferLen) {
     //technically the serialized size that we compate to maxEventsBatchSize should take into account
     //the character encoding. it's very difficult to compute statically. We use the stringBuilder length
     //which is a character count. Will be same as serialized size only for single-byte encodings like
-    //US-ASCII of ISO-8859-1    
-    return !flushed && (stringBuilder.length() > charBufferLen);
+    //US-ASCII of ISO-8859-1
+    return !flushed && (getLength() > charBufferLen);
   }
 
   @Override
   public synchronized void post(HecIOManager ioManager) {
-    if (!this.flushed && this.stringBuilder.length() > 0) {
-      //endpoints are either real (via the Sender) or simulated 
+    if (!this.flushed && getLength() > 0) {
+      //endpoints are either real (via the Sender) or simulated
       ioManager.postEvents(this);
       flushed = true;
+      numTries++;
     }
   }
 
   @Override
-  public HttpEntity getEntity() {
-    StringEntity e = new StringEntity(stringBuilder.toString(), "UTF-8");
-    e.setContentType("application/json; profile=urn:splunk:event:1.0; charset=utf-8"); //FIX ME application/json not all the time
-    return e;
-  }
-
-  @Override
-  public String toString() {
-    return this.stringBuilder.toString();
-  }
-
   public int getNumEvents() {
-    return numEvents;
-  }
-
-  public int getCharCount() {
-    return stringBuilder.length();
+    return events.size();
   }
 
   /**
    * @return the id
    */
+  @Override
   public Comparable getId() {
     return id;
   }
@@ -116,6 +120,7 @@ public class EventBatch implements HttpPostable {
   /**
    * @return the ackId
    */
+  @Override
   public Long getAckId() {
     return ackId;
   }
@@ -123,24 +128,15 @@ public class EventBatch implements HttpPostable {
   /**
    * @param ackId the ackId to set
    */
+  @Override
   public void setAckId(Long ackId) {
     this.ackId = ackId;
   }
 
-  /*
-  public void setSender(HttpSender sender) {
-    if (null != this.sender) {
-      String msg = "attempt to change the value of sender. Channel was " + this.sender.
-              getChannel() + ", and attempt to change to " + sender.getChannel();
-      LOG.severe(msg);
-      throw new IllegalStateException(msg);
-    }
-    this.sender = sender;
-  }*/
-
   /**
    * @return the acknowledged
    */
+  @Override
   public boolean isAcknowledged() {
     return acknowledged;
   }
@@ -148,6 +144,7 @@ public class EventBatch implements HttpPostable {
   /**
    * @param acknowledged the acknowledged to set
    */
+  @Override
   public void setAcknowledged(boolean acknowledged) {
     this.acknowledged = acknowledged;
   }
@@ -160,20 +157,103 @@ public class EventBatch implements HttpPostable {
     return flushed;
   }
 
-//  /**
-//   * @return the sender
-//   */
-//  public HttpSender getSender() {
-//    return sender;
-//  }
-//
-//  /**
-//   * @param sender the sender to set
-//   */
-//  @Override
-//  public void setSender(HttpSender sender) {
-//    this.sender = sender;
-//  }
+  /**
+   * @return the numTries
+   */
+  @Override
+  public int getNumTries() {
+    return numTries;
+  }
 
+  @Override
+  public int getLength() {
+    return length;
+  }
+
+  @Override
+  public HttpEntity getEntity() {
+    AbstractHttpEntity e = new HttpEventBatchEntity();
+    if (null == knownTarget) {
+      throw new IllegalStateException(
+              "getEntity cannot be called until post() has been called.");
+    }
+    if (knownTarget == Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
+      e.setContentType(
+              "application/json; profile=urn:splunk:event:1.0; charset=utf-8");
+    } else if (knownTarget == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+      if (null != knownType) {
+        if (knownType == Event.Type.JSON) {
+          e.setContentType(
+                  "application/json; profile=urn:splunk:event:1.0; charset=utf-8");
+        } else {
+          e.setContentType(
+                  "text/plain; profile=urn:splunk:event:1.0; charset=utf-8");
+        }
+      } else { //mixed content. Best to set content type to text/plain
+        e.setContentType(
+                "text/plain; profile=urn:splunk:event:1.0; charset=utf-8");
+      }
+    }
+    return e;
+  }
+
+  public void checkCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
+
+    if (knownTarget != null) {
+      if (knownTarget != target) {
+        throw new HecIllegalStateException(
+                "EventBatch contained  events wih getTarget()=" + knownTarget +
+                        " which is incompatible with HEC endpoint  " + target,
+                HecIllegalStateException.Type.INVALID_EVENTS_FOR_ENDPOINT);
+      }
+    } else {
+      knownTarget = target; //this can help us infer the content type as application/json when destined for /events
+    }
+
+  }
+
+  private class HttpEventBatchEntity extends AbstractHttpEntity {
+
+    @Override
+    public boolean isRepeatable() {
+      return true;
+    }
+
+    @Override
+    public long getContentLength() {
+      return getLength();
+    }
+
+    @Override
+    public InputStream getContent() throws IOException, UnsupportedOperationException {
+      return new SequenceInputStream(new Enumeration<InputStream>(){
+        int idx=-1;
+        @Override
+        public boolean hasMoreElements() {
+          return !events.isEmpty() && (idx+1) < events.size();
+        }
+
+        @Override
+        public InputStream nextElement() {
+          return events.get(++idx).getInputStream();
+        }
+      
+      });
+    }
+
+    @Override
+    public void writeTo(OutputStream outstream) throws IOException {
+      for (Event e : events) {
+        e.writeTo(outstream);
+      }
+
+    }
+
+    @Override
+    public boolean isStreaming() {
+      return false;
+    }
+
+  }
 
 }

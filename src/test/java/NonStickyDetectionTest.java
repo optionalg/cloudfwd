@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.IllegalHECStateException;
+import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
@@ -55,7 +56,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
         //appropriately.
         Assert.
                 assertTrue(e.getMessage(),
-                        e instanceof IllegalHECStateException);
+                        e instanceof HecIllegalStateException);
         System.out.println("Got expected exception: " + e);
         latch.countDown(); //allow the test to finish
       }

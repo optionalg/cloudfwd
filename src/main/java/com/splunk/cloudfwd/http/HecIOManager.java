@@ -26,6 +26,8 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchRequest;
 import com.splunk.cloudfwd.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.lifecycle.PreRequest;
 import java.io.Closeable;
 import java.io.IOException;
@@ -85,19 +87,23 @@ public class HecIOManager implements Closeable {
         }
         this.pollAcks();
       };
-      ackPollController.start(poller, 
-              sender.getConnection().getPropertiesFileHelper().getAckPollMS(), TimeUnit.MILLISECONDS);
+      ackPollController.start(poller,
+              sender.getConnection().getPropertiesFileHelper().getAckPollMS(),
+              TimeUnit.MILLISECONDS);
     }
     if (!healthPollController.isStarted()) {
       Runnable poller = () -> {
         this.pollHealth();
       };
       healthPollController.start(
-              poller, sender.getConnection().getPropertiesFileHelper().getHealthPollMS(), TimeUnit.MILLISECONDS);
+              poller, sender.getConnection().getPropertiesFileHelper().
+              getHealthPollMS(), TimeUnit.MILLISECONDS);
     }
   }
 
   public void postEvents(EventBatch events) {
+    //check to make sure the endpoint can absorb all the event formats in the batch
+    events.checkCompatibility(sender.getConnection().getHecEndpointType());
     this.ackTracker.preEventPost(events);
     sender.getChannelMetrics().update(new EventBatchRequest(
             LifecycleEvent.Type.PRE_EVENT_POST, events));
@@ -182,12 +188,12 @@ public class HecIOManager implements Closeable {
     }
 
   }
-  
-  public AcknowledgementTracker.AckRequest getAckPollRequest(){
+
+  public AcknowledgementTracker.AckRequest getAckPollRequest() {
     return ackTracker.getAckRequest();
   }
-  
-  public void setAckPollInProgress(boolean prog){
+
+  public void setAckPollInProgress(boolean prog) {
     this.ackPollInProgress = prog;
   }
 
@@ -197,7 +203,7 @@ public class HecIOManager implements Closeable {
     System.out.println("POLLING ACKS...");
     sender.getChannelMetrics().update(new PreRequest(
             LifecycleEvent.Type.PRE_ACK_POLL));
-    
+
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
@@ -227,7 +233,7 @@ public class HecIOManager implements Closeable {
         LOG.severe("ack poll cancelled.");
       }
     };
-    sender.pollAcks(this, cb);  
+    sender.pollAcks(this, cb);
   }
 
   private void setChannelHealth(int statusCode, String msg) {
@@ -282,7 +288,8 @@ public class HecIOManager implements Closeable {
   }
 
   /**
-   * Hits the /ack endpoint to check for a valid HEC token with acknowledgements enabled
+   * Hits the /ack endpoint to check for a valid HEC token with acknowledgements
+   * enabled
    */
   public void preFlightCheck() {
     System.out.println("PRE-FLIGHT CHECK...");
@@ -306,7 +313,8 @@ public class HecIOManager implements Closeable {
         if (code == 200) {
           System.out.println("PRE-FLIGHT CHECK OK");
           sender.getChannelMetrics().update(
-                  new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code, reply));
+                  new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code,
+                          reply));
         } else {
           handlePreFlightCheckFailure(reply, code);
         }
@@ -319,13 +327,16 @@ public class HecIOManager implements Closeable {
   private void handlePreFlightCheckFailure(String reply, int httpCode) {
     PreflightFailureResponseValueObject preFlightResp;
     try {
-      preFlightResp = mapper.readValue(reply, PreflightFailureResponseValueObject.class);
+      preFlightResp = mapper.readValue(reply,
+              PreflightFailureResponseValueObject.class);
     } catch (IOException ex) {
       throw new RuntimeException(ex.getMessage(), ex);
     }
-    LOG.severe("Error from HEC endpoint on channel: " + sender.getChannel().toString());
+    LOG.severe("Error from HEC endpoint on channel: " + sender.getChannel().
+            toString());
     Exception ex = new HecErrorResponseException(
-            preFlightResp.getText(), preFlightResp.getCode(), sender.getBaseUrl());
+            preFlightResp.getText(), preFlightResp.getCode(), sender.
+            getBaseUrl());
     sender.getChannel().getCallbacks().failed(null, ex);
   }
 
