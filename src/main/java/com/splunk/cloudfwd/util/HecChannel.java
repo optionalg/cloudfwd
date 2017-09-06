@@ -18,7 +18,6 @@ package com.splunk.cloudfwd.util;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.HecIllegalStateException;
@@ -35,8 +34,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.http.HttpPostable;
 
 /**
@@ -45,8 +44,8 @@ import com.splunk.cloudfwd.http.HttpPostable;
  */
 public class HecChannel implements Closeable, LifecycleEventObserver {
 
-  private static final Logger LOG = Logger.getLogger(HecChannel.class.
-          getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(HecChannel.class.getName());
+
   private final HttpSender sender;
   private final int full;
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
@@ -127,11 +126,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
-    System.out.println("channel=" + getChannelId() + " unack-count=" + count);
+    LOG.info("channel=" + getChannelId() + " unack-count=" + count);
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();
-      LOG.severe(msg);
+      LOG.error(msg);
       throw new IllegalStateException(msg);
     }
     sender.sendBatch(events);
@@ -161,7 +160,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     if (e instanceof Response) {
       if (((Response) e).getHttpCode() != 200) {
-        LOG.warning("Marking channel unhealthy: " + e);
+        LOG.warn("Marking channel unhealthy: " + e);
         this.healthy = false;
       }
     }
@@ -181,16 +180,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      */
     if (count < 0) {
       String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
-      LOG.severe(msg);
+      LOG.error(msg);
       throw new RuntimeException(msg);
     } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
       if (quiesced) {
         try {
           close();
         } catch (IllegalStateException ex) {
-          LOG.warning(
-                  "unable to close channel " + getChannelId() + ": " + ex.
-                  getMessage());
+          LOG.error("unable to close channel " + getChannelId() + ": " + ex.getMessage());
         }
       }
     }
@@ -209,13 +206,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
    *
    */
   protected synchronized void quiesce() {
-    LOG.log(Level.INFO, "Quiescing channel: {0}", getChannelId());
+    LOG.debug("Quiescing channel: {0}", getChannelId());
     quiesced = true;
     pollAcks();//so we don't have to wait for the next ack polling interval
   }
 
   synchronized void forceClose() { //wraps internalForceClose in a log messages
-    LOG.log(Level.INFO, "FORCE CLOSING CHANNEL  {0}", getChannelId());
+    LOG.debug("FORCE CLOSING CHANNEL  {0}", getChannelId());
     interalForceClose();
   }
 
@@ -223,7 +220,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     try {
       this.sender.close();
     } catch (Exception e) {
-      LOG.log(Level.SEVERE, e.getMessage(), e);
+      LOG.error(e.getMessage(), e);
     }
     this.loadBalancer.removeChannel(getChannelId(), true);
     this.channelMetrics.removeObserver(this);
@@ -233,10 +230,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   @Override
   public synchronized void close() {
     if (closed) {
-      LOG.info("LoggingChannel already closed.");
+      LOG.debug("LoggingChannel already closed.");
       return;
     }
-    LOG.log(Level.INFO, "CLOSE {0}", getChannelId());
+    LOG.debug("CLOSE {0}", getChannelId());
     if (!isEmpty()) {
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
@@ -344,8 +341,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
-          LOG.severe(
-                  "Dead channel detected. Resending messages and force closing channel");
+          LOG.error("Dead channel detected. Resending messages and force closing channel");
           //synchronize on the load balancer so we do not allow the load balancer to be
           //closed before  resendInFlightEvents. If that
           //could happen, then the channel we replace this one with
@@ -389,7 +385,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             if (e.getNumTries() > maxRetries) {
               String msg = "Tried to send event id=" + e.
                       getId() + " " + e.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
-              LOG.warning(msg);
+              LOG.warn(msg);
               loadBalancer.getConnection().getCallbacks().failed(e,
                       new HecMaxRetriesException(msg));
             } else {

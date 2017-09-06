@@ -26,15 +26,13 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchRequest;
 import com.splunk.cloudfwd.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.lifecycle.PreRequest;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -52,8 +50,8 @@ import org.apache.http.concurrent.FutureCallback;
  */
 public class HecIOManager implements Closeable {
 
-  private static final Logger LOG = Logger.getLogger(HecIOManager.class.
-          getName());
+  private static final Logger LOG = LoggerFactory.getLogger(HecIOManager.class.getName());
+
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpSender sender;
@@ -79,10 +77,10 @@ public class HecIOManager implements Closeable {
     if (!ackPollController.isStarted()) {
       Runnable poller = () -> {
         if (this.getAcknowledgementTracker().isEmpty()) {
-          System.out.println("No acks to poll for");
+          LOG.trace("No acks to poll for");
           return;
         } else if (this.isAckPollInProgress()) {
-          System.out.println("skipping ack poll - already have one in flight");
+          LOG.trace("skipping ack poll - already have one in flight");
           return;
         }
         this.pollAcks();
@@ -136,11 +134,11 @@ public class HecIOManager implements Closeable {
           try {
             consumeEventPostResponse(reply, events);
           } catch (Exception ex) {
-            LOG.log(Level.SEVERE, null, ex);
+            LOG.error(ex.getMessage(), ex);
           }
         } else {
           String msg = "HEC didn't return OK/200. Response code: " + code + ", response: " + reply;
-          LOG.log(Level.SEVERE, msg);
+          LOG.error(msg);
           //eventPostNotOK(code, reply, events);
           sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply, events));
@@ -163,8 +161,7 @@ public class HecIOManager implements Closeable {
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
     } catch (IOException ex) {
-      Logger.getLogger(getClass().getName()).log(Level.SEVERE, ex.getMessage(),
-              ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
 
@@ -200,15 +197,14 @@ public class HecIOManager implements Closeable {
   //called by the AckPollScheduler
   public void pollAcks() {
 
-    System.out.println("POLLING ACKS...");
+    LOG.debug("POLLING ACKS...");
     sender.getChannelMetrics().update(new PreRequest(
             LifecycleEvent.Type.PRE_ACK_POLL));
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
-        System.out.println(
-                "channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
+        LOG.info("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
           consumeAckPollResponse(reply);
         } else {
@@ -220,7 +216,7 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to poll acks", ex);
+        LOG.error("failed to poll acks", ex);
         //AckManager.this.ackPollFailed(ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.ACK_POLL_FAILURE, ex));
@@ -230,7 +226,7 @@ public class HecIOManager implements Closeable {
       @Override
       public void cancelled() {
         setAckPollInProgress(false);
-        LOG.severe("ack poll cancelled.");
+        LOG.error("ack poll cancelled.");
       }
     };
     sender.pollAcks(this, cb);
@@ -240,7 +236,7 @@ public class HecIOManager implements Closeable {
     // For status code anything other 200
     switch (statusCode) {
       case 200:
-        System.out.println("Health check is good");
+        LOG.info("Health check is good");
         sender.getChannelMetrics().update(new Response(
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 200, msg));
@@ -262,12 +258,12 @@ public class HecIOManager implements Closeable {
   }
 
   public void pollHealth() {
-    System.out.println("POLLING HEALTH...");
+    LOG.debug("POLLING HEALTH...");
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to poll health", ex);
+        LOG.error("failed to poll health", ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.HEALTH_POLL_FAILED, ex));
       }
@@ -292,12 +288,12 @@ public class HecIOManager implements Closeable {
    * enabled
    */
   public void preFlightCheck() {
-    System.out.println("PRE-FLIGHT CHECK...");
+    LOG.debug("PRE-FLIGHT CHECK...");
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to perform pre-flight check", ex);
+        LOG.error("failed to perform pre-flight check", ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.PREFLIGHT_CHECK_FAILED, ex));
       }
@@ -311,7 +307,7 @@ public class HecIOManager implements Closeable {
       @Override
       public void completed(String reply, int code) {
         if (code == 200) {
-          System.out.println("PRE-FLIGHT CHECK OK");
+          LOG.debug("PRE-FLIGHT CHECK OK");
           sender.getChannelMetrics().update(
                   new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code,
                           reply));
@@ -332,8 +328,7 @@ public class HecIOManager implements Closeable {
     } catch (IOException ex) {
       throw new RuntimeException(ex.getMessage(), ex);
     }
-    LOG.severe("Error from HEC endpoint on channel: " + sender.getChannel().
-            toString());
+    LOG.error("Error from HEC endpoint on channel: " + sender.getChannel().toString());
     Exception ex = new HecErrorResponseException(
             preFlightResp.getText(), preFlightResp.getCode(), sender.
             getBaseUrl());

@@ -19,6 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Periodically delegates polling for acks to the AckManager. Just a simple
@@ -28,6 +30,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class PollScheduler {
 
+  protected static final Logger LOG = LoggerFactory.getLogger(PollScheduler.class.getName());
   private ScheduledExecutorService scheduler;
   private boolean started;
   private final String name;
@@ -56,7 +59,7 @@ public class PollScheduler {
     //if the execution time of a task exceeds the period. We don't want that.
     scheduler.scheduleWithFixedDelay(poller, 0, delay, units);
     this.started = true;
-    System.out.println("STARTED POLLING: " + name + " with interval " + delay + " ms");
+    LOG.info("STARTED POLLING: " + name + " with interval " + delay + " ms");
 
   }
 
@@ -65,7 +68,7 @@ public class PollScheduler {
   }
 
   public synchronized void stop() {
-    System.out.println("SHUTTING DOWN POLLER:  " + name);
+    LOG.debug("SHUTTING DOWN POLLER:  " + name);
     if (null != scheduler) {
       scheduler.shutdownNow();
     }

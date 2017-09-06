@@ -23,8 +23,8 @@ import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents a reliable Connection to either the "event" HEC endpoint or the
@@ -34,7 +34,7 @@ import java.util.logging.Logger;
  */
 public class Connection implements Closeable {
 
-  private static final Logger LOG = Logger.getLogger(Connection.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(Connection.class.getName());
 
   /**
    * @return the propertiesFileHelper
@@ -108,7 +108,7 @@ public class Connection implements Closeable {
     try {
       latch.await();
     } catch (InterruptedException ex) {
-      Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
     }
   }
 
@@ -126,7 +126,7 @@ public class Connection implements Closeable {
     try {
       latch.await();
     } catch (InterruptedException ex) {
-      Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
     }
   }
 

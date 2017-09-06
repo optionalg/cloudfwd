@@ -20,7 +20,6 @@ import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObservable;
 import com.splunk.cloudfwd.http.lifecycle.Response;
-import java.util.logging.Logger;
 
 /**
  *
@@ -28,8 +27,6 @@ import java.util.logging.Logger;
  */
 public class ChannelMetrics extends LifecycleEventObservable implements LifecycleEventObserver {
 
-  private static final Logger LOG = Logger.getLogger(ChannelMetrics.class.
-          getName());
   /*
   private long eventPostCount;
   private long eventPostOKCount;
