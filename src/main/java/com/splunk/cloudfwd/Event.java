@@ -33,4 +33,5 @@ public interface Event {
   public void writeTo(OutputStream out) throws IOException;
   public Connection.HecEndpoint getTarget();
   public Type getType();
+  public int length();
 }

@@ -140,6 +140,14 @@ public class RawEvent implements Event{
   public InputStream getInputStream() {
     return new ByteArrayInputStream(bytes);
   }
+
+  @Override
+  public int length() {
+    if(null == bytes){
+      return 0;
+    }
+    return bytes.length;
+  }
   
   
 }

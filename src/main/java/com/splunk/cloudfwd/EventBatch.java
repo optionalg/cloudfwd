@@ -81,7 +81,7 @@ public class EventBatch  implements IEventBatch {
       knownType = event.getType();
     }
     this.id = event.getId();
-    this.length += event.getBytes().length;
+    this.length += event.length();
     this.events.add(event);
 
   }

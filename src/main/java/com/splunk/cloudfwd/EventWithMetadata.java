@@ -93,7 +93,7 @@ public class EventWithMetadata implements Event {
    * subsequent to the first invocation of either.
    * @return
    */
-  @Override
+  @Override  
   public byte[] getBytes() {
     try {
       if(null == this.bytes){
@@ -232,5 +232,10 @@ public class EventWithMetadata implements Event {
   @Override
   public InputStream getInputStream() {
     return new ByteArrayInputStream(getBytes());
+  }
+
+  @Override
+  public int length() {
+    return getBytes().length;
   }
 }

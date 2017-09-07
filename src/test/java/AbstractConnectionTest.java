@@ -16,8 +16,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import com.splunk.cloudfwd.UnvalidatedBytesEvent;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -221,7 +223,7 @@ public abstract class AbstractConnectionTest {
     return event;
   }
 
-  private Event getJsonEvent(int seqno) {
+  protected Event getJsonEvent(int seqno) {
     Event event;
     if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getJsonToRawEndpoint(seqno);
@@ -231,7 +233,7 @@ public abstract class AbstractConnectionTest {
     return event;
   }
 
-  private Event getTextEvent(int seqno) {
+  protected Event getTextEvent(int seqno) {
     Event event;
     if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getTimestampedRawEvent(seqno);
@@ -280,7 +282,7 @@ public abstract class AbstractConnectionTest {
     return events;
   }
 
-  private Event getJsonToRawEndpoint(int seqno) {
+  protected Event getJsonToRawEndpoint(int seqno) {
     try {
       Map m = getStructuredEvent();
       m.put("where_to", "/raw");
@@ -294,7 +296,7 @@ public abstract class AbstractConnectionTest {
     }
   }
 
-  private Event getJsonToEvents(int seqno) {
+  protected Event getJsonToEvents(int seqno) {
     Map m = getStructuredEvent();
     m.put("where_to", "/events");
     m.put("seqno", Integer.toString(seqno));
@@ -302,7 +304,7 @@ public abstract class AbstractConnectionTest {
     return event;
   }
 
-  private Event getTextToEvents(int seqno) {
+  protected Event getTextToEvents(int seqno) {
     Event event = new EventWithMetadata(
             "TEXT FOR /events endpoint 'event' field with "
             + getEventTracingInfo() + " seqno=" + seqno,
@@ -313,14 +315,16 @@ public abstract class AbstractConnectionTest {
   private Event getUnvalidatedBytesToRawEndpoint(int seqno) {
     //create a valid JSON to /events, grab its bytes, and wrap it in UnvalidatedBytes to simulate
     //the creation of /event endpoint envelope "by hand"
-    return new UnvalidatedBytesEvent(getJsonToRawEndpoint(seqno).getBytes(),
-            seqno);
+//    return new UnvalidatedBytesEvent(getJsonToRawEndpoint(seqno).getBytes(),
+//            seqno);
+    return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(getJsonToRawEndpoint(seqno).getBytes()), seqno);
   }
 
   private Event getUnvalidatedBytesToEventEndpoint(int seqno) {
     //create a valid JSON to /events, grab its bytes, and wrap it in UnvalidatedBytes to simulate
     //the creation of /event endpoint envelope "by hand"
-    return new UnvalidatedBytesEvent(getJsonToEvents(seqno).getBytes(), seqno);
+   // return new UnvalidatedBytesEvent(getJsonToEvents(seqno).getBytes(), seqno);
+    return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(getJsonToEvents(seqno).getBytes()), seqno);
   }
 
 }
