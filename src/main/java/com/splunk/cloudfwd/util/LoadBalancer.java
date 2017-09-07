@@ -17,11 +17,12 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.http.HttpSender;
+import com.splunk.cloudfwd.http.HttpSenderFactory;
+
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -32,10 +33,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -47,7 +44,7 @@ public class LoadBalancer implements Closeable {
 
   private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
           getName());
-  private int channelsPerDestination;
+
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
@@ -59,9 +56,7 @@ public class LoadBalancer implements Closeable {
 
   public LoadBalancer(Connection c) {
     this.connection = c;
-    this.channelsPerDestination = c.getPropertiesFileHelper().
-            getChannelsPerDestination();
-    this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper());
+    this.discoverer = new IndexDiscoverer(c.getConnectionSettings());
     this.checkpointManager = new CheckpointManager(c);
     //this.discoverer.addObserver(this);
   }
@@ -126,10 +121,10 @@ public class LoadBalancer implements Closeable {
     //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
     //and then the to-be-reaped channel would also be removed, leaving no channels, and
     //send will be stuck in a spin loop with no channels to send to
-    PropertiesFileHelper propsHelper = this.connection.getPropertiesFileHelper();
-    if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
+    ConnectionSettings settings = this.connection.getConnectionSettings();
+    if (!force && channels.size() >= settings.getMaxTotalChannels()) {
       LOG.info(
-              "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
+              "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + settings.
               getMaxTotalChannels() + ")");
       return;
     }
@@ -147,8 +142,8 @@ public class LoadBalancer implements Closeable {
       //https://tools.ietf.org/html/rfc7230#section-5.4
       host = s.getHostName() + ":" + s.getPort();
 
-      HttpSender sender = this.connection.getPropertiesFileHelper().
-              createSender(url, host);
+      HttpSender sender = HttpSenderFactory.createSender(
+              url, host, this.connection.getConnectionSettings());
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
@@ -200,7 +195,7 @@ public class LoadBalancer implements Closeable {
     //round robin until either A) we find an available channel
     long start = System.currentTimeMillis();
     int spinCount = 0;
-    int yieldInterval = this.connection.getPropertiesFileHelper().
+    int yieldInterval = this.connection.getConnectionSettings().
             getMaxTotalChannels();
     ///CountDownLatch latch = new CountDownLatch(1);
     if(!closed || forced){
@@ -252,20 +247,6 @@ public class LoadBalancer implements Closeable {
   }
 
   /**
-   * @return the channelsPerDestination
-   */
-  public int getChannelsPerDestination() {
-    return channelsPerDestination;
-  }
-
-  /**
-   * @param channelsPerDestination the channelsPerDestination to set
-   */
-  public void setChannelsPerDestination(int channelsPerDestination) {
-    this.channelsPerDestination = channelsPerDestination;
-  }
-
-  /**
    * @return the connection
    */
   public Connection getConnection() {
@@ -275,8 +256,8 @@ public class LoadBalancer implements Closeable {
   /**
    * @return the propertiesFileHelper
    */
-  public PropertiesFileHelper getPropertiesFileHelper() {
-    return this.connection.getPropertiesFileHelper();
+  public ConnectionSettings getPropertiesFileHelper() {
+    return this.connection.getConnectionSettings();
   }
 
 }

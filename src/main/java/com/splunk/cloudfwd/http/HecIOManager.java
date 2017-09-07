@@ -26,8 +26,6 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchRequest;
 import com.splunk.cloudfwd.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.lifecycle.PreRequest;
 import java.io.Closeable;
 import java.io.IOException;
@@ -88,7 +86,7 @@ public class HecIOManager implements Closeable {
         this.pollAcks();
       };
       ackPollController.start(poller,
-              sender.getConnection().getPropertiesFileHelper().getAckPollMS(),
+              sender.getConnection().getConnectionSettings().getAckPollMS(),
               TimeUnit.MILLISECONDS);
     }
     if (!healthPollController.isStarted()) {
@@ -96,7 +94,7 @@ public class HecIOManager implements Closeable {
         this.pollHealth();
       };
       healthPollController.start(
-              poller, sender.getConnection().getPropertiesFileHelper().
+              poller, sender.getConnection().getConnectionSettings().
               getHealthPollMS(), TimeUnit.MILLISECONDS);
     }
   }

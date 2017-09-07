@@ -17,8 +17,6 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.http.Endpoints;
 
-import com.splunk.cloudfwd.http.HttpSender;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -29,48 +27,78 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static com.splunk.cloudfwd.PropertyKeys.*;
+
 /**
  *
  * @author ghendrey
  */
-public class PropertiesFileHelper {
+public class ConnectionSettings {
 
-  private static final Logger LOG = Logger.getLogger(PropertiesFileHelper.class.
+  private static final Logger LOG = Logger.getLogger(ConnectionSettings.class.
           getName());
+  private Properties props = new Properties();
 
-  
-
-
-  private Properties defaultProps = new Properties();
-
-  public PropertiesFileHelper(Properties overrides) {
+  /**
+   * Create a new ConnectionSettings object that overrides
+   * values from lb.properties.
+   * @param overrides overrides settings in lb.properties
+   */
+  public ConnectionSettings(Properties overrides) {
     this(); //setup all defaults by calling SenderFactory() empty constr
-    this.defaultProps.putAll(overrides);
+    this.props.putAll(overrides);
   }
 
   /**
-   * create SenderFactory with default properties read from lb.properties file
+   * Create a new ConnectionSettings object that
+   * reads values from lb.properties.
    */
-  public PropertiesFileHelper() {
+  public ConnectionSettings() {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
       if (null == is) {
         throw new RuntimeException("can't find /lb.properties");
       }
-      defaultProps.load(is);
+      props.load(is);
     } catch (IOException ex) {
       LOG.log(Level.SEVERE, "problem loading lb.properties", ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
-  
+
+  /**
+   * Set a property in the Properties object that is
+   * interpreted at runtime to configure the
+   * Connection.
+   * @param k key from PropertyKeys.java
+   * @param v value of the property
+   */
   public void putProperty(String k, String v){
-    this.defaultProps.put(k, v);
+    this.props.put(k, v);
+  }
+
+  /**
+   * Overrides the settings in the Properties object
+   * that is interpreted at runtime to configure the
+   * Connection.
+   * @param overrides the Properties object with keys from PropertyKeys.java
+   */
+  public void putAll(Properties overrides) {
+    this.props.putAll(overrides);
+  }
+
+  /**
+   * The Properties object that the software reads and interprets
+   * to configure the Connection. Invalid values in this object
+   * may be overridden by default values at runtime.
+   * @return the Properties object
+   */
+  public Properties getPropertiesObject() {
+    return props;
   }
 
   public List<URL> getUrls() {
     List<URL> urls = new ArrayList<>();
-    String[] splits = defaultProps.getProperty(COLLECTOR_URI).split(",");
+    String[] splits = props.getProperty(COLLECTOR_URI).split(",");
     for (String urlString : splits) {
       try {
         URL url = new URL(urlString.trim());
@@ -82,16 +110,21 @@ public class PropertiesFileHelper {
     }
     return urls;
   }
-  
 
+  public String getToken() {
+    if (props.getProperty(TOKEN) == null) {
+      throw new RuntimeException("Connection settings must contain a token.");
+    }
+    return props.getProperty(TOKEN);
+  }
 
-  // Compares if the first URL matches Cloud>Trail domain (cloud.splunk.com)
   public boolean isCloudInstance() {
+    // Compares if the first URL matches Cloud>Trail domain (cloud.splunk.com)
     return getUrls().get(0).toString().trim().matches("^.+\\.cloud\\.splunk\\.com.*$");
   }
 
   public int getChannelsPerDestination() {
-    int n = Integer.parseInt(defaultProps.getProperty(CHANNELS_PER_DESTINATION, "8").trim());
+    int n = Integer.parseInt(props.getProperty(CHANNELS_PER_DESTINATION, "8").trim());
     if (n < 1) {
       n = Integer.MAX_VALUE; //effectively no limit by default
     }
@@ -99,7 +132,7 @@ public class PropertiesFileHelper {
   }
 
   public long getUnresponsiveChannelDecomMS() {
-    long t =  Long.parseLong(defaultProps.getProperty(
+    long t =  Long.parseLong(props.getProperty(
             UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS).trim());
     if (t < 1) {
       LOG.info(UNRESPONSIVE_MS +  ": unlimited");
@@ -109,7 +142,7 @@ public class PropertiesFileHelper {
   }
   
   public long getAckPollMS() {
-    long interval = Long.parseLong(defaultProps.getProperty(ACK_POLL_MS, DEFAULT_ACK_POLL_MS).trim());
+    long interval = Long.parseLong(props.getProperty(ACK_POLL_MS, DEFAULT_ACK_POLL_MS).trim());
     if (interval <= 0) {
       interval = MIN_ACK_POLL_MS;
     }
@@ -118,7 +151,7 @@ public class PropertiesFileHelper {
   }  
   
   public long getHealthPollMS() {
-        long interval = Long.parseLong(defaultProps.getProperty(HEALTH_POLL_MS, DEFAULT_HEALTH_POLL_MS).trim());
+        long interval = Long.parseLong(props.getProperty(HEALTH_POLL_MS, DEFAULT_HEALTH_POLL_MS).trim());
     if (interval <= 0) {
       interval = MIN_HEALTH_POLL_MS;
     }
@@ -127,7 +160,7 @@ public class PropertiesFileHelper {
   
 
   public int getMaxTotalChannels() {
-    int max = Integer.parseInt(defaultProps.getProperty(
+    int max = Integer.parseInt(props.getProperty(
             MAX_TOTAL_CHANNELS, "-1").trim()); //default no limit
     if (max < 1) {
       max = Integer.MAX_VALUE; //effectively no limit by default
@@ -136,7 +169,7 @@ public class PropertiesFileHelper {
   }
 
   public int getMaxUnackedEventBatchPerChannel() {
-    int max = Integer.parseInt(defaultProps.getProperty(
+    int max = Integer.parseInt(props.getProperty(
             MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL).trim());
     if (max < MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL) {
       max = 10000;
@@ -145,7 +178,7 @@ public class PropertiesFileHelper {
   }
   
   public int getEventBatchSize() {
-    int max = Integer.parseInt(defaultProps.getProperty(
+    int max = Integer.parseInt(props.getProperty(
             EVENT_BATCH_SIZE, DEFAULT_EVENT_BATCH_SIZE).trim());
     if (max < 1) {
       max = MIN_EVENT_BATCH_SIZE;
@@ -154,20 +187,21 @@ public class PropertiesFileHelper {
   }  
   
   public long getChannelDecomMS() {
-    long decomMs = Long.parseLong(defaultProps.getProperty(
+    long decomMs = Long.parseLong(props.getProperty(
             CHANNEL_DECOM_MS, DEFAULT_DECOM_MS).trim());
     if(decomMs <= 1){
       return -1;
     }
     if (decomMs < MIN_DECOM_MS) {
-      LOG.warning("Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
+      LOG.warning("Ignoring setting for " + CHANNEL_DECOM_MS
+              + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
       decomMs = MIN_DECOM_MS;
     }
     return decomMs;
   }    
   
   public long getAckTimeoutMS() {
-    long timeout = Long.parseLong(defaultProps.getProperty(
+    long timeout = Long.parseLong(props.getProperty(
             ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
     if (timeout < MIN_ACK_TIMEOUT_MS) {
       LOG.warning(ACK_TIMEOUT_MS+ " was set to a potentially too-low value: " + timeout);
@@ -176,7 +210,7 @@ public class PropertiesFileHelper {
   }    
   
   public long getBlockingTimeoutMS() {
-    long timeout = Long.parseLong(defaultProps.getProperty(
+    long timeout = Long.parseLong(props.getProperty(
             BLOCKING_TIMEOUT_MS, DEFAULT_BLOCKING_TIMEOUT_MS).trim());
     if (timeout < 0) {
       throw new IllegalArgumentException(BLOCKING_TIMEOUT_MS + " must be positive.");
@@ -185,23 +219,23 @@ public class PropertiesFileHelper {
   }     
 
   public boolean isMockHttp() {
-    return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
+    return Boolean.parseBoolean(this.props.getProperty(MOCK_HTTP_KEY,
             "false").trim());
   }
 
   public boolean isForcedUrlMapToSingleAddr() {
-    return Boolean.parseBoolean(this.defaultProps.getProperty(
+    return Boolean.parseBoolean(this.props.getProperty(
             MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
   }
 
   public Endpoints getSimulatedEndpoints() {
-    String classname = this.defaultProps.getProperty(MOCK_HTTP_CLASSNAME,
+    String classname = this.props.getProperty(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.SimulatedHECEndpoints");
 
     try {
       return (Endpoints) Class.forName(classname).newInstance();
     } catch (Exception ex) {
-      Logger.getLogger(PropertiesFileHelper.class.getName()).
+      Logger.getLogger(ConnectionSettings.class.getName()).
               log(Level.SEVERE, null, ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
@@ -209,25 +243,21 @@ public class PropertiesFileHelper {
   }
 
   public boolean isCertValidationDisabled() {
-    return Boolean.parseBoolean(this.defaultProps.
+    return Boolean.parseBoolean(this.props.
             getProperty(DISABLE_CERT_VALIDATION, "false").trim());
   }
 
-  public boolean enabledHttpDebug() {
-    return Boolean.parseBoolean(this.defaultProps.
+  public boolean httpDebugEnabled() {
+    return Boolean.parseBoolean(this.props.
             getProperty(
                     ENABLE_HTTP_DEBUG, "false").trim());
   }
 
-  /**
-   *
-   * @return
-   */
   public String getSSLCertContent() {
     if (isCloudInstance()) {
-      return defaultProps.getProperty(CLOUD_SSL_CERT_CONTENT).trim();
+      return props.getProperty(CLOUD_SSL_CERT_CONTENT).trim();
     }
-    return defaultProps.getProperty(SSL_CERT_CONTENT).trim()  ;
+    return props.getProperty(SSL_CERT_CONTENT).trim()  ;
   }
 
   public void enableHttpDebug() {
@@ -237,40 +267,8 @@ public class PropertiesFileHelper {
     System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
   }
 
-  public HttpSender createSender(URL url, String host) {
-    Properties props = new Properties(defaultProps);
-    props.put(COLLECTOR_URI, url.toString());
-    props.put(HOST, host.toString());
-    return createSender(props);
-  }
-
-  private HttpSender createSender(Properties props) {
-    try {
-      // enable http client debugging
-      if (enabledHttpDebug()) enableHttpDebug();
-      String url = props.getProperty(COLLECTOR_URI).trim();
-      String host = props.getProperty(HOST).trim();
-      String token = props.getProperty(TOKEN).trim();
-      String cert = getSSLCertContent();
-      HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert, host);
-      if(isMockHttp()){
-        sender.setSimulatedEndpoints(getSimulatedEndpoints());
-      }
-      return sender;
-    } catch (Exception ex) {
-      LOG.log(Level.SEVERE, "Problem instantiating HTTP sender.", ex);
-      throw new RuntimeException(
-              "problem parsing lb.properties to create HttpEventCollectorSender",
-              ex);
-    }
-  }
-
-  public HttpSender createSender() {
-    return createSender(this.defaultProps);
-  }
-
   int getMaxRetries() {
-    int max = Integer.parseInt(defaultProps.getProperty(
+    int max = Integer.parseInt(props.getProperty(
             RETRIES, DEFAULT_RETRIES).trim());
     if (max < 1) {
       LOG.info(RETRIES +  ": unlimited");
@@ -278,6 +276,4 @@ public class PropertiesFileHelper {
     }
     return max;
   }
-
-
 }

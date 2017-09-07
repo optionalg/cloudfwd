@@ -18,13 +18,11 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecIllegalStateException;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
-import com.splunk.cloudfwd.RawEvent;
+
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;

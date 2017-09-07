@@ -17,8 +17,8 @@ package com.splunk.cloudfwd;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.util.CallbackInterceptor;
+import com.splunk.cloudfwd.util.ConnectionSettings;
 import com.splunk.cloudfwd.util.LoadBalancer;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
 import java.util.Properties;
@@ -37,14 +37,6 @@ public class Connection implements Closeable {
   private static final Logger LOG = Logger.getLogger(Connection.class.getName());
 
   /**
-   * @return the propertiesFileHelper
-   */
-  public PropertiesFileHelper getPropertiesFileHelper() {
-    return propertiesFileHelper;
-  }
-
-
-  /**
    * Used to select either structured HEC /event endpoint, or raw HEC endpoint
    */
   public static enum HecEndpoint {
@@ -56,24 +48,24 @@ public class Connection implements Closeable {
   private boolean closed;
   private HecEndpoint hecEndpointType;
   private EventBatch events; //default EventBatch used if send(event) is called
-  private PropertiesFileHelper propertiesFileHelper;
+  private ConnectionSettings connectionSettings;
 
   public Connection(ConnectionCallbacks callbacks) {
     this(callbacks, new Properties());
   }
 
   public Connection(ConnectionCallbacks callbacks, Properties settings) {
-    this.propertiesFileHelper = new PropertiesFileHelper(settings);
-    init(callbacks, propertiesFileHelper);
+    this.connectionSettings = new ConnectionSettings(settings);
+    init(callbacks);
     this.lb = new LoadBalancer(this);
   }
 
-  private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
+  private void init(ConnectionCallbacks callbacks) {
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
     //the EventBatch that succeeded or failed from the timoutChecker
-    this.timeoutChecker = new TimeoutChecker(propertiesFileHelper.getAckTimeoutMS());
+    this.timeoutChecker = new TimeoutChecker(connectionSettings.getAckTimeoutMS());
     this.callbacks = new CallbackInterceptor(callbacks,
             timeoutChecker::removeEvents);
     this.timeoutChecker.setInterceptor(this.callbacks);
@@ -81,11 +73,11 @@ public class Connection implements Closeable {
   }
 
   public synchronized void setEventAcknowledgementTimeoutMS(long ms) {
-    this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
+    this.connectionSettings.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
   }
   
   public synchronized void setBlockingTimeoutMS(long ms){
-    this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.valueOf(ms));
+    this.connectionSettings.putProperty(BLOCKING_TIMEOUT_MS, String.valueOf(ms));
   }
 
   @Override
@@ -194,18 +186,24 @@ public class Connection implements Closeable {
    * @return the desired size of an EventBatch, in characters (not bytes)
    */
   public int getEventBatchSize() {
-    return propertiesFileHelper.getEventBatchSize();
+    return connectionSettings.getEventBatchSize();
   }
 
   /**
    * @param numChars the size of the EventBatch in characters (not bytes)
    */
   public void setEventBatchSize(int numChars) {
-    propertiesFileHelper.putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.valueOf(numChars));
+    connectionSettings.putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.valueOf(numChars));
   }
   
   public long getBlockingTimeoutMS(){
-    return propertiesFileHelper.getBlockingTimeoutMS();
+    return connectionSettings.getBlockingTimeoutMS();
   }
-   
+
+  /**
+   * @return the connectionSettings
+   */
+  public ConnectionSettings getConnectionSettings() {
+    return connectionSettings;
+  }
 }

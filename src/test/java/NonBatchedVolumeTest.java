@@ -1,7 +1,6 @@
 
-import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
+
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
@@ -40,7 +39,7 @@ public class NonBatchedVolumeTest extends AbstractConnectionTest{
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //props.put(ConnectionSettings.MOCK_HTTP_KEY, "true");
     return props;
   }
 

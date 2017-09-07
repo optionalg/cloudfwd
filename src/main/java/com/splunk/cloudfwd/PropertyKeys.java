@@ -23,7 +23,6 @@ public class PropertyKeys {
   
   public static final String TOKEN = "token";
   public static final String COLLECTOR_URI = "url";
-  public static final String HOST = "host";
   public static final String DISABLE_CERT_VALIDATION = "disableCertificateValidation";
   public static final String CHANNELS_PER_DESTINATION = "channels_per_dest";
   public static final String MOCK_HTTP_KEY = "mock_http";

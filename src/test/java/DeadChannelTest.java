@@ -4,7 +4,7 @@ import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
+
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
@@ -37,7 +37,7 @@ public class DeadChannelTest extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    //props.put(ConnectionSettings.MOCK_HTTP_KEY, "true");
     props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.errorgen.ackslost.LossyEndpoints");
     props.put(UNRESPONSIVE_MS,

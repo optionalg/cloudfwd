@@ -20,7 +20,6 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.HttpClientFactory;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 
 import java.io.IOException;
 import java.util.*;
