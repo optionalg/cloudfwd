@@ -144,7 +144,7 @@
                     <excludes>
                         <exclude>**/LargeBatchTest.java</exclude>
                         <exclude>**/ReconciliationTest.java</exclude> 
-                        <exclude>**/ByteBufferWithManyEventsToRawTest.java</exclude>                                                
+                        <exclude>**/ByteBufferWithMixedEventsTest.java</exclude>                                                
                     </excludes>
                 </configuration>
             </plugin>            

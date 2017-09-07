@@ -26,19 +26,27 @@ import org.junit.Test;
  *
  * @author ghendrey
  */
-public class ByteBufferWithManyEventsToRawTest extends AbstractReconciliationTest {
+public class ByteBufferWithMixedEventsTest extends AbstractReconciliationTest {
 
   int n = 25;
   int eventCounter = 0;
 
   @Test
-  public void chalkFullOBytes() throws InterruptedException, HecConnectionTimeoutException {
+  public void chalkFullOBytesForRawEndpoint() throws InterruptedException, HecConnectionTimeoutException {
     connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    
   }
 
+    @Test
+  public void chalkFullOBytesForEventEndpoint() throws InterruptedException, HecConnectionTimeoutException {
+    connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    super.sendEvents();
+    Set<String> searchResults = getEventsFromSplunk();
+    verifyResults(getSentEvents(), searchResults);    
+  }
+  
   @Override
   protected Event nextEvent(int seqno) {
 
