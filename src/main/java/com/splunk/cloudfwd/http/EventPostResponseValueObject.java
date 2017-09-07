@@ -26,6 +26,9 @@ public class EventPostResponseValueObject {
 
 
   EventPostResponseValueObject(Map<String, Object> map) {
+    if(!map.containsKey("ackId") || map.get("ackId") == null) {
+        throw new IllegalStateException();
+    }
     this.map = map;
   }
   

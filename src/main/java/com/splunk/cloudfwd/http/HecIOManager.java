@@ -155,16 +155,20 @@ public class HecIOManager implements Closeable {
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
   public void consumeEventPostResponse(String resp, EventBatch events) {
     //System.out.println("consuming event post response" + resp);
-    EventPostResponseValueObject epr;
+    EventPostResponseValueObject epr = null;
     try {
       Map<String, Object> map = mapper.readValue(resp,
               new TypeReference<Map<String, Object>>() {
       });
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
+    } catch (IllegalStateException e) {
+      sender.getConnection().getCallbacks().failed(events,
+              new HecErrorResponseException("ACK is disabled", 14, sender.getBaseUrl()));
     } catch (IOException ex) {
       Logger.getLogger(getClass().getName()).log(Level.SEVERE, ex.getMessage(),
               ex);
+      sender.getConnection().getCallbacks().failed(events, ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
 
