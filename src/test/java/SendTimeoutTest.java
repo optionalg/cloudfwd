@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
@@ -44,7 +45,7 @@ public class SendTimeoutTest extends AbstractConnectionTest {
   @Test
   public void testTimeout() throws InterruptedException, HecConnectionTimeoutException {
     
-      super.eventType = EventType.TEXT;
+      super.eventType = Event.Type.TEXT;
       super.sendEvents();
 
   }

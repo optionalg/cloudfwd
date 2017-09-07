@@ -75,7 +75,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   public void checkNonStickyChannelDetected() throws InterruptedException {
 
     try {
-      super.eventType = EventType.TEXT;
+      super.eventType = Event.Type.TEXT;
       super.sendEvents();
     } catch (HecConnectionTimeoutException e) {
       System.out.println(

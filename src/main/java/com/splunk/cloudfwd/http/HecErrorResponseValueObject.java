@@ -22,11 +22,11 @@ import java.util.Map;
  *
  * @author eprokop
  */
-public class PreflightFailureResponseValueObject {
+public class HecErrorResponseValueObject {
     private String text;
     private int code;
 
-    PreflightFailureResponseValueObject() {
+    HecErrorResponseValueObject() {
     }
 
     /**
