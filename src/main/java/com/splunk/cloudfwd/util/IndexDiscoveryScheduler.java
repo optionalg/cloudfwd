@@ -53,7 +53,7 @@ class IndexDiscoveryScheduler {
     //if the execution time of a task exceeds the period. We don't want that.
     scheduler.scheduleWithFixedDelay(poller, 0, 1, TimeUnit.SECONDS); //TODO MAKE THIS MILLISECONDS
     this.started = true;
-    LOG.debug("STARTED INDEX DISCOVERY POLLING");
+    LOG.info("STARTED INDEX DISCOVERY POLLING");
 
   }
 
@@ -66,7 +66,7 @@ class IndexDiscoveryScheduler {
     if(null == this.scheduler){
       return;
     }
-    LOG.debug("SHUTTING DOWN INDEX DISCOVER POLLER");
+    LOG.info("SHUTTING DOWN INDEX DISCOVER POLLER");
     scheduler.shutdownNow();
     scheduler = null;
   }  

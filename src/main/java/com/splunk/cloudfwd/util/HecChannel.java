@@ -212,7 +212,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   synchronized void forceClose() { //wraps internalForceClose in a log messages
-    LOG.debug("FORCE CLOSING CHANNEL  {0}", getChannelId());
+    LOG.info("FORCE CLOSING CHANNEL  {0}", getChannelId());
     interalForceClose();
   }
 
@@ -233,7 +233,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       LOG.debug("LoggingChannel already closed.");
       return;
     }
-    LOG.debug("CLOSE {0}", getChannelId());
+    LOG.info("CLOSE {0}", getChannelId());
     if (!isEmpty()) {
       quiesce(); //this essentially tells the channel to close after it is empty
       return;

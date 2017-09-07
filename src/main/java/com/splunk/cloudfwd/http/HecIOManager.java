@@ -77,10 +77,10 @@ public class HecIOManager implements Closeable {
     if (!ackPollController.isStarted()) {
       Runnable poller = () -> {
         if (this.getAcknowledgementTracker().isEmpty()) {
-          LOG.trace("No acks to poll for");
+          LOG.debug("No acks to poll for");
           return;
         } else if (this.isAckPollInProgress()) {
-          LOG.trace("skipping ack poll - already have one in flight");
+          LOG.debug("skipping ack poll - already have one in flight");
           return;
         }
         this.pollAcks();
@@ -197,7 +197,7 @@ public class HecIOManager implements Closeable {
   //called by the AckPollScheduler
   public void pollAcks() {
 
-    LOG.debug("POLLING ACKS...");
+    LOG.info("POLLING ACKS...");
     sender.getChannelMetrics().update(new PreRequest(
             LifecycleEvent.Type.PRE_ACK_POLL));
 
@@ -236,7 +236,7 @@ public class HecIOManager implements Closeable {
     // For status code anything other 200
     switch (statusCode) {
       case 200:
-        LOG.debug("Health check is good");
+        LOG.info("Health check is good");
         sender.getChannelMetrics().update(new Response(
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 200, msg));
@@ -258,7 +258,7 @@ public class HecIOManager implements Closeable {
   }
 
   public void pollHealth() {
-    LOG.debug("POLLING HEALTH...");
+    LOG.info("POLLING HEALTH...");
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
@@ -288,7 +288,7 @@ public class HecIOManager implements Closeable {
    * enabled
    */
   public void preFlightCheck() {
-    LOG.debug("PRE-FLIGHT CHECK...");
+    LOG.info("PRE-FLIGHT CHECK...");
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
@@ -307,7 +307,7 @@ public class HecIOManager implements Closeable {
       @Override
       public void completed(String reply, int code) {
         if (code == 200) {
-          LOG.debug("PRE-FLIGHT CHECK OK");
+          LOG.info("PRE-FLIGHT CHECK OK");
           sender.getChannelMetrics().update(
                   new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code,
                           reply));
