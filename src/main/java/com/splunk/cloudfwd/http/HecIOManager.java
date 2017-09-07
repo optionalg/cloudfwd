@@ -26,8 +26,6 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchRequest;
 import com.splunk.cloudfwd.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.lifecycle.PreRequest;
 import java.io.Closeable;
 import java.io.IOException;
@@ -139,23 +137,21 @@ public class HecIOManager implements Closeable {
             LOG.log(Level.SEVERE, null, ex);
           }
         } else {
-          String msg = "HEC didn't return OK/200. Response code: " + code + ", response: " + reply;
-          LOG.log(Level.SEVERE, msg);
-          //eventPostNotOK(code, reply, events);
           sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply, events));
+          handleHecErrorResponse(reply, code);
         }
       }
-
     };
-    sender.postEvents(events, cb);
 
+    sender.postEvents(events, cb);
   }
 
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
   public void consumeEventPostResponse(String resp, EventBatch events) {
     //System.out.println("consuming event post response" + resp);
     EventPostResponseValueObject epr = null;
+
     try {
       Map<String, Object> map = mapper.readValue(resp,
               new TypeReference<Map<String, Object>>() {
@@ -218,6 +214,7 @@ public class HecIOManager implements Closeable {
         } else {
           sender.getChannelMetrics().update(new Response(
                   LifecycleEvent.Type.ACK_POLL_NOT_OK, code, reply));
+          handleHecErrorResponse(reply, code);
         }
         setAckPollInProgress(false);
       }
@@ -240,27 +237,23 @@ public class HecIOManager implements Closeable {
     sender.pollAcks(this, cb);
   }
 
-  private void setChannelHealth(int statusCode, String msg) {
-    // For status code anything other 200
+  private void setChannelHealth(int statusCode, String reply) {
     switch (statusCode) {
       case 200:
         System.out.println("Health check is good");
         sender.getChannelMetrics().update(new Response(
                 LifecycleEvent.Type.HEALTH_POLL_OK,
-                200, msg));
+                200, reply));
         break;
       case 503:
-
         sender.getChannelMetrics().update(new Response(
-                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, statusCode, msg));
+                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, statusCode, reply));
         break;
       default:
-        // 400 should not be indicative of unhealthy HEC
+        // Other status codes are not indicative of unhealthy HEC,
         // but rather the URL/token is wrong.
-        //healthPollFailed(new Exception(msg));
-        //this is actualy a failure. Something is actually *wrong* with the endpoint or configured URL
-        sender.getConnection().getCallbacks().failed(null, new Exception(
-                "HEC health endpoint returned " + statusCode + ". Response was: " + msg));
+        // This is actually a failure.
+        handleHecErrorResponse(reply, statusCode);
         break;
     }
   }
@@ -320,7 +313,7 @@ public class HecIOManager implements Closeable {
                   new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code,
                           reply));
         } else {
-          handlePreFlightCheckFailure(reply, code);
+          handleHecErrorResponse(reply, code);
         }
       }
     };
@@ -328,20 +321,23 @@ public class HecIOManager implements Closeable {
     sender.preFlightCheck(cb);
   }
 
-  private void handlePreFlightCheckFailure(String reply, int httpCode) {
-    PreflightFailureResponseValueObject preFlightResp;
-    try {
-      preFlightResp = mapper.readValue(reply,
-              PreflightFailureResponseValueObject.class);
-    } catch (IOException ex) {
-      throw new RuntimeException(ex.getMessage(), ex);
+  private void handleHecErrorResponse(String reply, int httpCode) {
+    // 503 means indexer queues are full - no need to propagate that
+    if (httpCode != 503) {
+      HecErrorResponseValueObject hecErrorResp;
+      try {
+        hecErrorResp = mapper.readValue(reply,
+                HecErrorResponseValueObject.class);
+      } catch (IOException ex) {
+        throw new RuntimeException(ex.getMessage(), ex);
+      }
+      LOG.severe("Error from HEC endpoint. Channel: " + sender.getChannel().
+              toString() + " Code: " + httpCode + " Reply: " + reply);
+      Exception ex = new HecErrorResponseException(
+              hecErrorResp.getText(), hecErrorResp.getCode(), sender.
+              getBaseUrl());
+      sender.getChannel().getCallbacks().failed(null, ex);
     }
-    LOG.severe("Error from HEC endpoint on channel: " + sender.getChannel().
-            toString());
-    Exception ex = new HecErrorResponseException(
-            preFlightResp.getText(), preFlightResp.getCode(), sender.
-            getBaseUrl());
-    sender.getChannel().getCallbacks().failed(null, ex);
   }
 
   /**
