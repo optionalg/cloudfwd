@@ -268,7 +268,7 @@ public final class HttpSender implements Endpoints {
       StringEntity entity;
       
       String req = ackReq.toString();
-      LOG.info("channel=" + getChannel() + " posting: " + req);
+      LOG.debug("channel=" + getChannel() + " posting: " + req);
       entity = new StringEntity(req);
       
       entity.setContentType(HttpContentType);

@@ -148,7 +148,7 @@ public class Connection implements Closeable {
     }
     timeoutChecker.start();
     timeoutChecker.add(events);
-    LOG.info("sending " + events.getLength() + " characters.");
+    LOG.debug("sending " + events.getLength() + " characters.");
     lb.sendBatch(events);
     this.events = null; //batch is in flight, null it out
     //return the number of characters posted to HEC for the events data

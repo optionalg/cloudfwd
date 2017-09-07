@@ -62,7 +62,7 @@ public class LoadBalancer implements Closeable {
   }
 
   private void updateChannels(IndexDiscoverer.Change change) {
-    LOG.info(change.toString());
+    LOG.debug(change.toString());
   }
 
   public synchronized void sendBatch(EventBatch events) throws HecConnectionTimeoutException {
@@ -110,7 +110,7 @@ public class LoadBalancer implements Closeable {
 
   void addChannelFromRandomlyChosenHost() {
     InetSocketAddress addr = discoverer.randomlyChooseAddr();
-    LOG.info("Adding channel to {0}", addr);
+    LOG.debug("Adding channel to {0}", addr);
     addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
   }
 
@@ -123,7 +123,7 @@ public class LoadBalancer implements Closeable {
     //send will be stuck in a spin loop with no channels to send to
     PropertiesFileHelper propsHelper = this.connection.getPropertiesFileHelper();
     if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
-      LOG.info(
+      LOG.debug(
               "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
               getMaxTotalChannels() + ")");
       return;
@@ -136,7 +136,7 @@ public class LoadBalancer implements Closeable {
 
       url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.
               getPort());
-      LOG.info("Trying to add URL: " + url);
+      LOG.debug("Trying to add URL: " + url);
       //We should provide a hostname for http client, so it can properly set Host header
       //this host is required for many proxy server and virtual servers implementations
       //https://tools.ietf.org/html/rfc7230#section-5.4
@@ -147,7 +147,7 @@ public class LoadBalancer implements Closeable {
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
-      LOG.info("Adding channel {0}", channel.getChannelId());
+      LOG.debug("Adding channel {0}", channel.getChannelId());
       channels.put(channel.getChannelId(), channel);
       //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
 

@@ -126,7 +126,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
-    LOG.info("channel=" + getChannelId() + " unack-count=" + count);
+    LOG.debug("channel=" + getChannelId() + " unack-count=" + count);
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();
@@ -389,7 +389,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
               loadBalancer.getConnection().getCallbacks().failed(e,
                       new HecMaxRetriesException(msg));
             } else {
-              LOG.info("retrying send on event id= " + e.getId());
+              LOG.debug("retrying send on event id= " + e.getId());
               loadBalancer.sendRoundRobin(e, forced);
             }
             break;

@@ -204,7 +204,7 @@ public class HecIOManager implements Closeable {
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
-        LOG.info("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
+        LOG.debug("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
           consumeAckPollResponse(reply);
         } else {
@@ -236,7 +236,7 @@ public class HecIOManager implements Closeable {
     // For status code anything other 200
     switch (statusCode) {
       case 200:
-        LOG.info("Health check is good");
+        LOG.debug("Health check is good");
         sender.getChannelMetrics().update(new Response(
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 200, msg));

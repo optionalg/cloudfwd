@@ -59,7 +59,7 @@ public class PollScheduler {
     //if the execution time of a task exceeds the period. We don't want that.
     scheduler.scheduleWithFixedDelay(poller, 0, delay, units);
     this.started = true;
-    LOG.info("STARTED POLLING: " + name + " with interval " + delay + " ms");
+    LOG.debug("STARTED POLLING: " + name + " with interval " + delay + " ms");
 
   }
 
