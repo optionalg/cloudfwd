@@ -3,21 +3,19 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
-
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
-import com.splunk.cloudfwd.UnvalidatedBytesEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
@@ -41,6 +39,8 @@ import java.nio.ByteBuffer;
  * @author ghendrey
  */
 public abstract class AbstractConnectionTest {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractConnectionTest.class.getName());
 
   /**
    * set enabled=false in test.properties to disable test.properties and
@@ -90,14 +90,14 @@ public abstract class AbstractConnectionTest {
   }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-    System.out.println(
+    LOG.trace(
             "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
       ///final EventBatch events =nextEventBatch(i+1);
       Event event = nextEvent(i + 1);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
+      LOG.trace("Send event: " + event.getId() + " i=" + i);
       connection.send(event);
     }
     connection.close(); //will flush
@@ -110,8 +110,7 @@ public abstract class AbstractConnectionTest {
   }
 
   protected void sendCombinationEvents() throws TimeoutException, InterruptedException, HecConnectionTimeoutException {
-    System.out.println(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
@@ -122,7 +121,7 @@ public abstract class AbstractConnectionTest {
         this.eventType = Event.Type.JSON;
       }
       Event event = nextEvent(i + 1);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
+      LOG.trace("Send event: " + event.getId() + " i=" + i);
       this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
     }
     connection.close(); //will flush
@@ -155,18 +154,15 @@ public abstract class AbstractConnectionTest {
       if (null != is) {
         props.load(is);
       } else {
-        System.out.println("No test_defaults.properties found on classpath");
+        LOG.trace("No test_defaults.properties found on classpath");
       }
     } catch (IOException ex) {
-      Logger.getLogger(AbstractConnectionTest.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
     }
     if (Boolean.parseBoolean(props.getProperty("enabled", "false"))) {
       return props;
     } else {
-      Logger.getLogger(AbstractConnectionTest.class.getName()).
-              log(Level.WARNING,
-                      "test.properties disabled, using lb.properties only");
+      LOG.warn("test.properties disabled, using lb.properties only");
       return new Properties(); //ignore test.properties
     }
   }
@@ -290,8 +286,7 @@ public abstract class AbstractConnectionTest {
       Event event = RawEvent.fromObject(m, seqno);
       return event;
     } catch (IOException ex) {
-      Logger.getLogger(AbstractConnectionTest.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }

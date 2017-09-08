@@ -1,6 +1,8 @@
 import com.splunk.cloudfwd.*;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Properties;
@@ -16,6 +18,8 @@ import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
  * Created by eprokop on 9/1/17.
  */
 public class InitialConfigErrorTest extends AbstractConnectionTest {
+    private static final Logger LOG = LoggerFactory.getLogger(InitialConfigErrorTest.class.getName());
+
     private int numEvents = 10;
     private enum ConfigError {
         ACKS_DISABLED,
@@ -34,7 +38,7 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
             public void failed(EventBatch events, Exception e) {
                 Assert.assertTrue(e.getMessage(),
                         e instanceof HecErrorResponseException);
-                System.out.println("Got expected exception: " + e);
+                LOG.trace("Got expected exception: " + e);
                 latch.countDown(); //allow the test to finish
             }
 
@@ -94,8 +98,7 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
         try {
             super.sendEvents();
         } catch (HecConnectionTimeoutException e) {
-            System.out.println(
-                "Got expected timeout exception because all channels are unhealthy "
+            LOG.trace("Got expected timeout exception because all channels are unhealthy "
                 + "due to acks disabled on token (per test design): "
                 + e.getMessage());
         }
@@ -108,8 +111,7 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
         try {
             super.sendEvents();
         } catch (HecConnectionTimeoutException e) {
-            System.out.println(
-                "Got expected timeout exception because all channels are unhealthy "
+            LOG.trace("Got expected timeout exception because all channels are unhealthy "
                 + "due to invalid token (per test design): "
                 + e.getMessage());
         }

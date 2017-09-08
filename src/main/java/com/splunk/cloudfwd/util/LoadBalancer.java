@@ -40,8 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public class LoadBalancer implements Closeable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LoadBalancer.class.
-          getName());
+  private static final Logger LOG = LoggerFactory.getLogger(LoadBalancer.class.getName());
   private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels

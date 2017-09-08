@@ -15,16 +15,14 @@
  */
 package com.splunk.cloudfwd.sim.errorgen.nonsticky;
 
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.sim.AckEndpoint;
 import com.splunk.cloudfwd.sim.EventEndpoint;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This AckEndpoint simulates a load balancer that is not sticky. This results
@@ -33,6 +31,7 @@ import org.apache.http.concurrent.FutureCallback;
  * @author ghendrey
  */
 public class NonStickEventEndpoint extends EventEndpoint {
+  private static final Logger LOG = LoggerFactory.getLogger(NonStickEventEndpoint.class.getName());
 
   public static int NUM_ACK_ENDPOINTS = 2;
   public static int N = 1;
@@ -51,7 +50,7 @@ public class NonStickEventEndpoint extends EventEndpoint {
 
   @Override
   public synchronized long nextAckId() {
-    System.out.println("next ack id");
+    LOG.trace("next ack id");
     maybeUnstick();
     return getAckEndpoint().nextAckId();
   }
@@ -67,7 +66,7 @@ public class NonStickEventEndpoint extends EventEndpoint {
   @Override
   public AckEndpoint getAckEndpoint() {
     AckEndpoint a = ackEndpoints.get(currentChannelIdx);
-    System.out.println("AckEndpoint is " + a);
+    LOG.trace("AckEndpoint is " + a);
     return a;
   }
 

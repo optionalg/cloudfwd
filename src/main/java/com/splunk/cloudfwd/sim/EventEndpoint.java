@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.sim;
 
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.HttpPostable;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -25,12 +24,16 @@ import java.util.concurrent.TimeUnit;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author ghendrey
  */
 public class EventEndpoint implements Endpoint{
+  private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.getName());
+
 
   Random rand = new Random(System.currentTimeMillis());
   final ScheduledExecutorService executor;
@@ -80,7 +83,7 @@ public class EventEndpoint implements Endpoint{
 
   @Override
   public void close() {
-    System.out.println("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
+    LOG.trace("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
     executor.shutdownNow();
   }
 

@@ -1,6 +1,4 @@
 
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
@@ -8,6 +6,8 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -29,6 +29,8 @@ import org.junit.Test;
  * @author ghendrey
  */
 public class MaxRetriesTest extends AbstractConnectionTest {
+
+  private static final Logger LOG = LoggerFactory.getLogger(MaxRetriesTest.class.getName());
 
   @Override
   protected Properties getProps() {
@@ -57,7 +59,7 @@ public class MaxRetriesTest extends AbstractConnectionTest {
               "This test uses close(), not closeNow(), so don't jam it up with more than one Batch to test on "
               + "a jammed up channel. It will take too long to be practical.");
     }
-    System.out.println(
+    LOG.trace(
             "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     try {

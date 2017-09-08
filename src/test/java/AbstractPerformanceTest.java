@@ -4,7 +4,10 @@ import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -26,6 +29,7 @@ import org.junit.Assert;
  * @author ghendrey
  */
 public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractPerformanceTest.class.getName());
 
   @Override
   protected BasicCallbacks getCallbacks() {
@@ -48,8 +52,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
 
   @Override
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-    System.out.println(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     long start = 0;
@@ -64,11 +67,11 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
       if (sent > 0) {
         warmingUp = (((float) i) / expected) < warmup;
         if (warmingUp) {
-          System.out.println("WARMING UP");
+          LOG.trace("WARMING UP");
         }
         windingDown = (((float) i) / expected) > (1 - warmup);
         if (windingDown) {
-          System.out.println("WINDING DOWN");
+          LOG.trace("WINDING DOWN");
         }
         if (start == 0L && !warmingUp) { //true first time we exit the warmup period and enter valid sampling period
           start = System.currentTimeMillis(); //start timing after warmup
@@ -81,8 +84,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
                   event.getId(), sent);
           showThroughput(System.currentTimeMillis(), start);
         }
-        System.out.println(
-                "Sent event batch with id: " + event.getId() + " i=" + i + " and size " + sent);
+        LOG.trace("Sent event batch with id: " + event.getId() + " i=" + i + " and size " + sent);
       }
 
     }
@@ -110,10 +112,10 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     if (sec <= 0) {
       return;
     }
-    System.out.println("Sent " + nChars + " chars in " + time + " ms");
-    System.out.println("Chars-per-second: " + nChars / sec);
+    LOG.trace("Sent " + nChars + " chars in " + time + " ms");
+    LOG.trace("Chars-per-second: " + nChars / sec);
     float mbps = ((float) nChars * 8) / (sec * 1000000f);
-    System.out.println("mbps: " + mbps);
+    LOG.trace("mbps: " + mbps);
     if (mbps < 0) {
       throw new IllegalStateException("Negative throughput is not allowed");
     }
