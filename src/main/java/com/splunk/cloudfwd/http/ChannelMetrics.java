@@ -20,7 +20,8 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecErrorResponseException;
 import com.splunk.cloudfwd.http.lifecycle.*;
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.sim.HecErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -29,6 +30,7 @@ import java.io.IOException;
  * @author ghendrey
  */
 public class ChannelMetrics extends LifecycleEventObservable implements LifecycleEventObserver {
+  private static final Logger LOG = LoggerFactory.getLogger(ChannelMetrics.class.getName());
 
   /*
   private long eventPostCount;
@@ -70,32 +72,25 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
     if(e instanceof Response){
       Response r = (Response)e;
       if(r.getHttpCode()!=200){
-
-//        String msg = "Server did not return OK/200 in state "+e.getType().name()+". HTTP code: " + r.getHttpCode() + ", reply:" + ((Response) e).getResp();
-
-        EventBatch events = null;
-        if (e instanceof EventBatchResponse) {
-          events = ((EventBatchResponse)e).getEvents();
-        }
-        connection.getCallbacks().failed(events, getException(r.getResp(),));
+        LOG.error("Error from HEC endpoint in state " + e.getType().name() + ". Url: " + r.getUrl() + ", Code: " + r.getHttpCode() + ", Reply: " + r.getResp());
+        EventBatch events = (e instanceof EventBatchResponse) ?
+                ((EventBatchResponse)e).getEvents() : null;
+        connection.getCallbacks().failed(events, getException(r.getResp(), r.getUrl()));
         notifyObservers(e); //might as well tell everyone there was a problem
       }
     }
   }
 
-  private HecErrorResponseException getException(String reply) {
+  private HecErrorResponseException getException(String reply, String url) {
     ObjectMapper mapper = new ObjectMapper();
     HecErrorResponseValueObject hecErrorResp;
     try {
       hecErrorResp = mapper.readValue(reply,
-              HecErrorResponseValueObject.class);
+        HecErrorResponseValueObject.class);
     } catch (IOException ex) {
       throw new RuntimeException(ex.getMessage(), ex);
     }
-//    LOG.error("Error from HEC endpoint. Channel: " + sender.getChannel().
-//            toString() + " Code: " + httpCode + " Reply: " + reply);
     return new HecErrorResponseException(
-            hecErrorResp.getText(), hecErrorResp.getCode(), sender.
-            getBaseUrl());
+      hecErrorResp.getText(), hecErrorResp.getCode(), url);
   }
 }

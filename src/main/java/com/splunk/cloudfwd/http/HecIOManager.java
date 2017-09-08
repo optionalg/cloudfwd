@@ -31,6 +31,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.maven.lifecycle.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.http.HttpResponse;
@@ -135,11 +137,12 @@ public class HecIOManager implements Closeable {
             consumeEventPostResponse(reply, events);
           } catch (Exception ex) {
             LOG.error(ex.getMessage(), ex);
+            sender.getConnection().getCallbacks().failed(events, ex);
           }
         } else {
           sender.getChannelMetrics().update(new EventBatchResponse(
-                  LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply, events));
-          handleHecErrorResponse(reply, code);
+                  LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply,
+                  events, sender.getBaseUrl()));
         }
       }
     };
@@ -173,7 +176,8 @@ public class HecIOManager implements Closeable {
     startPolling();
 
     sender.getChannelMetrics().update(new EventBatchResponse(
-            LifecycleEvent.Type.EVENT_POST_OK, 200, resp, events));
+            LifecycleEvent.Type.EVENT_POST_OK, 200, resp,
+            events, sender.getBaseUrl()));
   }
 
   public void consumeAckPollResponse(String resp) {
@@ -210,8 +214,8 @@ public class HecIOManager implements Closeable {
           consumeAckPollResponse(reply);
         } else {
           sender.getChannelMetrics().update(new Response(
-                  LifecycleEvent.Type.ACK_POLL_NOT_OK, code, reply));
-          handleHecErrorResponse(reply, code);
+                  LifecycleEvent.Type.ACK_POLL_NOT_OK, code,
+                  reply, sender.getBaseUrl()));
         }
         setAckPollInProgress(false);
       }
@@ -240,17 +244,20 @@ public class HecIOManager implements Closeable {
         LOG.info("Health check is good");
         sender.getChannelMetrics().update(new Response(
                 LifecycleEvent.Type.HEALTH_POLL_OK,
-                200, reply));
+                200, reply, sender.getBaseUrl()));
         break;
       case 503:
         sender.getChannelMetrics().update(new Response(
-                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, statusCode, reply));
+                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY,
+                statusCode, reply, sender.getBaseUrl()));
         break;
       default:
         // Other status codes are not indicative of unhealthy HEC,
         // but rather the URL/token is wrong.
         // This is actually a failure.
-        handleHecErrorResponse(reply, statusCode);
+        sender.getChannelMetrics().update(new Response(
+                LifecycleEvent.Type.HEALTH_POLL_ERROR,
+                statusCode, reply, sender.getBaseUrl()));
         break;
     }
   }
@@ -304,37 +311,19 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void completed(String reply, int code) {
+        LifecycleEvent.Type type;
         if (code == 200) {
           LOG.info("PRE-FLIGHT CHECK OK");
-          sender.getChannelMetrics().update(
-                  new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code,
-                          reply));
+          type = LifecycleEvent.Type.PREFLIGHT_CHECK_OK;
         } else {
-          handleHecErrorResponse(reply, code);
+          type = LifecycleEvent.Type.PREFLIGHT_CHECK_NOT_OK;
         }
+        sender.getChannelMetrics().update(
+            new Response(type, code, reply, sender.getBaseUrl()));
       }
     };
 
     sender.preFlightCheck(cb);
-  }
-
-  private void handleHecErrorResponse(String reply, int httpCode) {
-    // 503 means indexer queues are full - no need to propagate that
-    if (httpCode != 503) {
-      HecErrorResponseValueObject hecErrorResp;
-      try {
-        hecErrorResp = mapper.readValue(reply,
-                HecErrorResponseValueObject.class);
-      } catch (IOException ex) {
-        throw new RuntimeException(ex.getMessage(), ex);
-      }
-      LOG.error("Error from HEC endpoint. Channel: " + sender.getChannel().
-              toString() + " Code: " + httpCode + " Reply: " + reply);
-      Exception ex = new HecErrorResponseException(
-              hecErrorResp.getText(), hecErrorResp.getCode(), sender.
-              getBaseUrl());
-      sender.getChannel().getCallbacks().failed(null, ex);
-    }
   }
 
   /**

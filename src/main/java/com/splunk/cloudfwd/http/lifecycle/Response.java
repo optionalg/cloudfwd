@@ -23,11 +23,13 @@ public class Response extends LifecycleEvent {
 
   private final int httpCode;
   private final String resp;
+  private final String url;
 
-  public Response(final Type type, int httpCode, String resp) {
+  public Response(final Type type, int httpCode, String resp, String url) {
     super(type);
     this.httpCode = httpCode;
     this.resp = resp;
+    this.url = url;
   }
 
   @Override
@@ -49,4 +51,13 @@ public class Response extends LifecycleEvent {
   public String getResp() {
     return resp;
   }
+
+  /**
+   * @return the url
+   */
+  public String getUrl() {
+    return url;
+  }
+
 }
+

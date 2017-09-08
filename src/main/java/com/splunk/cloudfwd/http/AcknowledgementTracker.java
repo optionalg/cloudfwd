@@ -116,7 +116,7 @@ public class AcknowledgementTracker {
 
           this.sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?",
-                  events));
+                  events, sender.getBaseUrl()));
         }
         //System.out.println("polledAcks was " + polledAcks.keySet());
         idTracker.polledAcks.keySet().removeAll(succeeded);

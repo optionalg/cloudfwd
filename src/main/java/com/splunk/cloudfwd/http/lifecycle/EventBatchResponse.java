@@ -24,8 +24,8 @@ import com.splunk.cloudfwd.EventBatch;
 public class EventBatchResponse extends Response implements EventBatchLifecycleEvent{
   private EventBatch events = null;
     
-  public EventBatchResponse(Type type, int httpCode, String resp, EventBatch events) {
-    super(type, httpCode, resp);
+  public EventBatchResponse(Type type, int httpCode, String resp, EventBatch events, String url) {
+    super(type, httpCode, resp, url);
     this.events = events;
   }
   

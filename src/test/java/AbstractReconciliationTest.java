@@ -51,7 +51,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   private String mgmtPort = "8089"; // management port on the Splunk search head
   private String index = "firehose"; // where the data is indexed – this is the index that will be searched
   private String user = "admin"; // a Splunk user that has permissions to search in <index>
-  private String password = "changeme";
+  private String password = "a";
 
   /* ************ /CONFIGURABLE ************ */
   public AbstractReconciliationTest() {
