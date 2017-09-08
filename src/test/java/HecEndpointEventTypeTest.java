@@ -17,16 +17,17 @@
 import com.splunk.cloudfwd.Connection.HecEndpoint;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
-
 import java.util.*;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *Note this test is excluded by default in maven pom.xml
  * @author ajayaraman
  */
 public class HecEndpointEventTypeTest extends AbstractConnectionTest {
+  private static final Logger LOG = LoggerFactory.getLogger(HecEndpointEventTypeTest.class.getName());
 
   @Override
   protected int getNumEventsToSend() {
@@ -43,7 +44,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   @Test
   public void testTextToRaw() throws Exception {
-    System.out.println("testBlobToRaw");
+    LOG.trace("testBlobToRaw");
     this.eventType = Event.Type.TEXT;
     setEndpointType(HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.sendEvents();
@@ -51,7 +52,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   @Test
   public void testJsonToRaw() throws Exception {
-    System.out.println("testJsonToRaw");
+    LOG.trace("testJsonToRaw");
     this.eventType = Event.Type.JSON;
     setEndpointType(HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.sendEvents();
@@ -60,7 +61,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   @Test
   public void testTextToEvent() throws Exception {
-    System.out.println("testBlobToEvent");
+    LOG.trace("testBlobToEvent");
     this.eventType = Event.Type.TEXT;
     setEndpointType(HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.sendEvents();
@@ -69,7 +70,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
   @Test
   public void testJsonToEvent() throws Exception {
-    System.out.println("testJsonToEvent");
+    LOG.trace("testJsonToEvent");
     this.eventType = Event.Type.JSON;
     setEndpointType(HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.sendEvents();

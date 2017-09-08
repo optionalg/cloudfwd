@@ -18,22 +18,21 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecIllegalStateException;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
-import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author ghendrey
  */
 public class NonStickyDetectionTest extends AbstractConnectionTest {
+  private static final Logger LOG = LoggerFactory.getLogger(NonStickyDetectionTest.class.getName());
 
   public NonStickyDetectionTest() {
   }
@@ -57,13 +56,13 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
         Assert.
                 assertTrue(e.getMessage(),
                         e instanceof HecIllegalStateException);
-        System.out.println("Got expected exception: " + e);
+        LOG.trace("Got expected exception: " + e);
         latch.countDown(); //allow the test to finish
       }
 
       @Override
       public void checkpoint(EventBatch events) {
-        System.out.println("SUCCESS CHECKPOINT " + events.getId());
+        LOG.trace("SUCCESS CHECKPOINT " + events.getId());
         //do NOT count down the latch - otherwise the test ends before we have
         //opportunity to detect the non-sticky session
       }
@@ -78,8 +77,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
       super.eventType = Event.Type.TEXT;
       super.sendEvents();
     } catch (HecConnectionTimeoutException e) {
-      System.out.println(
-              "Got expected timeout exception because all channels are broken (per test design): " + e.
+      LOG.trace("Got expected timeout exception because all channels are broken (per test design): " + e.
               getMessage());
     }
   }

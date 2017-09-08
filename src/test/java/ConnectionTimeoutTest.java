@@ -4,10 +4,9 @@ import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -29,6 +28,8 @@ import org.junit.Test;
  * @author ghendrey
  */
 public class ConnectionTimeoutTest extends AbstractConnectionTest {
+
+  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(ConnectionTimeoutTest.class.getName());
 
   @Override
   protected Properties getProps() {
@@ -54,8 +55,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
               "This test uses close(), not closeNow(), so don't jam it up with more than one Batch to test on "
                       + "a jammed up channel. It will take too long to be practical.");
     }
-    System.out.println(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     try {
       //send a first message to block the channel (we are using the slowendpoints to jam up the channel, see getProps)
@@ -68,7 +68,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
       Event event = nextEvent(i + 1);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
+      LOG.trace("Send event: " + event.getId() + " i=" + i);
       int connTimeoutCount = 0;
       while (true) {
         try {
