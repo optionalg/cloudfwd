@@ -99,6 +99,8 @@ public abstract class AbstractConnectionTest {
       Event event = nextEvent(i + 1);
       System.out.println("Send event: " + event.getId() + " i=" + i);
       connection.send(event);
+      if (i == 300000) connection.setUrls("https://127.0.0.1:8288");
+      if (i == 600000) connection.setUrls("https://127.0.0.1:8388");
     }
     connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);

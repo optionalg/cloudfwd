@@ -251,6 +251,10 @@ public class LoadBalancer implements Closeable {
     }
   }
 
+  public void reloadUrls() {
+    discoverer.reloadUrls();
+  }
+
   /**
    * @return the channelsPerDestination
    */

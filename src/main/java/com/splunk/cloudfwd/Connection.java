@@ -207,5 +207,20 @@ public class Connection implements Closeable {
   public long getBlockingTimeoutMS(){
     return propertiesFileHelper.getBlockingTimeoutMS();
   }
+
+  public String getToken() {
+    return propertiesFileHelper.getToken();
+  }
+
+  public void setToken(String token) {
+    propertiesFileHelper.putProperty(PropertyKeys.TOKEN, token);
+  }
+
+  public void setUrls(String urls) {
+    // a single url or a list of comma separated urls
+    propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
+    lb.reloadUrls();
+  }
+
    
 }

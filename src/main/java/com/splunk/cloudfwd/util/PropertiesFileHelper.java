@@ -279,5 +279,12 @@ public class PropertiesFileHelper {
     return max;
   }
 
+  public String getToken() {
+    if (defaultProps.getProperty(TOKEN) == null) {
+      throw new RuntimeException("HEC token missing.");
+    }
+    return defaultProps.getProperty(TOKEN);
+  }
+
 
 }
