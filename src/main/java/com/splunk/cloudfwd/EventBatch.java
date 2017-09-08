@@ -39,7 +39,7 @@ public class EventBatch  implements IEventBatch {
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
   protected boolean flushed = false;
   protected boolean acknowledged;
-  protected final long creationTime = System.currentTimeMillis();
+  private final long creationTime = System.currentTimeMillis();
   protected int numEvents;
   protected int numTries; //events are resent by DeadChannelDetector
   protected int length;
@@ -210,6 +210,13 @@ public class EventBatch  implements IEventBatch {
       knownTarget = target; //this can help us infer the content type as application/json when destined for /events
     }
 
+  }
+
+  /**
+   * @return the creationTime
+   */
+  public long getCreationTime() {
+    return creationTime;
   }
 
   private class HttpEventBatchEntity extends AbstractHttpEntity {
