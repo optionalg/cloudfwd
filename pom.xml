@@ -114,7 +114,7 @@
                 <version>3.0.0-M1</version>
                 <configuration>
                     <reportOutputDirectory>docs</reportOutputDirectory>
-                    <excludePackageNames>com.splunk.cloudfwd.http:com.splunk.cloudfwd.util:com.splunk.cloudfwd.sim:com.amazonaws.services.kinesis.samples.stocktrades.model:com.amazonaws.services.kinesis.samples.stocktrades.utils</excludePackageNames>
+                    <excludePackageNames>com.splunk.cloudfwd.http:com.splunk.cloudfwd.util:com.splunk.cloudfwd.sim:com.amazonaws.services.kinesis.samples.*</excludePackageNames>
                 </configuration>
             </plugin>
             <!--plugin>

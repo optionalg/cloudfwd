@@ -92,7 +92,7 @@ public class AcknowledgementTracker {
     EventBatch events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      System.out.println("success acked ids: " + succeeded);
+      LOG.debug("success acked ids: " + succeeded);
       if (succeeded.isEmpty()) {
         /*
         this.sender.getChannelMetrics().update(new EventBatchResponse(

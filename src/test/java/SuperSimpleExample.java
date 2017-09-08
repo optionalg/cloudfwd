@@ -2,18 +2,17 @@
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -35,6 +34,8 @@ import java.util.logging.Logger;
  * @author ghendrey
  */
 public class SuperSimpleExample {
+  private static final Logger LOG = LoggerFactory.getLogger(SuperSimpleExample.class.getName());
+
 
   public static void main(String[] args) {
     final int numEvents = 10000;
@@ -42,25 +43,22 @@ public class SuperSimpleExample {
     ConnectionCallbacks callbacks = new ConnectionCallbacks() {
       @Override
       public void acknowledged(EventBatch events) {
-        System.out.println(
-                "EventBatch  " + events.getId() + " has been index-acknowledged by Splunk.");
+        LOG.trace("EventBatch  " + events.getId() + " has been index-acknowledged by Splunk.");
       }
 
       @Override
       public void failed(EventBatch events, Exception ex) {
         if (events != null) {
-          System.out.println("EventBatch " + events.getId() + " failed: " + ex.
-                  getMessage());
+          LOG.trace("EventBatch " + events.getId() + " failed: " + ex.getMessage());
         } else {
-          System.out.println("An exception occurred: " + ex.getMessage());
+          LOG.trace("An exception occurred: " + ex.getMessage());
         }
       }
 
       @Override
       public void checkpoint(EventBatch events) {
         // if (events.getId().compareTo(new Integer(numEvents)) == 0) {
-        System.out.println(
-                "CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
+        LOG.trace("CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
         //}
       }
     }; //end callbacks
@@ -89,8 +87,7 @@ public class SuperSimpleExample {
           c.send(event);
         } catch (HecConnectionTimeoutException ex) {
           //it's up to you to decide how to deal with timeouts. See PropertyKeys.BLOCKING_TIMEOUT_MS
-          Logger.getLogger(SuperSimpleExample.class.getName()).
-                  log(Level.SEVERE, ex.getMessage(), ex);
+          LOG.error(ex.getMessage(), ex);
         }
 
       }
@@ -108,8 +105,7 @@ public class SuperSimpleExample {
           c.send(event);
         } catch (HecConnectionTimeoutException ex) {
           //it's not a failiure if the connection times out
-          Logger.getLogger(SuperSimpleExample.class.getName()).
-                  log(Level.SEVERE, ex.getMessage(), ex);
+          LOG.error(ex.getMessage(), ex);
         }
       }
     }

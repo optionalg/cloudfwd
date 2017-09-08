@@ -26,6 +26,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -43,6 +45,8 @@ import org.junit.Assert;
  * limitations under the License.
  */
 public abstract class AbstractReconciliationTest extends AbstractConnectionTest {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractReconciliationTest.class.getName());
 
   /* ************ CONFIGURABLE ************ */
   protected int numToSend = 10;
@@ -160,7 +164,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       if (!searchResults.remove(eventText.trim())) {
         Assert.fail("Event was not present in search results: " + e.toString());
       } else {
-        System.out.println("Validated event");
+        LOG.trace("Validated event");
       }
     }
     if (searchResults.size() != 0) {

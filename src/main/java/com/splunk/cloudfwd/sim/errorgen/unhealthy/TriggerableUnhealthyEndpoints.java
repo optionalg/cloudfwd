@@ -20,12 +20,15 @@ import com.splunk.cloudfwd.sim.HealthEndpoint;
 import com.splunk.cloudfwd.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author ghendrey
  */
 public class TriggerableUnhealthyEndpoints extends SimulatedHECEndpoints {
+  private static final Logger LOG = LoggerFactory.getLogger(TriggerableUnhealthyEndpoints.class.getName());
 
   public static boolean healthy = true;
 
@@ -39,12 +42,12 @@ public class TriggerableUnhealthyEndpoints extends SimulatedHECEndpoints {
     @Override
     public void pollHealth(FutureCallback<HttpResponse> cb) {
       if (healthy) {
-        System.out.println("HEALTH POLL OK");
+        LOG.trace("HEALTH POLL OK");
         ((AbstractHttpCallback) cb).completed(               
                 "If we care about the actual conent, this will break something.",
                 200);
       } else {
-        System.out.println("HEALTH POLL UNHEALTHY (503)");
+        LOG.trace("HEALTH POLL UNHEALTHY (503)");
         ((AbstractHttpCallback) cb).completed(
                 "Simulated Inexer unhealthy queue is busy.",
                 503);
