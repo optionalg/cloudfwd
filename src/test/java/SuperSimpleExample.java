@@ -34,7 +34,7 @@ import java.util.Map;
  * @author ghendrey
  */
 public class SuperSimpleExample {
-  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(SuperSimpleExample.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(SuperSimpleExample.class.getName());
 
 
   public static void main(String[] args) {

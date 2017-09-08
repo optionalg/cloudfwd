@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ConnectionTimeoutTest extends AbstractConnectionTest {
 
-  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(ConnectionTimeoutTest.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionTimeoutTest.class.getName());
 
   @Override
   protected Properties getProps() {

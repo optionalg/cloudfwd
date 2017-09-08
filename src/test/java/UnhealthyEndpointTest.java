@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
-  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(UnhealthyEndpointTest.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(UnhealthyEndpointTest.class.getName());
 
   private final UnhealthyCallbackDetector customCallback;
 

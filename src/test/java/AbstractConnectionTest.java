@@ -39,7 +39,7 @@ import java.nio.ByteBuffer;
  */
 public abstract class AbstractConnectionTest {
 
-  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(AbstractConnectionTest.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractConnectionTest.class.getName());
 
   /**
    * set enabled=false in test.properties to disable test.properties and
