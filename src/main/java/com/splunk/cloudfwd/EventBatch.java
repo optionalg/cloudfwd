@@ -23,9 +23,10 @@ import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.logging.Logger;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.AbstractHttpEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -33,8 +34,7 @@ import org.apache.http.entity.AbstractHttpEntity;
  */
 public class EventBatch  implements IEventBatch {
 
-  protected static final Logger LOG = Logger.getLogger(
-          EventBatch.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(EventBatch.class.getName());
   protected Comparable id; //will be set to the id of the last (most recent) Event added to the batch
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
   protected boolean flushed = false;
@@ -59,7 +59,7 @@ public class EventBatch  implements IEventBatch {
   @Override
   public boolean isTimedOut(long timeout) {
     long flightTime = System.currentTimeMillis() - creationTime;
-    System.out.println("Flight time " + flightTime);
+    LOG.debug("Flight time " + flightTime);
     return flightTime >= timeout;
   }
 

@@ -23,8 +23,8 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import com.splunk.cloudfwd.ConnectionCallbacks;
@@ -35,8 +35,8 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
  */
 public class CheckpointManager implements LifecycleEventObserver {
 
-  private static final Logger LOG = Logger.getLogger(CheckpointManager.class.
-          getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(CheckpointManager.class.getName());
+
 
   private final SortedMap<Comparable, EventBatch> orderedEvents = new TreeMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
@@ -91,7 +91,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     if (!this.orderedEvents.containsKey(events.getId())) {
       String msg = "No callback registered for successfully acknowledged ackId: " + events.
               getAckId() + ". This can happen if event has been resent by DeadChannelDetector";
-      Logger.getLogger(getClass().getName()).log(Level.WARNING, msg);
+      LOG.warn(msg);
     }
     ConnectionCallbacks cb = this.connection.getCallbacks();
     //todo: maybe schedule acknowledge to be async
@@ -107,7 +107,7 @@ public class CheckpointManager implements LifecycleEventObserver {
   private synchronized void slideHighwaterUp(ConnectionCallbacks cb) {
     if (this.orderedEvents.isEmpty()) {
       String msg = "Failed to move highwater mark. No events present.";
-      LOG.severe(msg);
+      LOG.error(msg);
       throw new IllegalStateException(msg);
     }
     EventBatch acknowledgedEvents = null;
@@ -134,7 +134,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     if (null != prev) {
       String msg = "EventBatch checkpoint already tracked. EventBatch ID is " + events.
               getId();
-      LOG.severe(msg);
+      LOG.error(msg);
       throw new IllegalStateException(msg);
     }
   }
@@ -144,7 +144,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     if (null == prev) {
       String msg = "Attempt to deregister unregistered EventBatch. EventBatch ID is " + events.
               getId();
-      LOG.severe(msg);
+      LOG.error(msg);
       throw new IllegalStateException(msg);
     }
   }  

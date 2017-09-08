@@ -31,8 +31,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -50,8 +50,8 @@ import org.apache.http.concurrent.FutureCallback;
  */
 public class HecIOManager implements Closeable {
 
-  private static final Logger LOG = Logger.getLogger(HecIOManager.class.
-          getName());
+  private static final Logger LOG = LoggerFactory.getLogger(HecIOManager.class.getName());
+
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpSender sender;
@@ -77,10 +77,10 @@ public class HecIOManager implements Closeable {
     if (!ackPollController.isStarted()) {
       Runnable poller = () -> {
         if (this.getAcknowledgementTracker().isEmpty()) {
-          System.out.println("No acks to poll for");
+          LOG.debug("No acks to poll for");
           return;
         } else if (this.isAckPollInProgress()) {
-          System.out.println("skipping ack poll - already have one in flight");
+          LOG.debug("skipping ack poll - already have one in flight");
           return;
         }
         this.pollAcks();
@@ -134,7 +134,7 @@ public class HecIOManager implements Closeable {
           try {
             consumeEventPostResponse(reply, events);
           } catch (Exception ex) {
-            LOG.log(Level.SEVERE, null, ex);
+            LOG.error(ex.getMessage(), ex);
           }
         } else {
           sender.getChannelMetrics().update(new EventBatchResponse(
@@ -162,9 +162,7 @@ public class HecIOManager implements Closeable {
       sender.getConnection().getCallbacks().failed(events,
               new HecErrorResponseException("ACK is disabled", 14, sender.getBaseUrl()));
     } catch (IOException ex) {
-      Logger.getLogger(getClass().getName()).log(Level.SEVERE, ex.getMessage(),
-              ex);
-      sender.getConnection().getCallbacks().failed(events, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
 
@@ -200,15 +198,14 @@ public class HecIOManager implements Closeable {
   //called by the AckPollScheduler
   public void pollAcks() {
 
-    System.out.println("POLLING ACKS...");
+    LOG.info("POLLING ACKS...");
     sender.getChannelMetrics().update(new PreRequest(
             LifecycleEvent.Type.PRE_ACK_POLL));
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
-        System.out.println(
-                "channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
+        LOG.debug("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
         if (code == 200) {
           consumeAckPollResponse(reply);
         } else {
@@ -221,7 +218,7 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to poll acks", ex);
+        LOG.error("failed to poll acks", ex);
         //AckManager.this.ackPollFailed(ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.ACK_POLL_FAILURE, ex));
@@ -231,7 +228,7 @@ public class HecIOManager implements Closeable {
       @Override
       public void cancelled() {
         setAckPollInProgress(false);
-        LOG.severe("ack poll cancelled.");
+        LOG.error("ack poll cancelled.");
       }
     };
     sender.pollAcks(this, cb);
@@ -240,7 +237,7 @@ public class HecIOManager implements Closeable {
   private void setChannelHealth(int statusCode, String reply) {
     switch (statusCode) {
       case 200:
-        System.out.println("Health check is good");
+        LOG.info("Health check is good");
         sender.getChannelMetrics().update(new Response(
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 200, reply));
@@ -259,12 +256,12 @@ public class HecIOManager implements Closeable {
   }
 
   public void pollHealth() {
-    System.out.println("POLLING HEALTH...");
+    LOG.info("POLLING HEALTH...");
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to poll health", ex);
+        LOG.error("failed to poll health", ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.HEALTH_POLL_FAILED, ex));
       }
@@ -289,12 +286,12 @@ public class HecIOManager implements Closeable {
    * enabled
    */
   public void preFlightCheck() {
-    System.out.println("PRE-FLIGHT CHECK...");
+    LOG.info("PRE-FLIGHT CHECK...");
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void failed(Exception ex) {
-        LOG.log(Level.SEVERE, "failed to perform pre-flight check", ex);
+        LOG.error("failed to perform pre-flight check", ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.PREFLIGHT_CHECK_FAILED, ex));
       }
@@ -308,7 +305,7 @@ public class HecIOManager implements Closeable {
       @Override
       public void completed(String reply, int code) {
         if (code == 200) {
-          System.out.println("PRE-FLIGHT CHECK OK");
+          LOG.info("PRE-FLIGHT CHECK OK");
           sender.getChannelMetrics().update(
                   new Response(LifecycleEvent.Type.PREFLIGHT_CHECK_OK, code,
                           reply));
@@ -331,7 +328,7 @@ public class HecIOManager implements Closeable {
       } catch (IOException ex) {
         throw new RuntimeException(ex.getMessage(), ex);
       }
-      LOG.severe("Error from HEC endpoint. Channel: " + sender.getChannel().
+      LOG.error("Error from HEC endpoint. Channel: " + sender.getChannel().
               toString() + " Code: " + httpCode + " Reply: " + reply);
       Exception ex = new HecErrorResponseException(
               hecErrorResp.getText(), hecErrorResp.getCode(), sender.
