@@ -87,8 +87,10 @@ public class PropertiesFileHelper {
   }
 
   public int getChannelsPerDestination() {
-    int n = Integer.parseInt(defaultProps.getProperty(CHANNELS_PER_DESTINATION, "8").trim());
+    int n = Integer.parseInt(defaultProps.getProperty(CHANNELS_PER_DESTINATION,
+            DEFAULT_CHANNELS_PER_DESTINATION).trim());
     if (n < 1) {
+      // FIXME: EP: Do we actually want to allow creating 2,147,483,647 channels PER destination ?!
       n = Integer.MAX_VALUE; //effectively no limit by default
     }
     return n;
@@ -124,7 +126,7 @@ public class PropertiesFileHelper {
 
   public int getMaxTotalChannels() {
     int max = Integer.parseInt(defaultProps.getProperty(
-            MAX_TOTAL_CHANNELS, "-1").trim()); //default no limit
+            MAX_TOTAL_CHANNELS, DEFAULT_MAX_TOTAL_CHANNELS).trim()); //default no limit
     if (max < 1) {
       max = Integer.MAX_VALUE; //effectively no limit by default
     }
