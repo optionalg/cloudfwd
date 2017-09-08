@@ -10,6 +10,7 @@ Use Cloudfwd to reliably send data to Splunk Http Event Collector (HEC) with ind
 2. [Maven](https://maven.apache.org/index.html)
 3. [Java 8](http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html)
 4. [HEC Token](http://docs.splunk.com/Documentation/Splunk/6.6.1/Data/UsetheHTTPEventCollector)
+5. Link_to_Required_Add-On
 
 
 ### Installation
@@ -66,16 +67,25 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 
 After a minute, you should see stock trade events in the Splunk UI.
 
+## Troubleshoot Cloudfwd
+
+The following assumes familiarity with Splunk software. 
+
+### 1. Make sure that your events were indexed properly in HEC. 
+
+A ```true``` status generally indicates that the event(s) that correspond to that ackID were replicated at the desired replication factor. However, a ```true``` status may also result from event(s) that were dropped in the indexing process due to misconfiguration or another error.  For example, if the event formatting was not consistent with the format specified by ```INDEXED_EXTRACTIONS``` (in ```props.conf```), then the event would be dropped and an error logged in ```splunkd.log```. 
+
+If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```lb.properties```. 
+
 ## Built With
 
 * [Maven](https://maven.apache.org/) - Dependency Management
 * [Java](https://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html) - Programming model
 
 
-## Versioning
+## Version
 
 BETA 1
-
 
 ## License
 

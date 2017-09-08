@@ -26,8 +26,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 /**
  *
@@ -35,11 +35,7 @@ import static com.splunk.cloudfwd.PropertyKeys.*;
  */
 public class PropertiesFileHelper {
 
-  private static final Logger LOG = Logger.getLogger(PropertiesFileHelper.class.
-          getName());
-
-  
-
+  private static final Logger LOG = LoggerFactory.getLogger(PropertiesFileHelper.class.getName());
 
   private Properties defaultProps = new Properties();
 
@@ -59,7 +55,7 @@ public class PropertiesFileHelper {
       }
       defaultProps.load(is);
     } catch (IOException ex) {
-      LOG.log(Level.SEVERE, "problem loading lb.properties", ex);
+      LOG.error("problem loading lb.properties", ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -76,7 +72,7 @@ public class PropertiesFileHelper {
         URL url = new URL(urlString.trim());
         urls.add(url);
       } catch (MalformedURLException ex) {
-        LOG.severe(ex.getMessage());
+        LOG.error(ex.getMessage(), ex);
         throw new RuntimeException(ex);
       }
     }
@@ -102,7 +98,7 @@ public class PropertiesFileHelper {
     long t =  Long.parseLong(defaultProps.getProperty(
             UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS).trim());
     if (t < 1) {
-      LOG.info(UNRESPONSIVE_MS +  ": unlimited");
+      LOG.debug(UNRESPONSIVE_MS +  ": unlimited");
       t = Integer.MAX_VALUE;
     }
     return t;
@@ -160,7 +156,7 @@ public class PropertiesFileHelper {
       return -1;
     }
     if (decomMs < MIN_DECOM_MS) {
-      LOG.warning("Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
+      LOG.warn("Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
       decomMs = MIN_DECOM_MS;
     }
     return decomMs;
@@ -170,7 +166,7 @@ public class PropertiesFileHelper {
     long timeout = Long.parseLong(defaultProps.getProperty(
             ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
     if (timeout < MIN_ACK_TIMEOUT_MS) {
-      LOG.warning(ACK_TIMEOUT_MS+ " was set to a potentially too-low value: " + timeout);
+      LOG.warn(ACK_TIMEOUT_MS+ " was set to a potentially too-low value: " + timeout);
     }
     return timeout;
   }    
@@ -201,8 +197,7 @@ public class PropertiesFileHelper {
     try {
       return (Endpoints) Class.forName(classname).newInstance();
     } catch (Exception ex) {
-      Logger.getLogger(PropertiesFileHelper.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
 
@@ -258,7 +253,7 @@ public class PropertiesFileHelper {
       }
       return sender;
     } catch (Exception ex) {
-      LOG.log(Level.SEVERE, "Problem instantiating HTTP sender.", ex);
+      LOG.error("Problem instantiating HTTP sender.", ex);
       throw new RuntimeException(
               "problem parsing lb.properties to create HttpEventCollectorSender",
               ex);
@@ -273,7 +268,7 @@ public class PropertiesFileHelper {
     int max = Integer.parseInt(defaultProps.getProperty(
             RETRIES, DEFAULT_RETRIES).trim());
     if (max < 1) {
-      LOG.info(RETRIES +  ": unlimited");
+      LOG.debug(RETRIES +  ": unlimited");
       max = Integer.MAX_VALUE;
     }
     return max;
