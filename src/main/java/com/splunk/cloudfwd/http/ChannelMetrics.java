@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecDetentionException;
 import com.splunk.cloudfwd.HecErrorResponseException;
 import com.splunk.cloudfwd.http.lifecycle.*;
 import com.splunk.cloudfwd.Connection;
@@ -75,13 +76,16 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
         LOG.error("Error from HEC endpoint in state " + e.getType().name() + ". Url: " + r.getUrl() + ", Code: " + r.getHttpCode() + ", Reply: " + r.getResp());
         EventBatch events = (e instanceof EventBatchResponse) ?
                 ((EventBatchResponse)e).getEvents() : null;
-        connection.getCallbacks().failed(events, getException(r.getResp(), r.getUrl()));
+        connection.getCallbacks().failed(events, getException(r.getHttpCode(), r.getResp(), r.getUrl()));
         notifyObservers(e); //might as well tell everyone there was a problem
       }
     }
   }
 
-  private HecErrorResponseException getException(String reply, String url) {
+  private Exception getException(int httpCode, String reply, String url) {
+    if (httpCode == 404) {
+      return new HecDetentionException("Indexer not responding because it is in detention.");
+    }
     ObjectMapper mapper = new ObjectMapper();
     HecErrorResponseValueObject hecErrorResp;
     try {
