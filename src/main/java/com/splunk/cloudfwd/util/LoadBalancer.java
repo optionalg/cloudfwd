@@ -117,7 +117,7 @@ public class LoadBalancer implements Closeable {
   //this method must not be synchronized it will cause deadlock
   private void addChannel(InetSocketAddress s, boolean force) {
     //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
-    //we must add a new one, before we remove the old one. If we did not have the force
+    //we must add a new one, before we cancelEventTrackers the old one. If we did not have the force
     //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
     //and then the to-be-reaped channel would also be removed, leaving no channels, and
     //send will be stuck in a spin loop with no channels to send to
@@ -161,9 +161,9 @@ public class LoadBalancer implements Closeable {
     HecChannel c = this.channels.remove(channelId);
     /*
     if (c == null) {
-      LOG.severe("attempt to remove unknown channel: " + channelId);
+      LOG.severe("attempt to cancelEventTrackers unknown channel: " + channelId);
       throw new RuntimeException(
-              "attempt to remove unknown channel: " + channelId);
+              "attempt to cancelEventTrackers unknown channel: " + channelId);
     }
      */
     if (!force && !c.isEmpty()) {
@@ -233,7 +233,7 @@ public class LoadBalancer implements Closeable {
       long timeout = this.getConnection(). getBlockingTimeoutMS();
       if (System.currentTimeMillis() - start >= timeout) {
         LOG.warn(PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.getId());
-        this.checkpointManager.deRegisterInFlightEvents(events);
+        this.checkpointManager.cancel(events);
         throw new HecConnectionTimeoutException("Send timeout exceeded.");
       }
     }

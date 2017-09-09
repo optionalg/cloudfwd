@@ -198,7 +198,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return;
     }
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-    quiesce(); //drain in-flight packets, and close+remove when empty
+    quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
   }
 
   /**
@@ -233,7 +233,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       LOG.debug("LoggingChannel already closed.");
       return;
     }
-    LOG.info("CLOSE {0}", getChannelId());
+    LOG.info("CLOSE channel  {}",this);
     if (!isEmpty()) {
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
@@ -372,8 +372,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
-      sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
-        loadBalancer.getCheckpointManager().deRegisterInFlightEvents(e); //effectively cancels the tracking of the event
+      throw new RuntimeException("UNIMPLEMENTED  resend FIXME");
+      /*
+      //no, no, no you will be resending ALL eventss on all channels. duh
+      loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents().forEach((e) -> {
+        loadBalancer.getCheckpointManager().cancel(e); //internally cancels the tracking of the event so we can resend it
+        sender.getHecIOManager().getAcknowledgementTracker().cancel(e);//also need to cancelEventTrackers ack tracker
         e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
         //we must force messages to be sent because the connection could have been gracefully closed
         //already, in which case sendRoundRobbin will just ignore the sent messages
@@ -398,7 +402,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           }
         }
       });
-
+*/
     }
 
   }

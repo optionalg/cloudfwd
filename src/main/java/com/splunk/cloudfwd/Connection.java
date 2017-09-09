@@ -34,7 +34,8 @@ import org.slf4j.LoggerFactory;
  */
 public class Connection implements Closeable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(Connection.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(Connection.class.
+          getName());
 
   /**
    * @return the propertiesFileHelper
@@ -42,7 +43,6 @@ public class Connection implements Closeable {
   public PropertiesFileHelper getPropertiesFileHelper() {
     return propertiesFileHelper;
   }
-
 
   /**
    * Used to select either structured HEC /event endpoint, or raw HEC endpoint
@@ -71,21 +71,26 @@ public class Connection implements Closeable {
   private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
     this.events = new EventBatch();
     this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
-    //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to remove
+    //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
     //the EventBatch that succeeded or failed from the timoutChecker
-    this.timeoutChecker = new TimeoutChecker(propertiesFileHelper.getAckTimeoutMS());
-    this.callbacks = new CallbackInterceptor(callbacks,
-            timeoutChecker::removeEvents);
-    this.timeoutChecker.setInterceptor(this.callbacks);
-    
+    this.timeoutChecker = new TimeoutChecker(this);
+    //when a failure occurs on an EventBatch, everyone who was tracking that event batch needs to cancelEventTrackers
+    //tracking that EventBatch. In other words, failed callback should wipe out all trace of the message from 
+    //the Connection and it becomes the implicit responsibility of the owner of the Connection to resend the
+    //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
+    //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
+    //*before* those two functions (failed, or acknowledged) are invoked.
+    this.callbacks = new CallbackInterceptor(callbacks); 
+
   }
 
   public synchronized void setEventAcknowledgementTimeoutMS(long ms) {
     this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
   }
-  
-  public synchronized void setBlockingTimeoutMS(long ms){
-    this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.valueOf(ms));
+
+  public synchronized void setBlockingTimeoutMS(long ms) {
+    this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.
+            valueOf(ms));
   }
 
   @Override
@@ -93,7 +98,7 @@ public class Connection implements Closeable {
     try {
       flush();
     } catch (HecConnectionTimeoutException ex) {
-      throw new RuntimeException(ex.getMessage(),ex);
+      throw new RuntimeException(ex.getMessage(), ex);
     }
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
@@ -136,7 +141,7 @@ public class Connection implements Closeable {
     }
     this.events.add(event);
     if (this.events.isFlushable(getEventBatchSize())) {
-      return sendBatch(events);      
+      return sendBatch(events);
     }
     return 0;
 
@@ -152,7 +157,7 @@ public class Connection implements Closeable {
     lb.sendBatch(events);
     this.events = null; //batch is in flight, null it out
     //return the number of characters posted to HEC for the events data
-    return events.getLength(); 
+    return events.getLength();
   }
 
   public synchronized void flush() throws HecConnectionTimeoutException {
@@ -201,11 +206,20 @@ public class Connection implements Closeable {
    * @param numChars the size of the EventBatch in characters (not bytes)
    */
   public void setEventBatchSize(int numChars) {
-    propertiesFileHelper.putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.valueOf(numChars));
+    propertiesFileHelper.putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.
+            valueOf(numChars));
   }
-  
-  public long getBlockingTimeoutMS(){
+
+  public long getBlockingTimeoutMS() {
     return propertiesFileHelper.getBlockingTimeoutMS();
   }
-   
+
+  /**
+   * @return the TimeoutChecker
+   * @exclude
+   */
+  public TimeoutChecker getTimeoutChecker() {
+    return this.timeoutChecker;
+  }
+
 }

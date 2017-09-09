@@ -256,7 +256,7 @@ public class HecIOManager implements Closeable {
   }
 
   public void pollHealth() {
-    LOG.info("POLLING HEALTH...");
+    LOG.trace("polling health on {}...", sender.getChannel());
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override

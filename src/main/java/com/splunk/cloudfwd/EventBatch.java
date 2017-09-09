@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.HecIOManager;
+import com.splunk.cloudfwd.util.EventTracker;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,6 +47,7 @@ public class EventBatch  implements IEventBatch {
   protected List<Event> events = new ArrayList<>();
   protected Connection.HecEndpoint knownTarget;
   protected Event.Type knownType;
+  protected List<EventTracker> trackers = new ArrayList<>();
 
   public EventBatch() {
   }
@@ -196,7 +198,7 @@ public class EventBatch  implements IEventBatch {
     }
     return e;
   }
-
+    
   public void checkCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
 
     if (knownTarget != null) {
@@ -210,6 +212,24 @@ public class EventBatch  implements IEventBatch {
       knownTarget = target; //this can help us infer the content type as application/json when destined for /events
     }
 
+  }
+  
+  public void cancelEventTrackers(){
+    trackers.forEach(t->{
+      t.cancel(this);
+    });
+  }
+  /*
+  public void cancelInternalEventTrackers(){
+    trackers.forEach(t->{
+      if(t.isInternal()){
+        t.cancel(this);
+      }
+    });
+  }
+  */
+  public void registerEventTracker(EventTracker t){
+    trackers.add(t);
   }
 
   /**
