@@ -16,8 +16,6 @@
 package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
@@ -39,10 +37,10 @@ public class CheckpointManager implements LifecycleEventObserver {
 
 
   private final SortedMap<Comparable, EventBatch> orderedEvents = new TreeMap<>(); //key EventBatch.id, value is EventBatch
-  private final Connection connection;
+  private final ConnectionCallbacks cb;
 
-  CheckpointManager(Connection c) {
-    this.connection = c;
+  CheckpointManager(ConnectionCallbacks cb) {
+    this.cb = cb;
   }
 
   @Override
@@ -93,7 +91,7 @@ public class CheckpointManager implements LifecycleEventObserver {
               getAckId() + ". This can happen if event has been resent by DeadChannelDetector";
       LOG.warn(msg);
     }
-    ConnectionCallbacks cb = this.connection.getCallbacks();
+
     //todo: maybe schedule acknowledge to be async
     cb.acknowledged(events); //hit the callback to tell the user code that the EventBatch succeeded
     if (!events.getId().equals(this.orderedEvents.firstKey())) { //if this batch isn't the highwater

@@ -1,7 +1,4 @@
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.*;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -12,9 +9,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,10 +1,8 @@
 
 import com.splunk.cloudfwd.*;
 
-import java.io.Closeable;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -24,57 +22,63 @@ import org.junit.Test;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
- *
- * @author ghendrey
+ * @author eprokop
  */
+// TODO: tests for the 4 cases things amazon wants to be able to change on the fly: token, url, endpoint type (already in API?), ack_timeout_ms
 public class ChangePropsTest extends AbstractConnectionTest {
-    private int numEvents = 100;
-    Properties props;
+    private int numEvents = 100000;
+    private int numPropertyChanges = 2;
+    String[] tokens = {"4B521A0D-C5D8-4721-B68E-B4947E4CD33A", "EB610A08-D40A-4B7C-A67D-18E9E75570BE" };
+
 
     @Test
     public void changePropertiesTest() throws InterruptedException, HecConnectionTimeoutException {
-        sendSomeEvents();
-        connection.setProperties(
-                changeProps(0,15000));
-        sendSomeEvents();
-        connection.setProperties(
-                changeProps(5000,30000));
-        sendSomeEvents();
+        sendEvents();
         close();
     }
 
     private void close() throws InterruptedException {
+    }
+
+    @Override
+    protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
+        Assert.assertFalse("Connection should not be closed.", connection.isClosed());
+        System.out.println(
+                "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+                        + "And test method GUID " + testMethodGUID);
+        int start = 0;
+        int stop = getNumEventsToSend();
+        for (int i = 0; i <= numPropertyChanges; i++) {
+            for (int j = start; j < stop; j++) {
+                Event event = nextEvent(j + 1);
+                System.out.println("Send event: " + event.getId() + " j=" + j);
+                connection.send(event);
+                checkProperties();
+            }
+            start = stop;
+            stop += getNumEventsToSend();
+            if (i < numPropertyChanges) connection.setProperties(changeProps(i));
+        }
         connection.close(); //will flush
         this.callbacks.await(10, TimeUnit.MINUTES);
         if (callbacks.isFailed()) {
             Assert.fail("There was a failure callback with exception class  " + callbacks.getException() + " and message " + callbacks.getFailMsg());
         }
-    }
-
-    private void sendSomeEvents() throws InterruptedException, HecConnectionTimeoutException {
-        Assert.assertFalse("Connection should not be closed.", connection.isClosed());
-        System.out.println(
-                "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
-                        + "And test method GUID " + testMethodGUID);
-        int expected = getNumEventsToSend();
-        for (int i = 0; i < expected; i++) {
-            Event event = nextEvent(i + 1);
-            System.out.println("Send event: " + event.getId() + " i=" + i);
-            connection.send(event);
-            checkProperties();
-        }
 
     }
 
     private void checkProperties() {
-        Assert.assertEquals("Properties should have changed.", connection.getEventBatchSize(), )
+//        Assert.assertEquals("Properties should have changed.", connection.getEventBatchSize(), )
     }
 
-    protected Properties changeProps(int eventBatchSize, int blockingTimeout) {
-        props = new Properties();
-        props.put(PropertyKeys.EVENT_BATCH_SIZE, Integer.toString(eventBatchSize));
-        props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, Integer.toString(blockingTimeout));
+    private Properties changeProps(int i) {
+        Properties props = new Properties();
+        props.putAll(getTestProps());
+//        props.put(PropertyKeys.EVENT_BATCH_SIZE, Integer.toString(eventBatchSize));
+//        props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, Integer.toString(blockingTimeout));
+        props.put(PropertyKeys.TOKEN, tokens[i]);
         return props;
     }
 
@@ -84,7 +88,7 @@ public class ChangePropsTest extends AbstractConnectionTest {
     }
 
     protected BasicCallbacks getCallbacks() {
-        return new BasicCallbacks(5);
+        return new BasicCallbacks(getNumEventsToSend() * (numPropertyChanges+1));
     }
 
 

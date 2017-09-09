@@ -41,7 +41,7 @@ public class LogRecordProcessor implements IRecordProcessor {
     private static final ObjectMapper jsonMapper = new ObjectMapper();
     private final int BATCH_SIZE = 10;
     private EventBatch eventBatch = new EventBatch();
-    private Connection splunk;
+    private IConnection splunk;
     LogProcessorCallback callback;
 
     /**
@@ -52,7 +52,7 @@ public class LogRecordProcessor implements IRecordProcessor {
         this.kinesisShardId = shardId;
         callback = new LogProcessorCallback(shardId);
         try {
-            splunk = new Connection(callback);
+            splunk = Connection.createConnection(callback);
             splunk.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         } catch (RuntimeException e) {
             LOG.error("Unable to connect to Splunk.", e);

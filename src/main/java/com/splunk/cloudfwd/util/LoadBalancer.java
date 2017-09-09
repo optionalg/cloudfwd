@@ -51,12 +51,12 @@ public class LoadBalancer implements Closeable {
   private boolean closed;
   private volatile CountDownLatch latch;
 
-  public LoadBalancer(Connection c) {
+  public LoadBalancer(Connection c, CheckpointManager cpm) {
     this.connection = c;
     this.channelsPerDestination = c.getPropertiesFileHelper().
             getChannelsPerDestination();
     this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper());
-    this.checkpointManager = new CheckpointManager(c);
+    this.checkpointManager = (cpm != null ? cpm : new CheckpointManager(c.getCallbacks()));
     //this.discoverer.addObserver(this);
   }
 

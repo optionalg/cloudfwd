@@ -17,9 +17,7 @@ package com.amazonaws.services.kinesis.samples.stocktrades.processor;
 
 import java.util.List;
 
-import com.splunk.cloudfwd.Connection;
-
-import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,8 +29,7 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorC
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.samples.stocktrades.model.StockTrade;
-import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,7 +43,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
 
     private final int BATCH_SIZE = 10;
     private EventBatch eventBatch = new EventBatch();
-    private Connection splunk;
+    private IConnection splunk;
     StockTradeProcessorCallback callback;
 
     /**
@@ -57,7 +54,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
         this.kinesisShardId = shardId;
         callback = new StockTradeProcessorCallback(shardId);
         try {
-            splunk = new Connection(callback);
+            splunk = Connection.createConnection(callback);
             splunk.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         } catch (RuntimeException e) {
             LOG.error("Unable to connect to Splunk.", e);

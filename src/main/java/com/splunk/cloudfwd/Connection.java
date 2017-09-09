@@ -16,12 +16,12 @@
 package com.splunk.cloudfwd;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.util.CallbackInterceptor;
-import com.splunk.cloudfwd.util.LoadBalancer;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
-import com.splunk.cloudfwd.util.TimeoutChecker;
+
+import com.splunk.cloudfwd.util.*;
+
 import java.io.Closeable;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Properties;
@@ -61,14 +61,18 @@ public class Connection implements IConnection {
   private EventBatch events; //default EventBatch used if send(event) is called
   private PropertiesFileHelper propertiesFileHelper;
 
-  public Connection(ConnectionCallbacks callbacks) {
-    this(callbacks, new Properties());
+  private Connection(ConnectionCallbacks callbacks) {
+    this(callbacks, new Properties(), null);
   }
 
-  public Connection(ConnectionCallbacks callbacks, Properties settings) {
+  private Connection(ConnectionCallbacks callbacks, Properties settings) {
+    this(callbacks, settings, null);
+  }
+
+  private Connection(ConnectionCallbacks callbacks, Properties settings, CheckpointManager manager) {
     this.propertiesFileHelper = new PropertiesFileHelper(settings);
     init(callbacks, propertiesFileHelper);
-    this.lb = new LoadBalancer(this);
+    this.lb = new LoadBalancer(this, manager);
   }
 
   private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
@@ -219,17 +223,63 @@ public class Connection implements IConnection {
     return ConnectionProxy.newInstance(callbacks, settings);
   }
 
-  //    public Connection createConnection(ConnectionCallbacks callbacks, Properties settings) {
-//        activeConnection = new Connection(callbacks, settings);
-//        this.callbacks = callbacks;
-//        return createProxy();
-//    }
+  public void setProperties(Properties props) {
+    // no-op, since this should be handled by ConnectionProxy every time.
+    // this needs to be here in order implement all methods in IConnection
+    throw new RuntimeException("\"Connection.setProperties\" method not " +
+            "intercepted by proxy.");
+  }
 
-//  private static IConnection createProxy() {
-//    handler = new ConnectionInvocationHandler(activeConnection,);
-//    proxy = (IConnection) Proxy.newProxyInstance(activeConnection.getClass().getClassLoader(),
-//            new Class<?>[] { IConnection.class, Closeable.class }, handler);
-//    return proxy;
-//  }
+  private CheckpointManager getCheckpointManager() {
+    return lb.getCheckpointManager();
+  }
 
+  private static class ConnectionProxy implements InvocationHandler {
+    private Connection activeConnection;
+    private ConnectionCallbacks callbacks;
+
+    private ConnectionProxy(Connection activeConnection, ConnectionCallbacks callbacks) {
+      this.activeConnection = activeConnection;
+      this.callbacks = callbacks;
+    }
+
+    private static IConnection newInstance(ConnectionCallbacks callbacks) {
+      Connection c = new Connection(callbacks);
+      ConnectionProxy handler = new ConnectionProxy(c, callbacks);
+      return (IConnection) Proxy.newProxyInstance(c.getClass().getClassLoader(),
+              new Class[]{IConnection.class, Closeable.class}, handler);
+    }
+
+    private static IConnection newInstance(ConnectionCallbacks callbacks, Properties settings) {
+      Connection c = new Connection(callbacks, settings);
+      ConnectionProxy handler = new ConnectionProxy(c, callbacks);
+      return (IConnection) Proxy.newProxyInstance(c.getClass().getClassLoader(),
+              new Class[]{IConnection.class, Closeable.class}, handler);
+    }
+
+    private void setActiveConnection(Connection activeConnection) {
+      this.activeConnection = activeConnection;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args)
+            throws Throwable {
+      if (method.getName().equals("setProperties")) {
+        // TODO: some checks here to make sure that it has arguments
+        CheckpointManager cpm = activeConnection.getCheckpointManager();
+        activeConnection.close();
+        Properties newSettings = (Properties) args[0];
+        setActiveConnection(new Connection(callbacks, newSettings, cpm));
+        return null; // TODO: do something else?
+      } else {
+        try {
+          return method.invoke(activeConnection, args);
+        } catch (InvocationTargetException e) {
+          throw e.getTargetException();
+        } catch (IllegalArgumentException | IllegalAccessException e) {
+          throw e;
+        }
+      }
+    }
+  }
 }
