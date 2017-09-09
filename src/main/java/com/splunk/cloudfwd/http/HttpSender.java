@@ -31,16 +31,16 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class performs the actually HTTP send to HEC
  * event collector.
  */
 public final class HttpSender implements Endpoints {
-  
-  private static final Logger LOG = Logger.getLogger(HttpSender.class.getName());
+
+  protected static final Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
   
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
@@ -92,7 +92,7 @@ public final class HttpSender implements Endpoints {
   public HecChannel getChannel() {
     if (null == channel) {
       String msg = "Channel is null";
-      LOG.severe(msg);
+      LOG.error(msg);
       throw new IllegalStateException(msg);
     }
     return channel;
@@ -119,7 +119,7 @@ public final class HttpSender implements Endpoints {
   public synchronized void sendBatch(HttpPostable eventsBatch) {
     if (eventsBatch.isFlushed()) {
       String msg = "Illegal attempt to send already-flushed batch. EventBatch is not reusable.";
-      LOG.severe(msg);
+      LOG.error(msg);
       throw new IllegalStateException(msg);
     }
 
@@ -187,8 +187,7 @@ public final class HttpSender implements Endpoints {
               cert, host).build();
       httpClient.start();
     } catch (Exception ex) {
-      LOG.log(Level.SEVERE, "Exception building httpClient: " + ex.getMessage(),
-              ex);
+      LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
       callbacks.failed(null, ex);
     }
@@ -259,7 +258,7 @@ public final class HttpSender implements Endpoints {
         hecIoMgr.setAckPollInProgress(true);
       }
       if (isSimulated()) {
-        System.out.println("SIMULATED POLL ACKS");
+        LOG.debug("SIMULATED POLL ACKS");
         this.simulatedEndpoints.pollAcks(hecIoMgr, httpCallback);
         return;
       }
@@ -269,7 +268,7 @@ public final class HttpSender implements Endpoints {
       StringEntity entity;
       
       String req = ackReq.toString();
-      System.out.println("channel=" + getChannel() + " posting: " + req);
+      LOG.debug("channel=" + getChannel() + " posting: " + req);
       entity = new StringEntity(req);
       
       entity.setContentType(HttpContentType);
@@ -277,7 +276,7 @@ public final class HttpSender implements Endpoints {
       httpClient.execute(httpPost, httpCallback);
     } catch (Exception ex) {
       hecIoMgr.setAckPollInProgress(false);
-      LOG.severe(ex.getMessage());
+      LOG.error(ex.getMessage());
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -289,7 +288,7 @@ public final class HttpSender implements Endpoints {
       start();
     }
     if (isSimulated()) {
-      System.out.println("SIMULATED POLL HEALTH");
+      LOG.debug("SIMULATED POLL HEALTH");
       this.simulatedEndpoints.pollHealth(httpCallback);
       return;
     }
@@ -325,7 +324,7 @@ public final class HttpSender implements Endpoints {
       httpPost.setEntity(entity);
       httpClient.execute(httpPost, httpCallback);
     } catch (Exception ex) {
-      LOG.severe(ex.getMessage());
+      LOG.error(ex.getMessage());
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }

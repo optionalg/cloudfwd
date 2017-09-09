@@ -17,7 +17,6 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
@@ -32,12 +31,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -45,8 +40,7 @@ import java.util.logging.Logger;
  */
 public class LoadBalancer implements Closeable {
 
-  private static final Logger LOG = Logger.getLogger(LoadBalancer.class.
-          getName());
+  private static final Logger LOG = LoggerFactory.getLogger(LoadBalancer.class.getName());
   private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
@@ -67,7 +61,7 @@ public class LoadBalancer implements Closeable {
   }
 
   private void updateChannels(IndexDiscoverer.Change change) {
-    System.out.println(change);
+    LOG.debug(change.toString());
   }
 
   public synchronized void sendBatch(EventBatch events) throws HecConnectionTimeoutException {
@@ -115,7 +109,7 @@ public class LoadBalancer implements Closeable {
 
   void addChannelFromRandomlyChosenHost() {
     InetSocketAddress addr = discoverer.randomlyChooseAddr();
-    LOG.log(Level.INFO, "Adding channel to {0}", addr);
+    LOG.debug("Adding channel to {0}", addr);
     addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
   }
 
@@ -128,7 +122,7 @@ public class LoadBalancer implements Closeable {
     //send will be stuck in a spin loop with no channels to send to
     PropertiesFileHelper propsHelper = this.connection.getPropertiesFileHelper();
     if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
-      LOG.info(
+      LOG.debug(
               "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
               getMaxTotalChannels() + ")");
       return;
@@ -141,7 +135,7 @@ public class LoadBalancer implements Closeable {
 
       url = new URL("https://" + s.getAddress().getHostAddress() + ":" + s.
               getPort());
-      System.out.println("Trying to add URL: " + url);
+      LOG.debug("Trying to add URL: " + url);
       //We should provide a hostname for http client, so it can properly set Host header
       //this host is required for many proxy server and virtual servers implementations
       //https://tools.ietf.org/html/rfc7230#section-5.4
@@ -152,13 +146,12 @@ public class LoadBalancer implements Closeable {
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
-      LOG.log(Level.INFO, "Adding channel {0}", channel.getChannelId());
+      LOG.debug("Adding channel {0}", channel.getChannelId());
       channels.put(channel.getChannelId(), channel);
       //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
 
     } catch (MalformedURLException ex) {
-      Logger.getLogger(LoadBalancer.class.getName()).log(Level.SEVERE, null,
-              ex);
+      LOG.error(ex.getMessage(), ex);
     }
   }
 
@@ -173,10 +166,10 @@ public class LoadBalancer implements Closeable {
     }
      */
     if (!force && !c.isEmpty()) {
-      LOG.severe(
+      LOG.error(
               "Attempt to remove non-empty channel: " + channelId + " containing " + c.
               getUnackedCount() + " unacked payloads");
-      System.out.println(this.checkpointManager);
+      LOG.debug(this.checkpointManager.toString());
       throw new RuntimeException(
               "Attempt to remove non-empty channel: " + channelId + " containing " + c.
               getUnackedCount() + " unacked payloads");
@@ -222,15 +215,15 @@ public class LoadBalancer implements Closeable {
       tryMe = channelsSnapshot.get(channelIdx);
       if (tryMe.send(events)) {
         //System.out.println(
-        //      "sent EventBatch id=" + events.getId() + " on " + tryMe);        
+    //      "sent EventBatch id=" + events.getId() + " on " + tryMe);
         break;
       }
       if (++spinCount % yieldInterval == 0) {
-        LOG.info("Waiting for available channel...");
+        LOG.debug("Waiting for available channel...");
         try {
           latch.await(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-          LOG.severe(
+          LOG.error(
                   "LoadBalancer caught InterruptedException and resumed. Interruption message was: " + e.
                   getMessage());
         }
@@ -238,7 +231,7 @@ public class LoadBalancer implements Closeable {
       }
       long timeout = this.getConnection(). getBlockingTimeoutMS();
       if (System.currentTimeMillis() - start >= timeout) {
-        LOG.warning(PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.getId());
+        LOG.warn(PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.getId());
         this.checkpointManager.deRegisterInFlightEvents(events);
         throw new HecConnectionTimeoutException("Send timeout exceeded.");
       }

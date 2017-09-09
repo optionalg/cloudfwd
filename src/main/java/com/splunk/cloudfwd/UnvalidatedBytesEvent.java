@@ -19,6 +19,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.io.IOUtils;
 
 /**
  *
@@ -62,6 +65,22 @@ public class UnvalidatedBytesEvent implements Event{
   @Override
   public InputStream getInputStream() {
     return new ByteArrayInputStream(bytes);
+  }
+  
+  @Override 
+  public String toString(){
+    try {
+      return IOUtils.toString(getInputStream(), "UTF-8");
+    } catch (IOException ex) {
+      Logger.getLogger(UnvalidatedByteBufferEvent.class.getName()).
+              log(Level.SEVERE, null, ex);
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+  }  
+
+  @Override
+  public int length() {
+    return bytes.length;
   }
   
 }

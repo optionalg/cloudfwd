@@ -25,8 +25,8 @@ import java.io.OutputStream;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides methods for preparing  a structured event, as required by the HEC /event endpoint.
@@ -34,6 +34,7 @@ import java.util.logging.Logger;
  */
 public class EventWithMetadata implements Event {
 
+  private static final Logger LOG = LoggerFactory.getLogger(EventWithMetadata.class.getName());
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   public static final String TIME = "time";
@@ -82,8 +83,7 @@ public class EventWithMetadata implements Event {
     try {
       return jsonMapper.writeValueAsString(getJsonNode());
     } catch (Exception ex) {
-      Logger.getLogger(EventWithMetadata.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -93,7 +93,7 @@ public class EventWithMetadata implements Event {
    * subsequent to the first invocation of either.
    * @return
    */
-  @Override
+  @Override  
   public byte[] getBytes() {
     try {
       if(null == this.bytes){
@@ -101,8 +101,7 @@ public class EventWithMetadata implements Event {
       }
       return this.bytes;
     } catch (Exception ex) {
-      Logger.getLogger(EventWithMetadata.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }  
@@ -232,5 +231,10 @@ public class EventWithMetadata implements Event {
   @Override
   public InputStream getInputStream() {
     return new ByteArrayInputStream(getBytes());
+  }
+
+  @Override
+  public int length() {
+    return getBytes().length;
   }
 }

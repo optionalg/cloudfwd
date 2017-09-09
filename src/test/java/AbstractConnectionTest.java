@@ -1,18 +1,25 @@
-
-import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.EventWithMetadata;
+import com.splunk.cloudfwd.RawEvent;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
+import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -35,17 +42,21 @@ import java.io.InputStream;
  */
 public abstract class AbstractConnectionTest {
 
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractConnectionTest.class.getName());
+
   /**
-   * set enabled=false in test.properties to disable test.properties and fallback on lb.properties
+   * set enabled=false in test.properties to disable test.properties and
+   * fallback on lb.properties
    */
-  public static final String KEY_ENABLE_TEST_PROPERTIES = "enabled"; 
+  public static final String KEY_ENABLE_TEST_PROPERTIES = "enabled";
   public static final String TEST_METHOD_GUID_KEY = "testMethodGUID";
-  
+
   protected BasicCallbacks callbacks;
   protected IConnection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
           "yyyy-MM-dd HH:mm:ss");
-  protected final static String TEST_CLASS_INSTANCE_GUID = java.util.UUID.randomUUID().
+  protected final static String TEST_CLASS_INSTANCE_GUID = java.util.UUID.
+          randomUUID().
           toString();
   protected String testMethodGUID;
   protected List<Event> events;
@@ -55,11 +66,7 @@ public abstract class AbstractConnectionTest {
     //noop
   }
 
-  //used by tests that need to set eventType
-  protected enum EventType {
-    TEXT, JSON
-  }
-  protected EventType eventType = EventType.TEXT; //default to TEXT event content
+  protected Event.Type eventType = Event.Type.TEXT; //default to TEXT event content
 
   @Before
   public void setUp() {
@@ -86,37 +93,38 @@ public abstract class AbstractConnectionTest {
   }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-    System.out.println(
+    LOG.trace(
             "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
       ///final EventBatch events =nextEventBatch(i+1);
       Event event = nextEvent(i + 1);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
-      connection.send(event);     
+      LOG.trace("Send event: " + event.getId() + " i=" + i);
+      connection.send(event);
     }
     connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);
     if (callbacks.isFailed()) {
-      Assert.fail("There was a failure callback with exception class  " + callbacks.getException() + " and message " + callbacks.getFailMsg());
+      Assert.fail(
+              "There was a failure callback with exception class  " + callbacks.
+              getException() + " and message " + callbacks.getFailMsg());
     }
   }
 
   protected void sendCombinationEvents() throws TimeoutException, InterruptedException, HecConnectionTimeoutException {
-    System.out.println(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID +
-                    "And test method GUID " + testMethodGUID);
+    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+            + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
       ///final EventBatch events =nextEventBatch(i+1);
-      if (i%2==1) {
-        this.eventType = EventType.TEXT;
+      if (i % 2 == 1) {
+        this.eventType = Event.Type.TEXT;
       } else {
-        this.eventType = EventType.JSON;
+        this.eventType = Event.Type.JSON;
       }
       Event event = nextEvent(i + 1);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
+      LOG.trace("Send event: " + event.getId() + " i=" + i);
       this.connection.send(event); //will immediately send event in batch since buffer defaults to zero
     }
     connection.close(); //will flush
@@ -149,18 +157,15 @@ public abstract class AbstractConnectionTest {
       if (null != is) {
         props.load(is);
       } else {
-        System.out.println("No test_defaults.properties found on classpath");
+        LOG.trace("No test_defaults.properties found on classpath");
       }
     } catch (IOException ex) {
-      Logger.getLogger(AbstractConnectionTest.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
     }
     if (Boolean.parseBoolean(props.getProperty("enabled", "false"))) {
       return props;
     } else {
-      Logger.getLogger(AbstractConnectionTest.class.getName()).
-              log(Level.WARNING,
-                      "test.properties disabled, using lb.properties only");
+      LOG.warn("test.properties disabled, using lb.properties only");
       return new Properties(); //ignore test.properties
     }
   }
@@ -177,52 +182,64 @@ public abstract class AbstractConnectionTest {
   }
 
   /**
-   * Default implementation will return the
+   * Default implementation will return the next event to send
    *
    * @param seqno
    * @return
    */
   protected Event nextEvent(int seqno) {
-    Event event;
+    Event event = null;
     switch (this.eventType) {
       case TEXT: {
-        if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
-          event = getTimestampedRawEvent(seqno);
-          if (shouldCacheEvents()) events.add(event);
-          return event;
-        } else {
-          event = new EventWithMetadata("TEXT FOR /events endpoint 'event' field with "
-                          + getEventTracingInfo() + " seqno=" + seqno,
-                  seqno);
-          if (shouldCacheEvents()) events.add(event);
-          return event;
-        }
+        event = getTextEvent(seqno);
+        break;
       }
       case JSON: {
-        if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
-          try {
-            Map m = getStructuredEvent();
-            m.put("where_to", "/raw");
-            m.put("seqno", Integer.toString(seqno));
-            event = RawEvent.fromObject(m, seqno);
-            if (shouldCacheEvents()) events.add(event);
-            return event;
-          } catch (IOException ex) {
-            Logger.getLogger(AbstractConnectionTest.class.getName()).
-                    log(Level.SEVERE, null, ex);
-            throw new RuntimeException(ex.getMessage(), ex);
-          }
-        } else {
-          Map m = getStructuredEvent();
-          m.put("where_to", "/events");
-          m.put("seqno", Integer.toString(seqno));
-          event = new EventWithMetadata(m, seqno);
-          if (shouldCacheEvents()) events.add(event);
-          return event;
-        }
+        event = getJsonEvent(seqno);
+        break;
+      }
+      case UNKNOWN: {
+        event = getUnvalidatedBytesEvent(seqno);
+        break;
+      }
+      default: {
+        throw new RuntimeException("unsupported type");
       }
     }
-    throw new RuntimeException("Unknown event type in test");
+    if (shouldCacheEvents()) {
+      events.add(event);
+    }
+    return event;
+  }
+
+  private Event getUnvalidatedBytesEvent(int seqno) {
+    Event event;
+    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+      event = getUnvalidatedBytesToRawEndpoint(seqno);
+    } else {
+      event = getUnvalidatedBytesToEventEndpoint(seqno);
+    }
+    return event;
+  }
+
+  protected Event getJsonEvent(int seqno) {
+    Event event;
+    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+      event = getJsonToRawEndpoint(seqno);
+    } else {
+      event = getJsonToEvents(seqno);
+    }
+    return event;
+  }
+
+  protected Event getTextEvent(int seqno) {
+    Event event;
+    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+      event = getTimestampedRawEvent(seqno);
+    } else {
+      event = getTextToEvents(seqno);
+    }
+    return event;
   }
 
   protected Map getStructuredEvent() {
@@ -241,9 +258,10 @@ public abstract class AbstractConnectionTest {
   }
 
   protected RawEvent getTimestampedRawEvent(int seqno) {
-    return RawEvent.fromText(//dateFormat.format(new Date()) + " TEXT FOR /raw ENDPOINT", seqno);
-            "TEXT FOR /raw ENDPOINT with " + getEventTracingInfo() + " seqno=" + seqno,
-            seqno);
+    return RawEvent.
+            fromText(//dateFormat.format(new Date()) + " TEXT FOR /raw ENDPOINT", seqno);
+                    "TEXT FOR /raw ENDPOINT with " + getEventTracingInfo() + " seqno=" + seqno,
+                    seqno);
   }
 
   protected String getEventTracingInfo() {
@@ -257,9 +275,54 @@ public abstract class AbstractConnectionTest {
 
   protected List<Event> getSentEvents() {
     if (!shouldCacheEvents()) {
-      throw new RuntimeException("Events were not cached. Override shouldCacheEvents() to store sent events.");
+      throw new RuntimeException(
+              "Events were not cached. Override shouldCacheEvents() to store sent events.");
     }
     return events;
+  }
+
+  protected Event getJsonToRawEndpoint(int seqno) {
+    try {
+      Map m = getStructuredEvent();
+      m.put("where_to", "/raw");
+      m.put("seqno", Integer.toString(seqno));
+      Event event = RawEvent.fromObject(m, seqno);
+      return event;
+    } catch (IOException ex) {
+      LOG.error(ex.getMessage(), ex);
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
+  }
+
+  protected Event getJsonToEvents(int seqno) {
+    Map m = getStructuredEvent();
+    m.put("where_to", "/events");
+    m.put("seqno", Integer.toString(seqno));
+    Event event = new EventWithMetadata(m, seqno);
+    return event;
+  }
+
+  protected Event getTextToEvents(int seqno) {
+    Event event = new EventWithMetadata(
+            "TEXT FOR /events endpoint 'event' field with "
+            + getEventTracingInfo() + " seqno=" + seqno,
+            seqno);
+    return event;
+  }
+
+  private Event getUnvalidatedBytesToRawEndpoint(int seqno) {
+    //create a valid JSON to /events, grab its bytes, and wrap it in UnvalidatedBytes to simulate
+    //the creation of /event endpoint envelope "by hand"
+//    return new UnvalidatedBytesEvent(getJsonToRawEndpoint(seqno).getBytes(),
+//            seqno);
+    return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(getJsonToRawEndpoint(seqno).getBytes()), seqno);
+  }
+
+  private Event getUnvalidatedBytesToEventEndpoint(int seqno) {
+    //create a valid JSON to /events, grab its bytes, and wrap it in UnvalidatedBytes to simulate
+    //the creation of /event endpoint envelope "by hand"
+   // return new UnvalidatedBytesEvent(getJsonToEvents(seqno).getBytes(), seqno);
+    return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(getJsonToEvents(seqno).getBytes()), seqno);
   }
 
 }

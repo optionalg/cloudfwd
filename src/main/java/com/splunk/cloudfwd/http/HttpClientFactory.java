@@ -7,7 +7,6 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-
 import javax.net.ssl.SSLContext;
 import java.io.ByteArrayInputStream;
 import java.security.KeyManagementException;
@@ -17,9 +16,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.conn.util.PublicSuffixMatcher;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
@@ -56,7 +54,7 @@ import sun.security.provider.X509Factory;
  */
 public final class HttpClientFactory {
 
-    private static final Logger LOG = Logger.getLogger(HttpSender.class.getName());
+    protected static final Logger LOG = LoggerFactory.getLogger(HttpClientFactory.class.getName());
 
     private String url;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
@@ -163,7 +161,7 @@ public final class HttpClientFactory {
                     new TrustSelfSignedStrategy()).build();
             return sslContext;
         } catch (Exception ex) {
-            LOG.log(Level.SEVERE, ex.getMessage(), ex);
+            LOG.error(ex.getMessage(), ex);
             throw new RuntimeException(ex.getMessage(), ex);
         }
     }

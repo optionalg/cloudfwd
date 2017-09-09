@@ -18,7 +18,6 @@ package com.splunk.cloudfwd.http;
 import com.splunk.cloudfwd.EventBatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import java.util.ArrayList;
@@ -30,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Keeps track of acks that we are waiting for success on. Updates
@@ -43,8 +42,8 @@ import java.util.logging.Logger;
  */
 public class AcknowledgementTracker {
 
-  private static final Logger LOG = Logger.getLogger(
-          AcknowledgementTracker.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(AcknowledgementTracker.class.getName());
+
   private final static ObjectMapper jsonMapper = new ObjectMapper();
   private final IdTracker idTracker = new IdTracker();
   private final HttpSender sender;
@@ -81,7 +80,7 @@ public class AcknowledgementTracker {
       EventBatch removed = idTracker.postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
       if (null == removed) {
         String msg = "failed to track event batch " + events.getId();
-        LOG.severe(msg);
+        LOG.error(msg);
         throw new RuntimeException(msg);
       }
       idTracker.polledAcks.put(ackId, events);
@@ -93,7 +92,7 @@ public class AcknowledgementTracker {
     EventBatch events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      System.out.println("success acked ids: " + succeeded);
+      LOG.debug("success acked ids: " + succeeded);
       if (succeeded.isEmpty()) {
         /*
         this.sender.getChannelMetrics().update(new EventBatchResponse(
@@ -105,28 +104,26 @@ public class AcknowledgementTracker {
         for (long ackId : succeeded) {
           events = idTracker.polledAcks.get(ackId);
           if (null == events) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE,
-                    "Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}",
-                    ackId);
+            LOG.error("Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}", ackId);
           }
           //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
           if (ackId != events.getAckId()) {
             String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
                     getAckId();
-            LOG.severe(msg);
+            LOG.error(msg);
             throw new IllegalStateException(msg);
           }
 
           this.sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?",
-                  events));
+                  events, sender.getBaseUrl()));
         }
         //System.out.println("polledAcks was " + polledAcks.keySet());
         idTracker.polledAcks.keySet().removeAll(succeeded);
         //System.out.println("polledAcks now " + polledAcks.keySet());
       }
     } catch (Exception e) {
-      LOG.severe("caught exception in handleAckPollResponse: " + e.getMessage());
+      LOG.error("caught exception in handleAckPollResponse: " + e.getMessage(), e);
       sender.getConnection().getCallbacks().failed(events, e);
     }
   }
@@ -181,8 +178,7 @@ public class AcknowledgementTracker {
       json.put("acks", this.ackIds); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
       return jsonMapper.writeValueAsString(json);
     } catch (JsonProcessingException ex) {
-      Logger.getLogger(AcknowledgementTracker.class.getName()).log(Level.SEVERE,
-              null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
     }

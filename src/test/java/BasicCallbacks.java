@@ -1,12 +1,14 @@
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.EventBatch;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -29,6 +31,8 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
  */
 public class BasicCallbacks implements ConnectionCallbacks {
 
+  private static final Logger LOG = LoggerFactory.getLogger(BasicCallbacks.class.getName());
+
   private Integer expectedAckCount;
   protected final CountDownLatch latch;
   private final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
@@ -39,7 +43,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   
 
   public BasicCallbacks(int expected) {
-    System.out.println("Constructing BasicCallbacks");
+    LOG.trace("Constructing BasicCallbacks");
     this.expectedAckCount = expected;
     this.latch = new CountDownLatch(1);
   }
@@ -84,7 +88,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   @Override
   public void checkpoint(EventBatch events) {
-    System.out.println("SUCCESS CHECKPOINT " + events.getId());
+    LOG.trace("SUCCESS CHECKPOINT " + events.getId());
     if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
       latch.countDown();
     }

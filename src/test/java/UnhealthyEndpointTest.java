@@ -1,17 +1,15 @@
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -33,6 +31,8 @@ import org.junit.Test;
  * @author ghendrey
  */
 public final class UnhealthyEndpointTest extends AbstractConnectionTest {
+
+  private static final Logger LOG = LoggerFactory.getLogger(UnhealthyEndpointTest.class.getName());
 
   private final UnhealthyCallbackDetector customCallback;
 
@@ -73,8 +73,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     try {
       connection.send(getTimestampedRawEvent(1)); //shoud acknowledge
     } catch (HecConnectionTimeoutException ex) {
-      Logger.getLogger(UnhealthyEndpointTest.class.getName()).
-              log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       Assert.fail();
     }
     this.callbacks.await(10, TimeUnit.MINUTES); //wait for both messages to ack
@@ -106,20 +105,19 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
       }
 
       try {
-        System.out.println("Got first ack");
+        LOG.trace("Got first ack");
         //MAKE UNhealthy then send a second message
         TriggerableUnhealthyEndpoints.healthy = false;
-        System.out.println("waiting to detect unhealthy channel");
+        LOG.trace("waiting to detect unhealthy channel");
         Thread.sleep(sleepTime); //make sure health poll becomes unhealthy (poll has interval so we must wait)
-        System.out.println("sending event that we expect to block on send");
+        LOG.trace("sending event that we expect to block on send");
         //must send from another thread
         new Thread(() -> {
           long start = System.currentTimeMillis();
           try {
             connection.send(getTimestampedRawEvent(2));
           } catch (HecConnectionTimeoutException ex) {
-            Logger.getLogger(UnhealthyEndpointTest.class.getName()).
-                    log(Level.SEVERE, null, ex);
+            LOG.error(ex.getMessage(), ex);
             Assert.fail();
           }
           long blockedOnUnhealthyChannelTime = System.currentTimeMillis() - start;
@@ -131,8 +129,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
         TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll  
         //...which will cause acknowledged to be invoked again, but then count will be 2 so test will end.
       } catch (InterruptedException ex) {
-        Logger.getLogger(UnhealthyEndpointTest.class.getName()).
-                log(Level.SEVERE, ex.getMessage(), ex);
+        LOG.error(ex.getMessage(), ex);
       }
 
     }
