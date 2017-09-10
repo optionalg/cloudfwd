@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.http;
 import com.splunk.cloudfwd.EventBatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.util.EventTracker;
@@ -56,12 +57,13 @@ public class AcknowledgementTracker implements EventTracker{
 
   @Override
   public void cancel(EventBatch e) {
+    
     for(Iterator<Map.Entry<Long, EventBatch>> it = polledAcks.entrySet().iterator();it.hasNext();){
       Map.Entry<Long, EventBatch> entry = it.next();
       if(e.getId() == entry.getValue().getId()){
         it.remove();
       }
-    }
+    }    
   }
 
   /**
@@ -109,7 +111,7 @@ public class AcknowledgementTracker implements EventTracker{
     EventBatch events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      LOG.info("success acked ids: {}", succeeded);
+      LOG.info("Channel:{} success acked ids: {}", sender.getChannel(), succeeded);
       if (succeeded.isEmpty()) {
         /*
         this.sender.getChannelMetrics().update(new EventBatchResponse(
@@ -120,22 +122,25 @@ public class AcknowledgementTracker implements EventTracker{
       // synchronized (idTracker) {
       for (long ackId : succeeded) {
         events = polledAcks.get(ackId);
+        events.setAcknowledged(true);
         if (null == events) {
-          LOG.info(
+          LOG.warn(
                   "Got acknowledgement on ackId: {} but we're no long tracking that ackId",
                   ackId);
           return;
         }
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
-        if (ackId != events.getAckId()) {
+        //events.getAckId can be null if the event is being resent by DeadChannel detector 
+        //and EventBatch.prepareForResend has been caled
+        if (events.getAckId() != null && ackId != events.getAckId()) {
           String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
                   getAckId();
           LOG.error(msg);
-          throw new IllegalStateException(msg);
+          throw new HecIllegalStateException(msg, HecIllegalStateException.Type.ACK_ID_MISMATCH);
         }
 
         this.sender.getChannelMetrics().update(new EventBatchResponse(
-                LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?",
+                LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
                 events));
       }
       //System.out.println("polledAcks was " + polledAcks.keySet());

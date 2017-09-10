@@ -17,12 +17,15 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -43,14 +46,14 @@ public class TimeoutChecker implements EventTracker {
     stop();
     start();
   }
-  
-  private long getTimeoutMs(){
-     return connection.
+
+  private long getTimeoutMs() {
+    return connection.
             getPropertiesFileHelper().getAckTimeoutMS();
   }
 
   public synchronized void start() {
-    timoutCheckScheduler.start(this::checkTimeouts,getTimeoutMs(),
+    timoutCheckScheduler.start(this::checkTimeouts, getTimeoutMs(),
             TimeUnit.MILLISECONDS);
   }
 
@@ -64,7 +67,7 @@ public class TimeoutChecker implements EventTracker {
       if (events.isTimedOut(getTimeoutMs())) {
         //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
         //to the user-supplied callback. Otherwise we just loop back here over and over!
-        ((CallbackInterceptor)connection.getCallbacks()).failed(events,
+        ((CallbackInterceptor) connection.getCallbacks()).failed(events,
                 new TimeoutException(
                         "EventBatch with id " + events.getId() + " timed out."));
         iter.remove(); //remove it or else we will keep generating repeated timeout failures
@@ -85,9 +88,12 @@ public class TimeoutChecker implements EventTracker {
   public void cancel(EventBatch events) {
     this.eventBatches.remove(events.getId());
   }
-  
-  public Collection<EventBatch> getUnackedEvents() {
-    return this.eventBatches.values();
+
+  public List<EventBatch> getUnackedEvents(HecChannel c) {
+    //return only the batches whose channel matches c
+    return eventBatches.values().stream().filter(b -> {
+      return b.getHecChannel().getChannelId() == c.getChannelId();
+    }).collect(Collectors.toList());
   }
 
   @Override

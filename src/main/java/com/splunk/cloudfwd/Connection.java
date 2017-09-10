@@ -17,10 +17,12 @@ package com.splunk.cloudfwd;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.util.CallbackInterceptor;
+import com.splunk.cloudfwd.util.HecChannel;
 import com.splunk.cloudfwd.util.LoadBalancer;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
@@ -153,7 +155,7 @@ public class Connection implements Closeable {
     }
     timeoutChecker.start();
     timeoutChecker.add(events);
-    LOG.debug("sending " + events.getLength() + " characters.");
+    LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
     lb.sendBatch(events);
     this.events = null; //batch is in flight, null it out
     //return the number of characters posted to HEC for the events data
@@ -221,5 +223,9 @@ public class Connection implements Closeable {
   public TimeoutChecker getTimeoutChecker() {
     return this.timeoutChecker;
   }
+  
+  public List<EventBatch> getUnackedEvents(HecChannel c){
+    return timeoutChecker.getUnackedEvents(c);
+  }  
 
 }

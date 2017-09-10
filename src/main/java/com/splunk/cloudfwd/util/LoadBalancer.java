@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.util;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.http.HttpSender;
@@ -147,7 +148,7 @@ public class LoadBalancer implements Closeable {
 
       HecChannel channel = new HecChannel(this, sender, this.connection);
       channel.getChannelMetrics().addObserver(this.checkpointManager);
-      LOG.debug("Adding channel {0}", channel.getChannelId());
+      LOG.debug("Adding channel {}", channel);
       channels.put(channel.getChannelId(), channel);
       //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
 
@@ -186,8 +187,9 @@ public class LoadBalancer implements Closeable {
   synchronized void sendRoundRobin(EventBatch events, boolean forced) throws HecConnectionTimeoutException {
     latch = new CountDownLatch(1);
     if (channels.isEmpty()) {
-      throw new IllegalStateException(
-              "attempt to sendRoundRobin but no channel available.");
+      throw new HecIllegalStateException(
+              "attempt to sendRoundRobin but no channel available.",
+              HecIllegalStateException.Type.LOAD_BALANCER_NO_CHANNELS);
     }
     HecChannel tryMe = null;
     int tryCount = 0;
@@ -197,8 +199,8 @@ public class LoadBalancer implements Closeable {
     int yieldInterval = this.connection.getPropertiesFileHelper().
             getMaxTotalChannels();
     ///CountDownLatch latch = new CountDownLatch(1);
-    if(!closed || forced){
-          this.checkpointManager.registerInFlightEvents(events);
+    if (!closed || forced) {
+      this.checkpointManager.registerInFlightEvents(events);
     }
     while (!closed || forced) {
       //note: the channelsSnapshot must be refreshed each time through this loop
@@ -215,12 +217,11 @@ public class LoadBalancer implements Closeable {
       int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
       tryMe = channelsSnapshot.get(channelIdx);
       if (tryMe.send(events)) {
-        //System.out.println(
-    //      "sent EventBatch id=" + events.getId() + " on " + tryMe);
+        LOG.debug("sent EventBatch:{}  on channel: {}: ", events, tryMe);
         break;
       }
       if (++spinCount % yieldInterval == 0) {
-        LOG.debug("Waiting for available channel...");
+        LOG.warn("Waiting for available channel...");
         try {
           latch.await(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
@@ -230,10 +231,13 @@ public class LoadBalancer implements Closeable {
         }
         latch = new CountDownLatch(1); //replace the finished countdown latch
       }
-      long timeout = this.getConnection(). getBlockingTimeoutMS();
+      long timeout = this.getConnection().getBlockingTimeoutMS();
       if (System.currentTimeMillis() - start >= timeout) {
-        LOG.warn(PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.getId());
-        this.checkpointManager.cancel(events);
+        LOG.warn(
+                PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.
+                getId());
+        //this.checkpointManager.cancel(events);
+        events.cancelEventTrackers();
         throw new HecConnectionTimeoutException("Send timeout exceeded.");
       }
     }
@@ -272,5 +276,5 @@ public class LoadBalancer implements Closeable {
   public PropertiesFileHelper getPropertiesFileHelper() {
     return this.connection.getPropertiesFileHelper();
   }
-
+  
 }

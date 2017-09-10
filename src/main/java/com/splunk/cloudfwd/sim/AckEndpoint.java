@@ -32,10 +32,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -43,8 +43,8 @@ import org.apache.http.concurrent.FutureCallback;
  */
 public class AckEndpoint implements AcknowledgementEndpoint {
 
-  private static final Logger LOG = Logger.
-          getLogger(AckEndpoint.class.getName());
+  private static final Logger LOG =LoggerFactory.getLogger(
+          AckEndpoint.class.getName());
 
   ScheduledExecutorService executor;
   protected AtomicLong ackId = new AtomicLong(0);
@@ -122,7 +122,7 @@ public class AckEndpoint implements AcknowledgementEndpoint {
       //System.out.println("these are the ack states returned from the server: "+acks);
       cb.completed(getResult(resp));
     } catch (Exception ex) {
-      LOG.severe(ex.getMessage());
+      LOG.error(ex.getMessage(), ex);
       cb.failed(ex);
     }
   }
@@ -133,7 +133,7 @@ public class AckEndpoint implements AcknowledgementEndpoint {
     try {
       str = serializer.writeValueAsString(acks);
     } catch (JsonProcessingException ex) {
-      Logger.getLogger(AckEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(str, ex);
     }
     AckEndpointResponseEntity e = new AckEndpointResponseEntity(str);
@@ -142,7 +142,7 @@ public class AckEndpoint implements AcknowledgementEndpoint {
 
   @Override
   public void close() {
-    System.out.println("SHUTDOWN ACK FROBBER SIMULATOR");
+    LOG.debug("SHUTDOWN ACK FROBBER SIMULATOR");
     this.executor.shutdownNow();
   }
 

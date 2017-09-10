@@ -77,10 +77,10 @@ public class HecIOManager implements Closeable {
     if (!ackPollController.isStarted()) {
       Runnable poller = () -> {
         if (this.getAcknowledgementTracker().isEmpty()) {
-          LOG.debug("No acks to poll for");
+          LOG.trace("No acks to poll for");
           return;
         } else if (this.isAckPollInProgress()) {
-          LOG.debug("skipping ack poll - already have one in flight");
+          LOG.trace("skipping ack poll - already have one in flight");
           return;
         }
         this.pollAcks();
@@ -198,14 +198,14 @@ public class HecIOManager implements Closeable {
   //called by the AckPollScheduler
   public void pollAcks() {
 
-    LOG.info("POLLING ACKS...");
+    LOG.trace("POLLING ACKS...");
     sender.getChannelMetrics().update(new PreRequest(
             LifecycleEvent.Type.PRE_ACK_POLL));
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void completed(String reply, int code) {
-        LOG.debug("channel=" + HecIOManager.this.sender.getChannel() + " reply: " + reply);
+        LOG.trace("channel: {} reply:{} ", HecIOManager.this.sender.getChannel(), reply);
         if (code == 200) {
           consumeAckPollResponse(reply);
         } else {
@@ -218,7 +218,7 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void failed(Exception ex) {
-        LOG.error("failed to poll acks", ex);
+        LOG.error("failed to poll acks: "+ex.getMessage(), ex);
         //AckManager.this.ackPollFailed(ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.ACK_POLL_FAILURE, ex));
