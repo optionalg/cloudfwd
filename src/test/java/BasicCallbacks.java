@@ -34,8 +34,8 @@ public class BasicCallbacks implements ConnectionCallbacks {
   private final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
   private Comparable lastId;
-  private String failMsg;
-  private Exception exception;
+  protected String failMsg;
+  protected Exception exception;
   
 
   public BasicCallbacks(int expected) {

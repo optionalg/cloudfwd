@@ -24,6 +24,8 @@ package com.splunk.cloudfwd;
 public class HecIllegalStateException extends IllegalStateException {
 
   public enum Type {
+     ALREADY_SENT,
+    ALREADY_ACKNOWLEDGED,
     STICKY_SESSION_VIOLATION, 
     INVALID_EVENTS_FOR_ENDPOINT, 
     MIXED_BATCH, 

@@ -105,8 +105,12 @@ public class EventBatch  implements IEventBatch {
       //endpoints are either real (via the Sender) or simulated
       ioManager.postEvents(this);
       flushed = true;
-      numTries++;
+      //numTries++;
     }
+  }
+  
+  public void incrementNumTries(){
+    numTries++;
   }
 
   @Override
@@ -219,25 +223,15 @@ public class EventBatch  implements IEventBatch {
 
   @Override
   public String toString() {
-    return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged + '}';
+    return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged + ", numTries=" +numTries +'}';
   }
-  
-
   
   public void cancelEventTrackers(){
     trackers.forEach(t->{
       t.cancel(this);
     });
   }
-  /*
-  public void cancelInternalEventTrackers(){
-    trackers.forEach(t->{
-      if(t.isInternal()){
-        t.cancel(this);
-      }
-    });
-  }
-  */
+
   public void registerEventTracker(EventTracker t){
     trackers.add(t);
   }

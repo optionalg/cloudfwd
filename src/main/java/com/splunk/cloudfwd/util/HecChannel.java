@@ -346,7 +346,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
-          LOG.error(
+          LOG.warn(
                   "Dead channel detected. Resending messages and force closing channel");
           //synchronize on the load balancer so we do not allow the load balancer to be
           //closed before  resendInFlightEvents. If that
@@ -384,7 +384,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
               getMaxRetries();
       loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
               HecChannel.this).forEach((e) -> {
-                //loadBalancer.getCheckpointManager().cancel(e); //internally cancels the tracking of the event so we can resend it
+                //Note - in case you are tempted to cancel the checkpoint manager prior to resend, don't. If you do, the 
+                //checkpoint can move higher than the event batch you try to resend. That will cause HecIllegalStateException
+                //loadBalancer.getCheckpointManager().cancel(e); 
                 sender.getHecIOManager().getAcknowledgementTracker().cancel(e);//also need to cancelEventTrackers ack tracker
                 if (e.isAcknowledged() || e.isTimedOut(timeout)) {
                   return; //do not resend messages that are in a final state 
@@ -402,7 +404,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                       loadBalancer.getConnection().getCallbacks().failed(e,
                               new HecMaxRetriesException(msg));
                     } else {
-                      LOG.debug("retrying send on event id= " + e.getId());
+                      LOG.warn("resending  event {}", e);
                       loadBalancer.sendRoundRobin(e, forced);
                     }
                     break;

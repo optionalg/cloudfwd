@@ -185,6 +185,7 @@ public class LoadBalancer implements Closeable {
   }
 
   synchronized void sendRoundRobin(EventBatch events, boolean forced) throws HecConnectionTimeoutException {
+    events.incrementNumTries();
     latch = new CountDownLatch(1);
     if (channels.isEmpty()) {
       throw new HecIllegalStateException(
@@ -236,8 +237,9 @@ public class LoadBalancer implements Closeable {
         LOG.warn(
                 PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.
                 getId());
-        //this.checkpointManager.cancel(events);
-        events.cancelEventTrackers();
+        if(!forced){ //if this is a forced resend by dead channel detector, we *don't* want to cancel the timeout
+          events.cancelEventTrackers();
+        }
         throw new HecConnectionTimeoutException("Send timeout exceeded.");
       }
     }

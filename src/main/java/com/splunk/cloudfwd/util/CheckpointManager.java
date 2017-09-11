@@ -27,21 +27,20 @@ import org.slf4j.LoggerFactory;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.HecAlreadyAcknowledgedException;
-import com.splunk.cloudfwd.HecDuplicateEventException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 
 /**
  *
  * @author ghendrey
  */
-public class CheckpointManager implements LifecycleEventObserver, EventTracker {
+public class CheckpointManager implements LifecycleEventObserver{
 
   protected static final Logger LOG = LoggerFactory.getLogger(
           CheckpointManager.class.getName());
 
   volatile private SortedMap<Comparable, EventBatch> orderedEvents = new TreeMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
+  private Comparable checkpoint;
 
   CheckpointManager(Connection c) {
     this.connection = c;
@@ -67,7 +66,7 @@ public class CheckpointManager implements LifecycleEventObserver, EventTracker {
   private synchronized void acknowledgeHighwaterAndBelow(EventBatch events) {
     //Do not under penalty of death remove this commented sys out line below :-)
     //very useful for debugging...
-    LOG.debug("handling ack-checkpoint-logic for id {}", events.getId());
+    LOG.debug("handling ack-checkpoint-logic for event {}", events);
     LOG.trace("window state: {}", this);
     if (orderedEvents.isEmpty() || !orderedEvents.containsKey(events.getId())) {
       //this can happen when the on-demand ack-poll overlaps with the periodic ack poll,
@@ -82,12 +81,14 @@ public class CheckpointManager implements LifecycleEventObserver, EventTracker {
       //In other words, highwater hasn't moved
       LOG.debug("Cant slide {}", events.getId());
       return;
-    }
+    } 
+    cb.acknowledged(events); //hit the callback to tell the user code that the EventBatch succeeded 
     slideHighwaterUp(cb, events); //might call the highwater/checkpoint callback
     //musn't call cb.acknowledged until after we slideHighwater, because calling cb.acknowleged
     //will cause the CallbackInterceptor in Connection to cancel tracking of the EventBatch. Then
-    //then slideHighwater won't work
-    cb.acknowledged(events); //hit the callback to tell the user code that the EventBatch succeeded
+    //then slideHighwater won't work  
+
+
 
   }
 
@@ -117,20 +118,19 @@ public class CheckpointManager implements LifecycleEventObserver, EventTracker {
 
     //todo: maybe schedule checkpoint to be async
     if (null != acknowledgedEvents) {
-      LOG.info("CHECKPOINT at {}", acknowledgedEvents.getId());
+      LOG.info("CHECKPOINT at {}", acknowledgedEvents.getId());      
       cb.checkpoint(acknowledgedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
+      checkpoint = acknowledgedEvents.getId();
     }
   }
 
   synchronized void registerInFlightEvents(EventBatch events) {
     //event id must not be below the highwater mark
-    if (!orderedEvents.isEmpty() && events.getId().compareTo(orderedEvents.
-            firstKey()) < 0) {
+    if (null != checkpoint && events.getId().compareTo(checkpoint) <= 0) {
       String msg = "EventBatch already acknowldeged. EventBatch ID is " + events.
-              getId() + " but checkpoint at " + orderedEvents.
-              firstKey();
+              getId() + " but checkpoint at " + checkpoint;
       LOG.error(msg);
-      throw new HecAlreadyAcknowledgedException(msg);
+      throw new HecIllegalStateException(msg, HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED);
     }
     EventBatch prev = this.orderedEvents.put(events.getId(), events);
     //events.registerEventTracker(this);
@@ -147,7 +147,6 @@ public class CheckpointManager implements LifecycleEventObserver, EventTracker {
      */
   }
 
-  @Override
   public synchronized void cancel(EventBatch events) {
     //since highwater may have removed the key, we cant make any inference about correcteness based on whether the 
     //key was or was not still in the orderedEvents.
@@ -163,9 +162,5 @@ public class CheckpointManager implements LifecycleEventObserver, EventTracker {
 
   }
 
-  @Override
-  public boolean isInternal() {
-    return true;
-  }
 
 }

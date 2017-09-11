@@ -17,8 +17,6 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -96,9 +94,5 @@ public class TimeoutChecker implements EventTracker {
     }).collect(Collectors.toList());
   }
 
-  @Override
-  public boolean isInternal() {
-    return false;
-  }
 
 }

@@ -24,14 +24,6 @@ import com.splunk.cloudfwd.EventBatch;
 public interface EventTracker {
 
   /**
-   * An "internal" EventTracker can be canceled an EventBatch without affecting whether or not the EventBatch will timeout.
-   * Internal EventTracker like AcknowledgementTracker can cancel an EventBatch in preparation for resending. We need a way
-   * to differentiate internal from external trackers so that when we resend an event in DeadChannelDetector, we don't also
-   * cancel it's timeout.
-   */
-  public boolean isInternal();
-
-  /**
    * Causes the EventBatch to stop being tracked (and frees references to the EventBatch e)
    * @param e the EventBatch to cancel tracking of
    */

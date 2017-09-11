@@ -153,11 +153,14 @@ public class Connection implements Closeable {
     if (closed) {
       throw new IllegalStateException("Attempt to send on closed channel.");
     }
+    //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
+    //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
+    //send the failed batch again
+    this.events = null; //batch is in flight, null it out. 
     timeoutChecker.start();
     timeoutChecker.add(events);
     LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
     lb.sendBatch(events);
-    this.events = null; //batch is in flight, null it out
     //return the number of characters posted to HEC for the events data
     return events.getLength();
   }

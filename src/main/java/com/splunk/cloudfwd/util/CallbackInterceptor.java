@@ -36,7 +36,7 @@ public class CallbackInterceptor implements ConnectionCallbacks {
   @Override
   public void acknowledged(EventBatch events) {
     callbacks.acknowledged(events);
-    events.cancelEventTrackers(); //we can't cancel the 
+    events.cancelEventTrackers(); //remove the EventBatch from the system
   }
 
   @Override
