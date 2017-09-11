@@ -27,8 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Represents a reliable Connection to either the "event" HEC endpoint or the
- * "raw" HEc endpoint.
+ * Represents a reliable Connection to either the /event HEC endpoint or the
+ * /raw HEC endpoint.
  *
  * @author ghendrey
  */
@@ -45,7 +45,7 @@ public class Connection implements Closeable {
 
 
   /**
-   * Used to select either structured HEC /event endpoint, or raw HEC endpoint
+   * Used to select either structured HEC /event endpoint or /raw HEC endpoint
    */
   public static enum HecEndpoint {
     STRUCTURED_EVENTS_ENDPOINT, RAW_EVENTS_ENDPOINT

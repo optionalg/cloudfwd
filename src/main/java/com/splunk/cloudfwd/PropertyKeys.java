@@ -31,7 +31,7 @@ public class PropertyKeys {
 
   /**
    * The url and port number for the Splunk HEC endpoint or load balancer
-   * in front of Splunk cluster. Can also be a comma-separated list of
+   * in front of Splunk cluster. This can also be a comma-separated list of
    * urls.
    * Example: https://127.0.0.1:8088
    */
@@ -44,7 +44,7 @@ public class PropertyKeys {
 
   /**
    * If true, disables certificate validation
-   * and allows sending to non-https endpoints.
+   * and allows sending to non-HTTPs endpoints.
    * Defaults to false.
    */
   public static final String DISABLE_CERT_VALIDATION = "disableCertificateValidation";
@@ -52,8 +52,8 @@ public class PropertyKeys {
   /**
    * Integer number of channels per internet socket address destination.
    * Event batches are load balanced across all channels.
-   * (Note that a single URL may resolve to multiple destinations
-   * based on DNS lookup).
+   * Note: A single URL may resolve to multiple destinations
+   * based on DNS lookup.
    * @see MOCK_FORCE_URL_MAP_TO_ONE
    * @see DEFAULT_CHANNELS_PER_DESTINATION
    */
@@ -67,14 +67,14 @@ public class PropertyKeys {
   public static final String MOCK_HTTP_KEY = "mock_http";
 
   /**
-   * If true, forces each url in COLLECTOR_URI to map to only a
+   * If true, forces each url in COLLECTOR_URI to map to a
    * single internet socket address during DNS resolution.
    * Defaults to false.
    */
   public static final String MOCK_FORCE_URL_MAP_TO_ONE = "mock_force_url_map_to_one";
 
   /**
-   * If a channel is unresponsive (no ack's received) for this many ms, the
+   * If a channel is unresponsive (no acks received) for this many ms, the
    * channel is declared dead. A replacement channel is created, and all
    * unacked messages from the dead channel are re-sent on the replacement channel.
    * @see RETRIES
@@ -91,15 +91,15 @@ public class PropertyKeys {
 
   /**
    * Integer that caps the total number of unacknowledged event batches per channel.
-   * If the cap is reached, the channel will be considered "full" and no more
-   * events will be sent through it until it receives acknowledgements from Splunk.
+   * If the cap is reached, the channel will be considered full and no more
+   * events will be sent through it until it receives acknowledgements from Splunk software.
    * @see DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL
    * @see MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL
    */
   public static final String MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "max_unacked_per_channel";
 
   /**
-   * Character length of the internal buffer that fills up as Events
+   * Character length of the internal buffer that fills up as events
    * are passed into the client. When full, the buffer is flushed and
    * events are sent to Splunk HEC.
    * @see DEFAULT_EVENT_BATCH_SIZE
@@ -108,7 +108,7 @@ public class PropertyKeys {
   public static final String EVENT_BATCH_SIZE = "event_batch_size";
 
   /**
-   * Interval (in milliseconds) on which to poll Splunk HEC for
+   * Interval (in milliseconds) to poll Splunk HEC for
    * event batch acknowledgements.
    * @see MIN_ACK_POLL_MS
    * @see DEFAULT_ACK_POLL_MS
@@ -116,7 +116,7 @@ public class PropertyKeys {
   public static final String ACK_POLL_MS = "ack_poll_ms";
 
   /**
-   * Interval (in milliseconds) on which to poll Splunk HEC for
+   * Interval (in milliseconds) to poll Splunk HEC for
    * health check in case a Splunk indexer queue (and therefore channel)
    * is full.
    * @see MIN_HEALTH_POLL_MS
@@ -134,7 +134,7 @@ public class PropertyKeys {
 
   /**
    * Duration (in milliseconds) to wait for acknowledgements
-   * from Splunk after sending an event batch before reporting a
+   * from Splunk software after sending an event batch before reporting a
    * send failure.
    * @see DEFAULT_ACK_TIMEOUT_MS
    * @see MIN_ACK_TIMEOUT_MS
@@ -142,8 +142,8 @@ public class PropertyKeys {
   public static final String ACK_TIMEOUT_MS = "ack_timeout_ms";
 
   /**
-   * Duration (in milliseconds) that Connection.send() blocks for
-   * in the case that all channels are unavailable. If no channels
+   * Duration (in milliseconds) that Connection.send() blocks in
+   * case that all channels are unavailable. If no channels
    * become available before this timeout, an HecConnectionTimeoutException
    * is thrown.
    * @see DEFAULT_BLOCKING_TIMEOUT_MS
@@ -151,7 +151,7 @@ public class PropertyKeys {
   public static final String BLOCKING_TIMEOUT_MS = "blocking_timeout_ms";
 
   /**
-   * Name of the mock http class used for running unit tests.
+   * Name of the mock HTTP class used for running unit tests.
    * @see MOCK_HTTP_KEY
    */
   public static final String MOCK_HTTP_CLASSNAME = "mock_http_classname";
@@ -174,8 +174,8 @@ public class PropertyKeys {
 
   /**
    * The maximum number of attempts to resend EventBatch when a channel is
-   * suspected of being unresponsive. Note that retries will always occur
-   * on newly created channel that replaces the dead channel.
+   * suspected of being unresponsive.
+   * Note: Retries always occur on newly created channels that replace the dead channel.
    * @see UNRESPONSIVE_MS
    * @see DEFAULT_RETRIES
    */
