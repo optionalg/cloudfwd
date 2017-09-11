@@ -51,8 +51,7 @@ public class PropertiesFileHelper {
     this.parsePropertiesFile();
   }
 
-  // If not all necessary properties are passed into the Connection constructor
-  // as overrides, then there must be a valid lb.properties file to populate from
+  // All properties are populated by following order of precedence: 1) overrides, 2) lb.properties, then 3) defaults.
   private void parsePropertiesFile() {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
@@ -61,11 +60,10 @@ public class PropertiesFileHelper {
       }
 
       if (overrides != null) {
-        // Try to parse any properties from overrides
         defaultProps.putAll(overrides);
       }
 
-      // If required properties are missing from lb.properties, overrides, and defaults, then call failed callback.
+      // If required properties are missing from lb.properties, overrides, and defaults, then throw exception.
       for(String key: REQUIRED_KEYS) {
         if (this.defaultProps.getProperty(key) == null) {
           throw new HecMissingPropertiesException("Missing required key: " + key);
