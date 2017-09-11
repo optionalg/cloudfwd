@@ -88,7 +88,6 @@ public class PropertiesFileHelper {
     String[] splits = defaultProps.getProperty(COLLECTOR_URI).split(",");
     for (String urlString : splits) {
       try {
-        // check that fails here if not provided
         URL url = new URL(urlString.trim());
         urls.add(url);
       } catch (MalformedURLException ex) {

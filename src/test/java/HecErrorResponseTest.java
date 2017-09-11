@@ -138,35 +138,4 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
                     + e.getMessage());
         }
     }
-
-    // PropertiesHelper Configuration Tests
-    @Test
-    public void testPropertiesHelperWithOverrides() throws MalformedURLException {
-        // Need connection object to pass into PropertiesFileHelper constructor for failed() callback
-        Properties overrides = new Properties();
-        overrides.put(TOKEN, "foo-token");
-        overrides.put(COLLECTOR_URI, "https://inputs1.kinesis1.foo.com:8088");
-        overrides.put(EVENT_BATCH_SIZE, "100");
-        List<URL> urls = new ArrayList<>();
-        urls.add(new URL("https://inputs1.kinesis1.foo.com:8088"));
-
-        this.connection = new Connection(callbacks, overrides);
-
-        Assert.assertEquals(100, this.connection.getPropertiesFileHelper().getEventBatchSize()); // Override took effect
-        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getPropertiesFileHelper().getChannelDecomMS()); // No override or lb.properties value - use default
-        Assert.assertEquals(urls, this.connection.getPropertiesFileHelper().getUrls()); //Override took effect
-        Assert.assertEquals("foo-token", this.connection.getPropertiesFileHelper().getToken()); //Override took effect
-        Assert.assertEquals(5000, this.connection.getPropertiesFileHelper().getAckPollMS()); // No override but use lb.properties value
-    }
-
-    @Test
-    public void testPropertiesHelperWithoutOverrides() throws MalformedURLException {
-        // Need connection object to pass into PropertiesFileHelper constructor for failed() callback
-        Properties overrides = new Properties();
-
-        this.connection = new Connection(callbacks, overrides);
-
-        Assert.assertEquals(1000000, this.connection.getPropertiesFileHelper().getEventBatchSize()); // Property is in lb.properties
-        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getPropertiesFileHelper().getChannelDecomMS()); // Property is not in lb.properties so use default
-    }
 }

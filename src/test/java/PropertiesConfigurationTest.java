@@ -16,7 +16,7 @@ import static com.splunk.cloudfwd.PropertyKeys.*;
  * Created by mhora on 9/11/17.
  */
 public class PropertiesConfigurationTest extends AbstractConnectionTest {
-    private static final Logger LOG = LoggerFactory.getLogger(HecErrorResponseTest.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(PropertiesConfigurationTest.class.getName());
 
     private int numEvents = 10;
 
