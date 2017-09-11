@@ -16,7 +16,7 @@
 package com.splunk.cloudfwd;
 
 /**
- * Encapsulates a non-200 response from an HEC endpoint.
+ * These are non-successful responses from an HEC endpoint.
  *
  * The following error status codes and messages may
  * be returned from an HEC endpoint:
