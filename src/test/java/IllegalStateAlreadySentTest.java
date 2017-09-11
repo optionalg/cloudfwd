@@ -7,6 +7,7 @@ import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
 import java.util.Properties;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /*
@@ -28,7 +29,8 @@ import org.junit.Test;
  *
  * @author ghendrey
  */
-public class ResendTest extends AbstractConnectionTest {
+public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
+  private HecIllegalStateException.Type expecteExType;
 
   @Override
   protected Properties getProps() {
@@ -39,6 +41,16 @@ public class ResendTest extends AbstractConnectionTest {
     props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
     props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
     return props;
+  }
+  
+  @Before
+  public void setUp() {
+    super.setUp();
+    this.expecteExType = getExceptionType();
+  }
+  
+  protected HecIllegalStateException.Type getExceptionType(){
+    return HecIllegalStateException.Type.ALREADY_SENT;
   }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
@@ -64,13 +76,10 @@ public class ResendTest extends AbstractConnectionTest {
                 "Excpected Exception wasn't HecIllegalStateException. Was " + ex.
                 getClass().getName(), ex instanceof HecIllegalStateException);
         if (ex instanceof HecIllegalStateException) {
-          System.out.println("Got expected exception");
           HecIllegalStateException e = (HecIllegalStateException) ex;
-          Assert.assertTrue(
+          Assert.assertEquals(
                   "HecIllegalStateException type was unexpected: " + e.getType(),
-                  HecIllegalStateException.Type.ALREADY_SENT == e.
-                  getType() || HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED == e.
-                  getType());
+                   this.expecteExType,e.getType());
           exceptionCount++;
         }
       }
@@ -106,32 +115,4 @@ public class ResendTest extends AbstractConnectionTest {
   public void testDuplicateEvent() throws InterruptedException, HecConnectionTimeoutException {
     sendEvents();
   }
-
-  /*
-
-  private class ExpectingHecIllegalState extends BasicCallbacks {
-
-    public ExpectingHecIllegalState(int expected) {
-      super(expected);
-    }
-
-    @Override
-    public void failed(EventBatch events, Exception ex) {
-      Assert.assertTrue(
-              "Excpected Exception wasn't HecIllegalStateException. Was " + ex.
-              getClass().getName(), ex instanceof HecIllegalStateException);
-      if (ex instanceof HecIllegalStateException) {
-        HecIllegalStateException e = (HecIllegalStateException) ex;
-        Assert.assertTrue("HecIllegalStateException type was unexpected: " + e.getType(),
-                HecIllegalStateException.Type.ALREADY_SENT == e.
-                getType() || HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED == e.
-                getType());
-        latch.countDown(); //finish the test
-      }
-    }
-
-  }
-
-}
-   */
 }
