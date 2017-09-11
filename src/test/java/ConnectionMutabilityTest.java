@@ -1,10 +1,11 @@
 
 import com.splunk.cloudfwd.*;
 
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /*
@@ -27,11 +28,37 @@ import org.junit.Test;
  * @author eprokop
  */
 // TODO: tests for the 4 cases things amazon wants to be able to change on the fly: token, url, endpoint type (already in API?), ack_timeout_ms
-public class ChangePropsTest extends AbstractConnectionTest {
-    private int numEvents = 100000;
-    private int numPropertyChanges = 2;
-    String[] tokens = {"4B521A0D-C5D8-4721-B68E-B4947E4CD33A", "EB610A08-D40A-4B7C-A67D-18E9E75570BE" };
+public class ConnectionMutabilityTest extends AbstractConnectionTest {
+    private int numEvents = 200000;
+    private int numPropertyChanges;
+    protected List<Map<String, List<String>>> propsToChange; // Map: Property name -> List of values to change
 
+    // make this abstract. each test should override
+    protected void setPropsToChange() {
+        // tokens
+        Map tokens = new HashMap<String, List<String>>();
+        List<String> tokenValues = new ArrayList<>();
+        tokenValues.add("4B521A0D-C5D8-4721-B68E-B4947E4CD33A");
+        tokenValues.add("EB610A08-D40A-4B7C-A67D-18E9E75570BE");
+        tokenValues.add("4B521A0D-C5D8-4721-B68E-B4947E4CD33A");
+        tokenValues.add("EB610A08-D40A-4B7C-A67D-18E9E75570BE");
+        tokenValues.add("4B521A0D-C5D8-4721-B68E-B4947E4CD33A");
+        tokens.put(PropertyKeys.TOKEN, tokenValues);
+        propsToChange.add(tokens);
+    }
+
+    protected int getNumPropertyChanges() {
+        setPropsToChange();
+        int num = 0;
+        for (Map<String, List<String>> m : propsToChange) {
+            for (Collection<String> list : m.values()) {
+                if (list.size() > num) {
+                    num = list.size();
+                }
+            }
+        }
+        return num;
+    }
 
     @Test
     public void changePropertiesTest() throws InterruptedException, HecConnectionTimeoutException {
@@ -42,9 +69,10 @@ public class ChangePropsTest extends AbstractConnectionTest {
     private void close() throws InterruptedException {
     }
 
+    // Sends numEvents. Changes the properties. Sends numEvents.
+    // Changes the properties. Sends numEvents. etc.
     @Override
     protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-        Assert.assertFalse("Connection should not be closed.", connection.isClosed());
         System.out.println(
                 "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
                         + "And test method GUID " + testMethodGUID);
@@ -59,7 +87,8 @@ public class ChangePropsTest extends AbstractConnectionTest {
             }
             start = stop;
             stop += getNumEventsToSend();
-            if (i < numPropertyChanges) connection.setProperties(changeProps(i));
+            if (i < numPropertyChanges) connection.setProperties(nextProps(i));
+            Assert.assertFalse("Connection should not be closed.", connection.isClosed());
         }
         connection.close(); //will flush
         this.callbacks.await(10, TimeUnit.MINUTES);
@@ -73,13 +102,33 @@ public class ChangePropsTest extends AbstractConnectionTest {
 //        Assert.assertEquals("Properties should have changed.", connection.getEventBatchSize(), )
     }
 
-    private Properties changeProps(int i) {
+    private Properties nextProps(int i) {
         Properties props = new Properties();
         props.putAll(getTestProps());
-//        props.put(PropertyKeys.EVENT_BATCH_SIZE, Integer.toString(eventBatchSize));
-//        props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, Integer.toString(blockingTimeout));
-        props.put(PropertyKeys.TOKEN, tokens[i]);
+        for (Map<String, List<String>> m : propsToChange) {
+            for (String name : m.keySet()) {
+                if (m.get(name).size() > i) {
+                    props.put(name, m.get(name).get(i));
+                }
+            }
+        }
         return props;
+    }
+
+    @Override
+    @Before
+    public void setUp() {
+        propsToChange = new ArrayList<>();
+        setPropsToChange();
+        numPropertyChanges = getNumPropertyChanges();
+        this.callbacks = getCallbacks();
+        Properties props = new Properties();
+        props.putAll(getTestProps());
+        props.putAll(getProps());
+        this.connection = Connection.createConnection((ConnectionCallbacks) callbacks, props);
+        configureConnection(connection);
+        this.testMethodGUID = java.util.UUID.randomUUID().toString();
+        this.events = new ArrayList<>();
     }
 
     @Override
@@ -90,6 +139,4 @@ public class ChangePropsTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend() * (numPropertyChanges+1));
     }
-
-
 }
