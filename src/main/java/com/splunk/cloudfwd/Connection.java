@@ -16,6 +16,8 @@
 package com.splunk.cloudfwd;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
+
+import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.util.CallbackInterceptor;
 import com.splunk.cloudfwd.util.HecChannel;
 import com.splunk.cloudfwd.util.LoadBalancer;
@@ -65,7 +67,7 @@ public class Connection implements Closeable {
   }
 
   public Connection(ConnectionCallbacks callbacks, Properties settings) {
-    this.propertiesFileHelper = new PropertiesFileHelper(this, settings);
+    this.propertiesFileHelper = new PropertiesFileHelper(settings);
     init(callbacks, propertiesFileHelper);
     this.lb = new LoadBalancer(this);
   }

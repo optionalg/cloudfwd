@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd;
+package com.splunk.cloudfwd.exceptions;
 
 /**
  *
  * @author ghendrey
  */
-public class HecDuplicateEventException extends RuntimeException {
+public class HecConnectionTimeoutException extends Exception{
 
-  public HecDuplicateEventException(String msg) {
-    super(msg);
+  public HecConnectionTimeoutException(String message) {
+    super(message);
   }
-  
   
 }

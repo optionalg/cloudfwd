@@ -1,4 +1,6 @@
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.exceptions.HecErrorResponseException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;

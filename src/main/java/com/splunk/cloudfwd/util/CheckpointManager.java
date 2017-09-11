@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.exceptions.HecIllegalStateException;
 
 /**
  *

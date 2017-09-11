@@ -1,4 +1,5 @@
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.exceptions.HecMissingPropertiesException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -29,7 +30,7 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
             @Override
             public void failed(EventBatch events, Exception e) {
                 Assert.assertTrue(e.getMessage(),
-                        e instanceof ConfigurationException);
+                        e instanceof HecMissingPropertiesException);
                 LOG.trace("Got expected exception: " + e);
                 latch.countDown(); //allow the test to finish
             }

@@ -1,7 +1,6 @@
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
+import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
+
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;

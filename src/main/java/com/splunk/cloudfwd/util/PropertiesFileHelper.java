@@ -17,8 +17,7 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.HttpSender;
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.ConfigurationException;
+import com.splunk.cloudfwd.exceptions.HecMissingPropertiesException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -40,21 +39,21 @@ public class PropertiesFileHelper {
   private Properties defaultProps = new Properties();
   private Properties overrides;
 
-  public PropertiesFileHelper(Connection connection, Properties overrides) {
+  public PropertiesFileHelper(Properties overrides) {
     this.overrides = overrides;
-    this.parsePropertiesFile(connection);
+    this.parsePropertiesFile();
   }
 
   /**
    * create SenderFactory with default properties read from lb.properties file
    */
-  public PropertiesFileHelper(Connection connection) {
-    this.parsePropertiesFile(connection);
+  public PropertiesFileHelper() {
+    this.parsePropertiesFile();
   }
 
   // If not all necessary properties are passed into the Connection constructor
   // as overrides, then there must be a valid lb.properties file to populate from
-  private void parsePropertiesFile(Connection connection) {
+  private void parsePropertiesFile() {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
       if (is != null) {
@@ -69,7 +68,7 @@ public class PropertiesFileHelper {
       // If required properties are missing from lb.properties, overrides, and defaults, then call failed callback.
       for(String key: REQUIRED_KEYS) {
         if (this.defaultProps.getProperty(key) == null) {
-          connection.getCallbacks().failed(null, new ConfigurationException("Missing required key: " + key));
+          throw new HecMissingPropertiesException("Missing required key: " + key);
         }
       }
 

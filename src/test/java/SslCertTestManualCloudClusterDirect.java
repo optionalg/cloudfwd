@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
 import org.junit.Test;
 
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 
 /**
  *
