@@ -49,7 +49,7 @@ public class UnvalidatedByteBufferEvent implements Event {
   }
 
   /**
-   * WARNING: this method will throw UnsupportedOpertationException if called. You should use getInputStream() or
+   * Warning: This method will throw UnsupportedOpertationException if called. You should use getInputStream() or
    * write() instead
    *
    * @return

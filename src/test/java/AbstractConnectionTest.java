@@ -97,7 +97,7 @@ public abstract class AbstractConnectionTest {
     for (int i = 0; i < expected; i++) {
       ///final EventBatch events =nextEventBatch(i+1);
       Event event = nextEvent(i + 1);
-      LOG.trace("Send event: " + event.getId() + " i=" + i);
+      LOG.trace("Send event {} i={}", event.getId(), i);
       connection.send(event);
 //      if (i == 300000) connection.setUrls("https://127.0.0.1:8288");
 //      if (i == 600000) connection.setUrls("https://127.0.0.1:8388");

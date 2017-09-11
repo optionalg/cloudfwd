@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Provides methods for preparing  a structured event, as required by the HEC /event endpoint.
+ * Provides methods for preparing a structured event, as required by the HEC /event endpoint.
  * @author ghendrey
  */
 public class EventWithMetadata implements Event {

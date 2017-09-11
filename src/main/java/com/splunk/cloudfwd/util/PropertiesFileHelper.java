@@ -101,7 +101,6 @@ public class PropertiesFileHelper {
             UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS).trim());
     if (t < 1) {
       LOG.debug(UNRESPONSIVE_MS +  ": unlimited");
-      t = Integer.MAX_VALUE;
     }
     return t;
   }
