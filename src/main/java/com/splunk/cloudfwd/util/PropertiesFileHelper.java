@@ -16,9 +16,9 @@
 package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.http.Endpoints;
-
 import com.splunk.cloudfwd.http.HttpSender;
-
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -38,22 +38,44 @@ public class PropertiesFileHelper {
   private static final Logger LOG = LoggerFactory.getLogger(PropertiesFileHelper.class.getName());
 
   private Properties defaultProps = new Properties();
+  private Properties overrides;
 
-  public PropertiesFileHelper(Properties overrides) {
-    this(); //setup all defaults by calling SenderFactory() empty constr
-    this.defaultProps.putAll(overrides);
+  public PropertiesFileHelper(Connection connection, Properties overrides) {
+    this.overrides = overrides;
+    this.parsePropertiesFile(connection);
   }
 
   /**
    * create SenderFactory with default properties read from lb.properties file
    */
-  public PropertiesFileHelper() {
+  public PropertiesFileHelper(Connection connection) {
+    this.parsePropertiesFile(connection);
+  }
+
+  // If not all necessary properties are passed into the Connection constructor
+  // as overrides, then there must be a valid lb.properties file to populate from
+  private void parsePropertiesFile(Connection connection) {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
-      if (null == is) {
-        throw new RuntimeException("can't find /lb.properties");
+      if (is != null) {
+        defaultProps.load(is);
       }
-      defaultProps.load(is);
+
+      if (overrides != null) {
+        // Try to parse any properties from overrides
+        defaultProps.putAll(overrides);
+      }
+
+      // If required properties are missing from lb.properties, overrides, and defaults, then call failed callback.
+      for(String key: REQUIRED_KEYS) {
+        if (this.defaultProps.getProperty(key) == null) {
+          connection.getCallbacks().failed(null, new ConfigurationException("Missing required key: " + key));
+        }
+      }
+
+      // For any non-required properties, we allow them to remain null if they are not present in overrides
+      // or lb.properties, because the property getters below will return the default values.
+
     } catch (IOException ex) {
       LOG.error("problem loading lb.properties", ex);
       throw new RuntimeException(ex.getMessage(), ex);
@@ -69,6 +91,7 @@ public class PropertiesFileHelper {
     String[] splits = defaultProps.getProperty(COLLECTOR_URI).split(",");
     for (String urlString : splits) {
       try {
+        // check that fails here if not provided
         URL url = new URL(urlString.trim());
         urls.add(url);
       } catch (MalformedURLException ex) {
@@ -180,7 +203,11 @@ public class PropertiesFileHelper {
       throw new IllegalArgumentException(BLOCKING_TIMEOUT_MS + " must be positive.");
     }
     return timeout;
-  }     
+  }
+
+  public String getToken() {
+    return this.defaultProps.getProperty(TOKEN).trim();
+  }
 
   public boolean isMockHttp() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,

@@ -63,7 +63,7 @@ public class Connection implements Closeable {
   }
 
   public Connection(ConnectionCallbacks callbacks, Properties settings) {
-    this.propertiesFileHelper = new PropertiesFileHelper(settings);
+    this.propertiesFileHelper = new PropertiesFileHelper(this, settings);
     init(callbacks, propertiesFileHelper);
     this.lb = new LoadBalancer(this);
   }

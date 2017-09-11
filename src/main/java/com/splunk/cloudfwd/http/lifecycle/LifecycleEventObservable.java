@@ -17,7 +17,6 @@ package com.splunk.cloudfwd.http.lifecycle;
 
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.EventBatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.splunk.cloudfwd.ConnectionCallbacks;
