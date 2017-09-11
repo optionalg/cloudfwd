@@ -224,7 +224,7 @@ public class PropertyKeys {
    * Default value for UNRESPONSIVE_MS property.
    * @see UNRESPONSIVE_MS
    */
-  public static final String DEFAULT_UNRESPONSIVE_MS = "300000"; //5 min  
+  public static final String DEFAULT_UNRESPONSIVE_MS = "-1"; //disabled by default
   
   /**
    * Default value for the RETRIES property.

@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
  *
  * @author ghendrey
  */
-public class EventEndpoint implements Endpoint{
-  private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.getName());
+public class EventEndpoint implements Endpoint {
 
-
+  private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.
+          getName());
   Random rand = new Random(System.currentTimeMillis());
   final ScheduledExecutorService executor;
   private AcknowledgementEndpoint ackEndpoint;
@@ -83,7 +83,7 @@ public class EventEndpoint implements Endpoint{
 
   @Override
   public void close() {
-    LOG.trace("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
+    LOG.debug("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
     executor.shutdownNow();
   }
 

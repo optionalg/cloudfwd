@@ -17,8 +17,11 @@ limitations under the License.
 <Configuration status="WARN">
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} [thread:%t] %-5level %logger{1}::%method - %msg%n}"/>
+      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
     </Console>
+    <Console name="ConsoleExpensive" target="SYSTEM_OUT">
+      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1}::%method - %msg%n}"/>
+    </Console>    
   </Appenders>
   <Loggers>
     <Root level="info">

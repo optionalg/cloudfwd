@@ -68,7 +68,7 @@ public class PollScheduler {
   }
 
   public synchronized void stop() {
-    LOG.info("SHUTTING DOWN POLLER:  " + name);
+    LOG.debug("SHUTTING DOWN POLLER:  " + name);
     if (null != scheduler) {
       scheduler.shutdownNow();
     }

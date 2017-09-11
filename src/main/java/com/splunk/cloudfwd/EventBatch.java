@@ -16,6 +16,8 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.HecIOManager;
+import com.splunk.cloudfwd.util.EventTracker;
+import com.splunk.cloudfwd.util.HecChannel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -50,6 +52,8 @@ public class EventBatch  implements IEventBatch {
   protected List<Event> events = new ArrayList<>();
   protected Connection.HecEndpoint knownTarget;
   protected Event.Type knownType;
+  protected List<EventTracker> trackers = new ArrayList<>();
+  private HecChannel hecChannel;
 
   public EventBatch() {
   }
@@ -58,6 +62,7 @@ public class EventBatch  implements IEventBatch {
   public synchronized void prepareToResend() {
     this.flushed = false;
     this.acknowledged = false;
+    this.ackId = null;
   }
 
   @Override
@@ -104,8 +109,12 @@ public class EventBatch  implements IEventBatch {
       //endpoints are either real (via the Sender) or simulated
       ioManager.postEvents(this);
       flushed = true;
-      numTries++;
+      //numTries++;
     }
+  }
+  
+  public void incrementNumTries(){
+    numTries++;
   }
 
   @Override
@@ -200,7 +209,7 @@ public class EventBatch  implements IEventBatch {
     }
     return e;
   }
-
+    
   public void checkCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
 
     if (knownTarget != null) {
@@ -216,11 +225,40 @@ public class EventBatch  implements IEventBatch {
 
   }
 
+  @Override
+  public String toString() {
+    return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged + ", numTries=" +numTries +'}';
+  }
+  
+  public void cancelEventTrackers(){
+    trackers.forEach(t->{
+      t.cancel(this);
+    });
+  }
+
+  public void registerEventTracker(EventTracker t){
+    trackers.add(t);
+  }
+
   /**
    * @return the creationTime
    */
   public long getCreationTime() {
     return creationTime;
+  }
+
+  /**
+   * @return the hecChannel
+   */
+  public HecChannel getHecChannel() {
+    return hecChannel;
+  }
+
+  /**
+   * @param hecChannel the hecChannel to set
+   */
+  public void setHecChannel(HecChannel hecChannel) {
+    this.hecChannel = hecChannel;
   }
 
   private class HttpEventBatchEntity extends AbstractHttpEntity {

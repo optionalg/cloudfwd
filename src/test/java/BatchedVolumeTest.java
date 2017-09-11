@@ -17,6 +17,7 @@
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import java.util.Properties;
 import org.junit.Test;
@@ -31,6 +32,14 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   protected int numToSend = 1000000;
 
   public BatchedVolumeTest() {
+  }
+  
+    @Override
+  protected Properties getProps() {
+    Properties props = new Properties();
+    props.put(PropertyKeys.ACK_TIMEOUT_MS, "1000000"); //we don't want the ack timout kicking in
+    props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
+    return props;
   }
 
   @Override

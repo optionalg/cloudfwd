@@ -44,7 +44,8 @@ import com.splunk.cloudfwd.http.HttpPostable;
  */
 public class HecChannel implements Closeable, LifecycleEventObserver {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(HecChannel.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(HecChannel.class.
+          getName());
 
   private final HttpSender sender;
   private final int full;
@@ -60,6 +61,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final String channelId;
   private final ChannelMetrics channelMetrics;
   private DeadChannelDetector deadChannelDetector;
+  private final String memoizedToString;
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           Connection c) {
@@ -72,6 +74,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             getMaxUnackedEventBatchPerChannel();
     sender.setChannel(this);
     sender.getHecIOManager().preFlightCheck();
+    memoizedToString = this.channelId + "@" + sender.getBaseUrl();
   }
 
   private static String newChannelId() {
@@ -84,7 +87,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //is also trying to acquire the lock on this object. So deadlock.
   synchronized void pollAcks() {
     new Thread(sender.getHecIOManager()::pollAcks // poll for acks right now
-            , "Ack Kicker").start();
+            , "On-demand Ack Poller").start();
   }
 
   public synchronized void start() {
@@ -116,7 +119,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     started = true;
   }
 
-  public synchronized boolean send(HttpPostable events) {
+  public synchronized boolean send(EventBatch events) {
     if (!isAvailable()) {
       return false;
     }
@@ -133,6 +136,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       LOG.error(msg);
       throw new IllegalStateException(msg);
     }
+    events.setHecChannel(this);
     sender.sendBatch(events);
     if (unackedCount.get() == full) {
       pollAcks();
@@ -187,7 +191,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         try {
           close();
         } catch (IllegalStateException ex) {
-          LOG.error("unable to close channel " + getChannelId() + ": " + ex.getMessage());
+          LOG.error("unable to close channel " + getChannelId() + ": " + ex.
+                  getMessage());
         }
       }
     }
@@ -198,7 +203,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return;
     }
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-    quiesce(); //drain in-flight packets, and close+remove when empty
+    quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
   }
 
   /**
@@ -206,13 +211,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
    *
    */
   protected synchronized void quiesce() {
-    LOG.debug("Quiescing channel: {0}", getChannelId());
+    LOG.debug("Quiescing channel: {}", this);
     quiesced = true;
     pollAcks();//so we don't have to wait for the next ack polling interval
   }
 
   synchronized void forceClose() { //wraps internalForceClose in a log messages
-    LOG.info("FORCE CLOSING CHANNEL  {0}", getChannelId());
+    LOG.info("FORCE CLOSING CHANNEL  {}", getChannelId());
     interalForceClose();
   }
 
@@ -233,7 +238,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       LOG.debug("LoggingChannel already closed.");
       return;
     }
-    LOG.info("CLOSE {0}", getChannelId());
+    LOG.info("CLOSE channel  {}", this);
     if (!isEmpty()) {
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
@@ -278,7 +283,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   @Override
   public String toString() {
-    return this.channelId + "@" + sender.getBaseUrl();
+    return memoizedToString; //for logging performance we memo-ize the toString
   }
 
   public Connection getConnection() {
@@ -341,7 +346,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
-          LOG.error("Dead channel detected. Resending messages and force closing channel");
+          LOG.warn(
+                  "Dead channel detected. Resending messages and force closing channel");
           //synchronize on the load balancer so we do not allow the load balancer to be
           //closed before  resendInFlightEvents. If that
           //could happen, then the channel we replace this one with
@@ -372,33 +378,42 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
-      sender.getAcknowledgementTracker().getAllInFlightEvents().forEach((e) -> {
-        loadBalancer.getCheckpointManager().deRegisterInFlightEvents(e); //effectively cancels the tracking of the event
-        e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
-        //we must force messages to be sent because the connection could have been gracefully closed
-        //already, in which case sendRoundRobbin will just ignore the sent messages
-        boolean forced = true;
-        int maxRetries = loadBalancer.getPropertiesFileHelper().getMaxRetries();
-        int i = 0;
-        for (;; i++) { //try to resend the message up to N times
-          try {
-            if (e.getNumTries() > maxRetries) {
-              String msg = "Tried to send event id=" + e.
-                      getId() + " " + e.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
-              LOG.warn(msg);
-              loadBalancer.getConnection().getCallbacks().failed(e,
-                      new HecMaxRetriesException(msg));
-            } else {
-              LOG.debug("retrying send on event id= " + e.getId());
-              loadBalancer.sendRoundRobin(e, forced);
-            }
-            break;
-          } catch (HecConnectionTimeoutException ex) {
-            //noop
-          }
-        }
-      });
-
+      long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
+              getAckTimeoutMS();
+      final int maxRetries = loadBalancer.getPropertiesFileHelper().
+              getMaxRetries();
+      loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
+              HecChannel.this).forEach((e) -> {
+                //Note - in case you are tempted to cancel the checkpoint manager prior to resend, don't. If you do, the 
+                //checkpoint can move higher than the event batch you try to resend. That will cause HecIllegalStateException
+                //loadBalancer.getCheckpointManager().cancel(e); 
+                sender.getHecIOManager().getAcknowledgementTracker().cancel(e);//also need to cancelEventTrackers ack tracker
+                if (e.isAcknowledged() || e.isTimedOut(timeout)) {
+                  return; //do not resend messages that are in a final state 
+                }
+                e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
+                //we must force messages to be sent because the connection could have been gracefully closed
+                //already, in which case sendRoundRobbin will just ignore the sent messages
+               boolean forced = true;
+                while (true) { //try to resend the message up to N times
+                  try {
+                    if (e.getNumTries() > maxRetries) {
+                      String msg = "Tried to send event id=" + e.
+                              getId() + " " + e.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
+                      LOG.warn(msg);
+                      loadBalancer.getConnection().getCallbacks().failed(e,
+                              new HecMaxRetriesException(msg));
+                    } else {
+                      LOG.warn("resending  event {}", e);
+                      loadBalancer.sendRoundRobin(e, forced);
+                    }
+                    break;
+                  } catch (HecConnectionTimeoutException ex) {
+                    //noop
+                  }
+                }
+              });
+      LOG.info("Resent Events from dead channel {}", HecChannel.this);
     }
 
   }

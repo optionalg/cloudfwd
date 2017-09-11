@@ -18,14 +18,15 @@ package com.splunk.cloudfwd.http;
 import com.splunk.cloudfwd.EventBatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
-import java.util.ArrayList;
+import com.splunk.cloudfwd.util.EventTracker;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,30 +35,46 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Keeps track of acks that we are waiting for success on. Updates
- * ChannelMetrics every time an ackId is created, and also when success is
- * received on an ackId. This is not really a window in the sense of a sliding
- * window but "window" seems apropos to describe it.
+ * ChannelMetrics when success is received on an ackId.
  *
  * @author ghendrey
  */
-public class AcknowledgementTracker {
+public class AcknowledgementTracker implements EventTracker {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AcknowledgementTracker.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(
+          AcknowledgementTracker.class.getName());
 
   private final static ObjectMapper jsonMapper = new ObjectMapper();
-  private final IdTracker idTracker = new IdTracker();
+  private final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
+  private final Map<Comparable, EventBatch> eventBatches = new ConcurrentHashMap<>();
   private final HttpSender sender;
 
   AcknowledgementTracker(HttpSender sender) {
     this.sender = sender;
   }
 
+  @Override
+  public void cancel(EventBatch e) {
+    if (null != eventBatches.remove(e.getId())) {
+      //hunt for it in the polledAcks
+      for (Iterator<Map.Entry<Long, EventBatch>> it = polledAcks.entrySet().
+              iterator(); it.hasNext();) {
+        Map.Entry<Long, EventBatch> entry = it.next();
+        if (e.getId() == entry.getValue().getId()) {
+          it.remove();
+        }
+      }
+    }
+  }
+
   /**
-   * Returns the request whose string is posted to acks endpoint. But caller should check AckRequest.isEmpty first
+   * Returns the request whose string is posted to acks endpoint. But caller
+   * should check AckRequest.isEmpty first
+   *
    * @return
    */
   public AckRequest getAckRequest() {
-    return new AckRequest(idTracker.polledAcks.keySet());
+    return new AckRequest(polledAcks.keySet());
   }
 
   public boolean isEmpty() {
@@ -65,65 +82,66 @@ public class AcknowledgementTracker {
   }
 
   public void preEventPost(EventBatch batch) {
-    //cannot be synchrnoized! Will deadlock. Fortunately does no harm not 
-    //to synchronize
-    //synchronized (idTracker) {
-      this.idTracker.postedEventBatches.put(batch.getId(), batch);  //track what we attempt to post, so in case fail we can try again  
-    //}
+    if (null != this.eventBatches.put(batch.getId(), batch)) {
+      throwIllegalStateException(batch);
+    }     
+  }
+
+  private void throwIllegalStateException(EventBatch batch) {
+    String msg = "Attempt to send EventBatch that is still pending acknowledgement:  " + batch;
+    LOG.error(msg);
+    throw new HecIllegalStateException(msg,
+            HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED);
   }
 
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatch events) {
     Long ackId = epr.getAckId();
-    //System.out.println("handler event post response for ack " + ackId);
-    synchronized (idTracker) {
-      EventBatch removed = idTracker.postedEventBatches.remove(events.getId()); //we are now sure the server reveived the events POST
-      if (null == removed) {
-        String msg = "failed to track event batch " + events.getId();
-        LOG.error(msg);
-        throw new RuntimeException(msg);
-      }
-      idTracker.polledAcks.put(ackId, events);
-    }
-    //System.out.println("Tracked ackIDs on client "+this.hashCode()+": "+polledAcks.keySet());
+    events.registerEventTracker(this);
+    polledAcks.put(ackId, events);
   }
 
   public void handleAckPollResponse(AckPollResponseValueObject apr) {
     EventBatch events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      LOG.debug("success acked ids: " + succeeded);
+      LOG.info("Channel:{} success acked ids: {}", sender.getChannel(),
+              succeeded);
       if (succeeded.isEmpty()) {
-        /*
-        this.sender.getChannelMetrics().update(new EventBatchResponse(
-                  LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?",
-                  events));*/
         return;
       }
-      synchronized (idTracker) {
-        for (long ackId : succeeded) {
-          events = idTracker.polledAcks.get(ackId);
-          if (null == events) {
-            LOG.error("Unable to find EventBatch in buffer for successfully acknowledged ackId: {0}", ackId);
-          }
-          //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
-          if (ackId != events.getAckId()) {
-            String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
-                    getAckId();
-            LOG.error(msg);
-            throw new IllegalStateException(msg);
-          }
-
-          this.sender.getChannelMetrics().update(new EventBatchResponse(
-                  LifecycleEvent.Type.ACK_POLL_OK, 200, "why do you care?",
-                  events, sender.getBaseUrl()));
+      for (long ackId : succeeded) {
+        events = polledAcks.get(ackId);
+        events.setAcknowledged(true);
+        if (null == events) {
+          LOG.warn(
+                  "Got acknowledgement on ackId: {} but we're no long tracking that ackId",
+                  ackId);
+          return;
         }
-        //System.out.println("polledAcks was " + polledAcks.keySet());
-        idTracker.polledAcks.keySet().removeAll(succeeded);
-        //System.out.println("polledAcks now " + polledAcks.keySet());
+        //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
+        //events.getAckId can be null if the event is being resent by DeadChannel detector 
+        //and EventBatch.prepareForResend has been called
+        if (events.getAckId() != null && ackId != events.getAckId()) {
+          String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
+                  getAckId();
+          LOG.error(msg);
+          throw new HecIllegalStateException(msg,
+                  HecIllegalStateException.Type.ACK_ID_MISMATCH);
+        }
+
+        this.sender.getChannelMetrics().update(new EventBatchResponse(
+                LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
+                events,sender.getBaseUrl()));
+        eventBatches.remove(events.getId());
+        polledAcks.remove(ackId);
       }
+      //System.out.println("polledAcks was " + polledAcks.keySet());
+      //polledAcks.keySet().removeAll(succeeded);
+      //System.out.println("polledAcks now " + polledAcks.keySet());
     } catch (Exception e) {
-      LOG.error("caught exception in handleAckPollResponse: " + e.getMessage(), e);
+      LOG.error("caught exception in handleAckPollResponse: " + e.getMessage(),
+              e);
       sender.getConnection().getCallbacks().failed(events, e);
     }
   }
@@ -133,32 +151,19 @@ public class AcknowledgementTracker {
   }
 
   public Collection<Long> getPostedButUnackedEvents() {
-    return Collections.unmodifiableSet(idTracker.polledAcks.keySet());
+    return Collections.unmodifiableSet(polledAcks.keySet());
   }
 
-  //techically we need to synchronize this, and the method handleAckPollResponse
-  public Collection<EventBatch> getAllInFlightEvents() {
-    List<EventBatch> events = new ArrayList<>();
-    synchronized (idTracker) {
-      events.addAll(idTracker.postedEventBatches.values());
-      events.addAll(idTracker.polledAcks.values());
-    }
-    return events;
-  }
+  /**
+   * Thus class is used to formulate the body of the HTTP ack polling request
+   */
+  public static class AckRequest {
 
-  private static class IdTracker {
-
-    public final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
-    public final Map<Comparable, EventBatch> postedEventBatches = new ConcurrentHashMap<>();//key EventBatch ID
-
-  }
-  
-  public static class AckRequest{
     Set<Long> ackIds = new LinkedHashSet<>();
 
     public AckRequest(Set<Long> ackIds) {
       //take a copy, otherwise the ack id set can empty before we post it and post empty ack set is illegal
-      this.ackIds.addAll(ackIds); 
+      this.ackIds.addAll(ackIds);
     }
 
     /**
@@ -173,17 +178,16 @@ public class AcknowledgementTracker {
      */
     @Override
     public String toString() {
-    try {
-      Map json = new HashMap();
-      json.put("acks", this.ackIds); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
-      return jsonMapper.writeValueAsString(json);
-    } catch (JsonProcessingException ex) {
-      LOG.error(ex.getMessage(), ex);
-      throw new RuntimeException(ex.getMessage(), ex);
+      try {
+        Map json = new HashMap();
+        json.put("acks", this.ackIds); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
+        return jsonMapper.writeValueAsString(json);
+      } catch (JsonProcessingException ex) {
+        LOG.error(ex.getMessage(), ex);
+        throw new RuntimeException(ex.getMessage(), ex);
+      }
     }
-    }
-    
-    
+
   }
 
 }
