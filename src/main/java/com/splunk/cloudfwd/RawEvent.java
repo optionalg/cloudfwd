@@ -24,9 +24,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.lang.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -36,6 +36,7 @@ import org.apache.commons.lang.ArrayUtils;
  * @author ghendrey
  */
 public class RawEvent implements Event{
+  private static final Logger LOG = LoggerFactory.getLogger(RawEvent.class.getName());
   private static final ObjectMapper jsonMapper = new ObjectMapper();
   
   final byte[] bytes;
@@ -80,7 +81,7 @@ public class RawEvent implements Event{
     try {
       return new RawEvent(text.getBytes("UTF-8"), id, Event.Type.TEXT);
     } catch (UnsupportedEncodingException ex) {
-      Logger.getLogger(RawEvent.class.getName()).log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -116,7 +117,7 @@ public class RawEvent implements Event{
     try {
       return new String(bytes, "UTF-8");
     } catch (UnsupportedEncodingException ex) {
-      Logger.getLogger(RawEvent.class.getName()).log(Level.SEVERE, null, ex);
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }

@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -37,7 +37,7 @@ import java.util.logging.Logger;
  */
 class IndexDiscoverer extends Observable {
 
-  private static final Logger LOG = Logger.getLogger(IndexDiscoverer.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(IndexDiscoverer.class.getName());
 
   //note, the key is a string representation of the URL. It is critical that the String, and not the URL
   //Object be used as the key. This is because URL implements equals based on comparing the set of
@@ -61,7 +61,7 @@ class IndexDiscoverer extends Observable {
     return addrs;
   }
 
-  synchronized List<URL> getUrls() {
+  synchronized List<URL> getUrls() throws MalformedURLException {
 
     List<URL> urls = new ArrayList<>();
     if (propertiesFileHelper.isCloudInstance()) {
@@ -77,7 +77,8 @@ class IndexDiscoverer extends Observable {
                           ":" + addr.getPort()));
       } catch (MalformedURLException ex) {
         // log exception an re-throw
-        LOG.throwing(IndexDiscoverer.class.getName(), "getUrls", ex);
+        LOG.error(IndexDiscoverer.class.getName(), "getUrls", ex);
+        throw ex;
       }
     }
     return urls;
@@ -167,10 +168,8 @@ class IndexDiscoverer extends Observable {
           }).add(sockAddr);
         }
       } catch (UnknownHostException ex) {
-        Logger.getLogger(IndexDiscoverer.class.getName()).
-                log(Level.SEVERE, "Unknown Host: ''{0}''", url.getHost());
-        Logger.getLogger(IndexDiscoverer.class.getName()).
-                log(Level.SEVERE, null, ex);
+        LOG.error("Unknown Host: ''{0}''", url.getHost());
+        LOG.error(ex.getMessage(), ex);
       }
     }
     return mapping;

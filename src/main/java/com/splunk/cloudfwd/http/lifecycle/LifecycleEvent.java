@@ -37,8 +37,10 @@ public abstract class LifecycleEvent {
     HEALTH_POLL_OK,
     HEALTH_POLL_INDEXER_BUSY,
     HEALTH_POLL_FAILED,
+    HEALTH_POLL_ERROR,
     PREFLIGHT_CHECK_FAILED,
-    PREFLIGHT_CHECK_OK
+    PREFLIGHT_CHECK_OK,
+    PREFLIGHT_CHECK_NOT_OK
   };
 
   private final Type type;

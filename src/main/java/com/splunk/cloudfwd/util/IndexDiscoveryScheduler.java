@@ -19,7 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -27,7 +28,7 @@ import java.util.logging.Logger;
  */
 class IndexDiscoveryScheduler {
 
-  private static final Logger LOG = Logger.getLogger(IndexDiscoveryScheduler.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(IndexDiscoveryScheduler.class.getName());
   
   private IndexDiscoverer discoverer;
   private ScheduledExecutorService scheduler;
@@ -39,7 +40,7 @@ class IndexDiscoveryScheduler {
       throw new IllegalStateException("AckPollController already started");
     }
     if(stopped){
-      LOG.info("Ignoring request to start stopped IndexDiscoveryScheduler");
+      LOG.debug("Ignoring request to start stopped IndexDiscoveryScheduler");
       return;
     }
     this.discoverer = d;
@@ -52,7 +53,7 @@ class IndexDiscoveryScheduler {
     //if the execution time of a task exceeds the period. We don't want that.
     scheduler.scheduleWithFixedDelay(poller, 0, 1, TimeUnit.SECONDS); //TODO MAKE THIS MILLISECONDS
     this.started = true;
-    System.out.println("STARTED INDEX DISCOVERY POLLING");
+    LOG.info("STARTED INDEX DISCOVERY POLLING");
 
   }
 
@@ -65,7 +66,7 @@ class IndexDiscoveryScheduler {
     if(null == this.scheduler){
       return;
     }
-    System.out.println("SHUTTING DOWN INDEX DISCOVER POLLER");
+    LOG.info("SHUTTING DOWN INDEX DISCOVER POLLER");
     scheduler.shutdownNow();
     scheduler = null;
   }  
