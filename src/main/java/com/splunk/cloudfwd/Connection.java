@@ -82,6 +82,7 @@ public class Connection implements Closeable {
 
   public synchronized void setEventAcknowledgementTimeoutMS(long ms) {
     this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
+    this.timeoutChecker.setTimeout(ms);
   }
   
   public synchronized void setBlockingTimeoutMS(long ms){
