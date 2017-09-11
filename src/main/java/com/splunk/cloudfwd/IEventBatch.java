@@ -74,6 +74,8 @@ public interface IEventBatch extends HttpPostable {
    */
   void setAcknowledged(boolean acknowledged);
 
+  Connection.HecEndpoint getTarget();
+
   String toString();
   
 }

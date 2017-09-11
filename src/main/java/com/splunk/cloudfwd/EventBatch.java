@@ -95,6 +95,16 @@ public class EventBatch  implements IEventBatch {
 
   }
 
+  @Override
+  public Connection.HecEndpoint getTarget() {
+    // TODO: is this what we want to do here, or should we just return null (code will default to /raw)
+    if (knownTarget == null) {
+      throw new HecIllegalStateException("Event batch must have a target.",
+              HecIllegalStateException.Type.INVALID_EVENTS_FOR_ENDPOINT);
+    }
+    return knownTarget;
+  }
+
   protected synchronized boolean isFlushable(int charBufferLen) {
     //technically the serialized size that we compate to maxEventsBatchSize should take into account
     //the character encoding. it's very difficult to compute statically. We use the stringBuilder length
@@ -210,7 +220,7 @@ public class EventBatch  implements IEventBatch {
     return e;
   }
     
-  public void checkCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
+  public void checkAndSetCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
 
     if (knownTarget != null) {
       if (knownTarget != target) {

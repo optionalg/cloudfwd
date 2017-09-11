@@ -86,6 +86,11 @@ public class Connection implements Closeable {
 
   }
 
+  /**
+   * Set event acknowledgement timeout. See PropertyKeys.ACK_TIMEOUT_MS
+   * for more information.
+   * @param ms
+   */
   public synchronized void setEventAcknowledgementTimeoutMS(long ms) {
     this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
     this.timeoutChecker.setTimeout(ms);
@@ -157,7 +162,9 @@ public class Connection implements Closeable {
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
     //send the failed batch again
-    this.events = null; //batch is in flight, null it out. 
+    this.events = null; //batch is in flight, null it out.
+    //check to make sure the endpoint can absorb all the event formats in the batch
+    events.checkAndSetCompatibility(getHecEndpointType());
     timeoutChecker.start();
     timeoutChecker.add(events);
     LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
@@ -224,16 +231,27 @@ public class Connection implements Closeable {
     return propertiesFileHelper.getToken();
   }
 
+  /**
+   * Set Http Event Collector token to use.
+   * May take up to PropertyKeys.CHANNEL_DECOM_MS milliseconds
+   * to go into effect.
+   * @param token
+   */
   public void setToken(String token) {
     propertiesFileHelper.putProperty(PropertyKeys.TOKEN, token);
   }
 
+  /**
+   * Set urls to send to. See PropertyKeys.COLLECTOR_URI
+   * for more information.
+   * @param urls comma-separated list of urls
+   */
   public void setUrls(String urls) {
     // a single url or a list of comma separated urls
     propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
     lb.reloadUrls();
   }
-  
+
   /**
    * @return the TimeoutChecker
    * @exclude
