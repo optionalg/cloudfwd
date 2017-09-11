@@ -262,6 +262,10 @@ public class PropertiesFileHelper {
     }
   }
 
+  public String get(String key) {
+    return defaultProps.getProperty(key);
+  }
+
   public HttpSender createSender() {
     return createSender(this.defaultProps);
   }

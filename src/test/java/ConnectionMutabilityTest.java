@@ -4,6 +4,7 @@ import com.splunk.cloudfwd.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,6 +34,12 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     private int numPropertyChanges;
     protected List<Map<String, List<String>>> propsToChange; // Map: Property name -> List of values to change
 
+    @Test
+    public void changePropertiesTest() throws InterruptedException, HecConnectionTimeoutException {
+        sendEvents();
+        close();
+    }
+
     // make this abstract. each test should override
     protected void setPropsToChange() {
         // tokens
@@ -60,12 +67,6 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         return num;
     }
 
-    @Test
-    public void changePropertiesTest() throws InterruptedException, HecConnectionTimeoutException {
-        sendEvents();
-        close();
-    }
-
     private void close() throws InterruptedException {
     }
 
@@ -83,11 +84,11 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
                 Event event = nextEvent(j + 1);
                 System.out.println("Send event: " + event.getId() + " j=" + j);
                 connection.send(event);
-                checkProperties();
             }
             start = stop;
             stop += getNumEventsToSend();
             if (i < numPropertyChanges) connection.setProperties(nextProps(i));
+            checkProperties(i);
             Assert.assertFalse("Connection should not be closed.", connection.isClosed());
         }
         connection.close(); //will flush
@@ -95,11 +96,18 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         if (callbacks.isFailed()) {
             Assert.fail("There was a failure callback with exception class  " + callbacks.getException() + " and message " + callbacks.getFailMsg());
         }
-
     }
 
-    private void checkProperties() {
-//        Assert.assertEquals("Properties should have changed.", connection.getEventBatchSize(), )
+    private void checkProperties(int i) {
+        PropertiesFileHelper pfh = connection.getPropertiesFileHelper();
+        for (Map<String, List<String>> m : propsToChange) {
+            for (String propertyName : m.keySet()) {
+                if (m.get(propertyName).size() > i) {
+                    Assert.assertEquals("Connection should have new properties.",
+                        pfh.get(propertyName), m.get(propertyName).get(i));
+                }
+            }
+        }
     }
 
     private Properties nextProps(int i) {

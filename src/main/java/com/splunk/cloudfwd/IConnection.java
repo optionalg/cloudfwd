@@ -1,5 +1,7 @@
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.util.PropertiesFileHelper;
+
 import java.io.Closeable;
 import java.util.Properties;
 
@@ -43,6 +45,8 @@ public interface IConnection extends Closeable {
      * @return the desired size of an EventBatch, in characters (not bytes)
      */
     public int getEventBatchSize();
+
+    public PropertiesFileHelper getPropertiesFileHelper();
 
     /**
      * @param numChars the size of the EventBatch in characters (not bytes)
