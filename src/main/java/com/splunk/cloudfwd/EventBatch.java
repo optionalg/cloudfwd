@@ -28,15 +28,11 @@ import org.apache.http.entity.AbstractHttpEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-<<<<<<< 3b3c865367ed5d549844b3554cbf02f6a2abd39a
 /**
-=======
-/*
  * Use EventBatch if you want a high degree of control over
  * which events will be sent to HEC in a single HTTP post. Most of the time,
  * there is no need to use an EventBatch, as it is used inside the connection to
  * gather events together when buffering is enabled on the connection.
->>>>>>> javadoc updates
  *
  * @author ghendrey
  */
