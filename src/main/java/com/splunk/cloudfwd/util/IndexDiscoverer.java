@@ -45,12 +45,10 @@ class IndexDiscoverer extends Observable {
   //and would be changing over time
   private Map<String, List<InetSocketAddress>> mappings;
   private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
-  private volatile boolean shouldResetMappings = false;
 
   IndexDiscoverer(PropertiesFileHelper f) {
     this.propertiesFileHelper = f;
-    this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
-        f.isForcedUrlMapToSingleAddr());
+
   }
 
   public List<InetSocketAddress> getInetSockAddrs(){
@@ -85,10 +83,8 @@ class IndexDiscoverer extends Observable {
   }
 
   synchronized List<InetSocketAddress> getAddrs(){
-    if (shouldResetMappings) {
-      resetMappings();
-      System.out.println("mappings were reset: " + mappings.toString());
-    }
+    this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
+            propertiesFileHelper.isForcedUrlMapToSingleAddr());
     List<InetSocketAddress> addrs = new ArrayList<>();
     for (String url : this.mappings.keySet()) {
       addrs.addAll(mappings.get(url));
@@ -185,18 +181,6 @@ class IndexDiscoverer extends Observable {
       addChange(changes, new Change(Change.Diff.REMOVED, a));
     }
     return changes;
-  }
-
-  private synchronized void resetMappings() {
-    mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
-            propertiesFileHelper.isForcedUrlMapToSingleAddr());
-    shouldResetMappings = false;
-  }
-
-  public void reloadUrls() {
-    // sets a flag so that next time we get an address,
-    // we will load a new InetAddressMap from the urls
-    shouldResetMappings = true;
   }
 
   void addChange(List<Change> changes, Change change){

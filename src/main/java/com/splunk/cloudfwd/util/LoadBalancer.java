@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +45,7 @@ public class LoadBalancer implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(LoadBalancer.class.getName());
   private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
+  private final Map<String, HecChannel> closedChannels = new ConcurrentHashMap<>();
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -90,6 +93,9 @@ public class LoadBalancer implements Closeable {
     for (HecChannel c : this.channels.values()) {
       c.forceClose();
     }
+    for (HecChannel c : this.closedChannels.values()) {
+      c.forceClose();
+    }
     //}
     this.closed = true;
   }
@@ -114,7 +120,7 @@ public class LoadBalancer implements Closeable {
   }
 
   //this method must not be synchronized it will cause deadlock
-  private void addChannel(InetSocketAddress s, boolean force) {
+  private synchronized void addChannel(InetSocketAddress s, boolean force) {
     //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
     //we must add a new one, before we remove the old one. If we did not have the force
     //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
@@ -158,6 +164,9 @@ public class LoadBalancer implements Closeable {
   //also must not be synchronized
   void removeChannel(String channelId, boolean force) {
     HecChannel c = this.channels.remove(channelId);
+    if (c == null) {
+      c = this.closedChannels.remove(channelId);
+    }
     /*
     if (c == null) {
       LOG.severe("attempt to remove unknown channel: " + channelId);
@@ -244,8 +253,13 @@ public class LoadBalancer implements Closeable {
     }
   }
 
-  public void reloadUrls() {
-    discoverer.reloadUrls();
+  public synchronized void reloadUrls() {
+    for (HecChannel c : this.channels.values()) {
+      c.close();
+    }
+    closedChannels.putAll(channels);
+    channels.clear();
+    createChannels(discoverer.getAddrs());
   }
 
   /**
