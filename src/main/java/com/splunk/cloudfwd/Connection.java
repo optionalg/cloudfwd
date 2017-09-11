@@ -26,6 +26,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,17 +64,18 @@ public class Connection implements IConnection {
   private PropertiesFileHelper propertiesFileHelper;
 
   private Connection(ConnectionCallbacks callbacks) {
-    this(callbacks, new Properties(), null);
+    this(callbacks, new Properties(), null, null);
   }
 
   private Connection(ConnectionCallbacks callbacks, Properties settings) {
-    this(callbacks, settings, null);
+    this(callbacks, settings, null, null);
   }
 
-  private Connection(ConnectionCallbacks callbacks, Properties settings, CheckpointManager manager) {
+  private Connection(ConnectionCallbacks callbacks, Properties settings,
+                     CheckpointManager manager, AtomicInteger openChannelCount) {
     this.propertiesFileHelper = new PropertiesFileHelper(settings);
     init(callbacks, propertiesFileHelper);
-    this.lb = new LoadBalancer(this, manager);
+    this.lb = new LoadBalancer(this, manager, openChannelCount);
   }
 
   private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
@@ -234,6 +237,10 @@ public class Connection implements IConnection {
     return lb.getCheckpointManager();
   }
 
+  private AtomicInteger getChannelCount() {
+    return lb.getChannelCount();
+  }
+
   private static class ConnectionProxy implements InvocationHandler {
     private Connection activeConnection;
     private ConnectionCallbacks callbacks;
@@ -262,15 +269,19 @@ public class Connection implements IConnection {
     }
 
     @Override
-    public Object invoke(Object proxy, Method method, Object[] args)
-            throws Throwable {
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
       if (method.getName().equals("setProperties")) {
         // TODO: some checks here to make sure that it has arguments
         CheckpointManager cpm = activeConnection.getCheckpointManager();
+        AtomicInteger openChannelCount = activeConnection.getChannelCount();
         activeConnection.close();
+
         Properties newSettings = (Properties) args[0];
-        setActiveConnection(new Connection(callbacks, newSettings, cpm));
-        return null; // TODO: do something else?
+        setActiveConnection(
+                new Connection(callbacks, newSettings, cpm, openChannelCount));
+        return null; // TODO: return something else?
+
       } else {
         try {
           return method.invoke(activeConnection, args);

@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +52,16 @@ public class LoadBalancer implements Closeable {
   private final Connection connection;
   private boolean closed;
   private volatile CountDownLatch latch;
+  // may be fleetingly shared across multiple Connection instances if properties are changed
+  private AtomicInteger channelCount;
 
-  public LoadBalancer(Connection c, CheckpointManager cpm) {
+  public LoadBalancer(Connection c, CheckpointManager cpm, AtomicInteger channelCount) {
     this.connection = c;
     this.channelsPerDestination = c.getPropertiesFileHelper().
             getChannelsPerDestination();
     this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper());
     this.checkpointManager = (cpm != null ? cpm : new CheckpointManager(c.getCallbacks()));
+    this.channelCount = (channelCount != null ? channelCount : new AtomicInteger(0));
     //this.discoverer.addObserver(this);
   }
 
@@ -121,7 +126,8 @@ public class LoadBalancer implements Closeable {
     //and then the to-be-reaped channel would also be removed, leaving no channels, and
     //send will be stuck in a spin loop with no channels to send to
     PropertiesFileHelper propsHelper = this.connection.getPropertiesFileHelper();
-    if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
+    if (!force && channelCount.get() >= propsHelper.getMaxTotalChannels()) {
+
       LOG.debug(
               "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
               getMaxTotalChannels() + ")");
@@ -148,6 +154,7 @@ public class LoadBalancer implements Closeable {
       channel.getChannelMetrics().addObserver(this.checkpointManager);
       LOG.debug("Adding channel {0}", channel.getChannelId());
       channels.put(channel.getChannelId(), channel);
+      channelCount.incrementAndGet();
       //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
 
     } catch (MalformedURLException ex) {
@@ -158,6 +165,10 @@ public class LoadBalancer implements Closeable {
   //also must not be synchronized
   void removeChannel(String channelId, boolean force) {
     HecChannel c = this.channels.remove(channelId);
+    if (c != null) {
+      channelCount.decrementAndGet();
+    }
+
     /*
     if (c == null) {
       LOG.severe("attempt to remove unknown channel: " + channelId);
@@ -242,6 +253,10 @@ public class LoadBalancer implements Closeable {
     if (null != latch) {
       latch.countDown();
     }
+  }
+
+  public AtomicInteger getChannelCount() {
+    return channelCount;
   }
 
   /**
