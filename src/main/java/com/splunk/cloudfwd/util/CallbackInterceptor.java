@@ -20,45 +20,40 @@ import com.splunk.cloudfwd.EventBatch;
 import java.util.function.Consumer;
 
 /**
- *
+ * Server EventTrackers keep track of EventBatches by their ids. When an EventBatch fails, the
+ * EventTrackers must be canceled. When an EventBatch is acknowledged, also the EventTrackers must 
+ * be canceled, because in either case the EventBatch is no longer tracked by the Connection.
  * @author ghendrey
  */
 public class CallbackInterceptor implements ConnectionCallbacks {
 
-  ConnectionCallbacks futureCallback;
-  private final Consumer<EventBatch> wrappedAcknowledged;
-  private final Consumer<EventBatch> before;
+  ConnectionCallbacks callbacks;
 
-  public CallbackInterceptor(ConnectionCallbacks futureCallback,
-          Consumer<EventBatch> before) {
-    this.futureCallback = futureCallback;
-    //it's possible to pre-compose the wrappedAcknowledged function
-    this.wrappedAcknowledged = before.andThen(futureCallback::acknowledged);
-    this.before = before;
+  public CallbackInterceptor(ConnectionCallbacks callbacks) {
+    this.callbacks = callbacks;
   }
 
   @Override
   public void acknowledged(EventBatch events) {
-    this.wrappedAcknowledged.accept(events); //call the precompositon that wraps/intercepts futureCallback acknowledge
+    callbacks.acknowledged(events);
+    events.cancelEventTrackers(); //remove the EventBatch from the system
   }
 
   @Override
   public void failed(EventBatch events, Exception ex) {
-    //since we cannot pre-compose these two actions, because of their different method signatures
-    //we just call them in sequence
+    this.callbacks.failed(events, ex);
     if(null != events){
-      this.before.accept(events);
-    }
-    this.futureCallback.failed(events, ex);
+      events.cancelEventTrackers();
+    }    
   }
 
   @Override
   public void checkpoint(EventBatch events) {
-    futureCallback.checkpoint(events); //we don't need to wrap checkpoint at present
+    callbacks.checkpoint(events); //we don't need to wrap checkpoint at present
   }
 
-  ConnectionCallbacks unwrap() {
-    return this.futureCallback;
+  public ConnectionCallbacks unwrap() {
+    return this.callbacks;
   }
 
 }

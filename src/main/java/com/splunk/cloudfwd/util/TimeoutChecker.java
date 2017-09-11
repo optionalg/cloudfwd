@@ -15,55 +15,57 @@
  */
 package com.splunk.cloudfwd.util;
 
-import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  *
  * @author ghendrey
  */
-public class TimeoutChecker {
+public class TimeoutChecker implements EventTracker {
 
   private PollScheduler timoutCheckScheduler = new PollScheduler(
           "Event Timeout Scheduler");
   private final Map<Comparable, EventBatch> eventBatches = new ConcurrentHashMap<>();
-  private long timeout;
-  private CallbackInterceptor interceptor;
+  private Connection connection;
 
-  public TimeoutChecker(long ms) {
-    this.timeout = ms;
+  public TimeoutChecker(Connection c) {
+    this.connection = c;
   }
-  
-  public void setTimeout(long ms){
-    this.timeout = ms;
+
+  public void setTimeout(long ms) {
     stop();
     start();
   }
 
-  public long getTimeout() {
-    return this.timeout;
+  private long getTimeoutMs() {
+    return connection.
+            getPropertiesFileHelper().getAckTimeoutMS();
   }
 
   public synchronized void start() {
-    timoutCheckScheduler.start(this::checkTimeouts, timeout,
+    timoutCheckScheduler.start(this::checkTimeouts, getTimeoutMs(),
             TimeUnit.MILLISECONDS);
   }
 
   private synchronized void checkTimeouts() {
     long now = System.currentTimeMillis();
-    for (Iterator<Map.Entry<Comparable, EventBatch>> iter = eventBatches.entrySet().
+    for (Iterator<Map.Entry<Comparable, EventBatch>> iter = eventBatches.
+            entrySet().
             iterator(); iter.hasNext();) {
       final Map.Entry<Comparable, EventBatch> e = iter.next();
       EventBatch events = e.getValue();
-      if (events.isTimedOut(this.timeout)) {
+      if (events.isTimedOut(getTimeoutMs())) {
         //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
         //to the user-supplied callback. Otherwise we just loop back here over and over!
-        interceptor.unwrap().failed(events,
+        ((CallbackInterceptor) connection.getCallbacks()).failed(events,
                 new TimeoutException(
                         "EventBatch with id " + events.getId() + " timed out."));
         iter.remove(); //remove it or else we will keep generating repeated timeout failures
@@ -77,17 +79,20 @@ public class TimeoutChecker {
 
   public void add(EventBatch events) {
     this.eventBatches.put(events.getId(), events);
+    events.registerEventTracker(this);
   }
 
-  public void removeEvents(EventBatch events) {
+  @Override
+  public void cancel(EventBatch events) {
     this.eventBatches.remove(events.getId());
   }
 
-  /**
-   * @param interceptor the interceptor to set
-   */
-  public void setInterceptor(CallbackInterceptor interceptor) {
-    this.interceptor = interceptor;
+  public List<EventBatch> getUnackedEvents(HecChannel c) {
+    //return only the batches whose channel matches c
+    return eventBatches.values().stream().filter(b -> {
+      return b.getHecChannel().getChannelId() == c.getChannelId();
+    }).collect(Collectors.toList());
   }
+
 
 }

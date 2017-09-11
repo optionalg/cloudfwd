@@ -13,28 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.http.lifecycle;
-
-import com.splunk.cloudfwd.EventBatch;
+package com.splunk.cloudfwd;
 
 /**
  *
  * @author ghendrey
  */
-public class EventBatchResponse extends Response implements EventBatchLifecycleEvent{
-  private EventBatch events = null;
-    
-  public EventBatchResponse(Type type, int httpCode, String resp, EventBatch events, String url) {
-    super(type, httpCode, resp, url);
-    this.events = events;
+public class HecDuplicateEventException extends RuntimeException {
+
+  public HecDuplicateEventException(String msg) {
+    super(msg);
   }
   
-    /**
-   * @return the events
-   */
-  @Override
-  public EventBatch getEvents() {
-    return events;
-  }
   
 }

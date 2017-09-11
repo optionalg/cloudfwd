@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Provides various static methods for obtaining a RawEvent. If content is JSON it is validated. Newline is appended if
- * not present. A RawEvent should be sent to the /raw HEC events endpoint. The event is 'raw' in the sense that includes
+ * Provides various static methods for obtaining a RawEvent. If content is JSON, it is validated. A newline is appended if
+ * nothing is present. A RawEvent should be sent to the /raw HEC events endpoint. The event is 'raw' in the sense that includes
  * no enclosing JSON envelope. 
  * @author ghendrey
  */
@@ -44,8 +44,8 @@ public class RawEvent implements Event{
   private final Event.Type type;
   
   /**
-   * Convenience method that will handle either bytes of a JSON object, or bytes of a UTF-8 String.
-   * The bytes are first parsed as a json object. If that fails, the bytes are parsed into a String assuming
+   * Convenience method that will handle either bytes of a JSON object or bytes of a UTF-8 string.
+   * The bytes are first parsed as a JSON object. If that fails, the bytes are parsed into a string assuming
    * UTF-8 encoding in the bytes.
    * @param jsonOrText
    * @param id

@@ -16,12 +16,25 @@
 package com.splunk.cloudfwd;
 
 /**
- * Thrown if duplicate ack-id is received on a given HEC channel. This can indicate failure of a sticky load
- * balancer to provide stickiness.
+ * Thrown if duplicate ack-id is received on a given HEC channel. This can
+ * indicate failure of a sticky load balancer to provide stickiness.
+ *
  * @author ghendrey
  */
-public class HecIllegalStateException extends IllegalStateException{
-  public enum Type{STICKY_SESSION_VIOLATION, INVALID_EVENTS_FOR_ENDPOINT, MIXED_BATCH}
+public class HecIllegalStateException extends IllegalStateException {
+
+  public enum Type {
+     ALREADY_SENT,
+    ALREADY_ACKNOWLEDGED,
+    STICKY_SESSION_VIOLATION, 
+    INVALID_EVENTS_FOR_ENDPOINT, 
+    MIXED_BATCH, 
+    NO_EVENTS_TO_CHECKPOINT, 
+    EVENT_NOT_PRESENT_IN_CHECKPOINT_SET,
+    EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED,
+    LOAD_BALANCER_NO_CHANNELS,
+    ACK_ID_MISMATCH
+  }
   private final Type type;
 
   /**
@@ -35,6 +48,5 @@ public class HecIllegalStateException extends IllegalStateException{
     super(s);
     this.type = t;
   }
-  
-  
+
 }

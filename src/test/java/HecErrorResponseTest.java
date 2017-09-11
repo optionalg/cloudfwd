@@ -1,5 +1,4 @@
 import com.splunk.cloudfwd.*;
-import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -15,20 +14,21 @@ import java.util.concurrent.TimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
- * Test class to test for initial configuration errors that
- * should be detected before sending any events.
+ * Test class to that tests various error rseponse scenarios
+ * from HEC to ensure we are calling the correct callbacks.
  *
  * Created by eprokop on 9/1/17.
  */
-public class InitialConfigErrorTest extends AbstractConnectionTest {
-    private static final Logger LOG = LoggerFactory.getLogger(InitialConfigErrorTest.class.getName());
+public class HecErrorResponseTest extends AbstractConnectionTest {
+    private static final Logger LOG = LoggerFactory.getLogger(HecErrorResponseTest.class.getName());
 
     private int numEvents = 10;
-    private enum ConfigError {
+    private enum Error {
         ACKS_DISABLED,
-        INVALID_TOKEN
+        INVALID_TOKEN,
+        INDEXER_BUSY_POST
     }
-    private ConfigError errorToTest;
+    private Error errorToTest;
 
     protected int getNumEventsToSend() {
         return numEvents;
@@ -77,10 +77,13 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
                 props.put(MOCK_HTTP_CLASSNAME,
                         "com.splunk.cloudfwd.sim.errorgen.preflightfailure.InvalidTokenEndpoints");
                 break;
+            case INDEXER_BUSY_POST:
+                props.put(MOCK_HTTP_CLASSNAME,
+                        "com.splunk.cloudfwd.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
+                break;
             default:
                 Assert.fail("Unsupported configuration error type");
         }
-
         props.put(BLOCKING_TIMEOUT_MS, "3000");
         return props;
     }
@@ -97,7 +100,7 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
 
     @Test
     public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        errorToTest = ConfigError.ACKS_DISABLED;
+        errorToTest = Error.ACKS_DISABLED;
         createConnection();
         try {
             super.sendEvents();
@@ -110,7 +113,7 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
 
     @Test
     public void sendToInvalidToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        errorToTest = ConfigError.INVALID_TOKEN;
+        errorToTest = Error.INVALID_TOKEN;
         createConnection();
         try {
             super.sendEvents();
@@ -121,6 +124,20 @@ public class InitialConfigErrorTest extends AbstractConnectionTest {
         }
     }
 
+    @Test
+    public void postToBusyIndexer() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        errorToTest = Error.INDEXER_BUSY_POST;
+        createConnection();
+        try {
+            super.sendEvents();
+        } catch (HecConnectionTimeoutException e) {
+            LOG.trace("Got expected timeout exception because all channels are unhealthy "
+                    + "due to indexer being busy (per test design): "
+                    + e.getMessage());
+        }
+    }
+
+    // PropertiesHelper Configuration Tests
     @Test
     public void testPropertiesHelperWithOverrides() throws MalformedURLException {
         // Need connection object to pass into PropertiesFileHelper constructor for failed() callback

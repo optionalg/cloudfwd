@@ -47,7 +47,7 @@ public class MaxRetriesTest extends AbstractConnectionTest {
     props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
     props.put(PropertyKeys.ACK_POLL_MS, "250");
     props.put(PropertyKeys.RETRIES, "2");
-    props.put(PropertyKeys.UNRESPONSIVE_MS, "250"); //for this test, le't QUICKLY determine the channel is dead
+    props.put(PropertyKeys.UNRESPONSIVE_MS, "250"); //for this test, lets QUICKLY determine the channel is dead
     return props;
   }
   
