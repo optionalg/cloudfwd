@@ -40,7 +40,7 @@ import java.nio.ByteBuffer;
  */
 public abstract class AbstractConnectionTest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractConnectionTest.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(AbstractConnectionTest.class.getName());
 
   /**
    * set enabled=false in test.properties to disable test.properties and

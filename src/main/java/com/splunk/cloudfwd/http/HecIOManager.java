@@ -147,6 +147,8 @@ public class HecIOManager implements Closeable {
     };
 
     sender.postEvents(events, cb);
+    sender.getChannelMetrics().update(new EventBatchRequest(
+            LifecycleEvent.Type.EVENT_POSTED, events));
   }
 
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId

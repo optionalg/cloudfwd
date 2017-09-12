@@ -22,6 +22,8 @@ import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.http.HttpSender;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
+import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.apache.http.client.entity.GzipCompressingEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +44,8 @@ import org.slf4j.LoggerFactory;
  */
 public class LoadBalancer implements Closeable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LoadBalancer.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(LoadBalancer.class.
+          getName());
   private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
@@ -200,7 +204,7 @@ public class LoadBalancer implements Closeable {
             getMaxTotalChannels();
     ///CountDownLatch latch = new CountDownLatch(1);
     if (!closed || forced) {
-      this.checkpointManager.registerInFlightEvents(events);
+      this.checkpointManager.registerInFlightEvents(events, forced);
     }
     while (!closed || forced) {
       //note: the channelsSnapshot must be refreshed each time through this loop
@@ -216,8 +220,13 @@ public class LoadBalancer implements Closeable {
       }
       int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
       tryMe = channelsSnapshot.get(channelIdx);
-      if (tryMe.send(events)) {
-        LOG.debug("sent EventBatch:{}  on channel: {}: ", events, tryMe);
+      try {
+        if (tryMe.send(events)) {
+          LOG.debug("sent EventBatch:{}  on channel: {}: ", events, tryMe);
+          break;
+        }
+      } catch (RuntimeException e) {
+        recoverAndThrowException(events, forced, e);
         break;
       }
       if (++spinCount % yieldInterval == 0) {
@@ -236,12 +245,22 @@ public class LoadBalancer implements Closeable {
         LOG.warn(
                 PropertyKeys.BLOCKING_TIMEOUT_MS + " exceeded: " + timeout + " ms for id " + events.
                 getId());
-        if(!forced){ //if this is a forced resend by dead channel detector, we *don't* want to cancel the timeout
-          events.cancelEventTrackers();
-        }
-        throw new HecConnectionTimeoutException("Send timeout exceeded.");
+
+        recoverAndThrowException(events, forced, new HecConnectionTimeoutException("Send timeout exceeded."));
       }
     }
+  }
+
+  private void recoverAndThrowException(EventBatch events, boolean forced,
+          RuntimeException e)  {
+    //if this is a forced resend by dead channel detector, we *don't* want to cancel the timeout, nor do we need to worry
+    //about cleaning up state in AcknowledgementTracker
+    if (!forced) { 
+      events.cancelEventTrackers();
+    }
+    events.setState(EVENT_POST_FAILURE);
+    //checkpointManager.cancel(events.getId());
+    throw e;
   }
 
   void wakeUp() {
@@ -277,5 +296,5 @@ public class LoadBalancer implements Closeable {
   public PropertiesFileHelper getPropertiesFileHelper() {
     return this.connection.getPropertiesFileHelper();
   }
-  
+
 }

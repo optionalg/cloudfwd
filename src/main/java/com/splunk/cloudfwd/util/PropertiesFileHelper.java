@@ -166,7 +166,9 @@ public class PropertiesFileHelper {
   public long getAckTimeoutMS() {
     long timeout = Long.parseLong(defaultProps.getProperty(
             ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
-    if (timeout < MIN_ACK_TIMEOUT_MS) {
+    if(timeout <=0 ){
+      timeout = Long.MAX_VALUE;
+    }else if (timeout < MIN_ACK_TIMEOUT_MS) {
       LOG.warn(ACK_TIMEOUT_MS+ " was set to a potentially too-low value: " + timeout);
     }
     return timeout;

@@ -25,6 +25,7 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import org.apache.http.client.entity.EntityBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -229,6 +230,10 @@ public class Connection implements Closeable {
   
   public List<EventBatch> getUnackedEvents(HecChannel c){
     return timeoutChecker.getUnackedEvents(c);
-  }  
+  } 
+  
+  public void release(Comparable id){
+    //lb.getCheckpointManager().cancel(events);
+  }
 
 }

@@ -409,7 +409,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                     }
                     break;
                   } catch (HecConnectionTimeoutException ex) {
-                    //noop
+                     LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
                   }
                 }
               });

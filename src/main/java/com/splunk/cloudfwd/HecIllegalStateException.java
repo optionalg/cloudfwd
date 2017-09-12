@@ -33,7 +33,8 @@ public class HecIllegalStateException extends IllegalStateException {
     EVENT_NOT_PRESENT_IN_CHECKPOINT_SET,
     EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED,
     LOAD_BALANCER_NO_CHANNELS,
-    ACK_ID_MISMATCH
+    ACK_ID_MISMATCH,
+    EVENT_TRACKER_ALREADY_REGISTERED
   }
   private final Type type;
 
