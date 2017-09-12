@@ -221,8 +221,7 @@ public class Connection implements Closeable {
   }
 
   /**
-   * @return the TimeoutChecker
-   * @exclude
+   * @return the TimeoutChecker   
    */
   public TimeoutChecker getTimeoutChecker() {
     return this.timeoutChecker;
