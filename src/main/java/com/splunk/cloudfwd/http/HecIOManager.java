@@ -327,7 +327,7 @@ public class HecIOManager implements Closeable {
   /**
    * @return the sender
    */
-  HttpSender getSender() {
+  public HttpSender getSender() {
     return sender;
   }
 

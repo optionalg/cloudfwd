@@ -349,6 +349,10 @@ public final class HttpSender implements Endpoints {
     this.channel = c;
   }
 
+  public String getToken() {
+    return token;
+  }
+
   /**
    * @return the baseUrl
    */
