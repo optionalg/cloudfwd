@@ -22,31 +22,34 @@ public class ValidatePropsLiveEndpoint extends SimulatedHECEndpoints {
 
     public static List<URL> URLS; // set with PropertiesFileHelper.getUrls()
     public static long ACK_TIMEOUT_MS;
+    private static AssertionError fail = null;
 
     @Override
     public void pollAcks(HecIOManager ackMgr,
     FutureCallback<HttpResponse> httpCallback) {
-        // TODO: figure out a less shitty way to do this
-        if (validate(ackMgr.getSender())) {
-            ackEndpoint.pollAcks(ackMgr, httpCallback);
-        } else {
-            httpCallback.failed(new RuntimeException("URLs or ack timeout didn't match."));
+        validate(ackMgr.getSender());
+        ackEndpoint.pollAcks(ackMgr, httpCallback);
+    }
+
+    private void validate(HttpSender sender) {
+        try {
+            boolean match = false;
+            for (URL url : URLS) {
+                if (url.toString().equals(sender.getBaseUrl())) {
+                    match = true;
+                }
+            }
+            Assert.assertTrue("Sender url: " + sender.getBaseUrl()
+                    + ", must match a url in url list: " + URLS.toString(), match);
+            Assert.assertEquals("Ack timeouts do not match.",
+                    sender.getConnection().getPropertiesFileHelper().getAckTimeoutMS(), ACK_TIMEOUT_MS);
+        } catch (AssertionError e) {
+            fail = e;
+            throw e;
         }
     }
 
-    private boolean validate(HttpSender sender) {
-        boolean match = false;
-        for (URL url : URLS) {
-            if (url.toString().equals(sender.getBaseUrl())) {
-                match = true;
-            }
-        }
-
-//        Assert.assertTrue("Sender url: " + sender.getBaseUrl()
-//                + ", must match a url in url list: " + URLS.toString(), match);
-//        Assert.assertEquals("Ack timeouts do not match.",
-//                sender.getConnection().getPropertiesFileHelper().getAckTimeoutMS(), ACK_TIMEOUT_MS);
-        return match &&
-                sender.getConnection().getPropertiesFileHelper().getAckTimeoutMS() == ACK_TIMEOUT_MS;
+    public static AssertionError getAssertionFailures() {
+        return fail;
     }
 }

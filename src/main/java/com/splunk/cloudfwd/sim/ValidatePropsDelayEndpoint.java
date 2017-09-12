@@ -20,21 +20,26 @@ import org.junit.Assert;
 public class ValidatePropsDelayEndpoint extends SimulatedHECEndpoints {
     // set these in the test itself when changing properties
     public static String TOKEN;
+    private static AssertionError fail = null;
 
     @Override
     public void pollAcks(HecIOManager ackMgr,
                          FutureCallback<HttpResponse> httpCallback) {
-        // TODO: figure out a less shitty way to do this
-        if (validate(ackMgr.getSender())) {
-            ackEndpoint.pollAcks(ackMgr, httpCallback);
-        } else {
-            httpCallback.failed(new RuntimeException("Tokens do not match."));
-        }
+        validate(ackMgr.getSender());
+        ackEndpoint.pollAcks(ackMgr, httpCallback);
     }
 
-    private boolean validate(HttpSender sender) {
-//        Assert.assertEquals(TOKEN, sender.getToken());
-        return TOKEN.equals(sender.getToken());
+    private void validate(HttpSender sender) {
+        try {
+            Assert.assertEquals(TOKEN, sender.getToken());
+        } catch (AssertionError e) {
+            fail = e;
+            throw e;
+        }
         // TODO: add asserts for more properties
+    }
+
+    public static AssertionError getAssertionFailures() {
+        return fail;
     }
 }

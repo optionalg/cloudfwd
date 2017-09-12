@@ -213,7 +213,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   protected synchronized void quiesce() {
     LOG.debug("Quiescing channel: {}", this);
     quiesced = true;
-    pollAcks();//so we don't have to wait for the next ack polling interval
+
+    if (isEmpty()) {
+      close();
+    } else {
+      pollAcks(); //so we don't have to wait for the next ack polling interval
+    }
   }
 
   synchronized void forceClose() { //wraps internalForceClose in a log messages

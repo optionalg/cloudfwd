@@ -2,6 +2,7 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.sim.ValidatePropsDelayEndpoint;
 import com.splunk.cloudfwd.sim.ValidatePropsLiveEndpoint;
 import org.junit.Test;
 
@@ -37,33 +38,36 @@ public class LivePropsTest extends AbstractMutabilityTest {
         sendSomeEvents(getNumEventsToSend()/4);
 
         close();
+        checkAsserts();
     }
 
     @Test
     public void changeUrlsAndAckTimeout() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
+        long ackPollWait = 2000;
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(2000); // let ack polling finish
+        sleep(ackPollWait); // let ack polling finish
 
         setUrls("https://127.0.0.1:8188");
         setAckTimeout(120000);
 
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(2000);
+        sleep(ackPollWait);
 
         setAckTimeout(65000);
         setUrls("https://127.0.0.1:8288, https://127.0.0.1:8388");
 
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(2000);
+        sleep(ackPollWait);
 
         setUrls("https://127.0.0.1:8488, https://127.0.0.1:8588, https://127.0.0.1:8688");
         setAckTimeout(80000);
 
         sendSomeEvents(getNumEventsToSend()/4);
         close();
+        checkAsserts();
     }
 
     @Override
@@ -80,6 +84,13 @@ public class LivePropsTest extends AbstractMutabilityTest {
     private void setPropsOnEndpoint() {
         ValidatePropsLiveEndpoint.URLS = connection.getPropertiesFileHelper().getUrls();
         ValidatePropsLiveEndpoint.ACK_TIMEOUT_MS = connection.getPropertiesFileHelper().getAckTimeoutMS();
+    }
+
+    private void checkAsserts() {
+        AssertionError e;
+        if ((e = ValidatePropsDelayEndpoint.getAssertionFailures()) != null) {
+            throw e;
+        }
     }
 
     protected int getNumEventsToSend() {

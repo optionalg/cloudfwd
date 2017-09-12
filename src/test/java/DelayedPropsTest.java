@@ -3,7 +3,7 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.sim.ValidatePropsDelayEndpoint;
-import com.splunk.cloudfwd.sim.ValidatePropsLiveEndpoint;
+
 import org.junit.Test;
 
 import java.util.Properties;
@@ -15,7 +15,7 @@ import java.util.concurrent.TimeoutException;
 public class DelayedPropsTest extends AbstractMutabilityTest {
     private int numEvents = 1000000;
     private int channelDecom = 10000; //10 sec - we don't want test to run too long,
-    // but this can't be too small or we wont't get all acks and the test will hang
+    // but this can't be too small or channels won't get decomissioned at the right time
 
     @Test
     public void changeToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
@@ -24,18 +24,25 @@ public class DelayedPropsTest extends AbstractMutabilityTest {
         setPropsOnEndpoint();
 
         sendSomeEvents(getNumEventsToSend()/2);
+        connection.flush();
         sleep(5000); // wait for all acks
 
-        setToken("different-token");
-        sleep((long)(channelDecom*2)); // wait for the changes to take effect
-
-        System.out.println("sending more events");
+        setToken("different-token-value");
+        // CHANNELS MUST GET REAPED BETWEEN HERE...
+        sleep((long)(channelDecom*1.5));
+        // ...AND HERE
         sendSomeEvents(getNumEventsToSend()/2);
-        // all acks MUST be returned at this point before channel decommission
-        // kicks in again, otherwise new channels will never start polling for
-        // acks since we aren't sending anymore events.
 
+        checkAsserts();
         close();
+        checkAsserts();
+    }
+
+    private void checkAsserts() {
+        AssertionError e;
+        if ((e = ValidatePropsDelayEndpoint.getAssertionFailures()) != null) {
+            throw e;
+        }
     }
 
     private void setPropsOnEndpoint() {
