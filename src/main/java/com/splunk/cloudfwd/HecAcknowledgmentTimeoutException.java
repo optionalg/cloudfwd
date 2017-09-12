@@ -19,9 +19,9 @@ package com.splunk.cloudfwd;
  *
  * @author ghendrey
  */
-public class HecAlreadyAcknowledgedException extends RuntimeException{
+public class HecAcknowledgmentTimeoutException extends RuntimeException{
 
-  public HecAlreadyAcknowledgedException(String message) {
+  public HecAcknowledgmentTimeoutException(String message) {
     super(message);
   }
   

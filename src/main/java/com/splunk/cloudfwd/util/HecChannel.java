@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.HecNonStickySessionException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
@@ -311,9 +312,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       int ackId = events.getAckId().intValue();
       if (ackId == 1) {
         if (seenAckIdOne) {
-          Exception e = new HecIllegalStateException(
-                  "ackId " + ackId + " has already been received on channel " + this,
-                  HecIllegalStateException.Type.STICKY_SESSION_VIOLATION);
+          Exception e = new HecNonStickySessionException(
+                  "ackId " + ackId + " has already been received on channel " + this);
           HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
                   events, e);
         } else {

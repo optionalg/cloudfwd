@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +67,7 @@ public class TimeoutChecker implements EventTracker {
         //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
         //to the user-supplied callback. Otherwise we just loop back here over and over!
         ((CallbackInterceptor) connection.getCallbacks()).failed(events,
-                new TimeoutException(
+                new HecAcknowledgmentTimeoutException(
                         "EventBatch with id " + events.getId() + " timed out."));
         iter.remove(); //remove it or else we will keep generating repeated timeout failures
       }

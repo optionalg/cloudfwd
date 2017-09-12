@@ -92,7 +92,7 @@ public class EventBatch implements IEventBatch {
               "Illegal attempt to add event with getTarget()=" + event.
               getTarget()
               + " to EventBatch containing Event with getTarget()=" + knownTarget,
-              HecIllegalStateException.Type.MIXED_BATCH);
+              HecIllegalStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
     }
     if (event.getType() != Event.Type.UNKNOWN) {
       knownTarget = event.getTarget();
@@ -226,7 +226,7 @@ public class EventBatch implements IEventBatch {
         throw new HecIllegalStateException(
                 "EventBatch contained  events wih getTarget()=" + knownTarget
                 + " which is incompatible with HEC endpoint  " + target,
-                HecIllegalStateException.Type.INVALID_EVENTS_FOR_ENDPOINT);
+                HecIllegalStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
       }
     } else {
       knownTarget = target; //this can help us infer the content type as application/json when destined for /events
