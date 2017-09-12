@@ -277,7 +277,7 @@ public final class HttpSender implements Endpoints {
       httpClient.execute(httpPost, httpCallback);
     } catch (Exception ex) {
       hecIoMgr.setAckPollInProgress(false);
-      LOG.error(ex.getMessage());
+      LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }

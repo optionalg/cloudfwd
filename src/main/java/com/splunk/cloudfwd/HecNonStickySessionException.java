@@ -19,11 +19,10 @@ package com.splunk.cloudfwd;
  *
  * @author ghendrey
  */
-public class HecDuplicateEventException extends RuntimeException {
+public class HecNonStickySessionException extends RuntimeException{
 
-  public HecDuplicateEventException(String msg) {
-    super(msg);
+  public HecNonStickySessionException(String message) {
+    super(message);
   }
-  
   
 }

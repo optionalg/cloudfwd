@@ -28,12 +28,16 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecIllegalStateException;
+import static com.splunk.cloudfwd.HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED;
+import static com.splunk.cloudfwd.HecIllegalStateException.Type.ALREADY_SENT;
+import static com.splunk.cloudfwd.HecIllegalStateException.Type.EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED;
+import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.ACK_POLL_OK;
 
 /**
  *
  * @author ghendrey
  */
-public class CheckpointManager implements LifecycleEventObserver{
+public class CheckpointManager implements LifecycleEventObserver {
 
   protected static final Logger LOG = LoggerFactory.getLogger(
           CheckpointManager.class.getName());
@@ -48,7 +52,7 @@ public class CheckpointManager implements LifecycleEventObserver{
 
   @Override
   public void update(LifecycleEvent e) {
-    if (e.getType() == LifecycleEvent.Type.ACK_POLL_OK) {
+    if (e.getType() == ACK_POLL_OK) {
       EventBatchResponse resp = (EventBatchResponse) e;
       Comparable id = resp.getEvents().getId();
       acknowledgeHighwaterAndBelow(resp.getEvents());
@@ -81,14 +85,12 @@ public class CheckpointManager implements LifecycleEventObserver{
       //In other words, highwater hasn't moved
       LOG.debug("Cant slide {}", events.getId());
       return;
-    } 
+    }
     cb.acknowledged(events); //hit the callback to tell the user code that the EventBatch succeeded 
     slideHighwaterUp(cb, events); //might call the highwater/checkpoint callback
     //musn't call cb.acknowledged until after we slideHighwater, because calling cb.acknowleged
     //will cause the CallbackInterceptor in Connection to cancel tracking of the EventBatch. Then
     //then slideHighwater won't work  
-
-
 
   }
 
@@ -99,8 +101,7 @@ public class CheckpointManager implements LifecycleEventObserver{
       String msg = "Attempt to recompute highwater mark on unacknowledged EventBatch: " + events.
               getId();
       LOG.error(msg);
-      throw new HecIllegalStateException(msg,
-              HecIllegalStateException.Type.EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED);
+      throw new HecIllegalStateException(msg,EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED);
     }
     EventBatch acknowledgedEvents = null;
     //walk forward in the order of EventBatches, from the tail
@@ -118,39 +119,42 @@ public class CheckpointManager implements LifecycleEventObserver{
 
     //todo: maybe schedule checkpoint to be async
     if (null != acknowledgedEvents) {
-      LOG.info("CHECKPOINT at {}", acknowledgedEvents.getId());      
+      LOG.info("CHECKPOINT at {}", acknowledgedEvents.getId());
       cb.checkpoint(acknowledgedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
       checkpoint = acknowledgedEvents.getId();
     }
   }
 
-  synchronized void registerInFlightEvents(EventBatch events) {
+  synchronized void registerInFlightEvents(EventBatch events, boolean forced) {
     //event id must not be below the highwater mark
     if (null != checkpoint && events.getId().compareTo(checkpoint) <= 0) {
       String msg = "EventBatch already acknowldeged. EventBatch ID is " + events.
               getId() + " but checkpoint at " + checkpoint;
       LOG.error(msg);
-      throw new HecIllegalStateException(msg, HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED);
+      throw new HecIllegalStateException(msg, ALREADY_ACKNOWLEDGED);
     }
-    EventBatch prev = this.orderedEvents.put(events.getId(), events);
-    //events.registerEventTracker(this);
-    LOG.
-            trace("Registering EventBatch {} on {}", events.getId(), this.
-                    hashCode());
-    /* can't error on duplicate - when we resend from dead channel it will be a duplicate
-    if (null != prev) {
-      String msg = "EventBatch checkpoint already tracked. EventBatch ID is " + events.
-              getId();
-      LOG.error(msg);
-      throw new HecDuplicateEventException(msg); 
+    EventBatch prev = this.orderedEvents.get(events.getId());
+    if(null != prev){
+      LOG.trace("Existing EventBatch for is {}", prev);
     }
-     */
+    //Forced happens when we DeadChannelDetector needs to resend events
+    //Retriable EventBatch is one that has not yet received EVENT_POST_OK
+    if (null != prev && !forced  && !prev.isRetriable()) { 
+
+      String msg = "Attempt to resend EventBatch that is not retriable because previous state was: {}  " + prev.getState();
+      LOG.warn(msg);
+      throw new HecIllegalStateException(msg, ALREADY_SENT);
+    }
+
+    this.orderedEvents.put(events.getId(), events);
+
   }
 
-  public synchronized void cancel(EventBatch events) {
+  public synchronized void cancel(Comparable id) {
     //since highwater may have removed the key, we cant make any inference about correcteness based on whether the 
     //key was or was not still in the orderedEvents.
-    this.orderedEvents.remove(events.getId());
+    LOG.info("released checkpoint for id {}", id);
+    this.orderedEvents.remove(id);
 //    
 //    LOG.trace("deregister event batch {} on {}", events.getId(), this.hashCode());
 //    if (null == prev) {
@@ -161,6 +165,5 @@ public class CheckpointManager implements LifecycleEventObserver{
 //    }
 
   }
-
 
 }

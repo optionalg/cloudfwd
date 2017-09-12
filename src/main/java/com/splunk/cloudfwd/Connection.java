@@ -25,6 +25,7 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import org.apache.http.client.entity.EntityBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,6 +144,18 @@ public class Connection implements Closeable {
     }
   }
 
+  /**
+   * The send method will send the Event immediately unless buffering is enabled. Buffering is 
+   * enabled via either the setEventBatchSize method, or the EVENT_BATCH_SIZE property key. The buffer
+   * is flushed either by closing the Connection, calling flush, or calling send until EVENT_BATCH_SIZE bytes
+   * have accumulated in the Connections internal EventBatch. When an EventBatch is flushed, the connection's 
+   * ConnectionCallbacks will be invoked, asynchronusly. The send method may block for up to BLOCKING_TIMEOUT_MS
+   * milliseconds before throwing  an HecConnecionTimeoutException. 
+   * @param event
+   * @return the number of bytes sent (will be zero unless buffer reaches EVENT_BATCH_SIZE and flushes)
+   * @throws HecConnectionTimeoutException
+   * @see com.splunk.cloudfwd.PropertyKeys
+   */
   public synchronized int send(Event event) throws HecConnectionTimeoutException {
     if (null == this.events) {
       this.events = new EventBatch();
@@ -155,6 +168,15 @@ public class Connection implements Closeable {
 
   }
 
+  /**
+   * sendBatch will immediately send the EventBatch, returning the number of bytes sent, or throws an
+   * HecConnectionTimeoutException if BLOCKING_TIMEOUT_MS have expired before the batch could be sent. 
+   * HecIllegalStateException can be thrown if the connection has already acknowledged an EventBatch with the same id,
+   * or if an EventBatch with the same id has already previously been sent.
+   * @param events
+   * @return
+   * @throws HecConnectionTimeoutException
+   */
   public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (closed) {
       throw new IllegalStateException("Attempt to send on closed channel.");
@@ -253,8 +275,7 @@ public class Connection implements Closeable {
   }
 
   /**
-   * @return the TimeoutChecker
-   * @exclude
+   * @return the TimeoutChecker   
    */
   public TimeoutChecker getTimeoutChecker() {
     return this.timeoutChecker;
@@ -262,5 +283,9 @@ public class Connection implements Closeable {
   
   public List<EventBatch> getUnackedEvents(HecChannel c){
     return timeoutChecker.getUnackedEvents(c);
+  } 
+  
+  public void release(Comparable id){
+    //lb.getCheckpointManager().cancel(events);
   }
 }

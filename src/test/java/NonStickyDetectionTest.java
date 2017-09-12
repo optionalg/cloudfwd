@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecNonStickySessionException;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import java.util.Properties;
 import org.junit.After;
@@ -55,7 +56,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
         //appropriately.
         Assert.
                 assertTrue(e.getMessage(),
-                        e instanceof HecIllegalStateException);
+                        e instanceof HecNonStickySessionException);
         LOG.trace("Got expected exception: " + e);
         latch.countDown(); //allow the test to finish
       }

@@ -16,6 +16,7 @@
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints;
@@ -31,10 +32,10 @@ import org.slf4j.LoggerFactory;
  *
  * @author ghendrey
  */
-public class SendTimeoutTest extends AbstractConnectionTest {
-  private static final Logger LOG = LoggerFactory.getLogger(SendTimeoutTest.class.getName());
+public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
+  private static final Logger LOG = LoggerFactory.getLogger(AcknowledgementTimeoutTest.class.getName());
 
-  public SendTimeoutTest() {
+  public AcknowledgementTimeoutTest() {
   }
 
   @Override
@@ -99,7 +100,7 @@ public class SendTimeoutTest extends AbstractConnectionTest {
    @Override
       public void failed(EventBatch events, Exception e) {
         //We expect a timeout
-        Assert.assertTrue(e.getMessage(), e instanceof TimeoutException);
+        Assert.assertTrue(e.getMessage(), e instanceof HecAcknowledgmentTimeoutException);
         LOG.trace("Got expected exception: " + e);
         if(e instanceof TimeoutException){
           gotTimeout = true;

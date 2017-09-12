@@ -16,6 +16,11 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.http.HecIOManager;
+import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
+import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_BATCH_BORN;
+import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
+import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_NOT_OK;
+import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_OK;
 import com.splunk.cloudfwd.util.EventTracker;
 import com.splunk.cloudfwd.util.HecChannel;
 import java.io.IOException;
@@ -24,23 +29,26 @@ import java.io.OutputStream;
 import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Use EventBatch if you want a high degree of control over
- * which events will be sent to HEC in a single HTTP post. Most of the time,
- * there is no need to use an EventBatch, as it is used inside the connection to
- * gather events together when buffering is enabled on the connection.
+ * Use EventBatch if you want a high degree of control over which events will be
+ * sent to HEC in a single HTTP post. Most of the time, there is no need to use
+ * an EventBatch, as it is used inside the connection to gather events together
+ * when buffering is enabled on the connection.
  *
  * @author ghendrey
  */
-public class EventBatch  implements IEventBatch {
+public class EventBatch implements IEventBatch {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(EventBatch.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(EventBatch.class.
+          getName());
   protected Comparable id; //will be set to the id of the last (most recent) Event added to the batch
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
   protected boolean flushed = false;
@@ -52,8 +60,9 @@ public class EventBatch  implements IEventBatch {
   protected List<Event> events = new ArrayList<>();
   protected Connection.HecEndpoint knownTarget;
   protected Event.Type knownType;
-  protected List<EventTracker> trackers = new ArrayList<>();
+  protected Set<EventTracker> trackers = new HashSet<>();
   private HecChannel hecChannel;
+  private LifecycleEvent.Type state = EVENT_BATCH_BORN; //initial lifecyle state
 
   public EventBatch() {
   }
@@ -83,7 +92,7 @@ public class EventBatch  implements IEventBatch {
               "Illegal attempt to add event with getTarget()=" + event.
               getTarget()
               + " to EventBatch containing Event with getTarget()=" + knownTarget,
-              HecIllegalStateException.Type.MIXED_BATCH);
+              HecIllegalStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
     }
     if (event.getType() != Event.Type.UNKNOWN) {
       knownTarget = event.getTarget();
@@ -122,8 +131,8 @@ public class EventBatch  implements IEventBatch {
       //numTries++;
     }
   }
-  
-  public void incrementNumTries(){
+
+  public void incrementNumTries() {
     numTries++;
   }
 
@@ -219,15 +228,14 @@ public class EventBatch  implements IEventBatch {
     }
     return e;
   }
-    
-  public void checkAndSetCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
 
+  public void checkAndSetCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
     if (knownTarget != null) {
       if (knownTarget != target) {
         throw new HecIllegalStateException(
-                "EventBatch contained  events wih getTarget()=" + knownTarget +
-                        " which is incompatible with HEC endpoint  " + target,
-                HecIllegalStateException.Type.INVALID_EVENTS_FOR_ENDPOINT);
+                "EventBatch contained  events wih getTarget()=" + knownTarget
+                + " which is incompatible with HEC endpoint  " + target,
+                HecIllegalStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
       }
     } else {
       knownTarget = target; //this can help us infer the content type as application/json when destined for /events
@@ -237,17 +245,23 @@ public class EventBatch  implements IEventBatch {
 
   @Override
   public String toString() {
-    return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged + ", numTries=" +numTries +'}';
-  }
-  
-  public void cancelEventTrackers(){
-    trackers.forEach(t->{
-      t.cancel(this);
-    });
+    return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged
+            + ", numTries=" + numTries + ", state=" + state + '}';
   }
 
-  public void registerEventTracker(EventTracker t){
-    trackers.add(t);
+  public void cancelEventTrackers() {
+    trackers.forEach(t -> {
+      t.cancel(this);
+    });
+    trackers.clear();
+  }
+
+  public void registerEventTracker(EventTracker t) {
+    if (!trackers.add(t)) {
+      throw new HecIllegalStateException(
+              "EventTracker already registered on EventBatch " + this,
+              HecIllegalStateException.Type.EVENT_TRACKER_ALREADY_REGISTERED);
+    }
   }
 
   /**
@@ -271,6 +285,22 @@ public class EventBatch  implements IEventBatch {
     this.hecChannel = hecChannel;
   }
 
+  public void setState(LifecycleEvent.Type eventType) {
+    state = eventType;
+  }
+
+  public boolean isRetriable() {
+    //for an EventBatch to be retriable it must be in a failed or not_ok state
+    return state == EVENT_POST_NOT_OK || state == EVENT_POST_FAILURE;
+  }
+
+  /**
+   * @return the state
+   */
+  public LifecycleEvent.Type getState() {
+    return state;
+  }
+
   private class HttpEventBatchEntity extends AbstractHttpEntity {
 
     @Override
@@ -285,18 +315,19 @@ public class EventBatch  implements IEventBatch {
 
     @Override
     public InputStream getContent() throws IOException, UnsupportedOperationException {
-      return new SequenceInputStream(new Enumeration<InputStream>(){
-        int idx=-1;
+      return new SequenceInputStream(new Enumeration<InputStream>() {
+        int idx = -1;
+
         @Override
         public boolean hasMoreElements() {
-          return !events.isEmpty() && (idx+1) < events.size();
+          return !events.isEmpty() && (idx + 1) < events.size();
         }
 
         @Override
         public InputStream nextElement() {
           return events.get(++idx).getInputStream();
         }
-      
+
       });
     }
 

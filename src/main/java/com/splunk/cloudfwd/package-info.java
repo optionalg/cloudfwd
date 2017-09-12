@@ -1,9 +1,7 @@
 /**
- * The Connection class is used to send Events to Splunk HEC with indexer acknowledgements. The Connection 
- * supports buffering. When buffering is used, Events sent through the Connection are buffered and sent as
- * an EventBatch.
+ * The Connection class is used to send Events to Splunk HEC with indexer acknowledgements. 
  *
  * @since 1.0
- *
+ * @see com.splunk.cloudfwd.Connection
  */
 package com.splunk.cloudfwd;
