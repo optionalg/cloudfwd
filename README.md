@@ -75,7 +75,17 @@ The following assumes familiarity with Splunk software.
 
 A ```true``` status generally indicates that the event(s) that correspond to that ackID were replicated at the desired replication factor. However, a ```true``` status may also result from event(s) that were dropped in the indexing process due to misconfiguration or another error.  For example, if the event formatting was not consistent with the format specified by ```INDEXED_EXTRACTIONS``` (in ```props.conf```), then the event would be dropped and an error logged in ```splunkd.log```. 
 
-If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```lb.properties```. 
+If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```lb.properties```.
+
+###Error exceptions
+
+| Exception                 | Description                                                                                                                                                                                                                                      |
+|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| HecAckTimeoutException    | This exception is thrown after waiting for PropertyKeys.ACK_TIMEOUT_MS milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                             |
+| HecDetentionException     | This exception is thrown your indexer cannot be reached. Either your indexer will not accept any events because of low disk space (automatic detention) or because an administrator put your indexer in manual detention.                        |
+| HecErrorResponseException | This exception is thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server side error code (1-14) as well as the message. See the API documentation for a detailed description of each error code. |
+| HecIllegalStateException  | This exception is thrown if a duplicate ackId is received on a given HEC channel. This can indicate failure of a sticky load balancer to provide stickiness.                                                                                     |
+| IllegalStateException     | This exception is thrown when Cloudfwd has an internal ack error. The success ackId does not match the recorded ackId.                                                                                                                           | 
 
 ## Built With
 
