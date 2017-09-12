@@ -16,27 +16,53 @@
 package com.splunk.cloudfwd;
 
 /**
- * These are non-successful responses from an HEC endpoint.
+ * <p>These are non-successful responses from an HEC endpoint.</p>
  *
  * The following error status codes and messages may
  * be returned from an HEC endpoint:
- *
- * Code:    Message:
- * 1        Token disabled
- * 2        Token is required
- * 3        Invalid authorization
- * 4        Invalid token
- * 5        No data
- * 6        Invalid data format
- * 7        Incorrect index
- * 8        Internal server error
- * 9        Server is busy
- * 10       Data channel is missing
- * 11       Invalid data channel
- * 12       Event field is required
- * 13       Event field cannot be blank
- * 14       ACK is disabled
- *
+ * <p>
+ *<table summary="ErrorCodes" border="1">
+ * <tr>
+ *  <th>Code</th>
+ *  <th>Message</th>
+ * </tr>
+ *  <td> 1 </td> <td> Token disabled</td>
+ * </tr>
+ *<tr>
+ * <td> 2 </td> <td> Token is required</td>
+ *</tr>
+ * <td> 3 </td> <td> Invalid authorization</td>
+ *</tr>
+ *<tr>
+ * <td> 4 </td> <td> Invalid token</td>
+ *</tr>
+ * <td> 5 </td> <td> No data</td>
+ *</tr>
+ *<tr>
+ * <td> 6 </td> <td> Invalid data format</td>
+ *</tr>
+ * <td> 7 </td> <td> Incorrect index</td>
+ *</tr>
+ *<tr>
+ * <td> 8 </td> <td> Internal server error</td>
+ *</tr>
+ * <td> 9 </td> <td> Server is busy</td>
+ *</tr>
+ *<tr>
+ * <td> 10 </td> <td> Data channel is missing</td>
+ *</tr>
+ * <td> 11 </td> <td> Invalid data channel</td>
+ *</tr>
+ *<tr>
+ * <td> 12 </td> <td> Event field is required</td>
+ *</tr>
+ * <td> 13 </td> <td> Event field cannot be blank</td>
+ *</tr>
+ *<tr>
+ * <td> 14 </td> <td> ACK is disabled</td>
+ *</tr>
+ *</table>
+ *</p>
  * @author eprokop
  */
 public class HecErrorResponseException extends Exception {
