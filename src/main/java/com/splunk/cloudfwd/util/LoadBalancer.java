@@ -22,7 +22,7 @@ import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.http.HttpSender;
-import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
+
 import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
@@ -48,7 +48,7 @@ public class LoadBalancer implements Closeable {
           getName());
   private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
-  private final Map<String, HecChannel> closedChannels = new ConcurrentHashMap<>();
+  private final Map<String, HecChannel> channelsStaleUrls = new ConcurrentHashMap<>();
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -96,7 +96,7 @@ public class LoadBalancer implements Closeable {
     for (HecChannel c : this.channels.values()) {
       c.forceClose();
     }
-    for (HecChannel c : this.closedChannels.values()) {
+    for (HecChannel c : this.channelsStaleUrls.values()) {
       c.forceClose();
     }
     //}
@@ -167,7 +167,7 @@ public class LoadBalancer implements Closeable {
   void removeChannel(String channelId, boolean force) {
     HecChannel c = this.channels.remove(channelId);
     if (c == null) {
-      c = this.closedChannels.remove(channelId);
+      c = this.channelsStaleUrls.remove(channelId);
     }
     /*
     if (c == null) {
@@ -279,7 +279,7 @@ public class LoadBalancer implements Closeable {
     for (HecChannel c : this.channels.values()) {
       c.close();
     }
-    closedChannels.putAll(channels);
+    channelsStaleUrls.putAll(channels);
     channels.clear();
     createChannels(discoverer.getAddrs());
   }

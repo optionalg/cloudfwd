@@ -279,7 +279,8 @@ public class PropertiesFileHelper {
 
   public String getToken() {
     if (defaultProps.getProperty(TOKEN) == null) {
-      throw new RuntimeException("HEC token missing.");
+      throw new RuntimeException("HEC token missing from Connection configuration. " +
+              "See PropertyKeys.TOKEN");
     }
     return defaultProps.getProperty(TOKEN);
   }

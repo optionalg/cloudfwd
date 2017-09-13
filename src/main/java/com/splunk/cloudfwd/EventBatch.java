@@ -106,11 +106,6 @@ public class EventBatch implements IEventBatch {
 
   @Override
   public Connection.HecEndpoint getTarget() {
-    // TODO: is this what we want to do here, or should we just return null (code will default to /raw)
-    if (knownTarget == null) {
-      throw new HecIllegalStateException("Event batch must have a target.",
-              HecIllegalStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
-    }
     return knownTarget;
   }
 

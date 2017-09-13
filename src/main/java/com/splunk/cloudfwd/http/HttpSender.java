@@ -238,6 +238,9 @@ public final class HttpSender implements Endpoints {
     // create http request
     String endpointUrl = ((IEventBatch)events).getTarget()
             == Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT ? eventUrl : rawUrl;
+    if (endpointUrl == null) {
+      throw new NullPointerException();
+    }
     final HttpPost httpPost = new HttpPost(endpointUrl);
     setHttpHeaders(httpPost);
     
