@@ -27,8 +27,9 @@ public class HecConnectionStateException extends IllegalStateException {
         ALREADY_ACKNOWLEDGED,
         WRONG_EVENT_FORMAT_FOR_ENDPOINT,
         ALREADY_FLUSHED,
-        FUTURE_CALLBACK_NOT_SET,
-        SEND_ON_CLOSED_CHANNEL
+        CONNECTION_CALLBACK_NOT_SET,
+        SEND_ON_CLOSED_CHANNEL,
+        CONFIGURATION_EXCEPTION
     }
     private final Type type;
 
@@ -45,7 +46,6 @@ public class HecConnectionStateException extends IllegalStateException {
     }
 
     public String toString() {
-        return ""; //error code
+        return super.toString() + type;
     }
-
 }

@@ -76,7 +76,7 @@ public class LoadBalancer implements Closeable {
         if (null == this.connection.getCallbacks()) {
             throw new HecConnectionStateException(
                     "Connection FutureCallback has not been set.",
-                    HecConnectionStateException.Type.FUTURE_CALLBACK_NOT_SET);
+                    HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
         }
         if (channels.isEmpty()) {
             createChannels(discoverer.getAddrs());
@@ -182,13 +182,11 @@ public class LoadBalancer implements Closeable {
     }
          */
         if (!force && !c.isEmpty()) {
-            LOG.error(
-                    "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-                    getUnackedCount() + " unacked payloads");
             LOG.debug(this.checkpointManager.toString());
-            throw new RuntimeException(
+            throw new HecIllegalStateException(
                     "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-                    getUnackedCount() + " unacked payloads");
+                    getUnackedCount() + " unacked payloads",
+                    HecIllegalStateException.Type.REMOVE_NON_EMPTY_CHANNEL);
 
         }
 

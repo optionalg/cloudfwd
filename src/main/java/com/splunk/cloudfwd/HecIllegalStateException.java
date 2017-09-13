@@ -31,7 +31,11 @@ public class HecIllegalStateException extends IllegalStateException {
     INCORRECT_EVENT_TYPE_OBJECT,
     CHANNEL_MISMATCH,
     CANNOT_GET_ENTITY,
-    ALREADY_POLLING_ACKS
+    ALREADY_POLLING_ACKS,
+    CORE_POOL_SIZE_ZERO,
+    NEGATIVE_UNACKED_COUNT,
+    REMOVE_NON_EMPTY_CHANNEL,
+    CANNOT_LOAD_PROPERTIES
   }
   private final Type type;
 
@@ -48,7 +52,7 @@ public class HecIllegalStateException extends IllegalStateException {
   }
 
   public String toString() {
-    return ""; //error code
+    return super.toString() + type;
   }
 
 }

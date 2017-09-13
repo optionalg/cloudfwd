@@ -19,6 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+
+import com.splunk.cloudfwd.HecIllegalStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,8 +46,9 @@ public class PollScheduler {
     this(name);
     this.corePoolSize = corePoolSize;
     if (corePoolSize == 0) {
-      throw new RuntimeException(
-              "Core pool size of zero is dissallowed to do bug https://bugs.openjdk.java.net/browse/JDK-8129861");
+      throw new HecIllegalStateException(
+              "Core pool size of zero is dissallowed to do bug https://bugs.openjdk.java.net/browse/JDK-8129861",
+              HecIllegalStateException.Type.CORE_POOL_SIZE_ZERO);
     }
   }
 
