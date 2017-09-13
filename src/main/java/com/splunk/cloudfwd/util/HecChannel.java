@@ -135,8 +135,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
+      throw new HecIllegalStateException(msg, HecIllegalStateException.Type.CHANNEL_MISMATCH);
     }
     events.setHecChannel(this);
     sender.sendBatch(events);
@@ -317,7 +316,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     boolean seenAckIdOne;
 
-    synchronized void recordAckId(EventBatch events) throws IllegalStateException {
+    synchronized void recordAckId(EventBatch events) {
       int ackId = events.getAckId().intValue();
       if (ackId == 1) {
         if (seenAckIdOne) {
