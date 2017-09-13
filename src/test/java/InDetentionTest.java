@@ -72,7 +72,7 @@ public class InDetentionTest extends AbstractConnectionTest {
             super.sendEvents();
         } catch (HecConnectionTimeoutException e) {
             System.out.println(
-                "Got expected timeout exception because all indexers are in detention"
+                "Got expected timeout exception because all indexers are in detention "
                 + e.getMessage());
             // allow test to pass
             super.callbacks.latch.countDown();
