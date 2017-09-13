@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.HecNonStickySessionException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.http.ChannelMetrics;
@@ -36,6 +37,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.splunk.cloudfwd.http.HttpPostable;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 
 /**
  *
@@ -46,6 +52,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   protected static final Logger LOG = LoggerFactory.getLogger(HecChannel.class.
           getName());
 
+  private ExecutorService ackPollExecutor;
   private final HttpSender sender;
   private final int full;
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
@@ -85,8 +92,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //guess about it). What happens is HecIOManager will want to call channelMetrics.ackPollOK, but channelMetrics
   //is also trying to acquire the lock on this object. So deadlock.
   synchronized void pollAcks() {
-    new Thread(sender.getHecIOManager()::pollAcks // poll for acks right now
-            , "On-demand Ack Poller").start();
+    ackPollExecutor.execute(sender.getHecIOManager()::pollAcks);
   }
 
   public synchronized void start() {
@@ -94,12 +100,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return;
     }
     //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
-    ThreadFactory f = new ThreadFactory() {
-      @Override
-      public Thread newThread(Runnable r) {
-        return new Thread(r, "Channel Reaper");
-      }
-    };
+    ThreadFactory f = (Runnable r) -> new Thread(r, "Channel Reaper");
 
     long decomMs = loadBalancer.getPropertiesFileHelper().getChannelDecomMS();
     if (decomMs > 0) {
@@ -114,6 +115,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       deadChannelDetector = new DeadChannelDetector(unresponsiveDecomMS);
       deadChannelDetector.start();
     }
+    f = (Runnable r) -> new Thread(r, "On-demand Ack Poller");
+    this.ackPollExecutor = Executors.newSingleThreadExecutor(f);
 
     started = true;
   }
@@ -212,7 +215,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   protected synchronized void quiesce() {
     LOG.debug("Quiescing channel: {}", this);
     quiesced = true;
-    pollAcks();//so we don't have to wait for the next ack polling interval
+
+    if (isEmpty()) {
+      close();
+    } else {
+      pollAcks(); //so we don't have to wait for the next ack polling interval
+    }
   }
 
   synchronized void forceClose() { //wraps internalForceClose in a log messages
@@ -253,6 +261,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     if (null != deadChannelDetector) {
       deadChannelDetector.close();
+    }
+    if(null != deadChannelDetector){
+      ackPollExecutor.shutdownNow();
     }
   }
 
@@ -310,9 +321,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       int ackId = events.getAckId().intValue();
       if (ackId == 1) {
         if (seenAckIdOne) {
-          Exception e = new HecIllegalStateException(
-                  "ackId " + ackId + " has already been received on channel " + this,
-                  HecIllegalStateException.Type.STICKY_SESSION_VIOLATION);
+          Exception e = new HecNonStickySessionException(
+                  "ackId " + ackId + " has already been received on channel " + this);
           HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
                   events, e);
         } else {
@@ -408,7 +418,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                     }
                     break;
                   } catch (HecConnectionTimeoutException ex) {
-                    //noop
+                     LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
                   }
                 }
               });

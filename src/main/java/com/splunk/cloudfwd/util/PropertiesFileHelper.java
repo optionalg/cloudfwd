@@ -25,6 +25,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Comparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
@@ -84,18 +85,7 @@ public class PropertiesFileHelper {
   }
 
   public List<URL> getUrls() {
-    List<URL> urls = new ArrayList<>();
-    String[] splits = defaultProps.getProperty(COLLECTOR_URI).split(",");
-    for (String urlString : splits) {
-      try {
-        URL url = new URL(urlString.trim());
-        urls.add(url);
-      } catch (MalformedURLException ex) {
-        LOG.error(ex.getMessage(), ex);
-        throw new RuntimeException(ex);
-      }
-    }
-    return urls;
+    return urlsStringToList(defaultProps.getProperty(COLLECTOR_URI));
   }
   
 
@@ -175,7 +165,7 @@ public class PropertiesFileHelper {
     if(decomMs <= 1){
       return -1;
     }
-    if (decomMs < MIN_DECOM_MS) {
+    if (decomMs < MIN_DECOM_MS && !isMockHttp()) {
       LOG.warn("Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
       decomMs = MIN_DECOM_MS;
     }
@@ -185,7 +175,9 @@ public class PropertiesFileHelper {
   public long getAckTimeoutMS() {
     long timeout = Long.parseLong(defaultProps.getProperty(
             ACK_TIMEOUT_MS, DEFAULT_ACK_TIMEOUT_MS).trim());
-    if (timeout < MIN_ACK_TIMEOUT_MS) {
+    if(timeout <=0 ){
+      timeout = Long.MAX_VALUE;
+    }else if (timeout < MIN_ACK_TIMEOUT_MS) {
       LOG.warn(ACK_TIMEOUT_MS+ " was set to a potentially too-low value: " + timeout);
     }
     return timeout;
@@ -256,6 +248,7 @@ public class PropertiesFileHelper {
     System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
   }
 
+    //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
     Properties props = new Properties(defaultProps);
     props.put(COLLECTOR_URI, url.toString());
@@ -284,6 +277,7 @@ public class PropertiesFileHelper {
     }
   }
 
+  //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender() {
     return createSender(this.defaultProps);
   }
@@ -296,6 +290,35 @@ public class PropertiesFileHelper {
       max = Integer.MAX_VALUE;
     }
     return max;
+  }
+  
+  public boolean isCheckpointEnabled(){
+     return Boolean.parseBoolean(this.defaultProps.getProperty(ENABLE_CHECKPOINTS,
+            DEFAULT_ENABLE_CHECKPOINTS).trim());
+  }
+
+  public List<URL> urlsStringToList(String urlsListAsString) {
+    List<URL> urlList = new ArrayList<>();
+    String[] splits = urlsListAsString.split(",");
+    for (String urlString : splits) {
+      try {
+        URL url = new URL(urlString.trim());
+        urlList.add(url);
+      } catch (MalformedURLException ex) {
+        LOG.error(ex.getMessage(), ex);
+        throw new RuntimeException(ex);
+      }
+    }
+    urlList.sort(Comparator.comparing(URL::toString));
+    return urlList;
+  }
+
+  public String getToken() {
+    if (defaultProps.getProperty(TOKEN) == null) {
+      throw new RuntimeException("HEC token missing from Connection configuration. " +
+              "See PropertyKeys.TOKEN");
+    }
+    return defaultProps.getProperty(TOKEN);
   }
 
 

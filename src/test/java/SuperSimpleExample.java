@@ -78,7 +78,7 @@ public class SuperSimpleExample {
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
     try (Connection c = new Connection(callbacks, customization);) {
       c.setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
-      c.setEventAcknowledgementTimeoutMS(10000); //10 sec
+      c.setAckTimeoutMS(10000); //10 sec
       for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object
         //generate a 'raw' text event looking like "2017-08-10 11:21:04 foo bar baz"
         String eventData = dateFormat.format(new Date()) + " foo bar baz";
@@ -96,7 +96,7 @@ public class SuperSimpleExample {
     //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
     try (Connection c = new Connection(callbacks, customization);) {
       c.setEventBatchSize(1024 * 16); //16kB send buffering
-      c.setEventAcknowledgementTimeoutMS(10000); //10 sec
+      c.setAckTimeoutMS(10000); //10 sec
       c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       for (int seqno = 1; seqno <= numEvents; seqno++) {
         EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),

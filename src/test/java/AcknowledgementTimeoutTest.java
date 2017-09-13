@@ -16,11 +16,8 @@
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
-<<<<<<< HEAD:src/test/java/SendTimeoutTest.java
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-=======
 import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
->>>>>>> master:src/test/java/AcknowledgementTimeoutTest.java
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints;
 import java.util.Properties;

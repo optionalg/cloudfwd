@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd.http.lifecycle;
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.EventBatch;
 
 /**
  *
@@ -29,6 +28,7 @@ public class EventBatchRequest extends LifecycleEvent implements EventBatchLifec
   public EventBatchRequest(Type type, EventBatch events) {
     super(type);
     this.eventBatch = events;
+    events.setState(type);
   }
 
   /**

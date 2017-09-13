@@ -35,7 +35,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   private Integer expectedAckCount;
   protected final CountDownLatch latch;
-  private final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
+  protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
   private Comparable lastId;
   protected String failMsg;

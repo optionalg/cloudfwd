@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.http;
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecErrorResponseException;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
@@ -101,8 +102,6 @@ public class HecIOManager implements Closeable {
   }
 
   public void postEvents(EventBatch events) {
-    //check to make sure the endpoint can absorb all the event formats in the batch
-    events.checkCompatibility(sender.getConnection().getHecEndpointType());
     this.ackTracker.preEventPost(events);
     sender.getChannelMetrics().update(new EventBatchRequest(
             LifecycleEvent.Type.PRE_EVENT_POST, events));
@@ -147,6 +146,8 @@ public class HecIOManager implements Closeable {
     };
 
     sender.postEvents(events, cb);
+    sender.getChannelMetrics().update(new EventBatchRequest(
+            LifecycleEvent.Type.EVENT_POSTED, events));
   }
 
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
@@ -328,7 +329,7 @@ public class HecIOManager implements Closeable {
   /**
    * @return the sender
    */
-  HttpSender getSender() {
+  public HttpSender getSender() {
     return sender;
   }
 

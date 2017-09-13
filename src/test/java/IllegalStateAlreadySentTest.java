@@ -40,6 +40,8 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
             "com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints");
     props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
     props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
+    props.put(PropertyKeys.ACK_TIMEOUT_MS, "-1");     
+    props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true"); //checkpoints are required for this to work      
     return props;
   }
   
@@ -84,7 +86,7 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
         }
       }
     }
-    Assert.assertEquals(
+    Assert.assertEquals( //all the messages except the first should have failed
             "Did not receive correct number of HecIllegalStateExceptions",
             expected - 1, exceptionCount);
     connection.close(); //will flush 

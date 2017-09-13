@@ -23,11 +23,12 @@ public abstract class LifecycleEvent {
 
   public enum Type {
 	// States tied to an EventBatch object
-// States tied to an EventBatch object
+    EVENT_BATCH_BORN,
     PRE_EVENT_POST,
-    EVENT_POST_OK,
+    EVENT_POSTED,
     EVENT_POST_NOT_OK,
     EVENT_POST_FAILURE,
+    EVENT_POST_OK,
     PRE_ACK_POLL,
     ACK_POLL_OK,
     ACK_POLL_NOT_OK,

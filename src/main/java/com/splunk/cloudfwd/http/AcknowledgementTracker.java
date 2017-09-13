@@ -46,7 +46,7 @@ public class AcknowledgementTracker implements EventTracker {
 
   private final static ObjectMapper jsonMapper = new ObjectMapper();
   private final Map<Long, EventBatch> polledAcks = new ConcurrentHashMap<>(); //key ackID
-  private final Map<Comparable, EventBatch> eventBatches = new ConcurrentHashMap<>();
+  //private final Map<Comparable, EventBatch> eventBatches = new ConcurrentHashMap<>();
   private final HttpSender sender;
 
   AcknowledgementTracker(HttpSender sender) {
@@ -55,7 +55,7 @@ public class AcknowledgementTracker implements EventTracker {
 
   @Override
   public void cancel(EventBatch e) {
-    if (null != eventBatches.remove(e.getId())) {
+    //if (null != eventBatches.remove(e.getId())) {
       //hunt for it in the polledAcks
       for (Iterator<Map.Entry<Long, EventBatch>> it = polledAcks.entrySet().
               iterator(); it.hasNext();) {
@@ -64,7 +64,7 @@ public class AcknowledgementTracker implements EventTracker {
           it.remove();
         }
       }
-    }
+    //}
   }
 
   /**
@@ -81,10 +81,13 @@ public class AcknowledgementTracker implements EventTracker {
     return this.sender.getChannel().isEmpty();
   }
 
-  public void preEventPost(EventBatch batch) {
-    if (null != this.eventBatches.put(batch.getId(), batch)) {
-      throwIllegalStateException(batch);
-    }     
+  public void preEventPost(EventBatch events) {
+    events.registerEventTracker(this);
+    /*
+    if (null != this.eventBatches.put(events.getId(), events)) {
+      throwIllegalStateException(events);
+    }  
+    */
   }
 
   private void throwIllegalStateException(EventBatch batch) {
@@ -97,7 +100,6 @@ public class AcknowledgementTracker implements EventTracker {
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatch events) {
     Long ackId = epr.getAckId();
-    events.registerEventTracker(this);
     polledAcks.put(ackId, events);
   }
 
@@ -133,12 +135,9 @@ public class AcknowledgementTracker implements EventTracker {
         this.sender.getChannelMetrics().update(new EventBatchResponse(
                 LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
                 events,sender.getBaseUrl()));
-        eventBatches.remove(events.getId());
+        //eventBatches.remove(events.getId());
         polledAcks.remove(ackId);
       }
-      //System.out.println("polledAcks was " + polledAcks.keySet());
-      //polledAcks.keySet().removeAll(succeeded);
-      //System.out.println("polledAcks now " + polledAcks.keySet());
     } catch (Exception e) {
       LOG.error("caught exception in handleAckPollResponse: " + e.getMessage(),
               e);

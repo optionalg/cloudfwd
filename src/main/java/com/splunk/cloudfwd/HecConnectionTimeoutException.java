@@ -19,7 +19,7 @@ package com.splunk.cloudfwd;
  *
  * @author ghendrey
  */
-public class HecConnectionTimeoutException extends Exception{
+public class HecConnectionTimeoutException extends RuntimeException{
 
   public HecConnectionTimeoutException(String message) {
     super(message);

@@ -36,6 +36,7 @@ public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
     props.put(MOCK_HTTP_KEY, "true");
     props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
     props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
+    props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true"); //checkpoints are required for this to work      
     return props;
   }
     protected HecIllegalStateException.Type getExceptionType(){

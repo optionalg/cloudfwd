@@ -23,9 +23,11 @@ import com.splunk.cloudfwd.util.LoadBalancer;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
+import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,8 +89,20 @@ public class Connection implements Closeable {
 
   }
 
-  public synchronized void setEventAcknowledgementTimeoutMS(long ms) {
-    this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
+  /**
+   * Set event acknowledgement timeout. See PropertyKeys.ACK_TIMEOUT_MS
+   * for more information.
+   * @param ms
+   */
+  public synchronized void setAckTimeoutMS(long ms) {
+    if (ms != propertiesFileHelper.getAckTimeoutMS()) {
+      this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
+      this.timeoutChecker.setTimeout(ms);
+    }
+  }
+
+  public long getAckTimeoutMS() {
+    return propertiesFileHelper.getAckTimeoutMS();
   }
 
   public synchronized void setBlockingTimeoutMS(long ms) {
@@ -98,11 +112,7 @@ public class Connection implements Closeable {
 
   @Override
   public void close() {
-    try {
       flush();
-    } catch (HecConnectionTimeoutException ex) {
-      throw new RuntimeException(ex.getMessage(), ex);
-    }
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
@@ -138,6 +148,18 @@ public class Connection implements Closeable {
     }
   }
 
+  /**
+   * The send method will send the Event immediately unless buffering is enabled. Buffering is 
+   * enabled via either the setEventBatchSize method, or the EVENT_BATCH_SIZE property key. The buffer
+   * is flushed either by closing the Connection, calling flush, or calling send until EVENT_BATCH_SIZE bytes
+   * have accumulated in the Connections internal EventBatch. When an EventBatch is flushed, the connection's 
+   * ConnectionCallbacks will be invoked, asynchronusly. The send method may block for up to BLOCKING_TIMEOUT_MS
+   * milliseconds before throwing  an HecConnecionTimeoutException. 
+   * @param event
+   * @return the number of bytes sent (will be zero unless buffer reaches EVENT_BATCH_SIZE and flushes)
+   * @throws HecConnectionTimeoutException
+   * @see com.splunk.cloudfwd.PropertyKeys
+   */
   public synchronized int send(Event event) throws HecConnectionTimeoutException {
     if (null == this.events) {
       this.events = new EventBatch();
@@ -150,6 +172,15 @@ public class Connection implements Closeable {
 
   }
 
+  /**
+   * sendBatch will immediately send the EventBatch, returning the number of bytes sent, or throws an
+   * HecConnectionTimeoutException if BLOCKING_TIMEOUT_MS have expired before the batch could be sent. 
+   * HecIllegalStateException can be thrown if the connection has already acknowledged an EventBatch with the same id,
+   * or if an EventBatch with the same id has already previously been sent.
+   * @param events
+   * @return
+   * @throws HecConnectionTimeoutException
+   */
   public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (closed) {
       throw new IllegalStateException("Attempt to send on closed channel.");
@@ -157,7 +188,9 @@ public class Connection implements Closeable {
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
     //send the failed batch again
-    this.events = null; //batch is in flight, null it out. 
+    this.events = null; //batch is in flight, null it out.
+    //check to make sure the endpoint can absorb all the event formats in the batch
+    events.checkAndSetCompatibility(getHecEndpointType());
     timeoutChecker.start();
     timeoutChecker.add(events);
     LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
@@ -220,9 +253,43 @@ public class Connection implements Closeable {
     return propertiesFileHelper.getBlockingTimeoutMS();
   }
 
+  public String getToken() {
+    return propertiesFileHelper.getToken();
+  }
+
   /**
-   * @return the TimeoutChecker
-   * @exclude
+   * Set Http Event Collector token to use.
+   * May take up to PropertyKeys.CHANNEL_DECOM_MS milliseconds
+   * to go into effect.
+   * @param token
+   */
+  public void setToken(String token) {
+    if (!propertiesFileHelper.getToken().equals(token)) {
+      propertiesFileHelper.putProperty(PropertyKeys.TOKEN, token);
+      // TODO: gut and replace channels
+    }
+  }
+
+  /**
+   * Set urls to send to. See PropertyKeys.COLLECTOR_URI
+   * for more information.
+   * @param urls comma-separated list of urls
+   */
+  public void setUrls(String urls) {
+    if (!propertiesFileHelper.urlsStringToList(urls).equals(
+            propertiesFileHelper.getUrls())) {
+      // a single url or a list of comma separated urls
+      propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
+      lb.reloadUrls();
+    }
+  }
+
+  public List<URL> getUrls() {
+    return propertiesFileHelper.getUrls();
+  }
+
+  /**
+   * @return the TimeoutChecker   
    */
   public TimeoutChecker getTimeoutChecker() {
     return this.timeoutChecker;
@@ -230,6 +297,9 @@ public class Connection implements Closeable {
   
   public List<EventBatch> getUnackedEvents(HecChannel c){
     return timeoutChecker.getUnackedEvents(c);
-  }  
-
+  } 
+  
+  public void release(Comparable id){
+    //lb.getCheckpointManager().cancel(events);
+  }
 }
