@@ -42,7 +42,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
   @Before
   public void setUp() {
     super.setUp();
-    super.connection.setEventAcknowledgementTimeoutMS(100);
+    super.connection.setAckTimeoutMS(100);
   }
 
   @Test

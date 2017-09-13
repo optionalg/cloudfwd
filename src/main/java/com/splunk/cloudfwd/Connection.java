@@ -22,6 +22,7 @@ import com.splunk.cloudfwd.util.LoadBalancer;
 import com.splunk.cloudfwd.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.util.TimeoutChecker;
 import java.io.Closeable;
+import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -92,9 +93,13 @@ public class Connection implements Closeable {
    * for more information.
    * @param ms
    */
-  public synchronized void setEventAcknowledgementTimeoutMS(long ms) {
+  public synchronized void setAckTimeoutMS(long ms) {
     this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
     this.timeoutChecker.setTimeout(ms);
+  }
+
+  public long getAckTimeoutMS() {
+    return propertiesFileHelper.getAckTimeoutMS();
   }
 
   public synchronized void setBlockingTimeoutMS(long ms) {
@@ -272,6 +277,10 @@ public class Connection implements Closeable {
     // a single url or a list of comma separated urls
     propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
     lb.reloadUrls();
+  }
+
+  public List<URL> getUrls() {
+    return propertiesFileHelper.getUrls();
   }
 
   /**

@@ -103,7 +103,7 @@ public class LivePropsTest extends AbstractMutabilityTest {
     }
 
     private void setAckTimeout(long ms) {
-        connection.setEventAcknowledgementTimeoutMS(ms);
+        connection.setAckTimeoutMS(ms);
         ValidatePropsLiveEndpoint.ACK_TIMEOUT_MS = connection.getPropertiesFileHelper().getAckTimeoutMS();
     }
 }
