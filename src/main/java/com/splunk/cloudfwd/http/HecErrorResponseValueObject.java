@@ -1,7 +1,5 @@
 package com.splunk.cloudfwd.http;
 
-import java.util.Map;
-
 /*
  * Copyright 2017 Splunk, Inc..
  *

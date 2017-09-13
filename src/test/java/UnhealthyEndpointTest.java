@@ -56,7 +56,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     props.put(MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,"1000");
     props.put(ACK_POLL_MS, "250");
     props.put(HEALTH_POLL_MS, "250");
-    props.put(UNRESPONSIVE_MS, "-1"); //disable dead channel removel
+    props.put(UNRESPONSIVE_MS, "-1"); //disable dead channel removal
 
     return props;
   }
@@ -71,7 +71,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     int expected = getNumEventsToSend();
     TriggerableUnhealthyEndpoints.healthy = true;
     try {
-      connection.send(getTimestampedRawEvent(1)); //shoud acknowledge
+      connection.send(getTimestampedRawEvent(1)); //should acknowledge
     } catch (HecConnectionTimeoutException ex) {
       LOG.error(ex.getMessage(), ex);
       Assert.fail();
