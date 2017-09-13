@@ -18,6 +18,7 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints;
 import java.util.Properties;
@@ -42,15 +43,12 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
   @Before
   public void setUp() {
     super.setUp();
-    super.connection.setAckTimeoutMS(100);
   }
 
   @Test
-  public void testTimeout() throws InterruptedException, HecConnectionTimeoutException {
-    
+  public void testTimeout() throws InterruptedException, HecConnectionTimeoutException {   
       super.eventType = Event.Type.TEXT;
-      super.sendEvents();
-
+      sendEvents();
   }
 
   @Override
@@ -60,17 +58,15 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     //simulate a slow endpoint
     props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints");
+
     if(SlowEndpoints.sleep > 10000){
       throw new RuntimeException("Let's not get carried away here");
     }
-    //timeout must be less than the slow endpoint sleep
-    long timeout = SlowEndpoints.sleep/2;
-    if(timeout < 1000){
-      throw  new RuntimeException("Test timeout too low to be reliable");
-    }
-    props.put(ACK_TIMEOUT_MS, timeout);
+
+    props.put(ACK_TIMEOUT_MS, Long.toString(1000));
     props.put(UNRESPONSIVE_MS,
             "-1");//disable dead channel detection
+     props.put(PropertyKeys.EVENT_BATCH_SIZE, 0);
 
     return props;
   }
@@ -102,7 +98,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         //We expect a timeout
         Assert.assertTrue(e.getMessage(), e instanceof HecAcknowledgmentTimeoutException);
         LOG.trace("Got expected exception: " + e);
-        if(e instanceof TimeoutException){
+        if(e instanceof HecAcknowledgmentTimeoutException){
           gotTimeout = true;
         }
         latch.countDown(); //allow the test to finish

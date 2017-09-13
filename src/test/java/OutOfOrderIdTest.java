@@ -2,10 +2,7 @@
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.PropertyKeys;
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import java.util.Properties;
-import java.util.Random;
 import org.junit.Assert;
 import org.junit.Test;
 

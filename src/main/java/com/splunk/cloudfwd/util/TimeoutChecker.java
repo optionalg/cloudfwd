@@ -66,7 +66,7 @@ public class TimeoutChecker implements EventTracker {
       if (events.isTimedOut(getTimeoutMs())) {
         //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
         //to the user-supplied callback. Otherwise we just loop back here over and over!
-        ((CallbackInterceptor) connection.getCallbacks()).failed(events,
+        ((CallbackInterceptor) connection.getCallbacks()).unwrap().failed(events,
                 new HecAcknowledgmentTimeoutException(
                         "EventBatch with id " + events.getId() + " timed out."));
         iter.remove(); //remove it or else we will keep generating repeated timeout failures
