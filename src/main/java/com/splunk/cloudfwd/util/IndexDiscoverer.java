@@ -43,13 +43,12 @@ class IndexDiscoverer extends Observable {
   //Object be used as the key. This is because URL implements equals based on comparing the set of
   //InetSocketAddresses resolved. This means that equality for URL changes based on DNS host resolution
   //and would be changing over time
-  private final Map<String, List<InetSocketAddress>> mappings;
+  private Map<String, List<InetSocketAddress>> mappings;
   private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
 
   IndexDiscoverer(PropertiesFileHelper f) {
     this.propertiesFileHelper = f;
-    this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
-        f.isForcedUrlMapToSingleAddr());
+
   }
 
   public List<InetSocketAddress> getInetSockAddrs(){
@@ -84,6 +83,8 @@ class IndexDiscoverer extends Observable {
   }
 
   synchronized List<InetSocketAddress> getAddrs(){
+    this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
+            propertiesFileHelper.isForcedUrlMapToSingleAddr());
     List<InetSocketAddress> addrs = new ArrayList<>();
     for (String url : this.mappings.keySet()) {
       addrs.addAll(mappings.get(url));
@@ -205,8 +206,6 @@ class IndexDiscoverer extends Observable {
     public String toString() {
       return "NETWORK: Change{" + "change=" + change + ", inetSocketAddress=" + inetSocketAddress + '}';
     }
-
-
 
     /**
      * @return the change

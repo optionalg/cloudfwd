@@ -19,6 +19,7 @@ package com.splunk.cloudfwd.http;
  */
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.IEventBatch;
 import com.splunk.cloudfwd.util.HecChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -235,8 +236,11 @@ public final class HttpSender implements Endpoints {
     final String encoding = "utf-8";
 
     // create http request
-    String endpointUrl = getConnection().getHecEndpointType()
+    String endpointUrl = ((IEventBatch)events).getTarget()
             == Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT ? eventUrl : rawUrl;
+    if (endpointUrl == null) {
+      throw new NullPointerException();
+    }
     final HttpPost httpPost = new HttpPost(endpointUrl);
     setHttpHeaders(httpPost);
     
@@ -346,6 +350,10 @@ public final class HttpSender implements Endpoints {
   
   public void setChannel(HecChannel c) {
     this.channel = c;
+  }
+
+  public String getToken() {
+    return token;
   }
 
   /**

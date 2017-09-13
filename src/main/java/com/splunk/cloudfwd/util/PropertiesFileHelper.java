@@ -156,7 +156,7 @@ public class PropertiesFileHelper {
     if(decomMs <= 1){
       return -1;
     }
-    if (decomMs < MIN_DECOM_MS) {
+    if (decomMs < MIN_DECOM_MS && !isMockHttp()) {
       LOG.warn("Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
       decomMs = MIN_DECOM_MS;
     }
@@ -275,6 +275,14 @@ public class PropertiesFileHelper {
       max = Integer.MAX_VALUE;
     }
     return max;
+  }
+
+  public String getToken() {
+    if (defaultProps.getProperty(TOKEN) == null) {
+      throw new RuntimeException("HEC token missing from Connection configuration. " +
+              "See PropertyKeys.TOKEN");
+    }
+    return defaultProps.getProperty(TOKEN);
   }
 
 

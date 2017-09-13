@@ -22,7 +22,7 @@ import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.http.HttpSender;
-import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
+
 import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.apache.http.client.entity.GzipCompressingEntity;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +48,7 @@ public class LoadBalancer implements Closeable {
           getName());
   private int channelsPerDestination;
   private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
+  private final Map<String, HecChannel> channelsStaleUrls = new ConcurrentHashMap<>();
   private final CheckpointManager checkpointManager; //consolidate metrics across all channels
   private final IndexDiscoverer discoverer;
   private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -95,6 +96,9 @@ public class LoadBalancer implements Closeable {
     for (HecChannel c : this.channels.values()) {
       c.forceClose();
     }
+    for (HecChannel c : this.channelsStaleUrls.values()) {
+      c.forceClose();
+    }
     //}
     this.closed = true;
   }
@@ -118,8 +122,7 @@ public class LoadBalancer implements Closeable {
     addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
   }
 
-  //this method must not be synchronized it will cause deadlock
-  private void addChannel(InetSocketAddress s, boolean force) {
+  private synchronized void addChannel(InetSocketAddress s, boolean force) {
     //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
     //we must add a new one, before we cancelEventTrackers the old one. If we did not have the force
     //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
@@ -163,6 +166,9 @@ public class LoadBalancer implements Closeable {
   //also must not be synchronized
   void removeChannel(String channelId, boolean force) {
     HecChannel c = this.channels.remove(channelId);
+    if (c == null) {
+      c = this.channelsStaleUrls.remove(channelId);
+    }
     /*
     if (c == null) {
       LOG.severe("attempt to cancelEventTrackers unknown channel: " + channelId);
@@ -267,6 +273,15 @@ public class LoadBalancer implements Closeable {
     if (null != latch) {
       latch.countDown();
     }
+  }
+
+  public synchronized void reloadUrls() {
+    for (HecChannel c : this.channels.values()) {
+      c.close();
+    }
+    channelsStaleUrls.putAll(channels);
+    channels.clear();
+    createChannels(discoverer.getAddrs());
   }
 
   /**
