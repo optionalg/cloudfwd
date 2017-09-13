@@ -28,7 +28,7 @@ public class HecConnectionStateException extends IllegalStateException {
         WRONG_EVENT_FORMAT_FOR_ENDPOINT,
         ALREADY_FLUSHED,
         CONNECTION_CALLBACK_NOT_SET,
-        SEND_ON_CLOSED_CHANNEL,
+        SEND_ON_CLOSED_CONNECTION,
         CONFIGURATION_EXCEPTION
     }
     private final Type type;

@@ -182,7 +182,7 @@ public class Connection implements Closeable {
    */
   public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (closed) {
-      throw new HecConnectionStateException("Attempt to sendBatch on closed channel.", HecConnectionStateException.Type.SEND_ON_CLOSED_CHANNEL);
+      throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
     //must null the events before lb.sendBatch. If not, event can continue to be added to the
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
