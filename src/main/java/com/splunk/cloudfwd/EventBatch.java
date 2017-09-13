@@ -201,8 +201,8 @@ public class EventBatch implements IEventBatch {
   public HttpEntity getEntity() {
     AbstractHttpEntity e = new HttpEventBatchEntity();
     if (null == knownTarget) {
-      throw new IllegalStateException(
-              "getEntity cannot be called until post() has been called.");
+      throw new HecIllegalStateException(
+              "getEntity cannot be called until post() has been called.", HecIllegalStateException.Type.CANNOT_GET_ENTITY);
     }
     if (knownTarget == Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
       e.setContentType(

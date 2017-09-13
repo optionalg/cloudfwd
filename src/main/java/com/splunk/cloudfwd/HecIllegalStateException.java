@@ -29,7 +29,9 @@ public class HecIllegalStateException extends IllegalStateException {
     EVENT_TRACKER_ALREADY_REGISTERED,
     NULL_CHANNEL,
     INCORRECT_EVENT_TYPE_OBJECT,
-    CHANNEL_MISMATCH
+    CHANNEL_MISMATCH,
+    CANNOT_GET_ENTITY,
+    ALREADY_POLLING_ACKS
   }
   private final Type type;
 
