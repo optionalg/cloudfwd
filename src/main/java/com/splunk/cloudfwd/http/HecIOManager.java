@@ -162,12 +162,15 @@ public class HecIOManager implements Closeable {
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
     } catch (HecErrorResponseException e) {
+      e.setMessage("ACK_POLL_DISABLED");
+      e.setCode(14);
+      e.setUrl(sender.getBaseUrl());
       LOG.error("Error from HEC endpoint in state " + LifecycleEvent.Type.ACK_POLL_DISABLED
-              + ". Url: " + sender.getBaseUrl());
+              + ", Url: " + e.getUrl() + ", Code: " + e.getCode());
       sender.getChannelMetrics().update(new EventBatchResponse(
               LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
               events, sender.getBaseUrl()));
-      throw new HecErrorResponseException("ACK is disabled", 14, sender.getBaseUrl());
+      throw e;
     } catch (IOException ex) {
       LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
