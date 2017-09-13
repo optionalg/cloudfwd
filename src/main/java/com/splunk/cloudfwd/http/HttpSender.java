@@ -17,9 +17,7 @@ package com.splunk.cloudfwd.http;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.IEventBatch;
+import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.util.HecChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -92,9 +90,9 @@ public final class HttpSender implements Endpoints {
   
   public HecChannel getChannel() {
     if (null == channel) {
-      String msg = "Channel is null";
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
+      throw new HecIllegalStateException(
+              "Channel is null",
+              HecIllegalStateException.Type.NULL_CHANNEL);
     }
     return channel;
   }
@@ -119,9 +117,9 @@ public final class HttpSender implements Endpoints {
    */
   public synchronized void sendBatch(HttpPostable eventsBatch) {
     if (eventsBatch.isFlushed()) {
-      String msg = "Illegal attempt to send already-flushed batch. EventBatch is not reusable.";
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
+      throw new HecConnectionStateException(
+              "Illegal attempt to send already-flushed batch. EventBatch is not reusable.",
+              HecConnectionStateException.Type.ALREADY_FLUSHED);
     }
 
     eventsBatch.post(this.hecIOManager);

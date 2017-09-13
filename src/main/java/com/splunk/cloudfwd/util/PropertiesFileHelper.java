@@ -15,6 +15,8 @@
  */
 package com.splunk.cloudfwd.util;
 
+import com.splunk.cloudfwd.HecConnectionStateException;
+import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.Endpoints;
 
 import com.splunk.cloudfwd.http.HttpSender;
@@ -52,12 +54,11 @@ public class PropertiesFileHelper {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
       if (null == is) {
-        throw new RuntimeException("can't find /lb.properties");
+        throw new RuntimeException("can't find /lb.properties"); // TODO: This will be removed
       }
       defaultProps.load(is);
     } catch (IOException ex) {
-      LOG.error("problem loading lb.properties", ex);
-      throw new RuntimeException(ex.getMessage(), ex);
+      throw new HecIllegalStateException("Problem loading lb.properties", HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
     }
   }
   
@@ -234,7 +235,6 @@ public class PropertiesFileHelper {
   }
 
   private HttpSender createSender(Properties props) {
-    try {
       // enable http client debugging
       if (enabledHttpDebug()) enableHttpDebug();
       String url = props.getProperty(COLLECTOR_URI).trim();
@@ -246,12 +246,6 @@ public class PropertiesFileHelper {
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
       return sender;
-    } catch (Exception ex) {
-      LOG.error("Problem instantiating HTTP sender.", ex);
-      throw new RuntimeException(
-              "problem parsing lb.properties to create HttpEventCollectorSender",
-              ex);
-    }
   }
 
   //FIXME TODO. THis needs to get OUT of the public API
@@ -292,8 +286,8 @@ public class PropertiesFileHelper {
 
   public String getToken() {
     if (defaultProps.getProperty(TOKEN) == null) {
-      throw new RuntimeException("HEC token missing from Connection configuration. " +
-              "See PropertyKeys.TOKEN");
+      throw new HecConnectionStateException("HEC token missing from Connection configuration. " +
+              "See PropertyKeys.TOKEN", HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
     }
     return defaultProps.getProperty(TOKEN);
   }

@@ -17,9 +17,8 @@ package com.splunk.cloudfwd.http.lifecycle;
 
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.EventBatch;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -30,7 +29,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class LifecycleEventObservable {
 
-  private static final Logger LOG = Logger.getLogger(
+  private static final Logger LOG = LoggerFactory.getLogger(
           LifecycleEventObservable.class.getName());
   private final Collection<LifecycleEventObserver> observers = new ConcurrentLinkedQueue<>();
   protected final Connection connection;
@@ -55,7 +54,7 @@ public class LifecycleEventObservable {
         observer.update(event);
       });
     } catch (Exception ex) {
-      LOG.log(Level.SEVERE, ex.getMessage(), ex);
+      LOG.error(ex.getMessage(), ex);
       ConnectionCallbacks c = connection.getCallbacks();
       final EventBatch events = (ex instanceof EventBatchLifecycleEvent) ? ((EventBatchLifecycleEvent) ex).
               getEvents() : null;
