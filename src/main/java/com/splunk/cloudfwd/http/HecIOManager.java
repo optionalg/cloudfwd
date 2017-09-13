@@ -151,7 +151,7 @@ public class HecIOManager implements Closeable {
   }
 
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
-  public void consumeEventPostResponse(String resp, EventBatch events) {
+  public void consumeEventPostResponse(String resp, EventBatch events) throws HecErrorResponseException {
     //System.out.println("consuming event post response" + resp);
     EventPostResponseValueObject epr = null;
 
@@ -161,9 +161,13 @@ public class HecIOManager implements Closeable {
       });
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
-    } catch (IllegalStateException e) {
-      sender.getConnection().getCallbacks().failed(events,
-              new HecErrorResponseException("ACK is disabled", 14, sender.getBaseUrl()));
+    } catch (HecErrorResponseException e) {
+      LOG.error("Error from HEC endpoint in state " + LifecycleEvent.Type.ACK_POLL_DISABLED
+              + ". Url: " + sender.getBaseUrl());
+      sender.getChannelMetrics().update(new EventBatchResponse(
+              LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
+              events, sender.getBaseUrl()));
+      throw new HecErrorResponseException("ACK is disabled", 14, sender.getBaseUrl());
     } catch (IOException ex) {
       LOG.error(ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);

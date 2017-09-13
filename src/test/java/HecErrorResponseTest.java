@@ -24,7 +24,8 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
     private enum Error {
         ACKS_DISABLED,
         INVALID_TOKEN,
-        INDEXER_BUSY_POST
+        INDEXER_BUSY_POST,
+        ACK_ID_DISABLED
     }
     private Error errorToTest;
 
@@ -79,6 +80,10 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
                 props.put(MOCK_HTTP_CLASSNAME,
                         "com.splunk.cloudfwd.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
                 break;
+            case ACK_ID_DISABLED:
+                props.put(MOCK_HTTP_CLASSNAME,
+                        "com.splunk.cloudfwd.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
+                break;
             default:
                 Assert.fail("Unsupported configuration error type");
         }
@@ -125,6 +130,19 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
     @Test
     public void postToBusyIndexer() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.INDEXER_BUSY_POST;
+        createConnection();
+        try {
+            super.sendEvents();
+        } catch (HecConnectionTimeoutException e) {
+            LOG.trace("Got expected timeout exception because all channels are unhealthy "
+                    + "due to indexer being busy (per test design): "
+                    + e.getMessage());
+        }
+    }
+
+    @Test
+    public void postNoAckIdEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        errorToTest = Error.ACK_ID_DISABLED;
         createConnection();
         try {
             super.sendEvents();

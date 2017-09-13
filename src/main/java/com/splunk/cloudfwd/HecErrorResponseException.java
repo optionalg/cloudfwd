@@ -43,6 +43,8 @@ public class HecErrorResponseException extends Exception {
     private int code;
     private String url;
 
+    public HecErrorResponseException() {}
+
     public HecErrorResponseException(String message, int hecCode, String url) {
         super(message);
         this.code = hecCode;
