@@ -84,8 +84,8 @@ public class EventBatch implements IEventBatch {
   @Override
   public synchronized void add(Event event) {
     if (flushed) {
-      throw new IllegalStateException(
-              "Events cannot be added to a flushed EventBatch");
+      throw  new HecIllegalStateException("Can't add Event to flushed EventBatch",
+              HecIllegalStateException.Type.ALREADY_SENT);
     }
     if (null != knownTarget && knownTarget != event.getTarget()) { //and it's intended endpoint target doesn't match
       throw new HecIllegalStateException(

@@ -30,7 +30,8 @@ public class HecIllegalStateException extends IllegalStateException {
     EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED,
     LOAD_BALANCER_NO_CHANNELS,
     ACK_ID_MISMATCH,
-    EVENT_TRACKER_ALREADY_REGISTERED
+    EVENT_TRACKER_ALREADY_REGISTERED,
+    ALREADY_FLUSHED
   }
   private final Type type;
 
