@@ -44,12 +44,12 @@ public class TriggerableUnhealthyEndpoints extends SimulatedHECEndpoints {
       if (healthy) {
         LOG.trace("HEALTH POLL OK");
         ((AbstractHttpCallback) cb).completed(               
-                "If we care about the actual conent, this will break something.",
+                "If we care about the actual content, this will break something.",
                 200);
       } else {
         LOG.trace("HEALTH POLL UNHEALTHY (503)");
         ((AbstractHttpCallback) cb).completed(
-                "Simulated Inexer unhealthy queue is busy.",
+                "Simulated Indexer unhealthy queue is busy.",
                 503);
       }
 

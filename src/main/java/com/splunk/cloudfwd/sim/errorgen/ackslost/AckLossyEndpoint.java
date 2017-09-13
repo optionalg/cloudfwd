@@ -28,7 +28,7 @@ import org.apache.http.concurrent.FutureCallback;
  * basically turns off everything in the AckEndpoint except for generating the next ackId
  * @author ghendrey
  */
-public class AckLossyEndpoint extends AckEndpoint implements AcknowledgementEndpoint {
+public class AckLossyEndpoint extends AckEndpoint {
 
 
   @Override
