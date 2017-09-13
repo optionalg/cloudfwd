@@ -77,7 +77,7 @@ public class EventBatch implements IEventBatch {
   @Override
   public boolean isTimedOut(long timeout) {
     long flightTime = System.currentTimeMillis() - creationTime;
-    LOG.debug("Flight time " + flightTime);
+    LOG.warn("Flight time {}, isTimedOut {}" , flightTime, flightTime >= timeout);    
     return flightTime >= timeout;
   }
 

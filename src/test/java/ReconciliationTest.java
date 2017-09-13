@@ -16,11 +16,11 @@
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-
 import java.util.*;
 
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
+
 
 
 /**
