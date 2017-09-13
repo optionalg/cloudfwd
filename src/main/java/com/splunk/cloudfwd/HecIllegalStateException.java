@@ -30,7 +30,7 @@ public class HecIllegalStateException extends IllegalStateException {
     NULL_CHANNEL,
     INCORRECT_EVENT_TYPE_OBJECT,
     CHANNEL_MISMATCH,
-    CANNOT_GET_ENTITY,
+    NO_TARGET,
     ALREADY_POLLING_ACKS,
     CORE_POOL_SIZE_ZERO,
     NEGATIVE_UNACKED_COUNT,
