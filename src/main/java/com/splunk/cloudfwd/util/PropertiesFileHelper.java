@@ -26,6 +26,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Comparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
@@ -65,18 +66,7 @@ public class PropertiesFileHelper {
   }
 
   public List<URL> getUrls() {
-    List<URL> urls = new ArrayList<>();
-    String[] splits = defaultProps.getProperty(COLLECTOR_URI).split(",");
-    for (String urlString : splits) {
-      try {
-        URL url = new URL(urlString.trim());
-        urls.add(url);
-      } catch (MalformedURLException ex) {
-        LOG.error(ex.getMessage(), ex);
-        throw new RuntimeException(ex);
-      }
-    }
-    return urls;
+    return urlsStringToList(defaultProps.getProperty(COLLECTOR_URI));
   }
   
 
@@ -282,6 +272,22 @@ public class PropertiesFileHelper {
   public boolean isCheckpointEnabled(){
      return Boolean.parseBoolean(this.defaultProps.getProperty(ENABLE_CHECKPOINTS,
             DEFAULT_ENABLE_CHECKPOINTS).trim());
+  }
+
+  public List<URL> urlsStringToList(String urlsListAsString) {
+    List<URL> urlList = new ArrayList<>();
+    String[] splits = urlsListAsString.split(",");
+    for (String urlString : splits) {
+      try {
+        URL url = new URL(urlString.trim());
+        urlList.add(url);
+      } catch (MalformedURLException ex) {
+        LOG.error(ex.getMessage(), ex);
+        throw new RuntimeException(ex);
+      }
+    }
+    urlList.sort(Comparator.comparing(URL::toString));
+    return urlList;
   }
 
   public String getToken() {

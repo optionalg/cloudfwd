@@ -59,7 +59,7 @@ public class CheckpointManager implements LifecycleEventObserver {
       Comparable id = resp.getEvents().getId();
       if(enabled){
         acknowledgeHighwaterAndBelow(resp.getEvents());
-      }else{
+      }else{ //if checkpoints not enabled, we simple call both acknowledged and checkpoint without regard for highwater
        ConnectionCallbacks cb = this.connection.getCallbacks();
        cb.acknowledged(resp.getEvents());
        cb.checkpoint(resp.getEvents());
