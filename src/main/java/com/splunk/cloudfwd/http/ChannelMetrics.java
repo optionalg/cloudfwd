@@ -43,6 +43,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
   private long ackPollOKCount;
   private long ackPollNotOKCount;
   private long ackPollFailureCount;
+
      */
     // health-related
     //private boolean lastHealthCheck;
@@ -60,6 +61,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
             case ACK_POLL_OK:
             case HEALTH_POLL_OK:
             case PREFLIGHT_CHECK_OK:
+            case ACK_POLL_DISABLED:
             case HEALTH_POLL_INDEXER_BUSY: { //INDEXER_BUSY is a normal operating condition, not a failure
                 notifyObservers(e);
                 return;

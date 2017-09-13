@@ -158,6 +158,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         this.healthy = true; //see isAvailable
         break;
       }
+      case ACK_POLL_DISABLED:
+        this.healthy = false;
+        break;
     }
     if (e instanceof Response) {
       if (((Response) e).getHttpCode() != 200) {
