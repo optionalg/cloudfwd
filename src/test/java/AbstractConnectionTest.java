@@ -52,7 +52,7 @@ public abstract class AbstractConnectionTest {
   protected BasicCallbacks callbacks;
   protected Connection connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
-          "yyyy-MM-dd HH:mm:ss");
+          "MMM dd hh:mm:ss a ZZZ");
   protected final static String TEST_CLASS_INSTANCE_GUID = java.util.UUID.
           randomUUID().
           toString();
@@ -256,8 +256,7 @@ public abstract class AbstractConnectionTest {
 
   protected RawEvent getTimestampedRawEvent(int seqno) {
     return RawEvent.
-            fromText(//dateFormat.format(new Date()) + " TEXT FOR /raw ENDPOINT", seqno);
-                    "TEXT FOR /raw ENDPOINT with " + getEventTracingInfo() + " seqno=" + seqno,
+            fromText(dateFormat.format(new Date()) + " TEXT FOR /raw ENDPOINT with " + getEventTracingInfo() + " seqno=" + seqno,
                     seqno);
   }
 
