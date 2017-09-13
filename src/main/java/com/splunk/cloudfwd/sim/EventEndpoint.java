@@ -62,7 +62,12 @@ public class EventEndpoint implements Endpoint {
       ));
     };
     //return a single response with a delay uniformly distributed between  [0,5] ms
-    executor.schedule(respond, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+    delayResponse(respond);
+  }
+  
+  protected void delayResponse(Runnable r) {
+    //return a single response with a delay uniformly distributed between  [0,5] ms
+    executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
   }
 
   protected long nextAckId() {
