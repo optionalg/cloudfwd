@@ -192,10 +192,6 @@ public class PropertiesFileHelper {
     return timeout;
   }
 
-  public String getToken() {
-    return this.defaultProps.getProperty(TOKEN).trim();
-  }
-
   public boolean isMockHttp() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,
             "false").trim());
