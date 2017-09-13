@@ -98,11 +98,7 @@ public class Connection implements Closeable {
 
   @Override
   public void close() {
-    try {
       flush();
-    } catch (HecConnectionTimeoutException ex) {
-      throw new RuntimeException(ex.getMessage(), ex);
-    }
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the

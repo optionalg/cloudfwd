@@ -235,6 +235,7 @@ public class PropertiesFileHelper {
     System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
   }
 
+    //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
     Properties props = new Properties(defaultProps);
     props.put(COLLECTOR_URI, url.toString());
@@ -263,6 +264,7 @@ public class PropertiesFileHelper {
     }
   }
 
+  //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender() {
     return createSender(this.defaultProps);
   }
@@ -275,6 +277,11 @@ public class PropertiesFileHelper {
       max = Integer.MAX_VALUE;
     }
     return max;
+  }
+  
+  public boolean isCheckpointEnabled(){
+     return Boolean.parseBoolean(this.defaultProps.getProperty(ENABLE_CHECKPOINTS,
+            DEFAULT_ENABLE_CHECKPOINTS).trim());
   }
 
 

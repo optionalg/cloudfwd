@@ -45,17 +45,25 @@ public class CheckpointManager implements LifecycleEventObserver {
   volatile private SortedMap<Comparable, EventBatch> orderedEvents = new TreeMap<>(); //key EventBatch.id, value is EventBatch
   private final Connection connection;
   private Comparable checkpoint;
+  private boolean enabled;
 
   CheckpointManager(Connection c) {
     this.connection = c;
+    this.enabled = c.getPropertiesFileHelper().isCheckpointEnabled();
   }
 
   @Override
-  public void update(LifecycleEvent e) {
+  public void update(LifecycleEvent e) {    
     if (e.getType() == ACK_POLL_OK) {
       EventBatchResponse resp = (EventBatchResponse) e;
       Comparable id = resp.getEvents().getId();
-      acknowledgeHighwaterAndBelow(resp.getEvents());
+      if(enabled){
+        acknowledgeHighwaterAndBelow(resp.getEvents());
+      }else{
+       ConnectionCallbacks cb = this.connection.getCallbacks();
+       cb.acknowledged(resp.getEvents());
+       cb.checkpoint(resp.getEvents());
+      }
     }
   }
 
@@ -68,6 +76,7 @@ public class CheckpointManager implements LifecycleEventObserver {
   //acknowledged out of order. Return Callback from hightest EventBatch, for which there are no
   //lower unacknowledged event batches.
   private synchronized void acknowledgeHighwaterAndBelow(EventBatch events) {
+    
     //Do not under penalty of death remove this commented sys out line below :-)
     //very useful for debugging...
     LOG.debug("handling ack-checkpoint-logic for event {}", events);
@@ -79,13 +88,15 @@ public class CheckpointManager implements LifecycleEventObserver {
       LOG.debug(msg);
       return;
     }
+
     ConnectionCallbacks cb = this.connection.getCallbacks();
+    
     if (!events.getId().equals(this.orderedEvents.firstKey())) { //if this batch isn't the highwater
       //bail because there are unacknowleged EventBatches with lower sequence IDs
       //In other words, highwater hasn't moved
       LOG.debug("Cant slide {}", events.getId());
       return;
-    }
+    }    
     cb.acknowledged(events); //hit the callback to tell the user code that the EventBatch succeeded 
     slideHighwaterUp(cb, events); //might call the highwater/checkpoint callback
     //musn't call cb.acknowledged until after we slideHighwater, because calling cb.acknowleged
@@ -126,6 +137,9 @@ public class CheckpointManager implements LifecycleEventObserver {
   }
 
   synchronized void registerInFlightEvents(EventBatch events, boolean forced) {
+    if(!enabled){
+      return;
+    }
     //event id must not be below the highwater mark
     if (null != checkpoint && events.getId().compareTo(checkpoint) <= 0) {
       String msg = "EventBatch already acknowldeged. EventBatch ID is " + events.
@@ -147,10 +161,12 @@ public class CheckpointManager implements LifecycleEventObserver {
     }
 
     this.orderedEvents.put(events.getId(), events);
-
   }
 
   public synchronized void cancel(Comparable id) {
+    if(!enabled){
+      return;
+    }
     //since highwater may have removed the key, we cant make any inference about correcteness based on whether the 
     //key was or was not still in the orderedEvents.
     LOG.info("released checkpoint for id {}", id);

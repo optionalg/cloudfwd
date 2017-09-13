@@ -84,7 +84,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
 
   private Exception getException(int httpCode, String reply, String url) {
     if (httpCode == 404) {
-      return new HecDetentionException("Indexer not responding because it is in detention.");
+      return new HecDetentionException("Indexer not responding because it is in detention."); //TODO iindexer detention is health issue, not failure
     }
     ObjectMapper mapper = new ObjectMapper();
     HecErrorResponseValueObject hecErrorResp;
