@@ -1,7 +1,7 @@
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import java.nio.ByteBuffer;
 import java.util.Set;

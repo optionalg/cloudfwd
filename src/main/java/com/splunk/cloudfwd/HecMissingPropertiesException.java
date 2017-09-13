@@ -1,4 +1,4 @@
-package com.splunk.cloudfwd.exceptions;
+package com.splunk.cloudfwd;
 
 /**
  * Created by mhora on 9/8/17.

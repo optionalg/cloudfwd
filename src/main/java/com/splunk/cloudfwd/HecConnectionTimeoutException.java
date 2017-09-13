@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.exceptions;
+package com.splunk.cloudfwd;
 
 /**
  *
  * @author ghendrey
  */
-public class HecAlreadyAcknowledgedException extends RuntimeException{
+public class HecConnectionTimeoutException extends Exception{
 
-  public HecAlreadyAcknowledgedException(String message) {
+  public HecConnectionTimeoutException(String message) {
     super(message);
   }
   

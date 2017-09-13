@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.exceptions;
+package com.splunk.cloudfwd;
 
 /**
  * Thrown if duplicate ack-id is received on a given HEC channel. This can

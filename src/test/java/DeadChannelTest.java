@@ -1,6 +1,6 @@
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;

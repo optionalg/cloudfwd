@@ -17,7 +17,7 @@ package com.splunk.cloudfwd.util;
 
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.HttpSender;
-import com.splunk.cloudfwd.exceptions.HecMissingPropertiesException;
+import com.splunk.cloudfwd.HecMissingPropertiesException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;

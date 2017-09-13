@@ -32,7 +32,7 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.samples.stocktrades.model.StockTrade;
 import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

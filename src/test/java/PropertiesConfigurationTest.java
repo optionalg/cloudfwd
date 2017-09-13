@@ -1,5 +1,5 @@
 import com.splunk.cloudfwd.*;
-import com.splunk.cloudfwd.exceptions.HecMissingPropertiesException;
+import com.splunk.cloudfwd.HecMissingPropertiesException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;

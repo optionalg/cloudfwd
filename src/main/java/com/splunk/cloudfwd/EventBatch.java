@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.exceptions.HecIllegalStateException;
 import com.splunk.cloudfwd.http.HecIOManager;
 import com.splunk.cloudfwd.util.EventTracker;
 import com.splunk.cloudfwd.util.HecChannel;

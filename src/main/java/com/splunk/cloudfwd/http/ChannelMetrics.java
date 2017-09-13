@@ -17,8 +17,8 @@ package com.splunk.cloudfwd.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.exceptions.HecDetentionException;
-import com.splunk.cloudfwd.exceptions.HecErrorResponseException;
+import com.splunk.cloudfwd.HecDetentionException;
+import com.splunk.cloudfwd.HecErrorResponseException;
 import com.splunk.cloudfwd.http.lifecycle.*;
 import com.splunk.cloudfwd.Connection;
 import org.slf4j.Logger;

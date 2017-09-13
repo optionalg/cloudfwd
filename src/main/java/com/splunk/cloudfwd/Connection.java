@@ -17,7 +17,6 @@ package com.splunk.cloudfwd;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
 
-import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.util.CallbackInterceptor;
 import com.splunk.cloudfwd.util.HecChannel;
 import com.splunk.cloudfwd.util.LoadBalancer;

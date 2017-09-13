@@ -1,6 +1,6 @@
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.exceptions.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
