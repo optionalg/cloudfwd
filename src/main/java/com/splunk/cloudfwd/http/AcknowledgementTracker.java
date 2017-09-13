@@ -93,7 +93,6 @@ public class AcknowledgementTracker implements EventTracker {
 
   private void throwIllegalStateException(EventBatch batch) {
     String msg = "Attempt to send EventBatch that is still pending acknowledgement:  " + batch;
-    LOG.warn(msg);
     throw new HecConnectionStateException(msg,
             HecConnectionStateException.Type.ALREADY_SENT);
   }
