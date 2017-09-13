@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -32,68 +34,84 @@ import java.util.stream.Collectors;
  */
 public class TimeoutChecker implements EventTracker {
 
-  private PollScheduler timoutCheckScheduler = new PollScheduler(
-          "Event Timeout Scheduler");
-  private final Map<Comparable, EventBatch> eventBatches = new ConcurrentHashMap<>();
-  private Connection connection;
+    protected static final Logger LOG = LoggerFactory.getLogger(
+            TimeoutChecker.class.
+            getName());
 
-  public TimeoutChecker(Connection c) {
-    this.connection = c;
-  }
+    private PollScheduler timoutCheckScheduler = new PollScheduler(
+            "Event Timeout Scheduler");
+    private final Map<Comparable, EventBatch> eventBatches = new ConcurrentHashMap<>();
+    private Connection connection;
+    private boolean quiesced;
 
-  public void setTimeout(long ms) {
-    stop();
-    start();
-  }
-
-  private long getTimeoutMs() {
-    return connection.
-            getPropertiesFileHelper().getAckTimeoutMS();
-  }
-
-  public synchronized void start() {
-    timoutCheckScheduler.start(this::checkTimeouts, getTimeoutMs(),
-            TimeUnit.MILLISECONDS);
-  }
-
-  private synchronized void checkTimeouts() {
-    long now = System.currentTimeMillis();
-    for (Iterator<Map.Entry<Comparable, EventBatch>> iter = eventBatches.
-            entrySet().
-            iterator(); iter.hasNext();) {
-      final Map.Entry<Comparable, EventBatch> e = iter.next();
-      EventBatch events = e.getValue();
-      if (events.isTimedOut(getTimeoutMs())) {
-        //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
-        //to the user-supplied callback. Otherwise we just loop back here over and over!
-        ((CallbackInterceptor) connection.getCallbacks()).unwrap().failed(events,
-                new HecAcknowledgmentTimeoutException(
-                        "EventBatch with id " + events.getId() + " timed out."));
-        iter.remove(); //remove it or else we will keep generating repeated timeout failures
-      }
+    public TimeoutChecker(Connection c) {
+        this.connection = c;
     }
-  }
 
-  public void stop() {
-    timoutCheckScheduler.stop();
-  }
+    public void setTimeout(long ms) {
+        queisce();
+        start();
+    }
 
-  public void add(EventBatch events) {
-    this.eventBatches.put(events.getId(), events);
-    events.registerEventTracker(this);
-  }
+    private long getTimeoutMs() {
+        return connection.
+                getPropertiesFileHelper().getAckTimeoutMS();
+    }
 
-  @Override
-  public void cancel(EventBatch events) {
-    this.eventBatches.remove(events.getId());
-  }
+    public synchronized void start() {
+        timoutCheckScheduler.start(this::checkTimeouts, getTimeoutMs(),
+                TimeUnit.MILLISECONDS);
+    }
 
-  public List<EventBatch> getUnackedEvents(HecChannel c) {
-    //return only the batches whose channel matches c
-    return eventBatches.values().stream().filter(b -> {
-      return b.getHecChannel().getChannelId() == c.getChannelId();
-    }).collect(Collectors.toList());
-  }
+    private synchronized void checkTimeouts() {
+        if(quiesced && eventBatches.isEmpty()){
+            LOG.debug("Stopping TimeoutChecker (no more unacked event batches)");
+            timoutCheckScheduler.stop();
+            return;
+        }
+        LOG.debug("checking timeouts for {} EventBatches", eventBatches.size());
+        long now = System.currentTimeMillis();
+        for (Iterator<Map.Entry<Comparable, EventBatch>> iter = eventBatches.
+                entrySet().
+                iterator(); iter.hasNext();) {
+            final Map.Entry<Comparable, EventBatch> e = iter.next();
+            EventBatch events = e.getValue();
+            if (events.isTimedOut(getTimeoutMs())) {
+                //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
+                //to the user-supplied callback. Otherwise we just loop back here over and over!
+                ((CallbackInterceptor) connection.getCallbacks()).unwrap().
+                        failed(events,
+                                new HecAcknowledgmentTimeoutException(
+                                        "EventBatch with id " + events.getId() + " timed out."));
+                iter.remove(); //remove it or else we will keep generating repeated timeout failures
+            }
+        }
+    }
 
+    public void queisce() {
+        LOG.debug("Quiescing TimeoutChecker");
+        quiesced = true;
+        if(eventBatches.isEmpty()){
+            LOG.debug("Stopping TimeoutChecker (no EventBatches in flight)");
+            timoutCheckScheduler.stop();
+        }
+    }
+
+    public void add(EventBatch events) {
+        this.eventBatches.put(events.getId(), events);
+        events.registerEventTracker(this);
+    }
+
+    @Override
+    public void cancel(EventBatch events) {
+        this.eventBatches.remove(events.getId());
+    }
+
+    public List<EventBatch> getUnackedEvents(HecChannel c) {
+        //return only the batches whose channel matches c
+        return eventBatches.values().stream().filter(b -> {
+            return b.getHecChannel().getChannelId() == c.getChannelId();
+        }).collect(Collectors.toList());
+    }
 
 }

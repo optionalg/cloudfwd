@@ -20,7 +20,6 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecMaxRetriesException;
-import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.HecNonStickySessionException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
@@ -37,11 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.splunk.cloudfwd.http.HttpPostable;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
 
 /**
  *
@@ -262,7 +257,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (null != deadChannelDetector) {
       deadChannelDetector.close();
     }
-    if(null != deadChannelDetector){
+    if(null != ackPollExecutor){
       ackPollExecutor.shutdownNow();
     }
   }

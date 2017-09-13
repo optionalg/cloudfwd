@@ -119,7 +119,7 @@ public class Connection implements Closeable {
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.close();
-      timeoutChecker.stop();
+      timeoutChecker.queisce();
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -137,7 +137,7 @@ public class Connection implements Closeable {
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.closeNow();
-      timeoutChecker.stop();
+      timeoutChecker.queisce();
       latch.countDown();
     }, "Connection Closer").start();
     try {
