@@ -26,7 +26,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import org.apache.http.client.entity.EntityBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,8 +94,10 @@ public class Connection implements Closeable {
    * @param ms
    */
   public synchronized void setAckTimeoutMS(long ms) {
-    this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
-    this.timeoutChecker.setTimeout(ms);
+    if (ms != propertiesFileHelper.getAckTimeoutMS()) {
+      this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
+      this.timeoutChecker.setTimeout(ms);
+    }
   }
 
   public long getAckTimeoutMS() {
@@ -261,7 +263,10 @@ public class Connection implements Closeable {
    * @param token
    */
   public void setToken(String token) {
-    propertiesFileHelper.putProperty(PropertyKeys.TOKEN, token);
+    if (!propertiesFileHelper.getToken().equals(token)) {
+      propertiesFileHelper.putProperty(PropertyKeys.TOKEN, token);
+      // TODO: gut and replace channels
+    }
   }
 
   /**
@@ -270,9 +275,12 @@ public class Connection implements Closeable {
    * @param urls comma-separated list of urls
    */
   public void setUrls(String urls) {
-    // a single url or a list of comma separated urls
-    propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
-    lb.reloadUrls();
+    if (!propertiesFileHelper.urlsStringToList(urls).equals(
+            propertiesFileHelper.getUrls())) {
+      // a single url or a list of comma separated urls
+      propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
+      lb.reloadUrls();
+    }
   }
 
   public List<URL> getUrls() {
