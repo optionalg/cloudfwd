@@ -1,4 +1,6 @@
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecErrorResponseException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -8,8 +10,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
+import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * Test class to that tests various error rseponse scenarios

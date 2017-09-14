@@ -21,7 +21,7 @@ import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.Endpoints;
 import com.splunk.cloudfwd.http.HttpSender;
-
+import com.splunk.cloudfwd.HecMissingPropertiesException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -42,22 +42,42 @@ public class PropertiesFileHelper {
   private static final Logger LOG = LoggerFactory.getLogger(PropertiesFileHelper.class.getName());
 
   private Properties defaultProps = new Properties();
+  private Properties overrides;
 
   public PropertiesFileHelper(Properties overrides) {
-    this(); //setup all defaults by calling SenderFactory() empty constr
-    this.defaultProps.putAll(overrides);
+    this.overrides = overrides;
+    this.parsePropertiesFile();
   }
 
   /**
    * create SenderFactory with default properties read from lb.properties file
    */
   public PropertiesFileHelper() {
+    this.parsePropertiesFile();
+  }
+
+  // All properties are populated by following order of precedence: 1) overrides, 2) lb.properties, then 3) defaults.
+  private void parsePropertiesFile() {
     try {
       InputStream is = getClass().getResourceAsStream("/lb.properties");
-      if (null == is) {
-        throw new RuntimeException("can't find /lb.properties"); // TODO: This will be removed
+      if (is != null) {
+        defaultProps.load(is);
       }
-      defaultProps.load(is);
+
+      if (overrides != null) {
+        defaultProps.putAll(overrides);
+      }
+
+      // If required properties are missing from lb.properties, overrides, and defaults, then throw exception.
+      for(String key: REQUIRED_KEYS) {
+        if (this.defaultProps.getProperty(key) == null) {
+          throw new HecMissingPropertiesException("Missing required key: " + key);
+        }
+      }
+
+      // For any non-required properties, we allow them to remain null if they are not present in overrides
+      // or lb.properties, because the property getters below will return the default values.
+
     } catch (IOException ex) {
       throw new HecIllegalStateException("Problem loading lb.properties", HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
     }
@@ -173,7 +193,7 @@ public class PropertiesFileHelper {
       throw new IllegalArgumentException(BLOCKING_TIMEOUT_MS + " must be positive.");
     }
     return timeout;
-  }     
+  }
 
   public boolean isMockHttp() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(MOCK_HTTP_KEY,

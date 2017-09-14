@@ -20,7 +20,6 @@ import com.splunk.cloudfwd.RawEvent;
 import org.junit.Test;
 
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 
 /**
  *
