@@ -15,12 +15,12 @@
  */
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints;
+import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Assert;
@@ -59,7 +59,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
         props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints");
+                "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
 
         if (SlowEndpoints.sleep > 10000) {
             throw new RuntimeException("Let's not get carried away here");
@@ -99,7 +99,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         }
 
         @Override
-        public void failed(EventBatch events, Exception e) {
+        public void failed(EventBatchImpl events, Exception e) {
             //We expect a timeout
             Assert.assertTrue(e.getMessage(),
                     e instanceof HecAcknowledgmentTimeoutException);
@@ -111,14 +111,14 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         }
 
         @Override
-        public void checkpoint(EventBatch events) {
+        public void checkpoint(EventBatchImpl events) {
             LOG.trace("SUCCESS CHECKPOINT " + events.getId());
             Assert.fail(
                     "Got an unexpected checkpoint when we were waiting for timeout");
         }
 
         @Override
-        public void acknowledged(EventBatch events) {
+        public void acknowledged(EventBatchImpl events) {
             Assert.fail(
                     "Got an unexpected acknowledged when we were waiting for timeout");
 

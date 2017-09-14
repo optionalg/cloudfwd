@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
@@ -50,7 +50,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumEventsToSend()) {
       @Override
-      public void failed(EventBatch events, Exception e) {
+      public void failed(EventBatchImpl events, Exception e) {
         //The point of this test is to insure that we DO get this exception...
         //because it means we DID *detect* a non-sticky channel and fail
         //appropriately.
@@ -62,7 +62,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
       }
 
       @Override
-      public void checkpoint(EventBatch events) {
+      public void checkpoint(EventBatchImpl events) {
         LOG.trace("SUCCESS CHECKPOINT " + events.getId());
         //do NOT count down the latch - otherwise the test ends before we have
         //opportunity to detect the non-sticky session
@@ -88,12 +88,12 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
     Properties props = new Properties();
     //simulate a non-sticky endpoint
     props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.sim.errorgen.nonsticky.NonStickEndpoints");
+            "com.splunk.cloudfwd.impl.sim.errorgen.nonsticky.NonStickEndpoints");
     return props;
   }
   
   @Override
-  protected void configureConnection(Connection connection) {
+  protected void configureConnection(ConnectionImpl connection) {
     connection.setEventBatchSize(0);
   }  
 

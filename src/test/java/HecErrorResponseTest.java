@@ -1,3 +1,5 @@
+import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,7 +39,7 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
             @Override
-            public void failed(EventBatch events, Exception e) {
+            public void failed(EventBatchImpl events, Exception e) {
                 Assert.assertTrue(e.getMessage(),
                         e instanceof HecErrorResponseException);
                 LOG.trace("Got expected exception: " + e);
@@ -45,12 +47,12 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
             }
 
             @Override
-            public void checkpoint(EventBatch events) {
+            public void checkpoint(EventBatchImpl events) {
                 Assert.fail("We should fail before we checkpoint anything.");
             }
 
             @Override
-            public void acknowledged(EventBatch events) {
+            public void acknowledged(EventBatchImpl events) {
                 Assert.fail("We should fail before we get any acks.");
             }
 
@@ -70,19 +72,19 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
         switch(errorToTest) {
             case ACKS_DISABLED:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.preflightfailure.AckDisabledEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure.AckDisabledEndpoints");
                 break;
             case INVALID_TOKEN:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.preflightfailure.InvalidTokenEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure.InvalidTokenEndpoints");
                 break;
             case INDEXER_BUSY_POST:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
                 break;
             case ACK_ID_DISABLED:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
                 break;
             default:
                 Assert.fail("Unsupported configuration error type");
@@ -97,7 +99,7 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
         Properties props = new Properties();
         props.putAll(getTestProps());
         props.putAll(getProps());
-        this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+        this.connection = new ConnectionImpl((ConnectionCallbacks) callbacks, props);
         configureConnection(connection);
     }
 

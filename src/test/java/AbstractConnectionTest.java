@@ -1,5 +1,5 @@
 
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
@@ -50,7 +50,7 @@ public abstract class AbstractConnectionTest {
   public static final String TEST_METHOD_GUID_KEY = "testMethodGUID";
 
   protected BasicCallbacks callbacks;
-  protected Connection connection;
+  protected ConnectionImpl connection;
   protected SimpleDateFormat dateFormat = new SimpleDateFormat(
           "MMM dd hh:mm:ss a ZZZ");
   protected final static String TEST_CLASS_INSTANCE_GUID = java.util.UUID.
@@ -60,7 +60,7 @@ public abstract class AbstractConnectionTest {
   protected List<Event> events;
 
   //override to do stuff like set buffering or anything else affecting connection
-  protected void configureConnection(Connection connection) {
+  protected void configureConnection(ConnectionImpl connection) {
     //noop
   }
 
@@ -72,7 +72,7 @@ public abstract class AbstractConnectionTest {
     Properties props = new Properties();
     props.putAll(getTestProps());
     props.putAll(getProps());
-    this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+    this.connection = new ConnectionImpl((ConnectionCallbacks) callbacks, props);
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();
@@ -211,7 +211,7 @@ public abstract class AbstractConnectionTest {
 
   private Event getUnvalidatedBytesEvent(int seqno) {
     Event event;
-    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+    if (connection.getHecEndpointType() == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getUnvalidatedBytesToRawEndpoint(seqno);
     } else {
       event = getUnvalidatedBytesToEventEndpoint(seqno);
@@ -221,7 +221,7 @@ public abstract class AbstractConnectionTest {
 
   protected Event getJsonEvent(int seqno) {
     Event event;
-    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+    if (connection.getHecEndpointType() == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getJsonToRawEndpoint(seqno);
     } else {
       event = getJsonToEvents(seqno);
@@ -231,7 +231,7 @@ public abstract class AbstractConnectionTest {
 
   protected Event getTextEvent(int seqno) {
     Event event;
-    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+    if (connection.getHecEndpointType() == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getTimestampedRawEvent(seqno);
     } else {
       event = getTextToEvents(seqno);

@@ -1,6 +1,6 @@
 
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
@@ -42,12 +42,12 @@ public class SuperSimpleExample {
 
     ConnectionCallbacks callbacks = new ConnectionCallbacks() {
       @Override
-      public void acknowledged(EventBatch events) {
+      public void acknowledged(EventBatchImpl events) {
         LOG.trace("EventBatch  " + events.getId() + " has been index-acknowledged by Splunk.");
       }
 
       @Override
-      public void failed(EventBatch events, Exception ex) {
+      public void failed(EventBatchImpl events, Exception ex) {
         if (events != null) {
           LOG.trace("EventBatch " + events.getId() + " failed: " + ex.getMessage());
         } else {
@@ -56,7 +56,7 @@ public class SuperSimpleExample {
       }
 
       @Override
-      public void checkpoint(EventBatch events) {
+      public void checkpoint(EventBatchImpl events) {
         // if (events.getId().compareTo(new Integer(numEvents)) == 0) {
         LOG.trace("CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
         //}
@@ -76,7 +76,7 @@ public class SuperSimpleExample {
             "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
 
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
-    try (Connection c = new Connection(callbacks, customization);) {
+    try (ConnectionImpl c = new ConnectionImpl(callbacks, customization);) {
       c.setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
       c.setAckTimeoutMS(10000); //10 sec
       for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object
@@ -94,10 +94,10 @@ public class SuperSimpleExample {
     } //safely autocloses Connection, no event loss. (use Connection.closeNow() if you want to *lose* in-flight events)
 
     //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
-    try (Connection c = new Connection(callbacks, customization);) {
+    try (ConnectionImpl c = new ConnectionImpl(callbacks, customization);) {
       c.setEventBatchSize(1024 * 16); //16kB send buffering
       c.setAckTimeoutMS(10000); //10 sec
-      c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+      c.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       for (int seqno = 1; seqno <= numEvents; seqno++) {
         EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),
                 seqno);

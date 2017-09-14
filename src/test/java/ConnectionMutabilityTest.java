@@ -1,8 +1,8 @@
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.sim.ValidatePropsEndpoint;
+import com.splunk.cloudfwd.impl.sim.ValidatePropsEndpoint;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -58,7 +58,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     @Test
     public void setMultipleProperties() throws Throwable {
         setPropsOnEndpoint();
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
         sleep(ackPollWait);
@@ -96,22 +96,22 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     @Test
     public void changeEndpointType() throws Throwable {
         setPropsOnEndpoint();
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
         connection.flush();
 
-        connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
         connection.flush();
 
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
         sendSomeEvents(getNumEventsToSend()/4);
         connection.flush();
 
-        connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
         sendSomeEvents(getNumEventsToSend()/4);
 
@@ -122,7 +122,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     @Test
     public void changeToken() throws Throwable {
         setPropsOnEndpoint();
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/2);
         connection.flush();
@@ -137,7 +137,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
 
     @Test
     public void changeUrlsAndAckTimeout() throws Throwable {
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
@@ -170,7 +170,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
         props.put(PropertyKeys.MOCK_HTTP_KEY, "true");
         // the asserts for this test exist in the endpoint since we must check values server side
-        props.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.sim.ValidatePropsEndpoint");
+        props.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.ValidatePropsEndpoint");
         return props;
     }
 
@@ -202,7 +202,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void configureConnection(Connection connection) {
+    protected void configureConnection(ConnectionImpl connection) {
         connection.setEventBatchSize(1024*32); //32k batching batching, roughly
     }
 

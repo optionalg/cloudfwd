@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -215,8 +216,8 @@ public class EventWithMetadata implements Event {
   }
 
   @Override
-  public Connection.HecEndpoint getTarget() {
-    return Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT;
+  public ConnectionImpl.HecEndpoint getTarget() {
+    return ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT;
   }
 
   @Override

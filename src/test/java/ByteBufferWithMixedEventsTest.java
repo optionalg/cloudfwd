@@ -1,5 +1,5 @@
 
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
@@ -33,7 +33,7 @@ public class ByteBufferWithMixedEventsTest extends AbstractReconciliationTest {
 
   @Test
   public void chalkFullOBytesForRawEndpoint() throws InterruptedException, HecConnectionTimeoutException {
-    connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+    connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    
@@ -41,7 +41,7 @@ public class ByteBufferWithMixedEventsTest extends AbstractReconciliationTest {
 
     @Test
   public void chalkFullOBytesForEventEndpoint() throws InterruptedException, HecConnectionTimeoutException {
-    connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    

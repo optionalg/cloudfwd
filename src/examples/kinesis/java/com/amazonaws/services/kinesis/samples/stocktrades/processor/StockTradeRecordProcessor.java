@@ -17,9 +17,9 @@ package com.amazonaws.services.kinesis.samples.stocktrades.processor;
 
 import java.util.List;
 
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 
-import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,8 +45,8 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
     private String kinesisShardId;
 
     private final int BATCH_SIZE = 10;
-    private EventBatch eventBatch = new EventBatch();
-    private Connection splunk;
+    private EventBatchImpl eventBatch = new EventBatchImpl();
+    private ConnectionImpl splunk;
     StockTradeProcessorCallback callback;
 
     /**
@@ -57,8 +57,8 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
         this.kinesisShardId = shardId;
         callback = new StockTradeProcessorCallback(shardId);
         try {
-            splunk = new Connection(callback);
-            splunk.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+            splunk = new ConnectionImpl(callback);
+            splunk.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         } catch (RuntimeException e) {
             LOG.error("Unable to connect to Splunk.", e);
             System.exit(1);
@@ -91,7 +91,7 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
             Logger.getLogger(StockTradeRecordProcessor.class.getName()).
                     log(Level.SEVERE, null, ex);
           }
-            eventBatch = new EventBatch();
+            eventBatch = new EventBatchImpl();
         }
     }
 

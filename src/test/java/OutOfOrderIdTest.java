@@ -1,6 +1,6 @@
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.PropertyKeys;
 import java.util.Properties;
 import org.junit.Assert;
@@ -62,12 +62,12 @@ public class OutOfOrderIdTest extends AbstractConnectionTest {
         }
 
         @Override
-        public void checkpoint(EventBatch events) {
+        public void checkpoint(EventBatchImpl events) {
             //noop
         }
 
         @Override
-        public void acknowledged(EventBatch events) {
+        public void acknowledged(EventBatchImpl events) {
 
             if (!acknowledgedBatches.add(events.getId())) {
                 Assert.fail(

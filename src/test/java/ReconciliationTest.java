@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import java.util.*;
@@ -42,7 +42,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
     
     @Test
     public void sendJsonAsUnvalidatedBytesToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -51,7 +51,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
 
     @Test
     public void sendJsonAsUnvalidatedBytesToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -60,7 +60,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
     
     @Test
     public void sendTextToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -69,7 +69,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
 
     @Test
     public void sendJsonToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.JSON;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -78,7 +78,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
 
     @Test
     public void sendTextToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -87,7 +87,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
 
     @Test
     public void sendJsonToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.JSON;
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -96,7 +96,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
 
     @Test
     public void sendTextJsonToRawEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.sendCombinationEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
@@ -104,7 +104,7 @@ public class ReconciliationTest extends AbstractReconciliationTest {
 
     @Test
     public void sendTextJsonToEventsEndpoint() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.sendCombinationEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);

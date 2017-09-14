@@ -4,7 +4,7 @@ import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateExcep
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
-import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,14 +25,14 @@ public class LogProcessorCallback implements ConnectionCallbacks {
     }
 
     @Override
-    public void acknowledged(EventBatch events) {
+    public void acknowledged(EventBatchImpl events) {
         LOG.info("Received ack for event batch with sequenceNumber="
                 + events.getId()
                 + " (shardId=" + shardId + ")");
     }
 
     @Override
-    public void failed(EventBatch events, Exception ex) {
+    public void failed(EventBatchImpl events, Exception ex) {
         // TODO: show how to handle different types of exceptions
         LOG.warn("Sending failed for event batch with sequenceNumber="
                 + events.getId()
@@ -41,7 +41,7 @@ public class LogProcessorCallback implements ConnectionCallbacks {
     }
 
     @Override
-    public void checkpoint(EventBatch events) {
+    public void checkpoint(EventBatchImpl events) {
         String sequenceNumber = (String)events.getId(); // highest sequence number in the event batch
         try {
             LOG.info("Checkpointing at sequenceNumber="

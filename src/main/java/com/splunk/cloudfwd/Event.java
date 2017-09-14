@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,7 +32,7 @@ public interface Event {
   public byte[] getBytes();
   public InputStream getInputStream();
   public void writeTo(OutputStream out) throws IOException;
-  public Connection.HecEndpoint getTarget();
+  public ConnectionImpl.HecEndpoint getTarget();
   public Type getType();
   public int length();
 }

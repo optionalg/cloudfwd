@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.Connection.HecEndpoint;
+import com.splunk.cloudfwd.impl.ConnectionImpl.HecEndpoint;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
 import java.util.*;

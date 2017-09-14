@@ -1,9 +1,9 @@
 
-import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
-import com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
+import com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
@@ -51,7 +51,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     //simulate a non-sticky endpoint
     props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
+            "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
     props.put(MAX_TOTAL_CHANNELS, "1");
     props.put(MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,"1000");
     props.put(ACK_POLL_MS, "250");
@@ -96,7 +96,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     }
 
     @Override
-    public void acknowledged(EventBatch events) {
+    public void acknowledged(EventBatchImpl events) {
       count++;
       if (count == 2) {
         Assert.assertTrue("Message Failed to block on unhealthy channel",
