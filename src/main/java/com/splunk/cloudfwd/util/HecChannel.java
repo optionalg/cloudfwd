@@ -28,6 +28,7 @@ import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.HttpSender;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.http.lifecycle.Response;
+import com.splunk.cloudfwd.HecIllegalStateException;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
