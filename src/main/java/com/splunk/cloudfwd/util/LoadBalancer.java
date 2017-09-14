@@ -50,7 +50,7 @@ public class LoadBalancer implements Closeable {
             getName());
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
-    private final Map<String, HecChannel> channelsStaleUrls = new ConcurrentHashMap<>();
+    private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
     private final CheckpointManager checkpointManager; //consolidate metrics across all channels
     private final IndexDiscoverer discoverer;
     private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -99,7 +99,7 @@ public class LoadBalancer implements Closeable {
         for (HecChannel c : this.channels.values()) {
             c.forceClose();
         }
-        for (HecChannel c : this.channelsStaleUrls.values()) {
+        for (HecChannel c : this.staleChannels.values()) {
             c.forceClose();
         }
         //}
@@ -172,7 +172,7 @@ public class LoadBalancer implements Closeable {
     void removeChannel(String channelId, boolean force) {
         HecChannel c = this.channels.remove(channelId);
         if (c == null) {
-            c = this.channelsStaleUrls.remove(channelId);
+            c = this.staleChannels.remove(channelId);
         }
         /*
     if (c == null) {
@@ -295,13 +295,14 @@ public class LoadBalancer implements Closeable {
         }
     }
 
-    public synchronized void reloadUrls() {
+    public synchronized void refreshChannels(boolean dnsLookup) {
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
-        channelsStaleUrls.putAll(channels);
+        staleChannels.putAll(channels);
         channels.clear();
-        createChannels(discoverer.getAddrs());
+        List<InetSocketAddress> addrs = dnsLookup ? discoverer.getAddrs() : discoverer.getCachedAddrs();
+        createChannels(addrs);
     }
 
     /**

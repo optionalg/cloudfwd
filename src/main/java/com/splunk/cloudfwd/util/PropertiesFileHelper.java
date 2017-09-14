@@ -15,10 +15,11 @@
  */
 package com.splunk.cloudfwd.util;
 
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.http.Endpoints;
-
 import com.splunk.cloudfwd.http.HttpSender;
 
 import java.io.IOException;
@@ -268,6 +269,29 @@ public class PropertiesFileHelper {
             DEFAULT_ENABLE_CHECKPOINTS).trim());
   }
 
+  public Connection.HecEndpoint getHecEndpointType() {
+    Connection.HecEndpoint endpoint;
+    String type = defaultProps.getProperty(HEC_ENDPOINT_TYPE, DEFAULT_HEC_ENDPOINT_TYPE).trim();
+    if (type.equals("raw")) {
+      endpoint = Connection.HecEndpoint.RAW_EVENTS_ENDPOINT;
+    } else if (type.equals("event")) {
+      endpoint = Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT;
+    } else {
+      LOG.warn("Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE
+        + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
+      endpoint = Connection.HecEndpoint.RAW_EVENTS_ENDPOINT;
+    }
+    return endpoint;
+  }
+
+  public void setHecEndpointType(Connection.HecEndpoint type) {
+    if (type == Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
+      defaultProps.put(PropertyKeys.HEC_ENDPOINT_TYPE, "event");
+    } else {
+      defaultProps.put(PropertyKeys.HEC_ENDPOINT_TYPE, "raw");
+    }
+  }
+
   public List<URL> urlsStringToList(String urlsListAsString) {
     List<URL> urlList = new ArrayList<>();
     String[] splits = urlsListAsString.split(",");
@@ -282,6 +306,14 @@ public class PropertiesFileHelper {
     }
     urlList.sort(Comparator.comparing(URL::toString));
     return urlList;
+  }
+
+  public Properties getDiff(Properties props) {
+    Properties diff = new Properties();
+    diff.putAll(defaultProps);
+    diff.putAll(props);
+    diff.entrySet().removeAll(defaultProps.entrySet());
+    return diff;
   }
 
   public String getToken() {
