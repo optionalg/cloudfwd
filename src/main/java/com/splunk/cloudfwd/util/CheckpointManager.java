@@ -28,8 +28,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecIllegalStateException;
-import static com.splunk.cloudfwd.HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED;
-import static com.splunk.cloudfwd.HecIllegalStateException.Type.ALREADY_SENT;
+import com.splunk.cloudfwd.HecConnectionStateException;
 import static com.splunk.cloudfwd.HecIllegalStateException.Type.EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED;
 import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.ACK_POLL_OK;
 
@@ -59,7 +58,7 @@ public class CheckpointManager implements LifecycleEventObserver {
       Comparable id = resp.getEvents().getId();
       if(enabled){
         acknowledgeHighwaterAndBelow(resp.getEvents());
-      }else{
+      }else{ //if checkpoints not enabled, we simple call both acknowledged and checkpoint without regard for highwater
        ConnectionCallbacks cb = this.connection.getCallbacks();
        cb.acknowledged(resp.getEvents());
        cb.checkpoint(resp.getEvents());
@@ -111,8 +110,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     if (!events.isAcknowledged()) {
       String msg = "Attempt to recompute highwater mark on unacknowledged EventBatch: " + events.
               getId();
-      LOG.error(msg);
-      throw new HecIllegalStateException(msg,EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED);
+      throw new HecIllegalStateException(msg, EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED);
     }
     EventBatch acknowledgedEvents = null;
     //walk forward in the order of EventBatches, from the tail
@@ -144,8 +142,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     if (null != checkpoint && events.getId().compareTo(checkpoint) <= 0) {
       String msg = "EventBatch already acknowldeged. EventBatch ID is " + events.
               getId() + " but checkpoint at " + checkpoint;
-      LOG.error(msg);
-      throw new HecIllegalStateException(msg, ALREADY_ACKNOWLEDGED);
+      throw new HecConnectionStateException(msg, HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED);
     }
     EventBatch prev = this.orderedEvents.get(events.getId());
     if(null != prev){
@@ -154,10 +151,8 @@ public class CheckpointManager implements LifecycleEventObserver {
     //Forced happens when we DeadChannelDetector needs to resend events
     //Retriable EventBatch is one that has not yet received EVENT_POST_OK
     if (null != prev && !forced  && !prev.isRetriable()) { 
-
       String msg = "Attempt to resend EventBatch that is not retriable because previous state was: {}  " + prev.getState();
-      LOG.warn(msg);
-      throw new HecIllegalStateException(msg, ALREADY_SENT);
+      throw new HecConnectionStateException(msg, HecConnectionStateException.Type.ALREADY_SENT);
     }
 
     this.orderedEvents.put(events.getId(), events);

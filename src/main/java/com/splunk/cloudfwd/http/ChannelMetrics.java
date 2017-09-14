@@ -30,9 +30,11 @@ import java.io.IOException;
  * @author ghendrey
  */
 public class ChannelMetrics extends LifecycleEventObservable implements LifecycleEventObserver {
-  private static final Logger LOG = LoggerFactory.getLogger(ChannelMetrics.class.getName());
 
-  /*
+    private static final Logger LOG = LoggerFactory.getLogger(
+            ChannelMetrics.class.getName());
+
+    /*
   private long eventPostCount;
   private long eventPostOKCount;
   private long eventPostNotOKCount;
@@ -41,68 +43,63 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
   private long ackPollOKCount;
   private long ackPollNotOKCount;
   private long ackPollFailureCount;
-   */
 
-  // health-related
-  //private boolean lastHealthCheck;
-  // private long healthPollOKCount;
-  // private long healthPollNotOKCount;
-  // private long healthPollFailureCount;
-
-  public ChannelMetrics(Connection c) {
-    super(c);
-  }
-
-  @Override
-  public void update(LifecycleEvent e) {
-    handleLifecycleEvent(e);
-  }
-
-  private void handleLifecycleEvent(LifecycleEvent e) {
-    switch (e.getType()) {
-      case EVENT_POST_OK: 
-      case ACK_POLL_OK: 
-      case HEALTH_POLL_OK:
-      case PREFLIGHT_CHECK_OK:
-      case HEALTH_POLL_INDEXER_BUSY:{ //INDEXER_BUSY is a normal operating condition, not a failure
-        notifyObservers(e);
-        return;
-      }
+     */
+    // health-related
+    //private boolean lastHealthCheck;
+    // private long healthPollOKCount;
+    // private long healthPollNotOKCount;
+    // private long healthPollFailureCount;
+    public ChannelMetrics(Connection c) {
+        super(c);
     }
-    if(e instanceof Response){
-      Response r = (Response)e;
-      if (r.getHttpCode() == 404) {
-        LOG.debug("The indexer is in detention. Url: "
-            + r.getUrl()
-            + ", Code: " + r.getHttpCode()
-            + ", Reply: ", r.getResp());
-        notifyObservers(e);
-      }
-      else if(r.getHttpCode()!=200){
-        LOG.error("Error from HEC endpoint in state "
-            + e.getType().name()
-            + ". Url: " + r.getUrl()
-            + ", Code: " + r.getHttpCode()
-            + ", Reply: " + r.getResp());
-        EventBatch events = (e instanceof EventBatchResponse) ?
-                ((EventBatchResponse)e).getEvents() : null;
-        connection.getCallbacks().failed(events
-            , getException(r.getHttpCode(), r.getResp(), r.getUrl()));
-        notifyObservers(e); //might as well tell everyone there was a problem
-      }
-    }
-  }
 
-  private Exception getException(int httpCode, String reply, String url) {
-    ObjectMapper mapper = new ObjectMapper();
-    HecErrorResponseValueObject hecErrorResp;
-    try {
-      hecErrorResp = mapper.readValue(reply,
-        HecErrorResponseValueObject.class);
-    } catch (IOException ex) {
-      throw new RuntimeException(ex.getMessage(), ex);
+    @Override
+    public void update(LifecycleEvent e) {
+        switch (e.getType()) {
+            case EVENT_POST_OK:
+            case ACK_POLL_OK:
+            case HEALTH_POLL_OK:
+            case PREFLIGHT_CHECK_OK:
+            case ACK_POLL_DISABLED:
+            case HEALTH_POLL_INDEXER_BUSY: { //INDEXER_BUSY is a normal operating condition, not a failure
+                notifyObservers(e);
+                return;
+            }
+        }
+        if (e instanceof Response) {
+            Response r = (Response) e;
+            if (r.getHttpCode() == 404) {
+                LOG.debug("The indexer is in detention. Url: "
+                        + r.getUrl()
+                        + ", Code: " + r.getHttpCode()
+                        + ", Reply: ", r.getResp());
+                notifyObservers(e);
+            } else if (r.getHttpCode() != 200) {
+                LOG.error("Error from HEC endpoint in state "
+                        + e.getType().name()
+                        + ". Url: " + r.getUrl()
+                        + ", Code: " + r.getHttpCode()
+                        + ", Reply: " + r.getResp());
+                EventBatch events = (e instanceof EventBatchResponse)
+                        ? ((EventBatchResponse) e).getEvents() : null;
+                connection.getCallbacks().failed(events, getException(r.
+                        getHttpCode(), r.getResp(), r.getUrl()));
+                notifyObservers(e); //might as well tell everyone there was a problem
+            }
+        }
     }
-    return new HecErrorResponseException(
-      hecErrorResp.getText(), hecErrorResp.getCode(), url);
-  }
+
+    private Exception getException(int httpCode, String reply, String url) {
+        ObjectMapper mapper = new ObjectMapper();
+        HecErrorResponseValueObject hecErrorResp;
+        try {
+            hecErrorResp = mapper.readValue(reply,
+                    HecErrorResponseValueObject.class);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
+        return new HecErrorResponseException(
+                hecErrorResp.getText(), hecErrorResp.getCode(), url);
+    }
 }

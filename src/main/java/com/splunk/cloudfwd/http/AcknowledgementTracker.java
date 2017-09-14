@@ -19,6 +19,7 @@ import com.splunk.cloudfwd.EventBatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.util.EventTracker;
@@ -92,9 +93,8 @@ public class AcknowledgementTracker implements EventTracker {
 
   private void throwIllegalStateException(EventBatch batch) {
     String msg = "Attempt to send EventBatch that is still pending acknowledgement:  " + batch;
-    LOG.warn(msg);
-    throw new HecIllegalStateException(msg,
-            HecIllegalStateException.Type.ALREADY_SENT);
+    throw new HecConnectionStateException(msg,
+            HecConnectionStateException.Type.ALREADY_SENT);
   }
 
   public void handleEventPostResponse(EventPostResponseValueObject epr,

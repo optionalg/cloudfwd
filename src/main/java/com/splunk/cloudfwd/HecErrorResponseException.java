@@ -42,11 +42,26 @@ package com.splunk.cloudfwd;
 public class HecErrorResponseException extends Exception {
     private int code;
     private String url;
+    private String message;
+
+    public HecErrorResponseException() {}
 
     public HecErrorResponseException(String message, int hecCode, String url) {
         super(message);
         this.code = hecCode;
         this.url = url;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 
     public int getCode() {
@@ -56,4 +71,6 @@ public class HecErrorResponseException extends Exception {
     public String getUrl() {
         return url;
     }
+
+    public String getMessage() { return message;}
 }

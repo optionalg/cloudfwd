@@ -20,7 +20,6 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecMaxRetriesException;
-import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.HecNonStickySessionException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
@@ -37,11 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.splunk.cloudfwd.http.HttpPostable;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
 
 /**
  *
@@ -135,8 +130,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();
-      LOG.error(msg);
-      throw new IllegalStateException(msg);
+      throw new HecIllegalStateException(msg, HecIllegalStateException.Type.CHANNEL_MISMATCH);
     }
     events.setHecChannel(this);
     sender.sendBatch(events);
@@ -163,6 +157,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         this.healthy = true; //see isAvailable
         break;
       }
+      case ACK_POLL_DISABLED:
+        this.healthy = false;
+        break;
     }
     if (e instanceof Response) {
       if (((Response) e).getHttpCode() != 200) {
@@ -175,7 +172,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
   }
 
-  private void ackReceived(LifecycleEvent s) throws RuntimeException {
+  private void ackReceived(LifecycleEvent s) {
     int count = unackedCount.decrementAndGet();
     ackedCount.incrementAndGet();
     /*
@@ -186,16 +183,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      */
     if (count < 0) {
       String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
-      LOG.error(msg);
-      throw new RuntimeException(msg);
+      throw new HecIllegalStateException(msg, HecIllegalStateException.Type.NEGATIVE_UNACKED_COUNT);
     } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
       if (quiesced) {
-        try {
-          close();
-        } catch (IllegalStateException ex) {
-          LOG.error("unable to close channel " + getChannelId() + ": " + ex.
-                  getMessage());
-        }
+        close();
       }
     }
   }
@@ -262,7 +253,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (null != deadChannelDetector) {
       deadChannelDetector.close();
     }
-    if(null != deadChannelDetector){
+    if(null != ackPollExecutor){
       ackPollExecutor.shutdownNow();
     }
   }
@@ -317,7 +308,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     boolean seenAckIdOne;
 
-    synchronized void recordAckId(EventBatch events) throws IllegalStateException {
+    synchronized void recordAckId(EventBatch events) {
       int ackId = events.getAckId().intValue();
       if (ackId == 1) {
         if (seenAckIdOne) {
