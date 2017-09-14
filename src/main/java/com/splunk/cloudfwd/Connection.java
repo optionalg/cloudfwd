@@ -184,6 +184,7 @@ public class Connection implements Closeable {
     if (closed) {
       throw new IllegalStateException("Attempt to send on closed channel.");
     }
+    events.setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
     //send the failed batch again

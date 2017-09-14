@@ -53,7 +53,7 @@ public class EventBatch implements IEventBatch {
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
   protected boolean flushed = false;
   protected boolean acknowledged;
-  private final long creationTime = System.currentTimeMillis();
+  private long sendTimestamp = System.currentTimeMillis();
   protected int numEvents;
   protected int numTries; //events are resent by DeadChannelDetector
   protected int length;
@@ -76,7 +76,7 @@ public class EventBatch implements IEventBatch {
 
   @Override
   public boolean isTimedOut(long timeout) {
-    long flightTime = System.currentTimeMillis() - creationTime;
+    long flightTime = System.currentTimeMillis() - sendTimestamp;
     LOG.warn("Flight time {}, isTimedOut {}" , flightTime, flightTime >= timeout);    
     return flightTime >= timeout;
   }
@@ -260,10 +260,10 @@ public class EventBatch implements IEventBatch {
   }
 
   /**
-   * @return the creationTime
+   * @return the sendTimestamp
    */
-  public long getCreationTime() {
-    return creationTime;
+  public long getSendTimestamp() {
+    return sendTimestamp;
   }
 
   /**
@@ -295,6 +295,10 @@ public class EventBatch implements IEventBatch {
   public LifecycleEvent.Type getState() {
     return state;
   }
+
+    void setSendTimestamp(long currentTimeMillis) {
+        this.sendTimestamp = currentTimeMillis;
+    }
 
   private class HttpEventBatchEntity extends AbstractHttpEntity {
 
