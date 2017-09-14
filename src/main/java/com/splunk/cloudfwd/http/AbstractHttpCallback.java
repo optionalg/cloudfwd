@@ -16,11 +16,12 @@
 package com.splunk.cloudfwd.http;
 
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -28,8 +29,7 @@ import org.apache.http.util.EntityUtils;
  */
 public abstract class AbstractHttpCallback implements FutureCallback<HttpResponse> {
 
-  private static final Logger LOG = Logger.getLogger(AbstractHttpCallback.class.
-          getName());
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractHttpCallback.class.getName());
 
   @Override
   final public void completed(HttpResponse response) {
@@ -38,7 +38,7 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
       String reply = EntityUtils.toString(response.getEntity(), "utf-8");
       completed(reply, code);
     } catch (IOException e) {      
-      LOG.log(Level.SEVERE, "failed to unmarshal response", e);
+      LOG.error("failed to unmarshal response", e);
     }      
   }
 

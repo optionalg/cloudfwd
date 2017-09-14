@@ -58,7 +58,6 @@ public class Connection implements Closeable {
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
   private boolean closed;
-  private HecEndpoint hecEndpointType;
   private EventBatch events; //default EventBatch used if send(event) is called
   private PropertiesFileHelper propertiesFileHelper;
 
@@ -74,7 +73,6 @@ public class Connection implements Closeable {
 
   private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
     this.events = new EventBatch();
-    this.hecEndpointType = HecEndpoint.RAW_EVENTS_ENDPOINT;
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
     //the EventBatch that succeeded or failed from the timoutChecker
     this.timeoutChecker = new TimeoutChecker(this);
@@ -182,7 +180,7 @@ public class Connection implements Closeable {
    */
   public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (closed) {
-      throw new IllegalStateException("Attempt to send on closed channel.");
+      throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
     events.setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
@@ -223,7 +221,7 @@ public class Connection implements Closeable {
    * @return the hecEndpointType
    */
   public HecEndpoint getHecEndpointType() {
-    return hecEndpointType;
+    return propertiesFileHelper.getHecEndpointType();
   }
 
   /**
@@ -231,7 +229,7 @@ public class Connection implements Closeable {
    */
   public void setHecEndpointType(
           HecEndpoint hecEndpointType) {
-    this.hecEndpointType = hecEndpointType;
+    propertiesFileHelper.setHecEndpointType(hecEndpointType);
   }
 
   /**
@@ -266,7 +264,7 @@ public class Connection implements Closeable {
   public void setToken(String token) {
     if (!propertiesFileHelper.getToken().equals(token)) {
       propertiesFileHelper.putProperty(PropertyKeys.TOKEN, token);
-      // TODO: gut and replace channels
+      lb.refreshChannels(false);
     }
   }
 
@@ -280,7 +278,46 @@ public class Connection implements Closeable {
             propertiesFileHelper.getUrls())) {
       // a single url or a list of comma separated urls
       propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      lb.reloadUrls();
+      lb.refreshChannels(true);
+    }
+  }
+
+  /**
+   * Use this method to change multiple settings on the connection.
+   * See PropertyKeys class for more information.
+   * @param props
+   */
+  public void setProperties(Properties props) {
+    Properties diffs = propertiesFileHelper.getDiff(props);
+    boolean refreshChannels = false;
+    boolean dnsLookup = false;
+
+    for (String key : diffs.stringPropertyNames()) {
+      switch (key) {
+        case PropertyKeys.ACK_TIMEOUT_MS:
+          setAckTimeoutMS(Long.parseLong(diffs.getProperty(key)));
+          break;
+        case PropertyKeys.COLLECTOR_URI:
+          propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI,
+                  diffs.getProperty(key));
+          dnsLookup = true;
+          refreshChannels = true;
+          break;
+        case PropertyKeys.TOKEN:
+          propertiesFileHelper.putProperty(PropertyKeys.TOKEN,
+                  diffs.getProperty(key));
+          refreshChannels = true;
+          break;
+        case PropertyKeys.HEC_ENDPOINT_TYPE:
+          propertiesFileHelper.putProperty(PropertyKeys.HEC_ENDPOINT_TYPE,
+                  diffs.getProperty(key));
+          break;
+        default:
+          LOG.warn("Attempt to change property not supported: " + key);
+      }
+    }
+    if (refreshChannels) {
+      lb.refreshChannels(dnsLookup);
     }
   }
 

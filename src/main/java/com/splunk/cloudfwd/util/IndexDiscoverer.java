@@ -51,9 +51,13 @@ class IndexDiscoverer extends Observable {
 
   }
 
-  public List<InetSocketAddress> getInetSockAddrs(){
+  // avoids doing a DNS lookup if possible
+  public List<InetSocketAddress> getCachedAddrs() {
+    if (mappings == null || mappings.isEmpty()) {
+      return getAddrs();
+    }
     List<InetSocketAddress> addrs = new ArrayList<>();
-    for(List<InetSocketAddress> list:this.mappings.values()){
+    for (List<InetSocketAddress> list : mappings.values()) {
       addrs.addAll(list);
     }
     return addrs;
@@ -83,6 +87,7 @@ class IndexDiscoverer extends Observable {
   }
 
   synchronized List<InetSocketAddress> getAddrs(){
+    // perform DNS lookup
     this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
             propertiesFileHelper.isForcedUrlMapToSingleAddr());
     List<InetSocketAddress> addrs = new ArrayList<>();

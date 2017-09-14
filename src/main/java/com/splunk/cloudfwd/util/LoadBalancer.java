@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.util;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
@@ -49,7 +50,7 @@ public class LoadBalancer implements Closeable {
             getName());
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
-    private final Map<String, HecChannel> channelsStaleUrls = new ConcurrentHashMap<>();
+    private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
     private final CheckpointManager checkpointManager; //consolidate metrics across all channels
     private final IndexDiscoverer discoverer;
     private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
@@ -73,8 +74,9 @@ public class LoadBalancer implements Closeable {
 
     public synchronized void sendBatch(EventBatch events) throws HecConnectionTimeoutException {
         if (null == this.connection.getCallbacks()) {
-            throw new IllegalStateException(
-                    "Connection FutureCallback has not been set.");
+            throw new HecConnectionStateException(
+                    "Connection FutureCallback has not been set.",
+                    HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
         }
         if (channels.isEmpty()) {
             createChannels(discoverer.getAddrs());
@@ -97,7 +99,7 @@ public class LoadBalancer implements Closeable {
         for (HecChannel c : this.channels.values()) {
             c.forceClose();
         }
-        for (HecChannel c : this.channelsStaleUrls.values()) {
+        for (HecChannel c : this.staleChannels.values()) {
             c.forceClose();
         }
         //}
@@ -170,7 +172,7 @@ public class LoadBalancer implements Closeable {
     void removeChannel(String channelId, boolean force) {
         HecChannel c = this.channels.remove(channelId);
         if (c == null) {
-            c = this.channelsStaleUrls.remove(channelId);
+            c = this.staleChannels.remove(channelId);
         }
         /*
     if (c == null) {
@@ -180,13 +182,11 @@ public class LoadBalancer implements Closeable {
     }
          */
         if (!force && !c.isEmpty()) {
-            LOG.error(
-                    "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-                    getUnackedCount() + " unacked payloads");
             LOG.debug(this.checkpointManager.toString());
-            throw new RuntimeException(
+            throw new HecIllegalStateException(
                     "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-                    getUnackedCount() + " unacked payloads");
+                    getUnackedCount() + " unacked payloads",
+                    HecIllegalStateException.Type.REMOVE_NON_EMPTY_CHANNEL);
 
         }
 
@@ -295,13 +295,14 @@ public class LoadBalancer implements Closeable {
         }
     }
 
-    public synchronized void reloadUrls() {
+    public synchronized void refreshChannels(boolean dnsLookup) {
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
-        channelsStaleUrls.putAll(channels);
+        staleChannels.putAll(channels);
         channels.clear();
-        createChannels(discoverer.getAddrs());
+        List<InetSocketAddress> addrs = dnsLookup ? discoverer.getAddrs() : discoverer.getCachedAddrs();
+        createChannels(addrs);
     }
 
     /**

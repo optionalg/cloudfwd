@@ -20,7 +20,7 @@ import com.splunk.cloudfwd.http.lifecycle.LifecycleEvent;
 import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_BATCH_BORN;
 import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_NOT_OK;
-import static com.splunk.cloudfwd.http.lifecycle.LifecycleEvent.Type.EVENT_POST_OK;
+import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.util.EventTracker;
 import com.splunk.cloudfwd.util.HecChannel;
 import java.io.IOException;
@@ -84,15 +84,15 @@ public class EventBatch implements IEventBatch {
   @Override
   public synchronized void add(Event event) {
     if (flushed) {
-      throw  new HecIllegalStateException("Can't add Event to flushed EventBatch",
-              HecIllegalStateException.Type.ALREADY_SENT);
+      throw  new HecConnectionStateException("Can't add Event to flushed EventBatch",
+              HecConnectionStateException.Type.ALREADY_SENT);
     }
     if (null != knownTarget && knownTarget != event.getTarget()) { //and it's intended endpoint target doesn't match
-      throw new HecIllegalStateException(
+      throw new HecConnectionStateException(
               "Illegal attempt to add event with getTarget()=" + event.
               getTarget()
               + " to EventBatch containing Event with getTarget()=" + knownTarget,
-              HecIllegalStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
+              HecConnectionStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
     }
     if (event.getType() != Event.Type.UNKNOWN) {
       knownTarget = event.getTarget();
@@ -201,8 +201,8 @@ public class EventBatch implements IEventBatch {
   public HttpEntity getEntity() {
     AbstractHttpEntity e = new HttpEventBatchEntity();
     if (null == knownTarget) {
-      throw new IllegalStateException(
-              "getEntity cannot be called until post() has been called.");
+      throw new HecIllegalStateException(
+              "Event batch has no target.", HecIllegalStateException.Type.NO_TARGET);
     }
     if (knownTarget == Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
       e.setContentType(
@@ -224,13 +224,13 @@ public class EventBatch implements IEventBatch {
     return e;
   }
 
-  public void checkAndSetCompatibility(Connection.HecEndpoint target) throws HecIllegalStateException {
+  public void checkAndSetCompatibility(Connection.HecEndpoint target) {
     if (knownTarget != null) {
       if (knownTarget != target) {
-        throw new HecIllegalStateException(
+        throw new HecConnectionStateException(
                 "EventBatch contained  events wih getTarget()=" + knownTarget
                 + " which is incompatible with HEC endpoint  " + target,
-                HecIllegalStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
+                HecConnectionStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT);
       }
     } else {
       knownTarget = target; //this can help us infer the content type as application/json when destined for /events

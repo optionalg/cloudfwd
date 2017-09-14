@@ -33,6 +33,7 @@ public abstract class LifecycleEvent {
     ACK_POLL_OK,
     ACK_POLL_NOT_OK,
     ACK_POLL_FAILURE,
+    ACK_POLL_DISABLED,
 
     // States without an EventBatch object
     HEALTH_POLL_OK,
