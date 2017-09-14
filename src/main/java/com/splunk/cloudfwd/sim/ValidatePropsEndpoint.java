@@ -18,11 +18,12 @@ import java.util.List;
  *
  * Created by eprokop on 9/11/17.
  */
-public class ValidatePropsLiveEndpoint extends SimulatedHECEndpoints {
+public class ValidatePropsEndpoint extends SimulatedHECEndpoints {
 
     public static List<URL> URLS; // set with PropertiesFileHelper.getUrls()
     public static long ACK_TIMEOUT_MS;
-    private static AssertionError fail = null;
+    public static String TOKEN;
+    private static Throwable fail = null;
 
     @Override
     public void pollAcks(HecIOManager ackMgr,
@@ -40,16 +41,19 @@ public class ValidatePropsLiveEndpoint extends SimulatedHECEndpoints {
                 }
             }
             Assert.assertTrue("Sender url: " + sender.getBaseUrl()
-                    + ", must match a url in url list: " + URLS.toString(), match);
-            Assert.assertEquals("Ack timeouts do not match.",
+                    + ", should match a url in url list: " + URLS.toString(), match);
+            Assert.assertEquals("Ack timeouts should match.",
                     sender.getConnection().getPropertiesFileHelper().getAckTimeoutMS(), ACK_TIMEOUT_MS);
-        } catch (AssertionError e) {
+            Assert.assertEquals("Tokens should match.",
+                    sender.getConnection().getPropertiesFileHelper().getToken(), TOKEN);
+        } catch (AssertionError|Exception e) {
             fail = e;
-            throw e;
+            throw e; // so it shows up in console. still need to call getAssertionFailures
+            // since this won't cause the test to fail as it isn't thrown in the main thread
         }
     }
 
-    public static AssertionError getAssertionFailures() {
+    public static Throwable getAssertionFailures() {
         return fail;
     }
 }

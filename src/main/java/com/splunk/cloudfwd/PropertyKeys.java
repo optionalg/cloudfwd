@@ -43,6 +43,32 @@ public class PropertyKeys {
   public static final String HOST = "host";
 
   /**
+   * Specifies whether to send to Splunk HEC /raw or /event endpoint.
+   * Can be one of two values: "raw" or "event".
+   * @see DEFAULT_HEC_ENDPOINT_TYPE
+   */
+  public static final String HEC_ENDPOINT_TYPE = "hec_endpoint_type";
+
+  /**
+   * Checkpoints are disabled by default. Checkpoints are a feature that can be
+   * used ONLY when the sequence of Events sent through the connection has
+   * monotonically ascending Comparable IDs. When checkpoints are enabled,
+   * ConnectionCallbacks.checkpoint is called each time the highwater mark moves
+   * forward in the monotonic sequence. The checkpoint moves forward when all
+   * events have been delivered whose IDs are lower or equal to the highwater
+   * mark provided in the ConnectionCallbacks.checkpoint call. By storing the
+   * highwater mark to durable storage, the user of the Connection can recover
+   * from a crash/cold start by reading the highwater mark out of storage and
+   * resuming sending events based on the highwater mark. It is important to
+   * understand that, because acknowledgments occur out of order, that while
+   * a ConnectionCallbacks.acknowledged will be called for every event that is
+   * acknowledged by splunk HEC, that ConnectionCallbacks.checkpoint need
+   * not be called for each, and may skip over many acknowledged IDs landing
+   * only on the highwater mark itself.
+   */
+  public static final String ENABLE_CHECKPOINTS = "enable_checkpoints";
+
+  /**
    * If true, disables certificate validation and allows sending to non-HTTPs
    * endpoints. Defaults to false.
    */
@@ -269,6 +295,22 @@ public class PropertyKeys {
    */
   public static final String DEFAULT_CHANNELS_PER_DESTINATION = "8";
 
+  /**
+   * Default value for the HEC_ENDPOINT_TYPE property.
+   * @see HEC_ENDPOINT_TYPE
+   */
+  public static final String DEFAULT_HEC_ENDPOINT_TYPE = "raw";
+
+  /**
+   * By default checkpoints are disabled. When checkpoints are disabled the
+   * ConnectionCallbacks.checkpoint method is still invoked, but its meaning is
+   * identical to ConnectionCallbacks.acknowledged. It will be called once for
+   * each acknowledged ID, and can occur out of order with respect to event IDs.
+   * When disabled, the application does NOT have to send events in order of
+   * monotonically increasing IDs.
+   */
+  public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
+
 
   /* **************************** LIMITS ************************* */
   /**
@@ -315,34 +357,5 @@ public class PropertyKeys {
    * @see MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL
    */
   public static final int MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL = 1;
-
-  /**
-   * Checkpoints are disabled by default. Checkpoints are a feature that can be
-   * used ONLY when the sequence of Events sent through the connection has
-   * monotonically ascending Comparable IDs. When checkpoints are enabled,
-   * ConnectionCallbacks.checkpoint is called each time the highwater mark moves
-   * forward in the monotonic sequence. The checkpoint moves forward when all
-   * events have been delivered whose IDs are lower or equal to the highwater
-   * mark provided in the ConnectionCallbacks.checkpoint call. By storing the
-   * highwater mark to durable storage, the user of the Connection can recover
-   * from a crash/cold start by reading the highwater mark out of storage and
-   * resuming sending events based on the highwater mark. It is important to 
-   * understand that, because acknowledgments occur out of order, that while
-   * a ConnectionCallbacks.acknowledged will be called for every event that is 
-   * acknowledged by splunk HEC, that ConnectionCallbacks.checkpoint need
-   * not be called for each, and may skip over many acknowledged IDs landing
-   * only on the highwater mark itself.
-   */
-  public static final String ENABLE_CHECKPOINTS = "enable_checkpoints";
-
-  /**
-   * By default checkpoints are disabled. When checkpoints are disabled the 
-   * ConnectionCallbacks.checkpoint method is still invoked, but its meaning is 
-   * identical to ConnectionCallbacks.acknowledged. It will be called once for
-   * each acknowledged ID, and can occur out of order with respect to event IDs.
-   * When disabled, the application does NOT have to send events in order of
-   * monotonically increasing IDs.
-   */
-  public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
 
 }
