@@ -66,7 +66,9 @@ public class RawEvent implements Event{
     JsonNode node = jsonMapper.readTree(jsonBytes);
     JsonNodeType type = node.getNodeType();
     if(type!=JsonNodeType.OBJECT && type!=JsonNodeType.ARRAY && type!=JsonNodeType.POJO) {
-      throw new IllegalStateException("Incorrect event type object: " + type);
+      throw new HecIllegalStateException(
+              "Incorrect event type object: " + type,
+              HecIllegalStateException.Type.INCORRECT_EVENT_TYPE_OBJECT);
     }
 
     return new RawEvent(jsonBytes, id,  Event.Type.JSON);

@@ -1,8 +1,6 @@
 
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecIllegalStateException;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.*;
+
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
 import java.util.Properties;
@@ -30,7 +28,7 @@ import org.junit.Test;
  * @author ghendrey
  */
 public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
-  private HecIllegalStateException.Type expecteExType;
+  private HecConnectionStateException.Type expectedExType;
 
   @Override
   protected Properties getProps() {
@@ -48,11 +46,11 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
   @Before
   public void setUp() {
     super.setUp();
-    this.expecteExType = getExceptionType();
+    this.expectedExType = getExceptionType();
   }
   
-  protected HecIllegalStateException.Type getExceptionType(){
-    return HecIllegalStateException.Type.ALREADY_SENT;
+  protected HecConnectionStateException.Type getExceptionType(){
+    return HecConnectionStateException.Type.ALREADY_SENT;
   }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
@@ -72,22 +70,22 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
       event = nextEvent(1); //duplicate event ID
       try {
         connection.send(event);
-        Assert.fail("Succeeded in sending a message, where HecIllegalStateException was expected");
-      } catch (HecIllegalStateException ex) {       
+        Assert.fail("Succeeded in sending a message, where HecConnectionStateException was expected");
+      } catch (HecConnectionStateException ex) {
         Assert.assertTrue(
-                "Excpected Exception wasn't HecIllegalStateException. Was " + ex.
-                getClass().getName(), ex instanceof HecIllegalStateException);
-        if (ex instanceof HecIllegalStateException) {
-          HecIllegalStateException e = (HecIllegalStateException) ex;
+                "Excpected Exception wasn't HecConnectionStateException. Was " + ex.
+                getClass().getName(), ex instanceof HecConnectionStateException);
+        if (ex instanceof HecConnectionStateException) {
+          HecConnectionStateException e = (HecConnectionStateException) ex;
           Assert.assertEquals(
-                  "HecIllegalStateException type was unexpected: " + e.getType(),
-                   this.expecteExType,e.getType());
+                  "HecConnectionStateException type was unexpected: " + e.getType(),
+                   this.expectedExType,e.getType());
           exceptionCount++;
         }
       }
     }
     Assert.assertEquals( //all the messages except the first should have failed
-            "Did not receive correct number of HecIllegalStateExceptions",
+            "Did not receive correct number of HecConnectionStateException",
             expected - 1, exceptionCount);
     connection.close(); //will flush 
     //note we don't need to wait for callbacks latch on this test

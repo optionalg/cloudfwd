@@ -16,22 +16,26 @@
 package com.splunk.cloudfwd;
 
 /**
- * Thrown if duplicate ack-id is received on a given HEC channel. This can
- * indicate failure of a sticky load balancer to provide stickiness.
+ * Represents an internal illegal state in Cloudfwd, which is not recoverable but should be logged.
  *
  * @author ghendrey
  */
 public class HecIllegalStateException extends IllegalStateException {
 
   public enum Type {
-     ALREADY_SENT,
-    ALREADY_ACKNOWLEDGED,
-    WRONG_EVENT_FORMAT_FOR_ENDPOINT,  
     EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED,
     LOAD_BALANCER_NO_CHANNELS,
     ACK_ID_MISMATCH,
     EVENT_TRACKER_ALREADY_REGISTERED,
-    ALREADY_FLUSHED
+    NULL_CHANNEL,
+    INCORRECT_EVENT_TYPE_OBJECT,
+    CHANNEL_MISMATCH,
+    CANNOT_GET_ENTITY,
+    ALREADY_POLLING_ACKS,
+    CORE_POOL_SIZE_ZERO,
+    NEGATIVE_UNACKED_COUNT,
+    REMOVE_NON_EMPTY_CHANNEL,
+    CANNOT_LOAD_PROPERTIES
   }
   private final Type type;
 
@@ -45,6 +49,10 @@ public class HecIllegalStateException extends IllegalStateException {
   public HecIllegalStateException(String s, Type t) {
     super(s);
     this.type = t;
+  }
+
+  public String toString() {
+    return super.toString() + type;
   }
 
 }

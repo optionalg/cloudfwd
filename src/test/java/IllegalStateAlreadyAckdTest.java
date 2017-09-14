@@ -1,5 +1,6 @@
 
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 
@@ -39,8 +40,8 @@ public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
     props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true"); //checkpoints are required for this to work      
     return props;
   }
-    protected HecIllegalStateException.Type getExceptionType(){
-    return HecIllegalStateException.Type.ALREADY_ACKNOWLEDGED;
+    protected HecConnectionStateException.Type getExceptionType(){
+    return HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED;
   }
     
   @Override

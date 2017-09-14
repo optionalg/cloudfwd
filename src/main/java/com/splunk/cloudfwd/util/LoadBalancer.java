@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.util;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
@@ -73,8 +74,9 @@ public class LoadBalancer implements Closeable {
 
     public synchronized void sendBatch(EventBatch events) throws HecConnectionTimeoutException {
         if (null == this.connection.getCallbacks()) {
-            throw new IllegalStateException(
-                    "Connection FutureCallback has not been set.");
+            throw new HecConnectionStateException(
+                    "Connection FutureCallback has not been set.",
+                    HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
         }
         if (channels.isEmpty()) {
             createChannels(discoverer.getAddrs());
@@ -180,13 +182,11 @@ public class LoadBalancer implements Closeable {
     }
          */
         if (!force && !c.isEmpty()) {
-            LOG.error(
-                    "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-                    getUnackedCount() + " unacked payloads");
             LOG.debug(this.checkpointManager.toString());
-            throw new RuntimeException(
+            throw new HecIllegalStateException(
                     "Attempt to remove non-empty channel: " + channelId + " containing " + c.
-                    getUnackedCount() + " unacked payloads");
+                    getUnackedCount() + " unacked payloads",
+                    HecIllegalStateException.Type.REMOVE_NON_EMPTY_CHANNEL);
 
         }
 

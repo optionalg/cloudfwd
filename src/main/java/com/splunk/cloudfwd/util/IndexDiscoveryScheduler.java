@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.splunk.cloudfwd.HecIllegalStateException;
 
 /**
  *
@@ -37,7 +38,7 @@ class IndexDiscoveryScheduler {
 
   public synchronized void start(IndexDiscoverer d){
     if(started){
-      throw new IllegalStateException("AckPollController already started");
+      throw new HecIllegalStateException("AckPollController already started", HecIllegalStateException.Type.ALREADY_POLLING_ACKS);
     }
     if(stopped){
       LOG.debug("Ignoring request to start stopped IndexDiscoveryScheduler");
