@@ -46,7 +46,7 @@ public class CallbackInterceptor implements ConnectionCallbacks {
             LOG.error("Caught exception from ConnectionCallbacks.acknowledged: " + e.getMessage());
             LOG.error(e.getMessage(), e);
         } finally {
-           ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
+            ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
         }
     }
 
