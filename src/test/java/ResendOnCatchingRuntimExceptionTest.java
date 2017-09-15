@@ -1,6 +1,5 @@
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;

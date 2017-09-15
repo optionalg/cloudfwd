@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,19 +39,19 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     }       
 
     @Override
-    public void acknowledged(EventBatchImpl events) {
+    public void acknowledged(EventBatch events) {
         try {
             callbacks.acknowledged(events);
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.acknowledged: " + e.getMessage());
             LOG.error(e.getMessage(), e);
         } finally {
-            events.cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
+           ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
         }
     }
 
     @Override
-    public void failed(EventBatchImpl events, Exception ex) {
+    public void failed(EventBatch events, Exception ex) {
         try {
             this.callbacks.failed(events, ex);
         } catch (Exception e) {
@@ -58,13 +59,13 @@ public class CallbackInterceptor implements ConnectionCallbacks {
             LOG.error(e.getMessage(), e);
         } finally {
             if (null != events) {
-                events.cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
+                ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
             }
         }
     }
 
     @Override
-    public void checkpoint(EventBatchImpl events) {
+    public void checkpoint(EventBatch events) {
         try {
             callbacks.checkpoint(events); //we don't need to wrap checkpoint at present
         } catch (Exception e) {

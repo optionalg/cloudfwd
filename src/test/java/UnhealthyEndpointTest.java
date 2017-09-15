@@ -1,5 +1,5 @@
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
@@ -96,7 +96,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     }
 
     @Override
-    public void acknowledged(EventBatchImpl events) {
+    public void acknowledged(EventBatch events) {
       count++;
       if (count == 2) {
         Assert.assertTrue("Message Failed to block on unhealthy channel",

@@ -14,16 +14,9 @@
  */
 
 package com.amazonaws.services.kinesis.samples.stocktrades.processor;
-
 import java.util.List;
-
-import com.splunk.cloudfwd.impl.ConnectionImpl;
-
-import com.splunk.cloudfwd.impl.EventBatchImpl;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
@@ -31,7 +24,11 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorC
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.samples.stocktrades.model.StockTrade;
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.Connections;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventWithMetadata;
+import com.splunk.cloudfwd.Events;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,8 +42,8 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
     private String kinesisShardId;
 
     private final int BATCH_SIZE = 10;
-    private EventBatchImpl eventBatch = new EventBatchImpl();
-    private ConnectionImpl splunk;
+    private EventBatch eventBatch = Events.createBatch();
+    private Connection connection;
     StockTradeProcessorCallback callback;
 
     /**
@@ -57,8 +54,8 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
         this.kinesisShardId = shardId;
         callback = new StockTradeProcessorCallback(shardId);
         try {
-            splunk = new ConnectionImpl(callback);
-            splunk.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+            connection = Connections.create(callback);
+            connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         } catch (RuntimeException e) {
             LOG.error("Unable to connect to Splunk.", e);
             System.exit(1);
@@ -86,12 +83,12 @@ public class StockTradeRecordProcessor implements IRecordProcessor {
             LOG.info("Sending event batch with sequenceNumber=" + eventBatch.getId());
             callback.addCheckpointer((String)eventBatch.getId(), checkpointer);
           try {
-            splunk.sendBatch(eventBatch);
+            connection.sendBatch(eventBatch);
           } catch (HecConnectionTimeoutException ex) {
             Logger.getLogger(StockTradeRecordProcessor.class.getName()).
                     log(Level.SEVERE, null, ex);
           }
-            eventBatch = new EventBatchImpl();
+            eventBatch = Events.createBatch();
         }
     }
 

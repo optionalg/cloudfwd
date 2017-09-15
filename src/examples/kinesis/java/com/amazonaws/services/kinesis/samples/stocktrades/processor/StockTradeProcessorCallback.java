@@ -9,7 +9,7 @@ import org.apache.commons.logging.LogFactory;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.EventBatch;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -28,14 +28,14 @@ public class StockTradeProcessorCallback implements ConnectionCallbacks {
     }
 
     @Override
-    public void acknowledged(EventBatchImpl events) {
+    public void acknowledged(EventBatch events) {
         LOG.info("Received ack for event batch with sequenceNumber="
                 + events.getId()
                 + " (shardId=" + shardId + ")");
     }
 
     @Override
-    public void failed(EventBatchImpl events, Exception ex) {
+    public void failed(EventBatch events, Exception ex) {
         // TODO: show how to handle different types of exceptions
         LOG.warn("Sending failed for event batch with sequenceNumber="
                 + events.getId()
@@ -44,7 +44,7 @@ public class StockTradeProcessorCallback implements ConnectionCallbacks {
     }
 
     @Override
-    public void checkpoint(EventBatchImpl events) {
+    public void checkpoint(EventBatch events) {
         String sequenceNumber = (String)events.getId(); // highest sequence number in the event batch
         try {
             LOG.info("Checkpointing at sequenceNumber="

@@ -82,8 +82,11 @@ public class EventBatchImpl implements EventBatch {
   @Override
   public boolean isTimedOut(long timeout) {
     long flightTime = System.currentTimeMillis() - sendTimestamp;
-    LOG.warn("Flight time {}, isTimedOut {}" , flightTime, flightTime >= timeout);    
-    return flightTime >= timeout;
+    boolean isTimedOut = flightTime >= timeout;
+    if(isTimedOut){
+        LOG.warn("Timed Out at {} ms: {}", flightTime, this);    
+    }
+    return isTimedOut;
   }
 
   @Override

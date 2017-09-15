@@ -195,7 +195,8 @@ public class LoadBalancer implements Closeable {
         sendRoundRobin(events, false);
     }
 
-    synchronized void sendRoundRobin(EventBatchImpl events, boolean forced) throws HecConnectionTimeoutException {
+    synchronized void sendRoundRobin(EventBatchImpl events, boolean forced)
+            throws HecConnectionTimeoutException {
         prepareToFindChannel(events, forced);
         long startTime = System.currentTimeMillis();
         int spinCount = 0;
@@ -206,7 +207,8 @@ public class LoadBalancer implements Closeable {
             //list of channels. Because the channelIdx could wind up pointing past the end
             //of the live list, due to fact that this.removeChannel is not synchronized (and
             //must not be do avoid deadlocks).
-            List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.values());
+            List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.
+                    values());
             if (channelsSnapshot.isEmpty()) {
                 continue; //keep going until a channel is added
             }
@@ -218,9 +220,9 @@ public class LoadBalancer implements Closeable {
         }
     }
 
-    private void prepareToFindChannel(EventBatchImpl events, boolean forced) throws HecIllegalStateException {
+    private void prepareToFindChannel(EventBatchImpl events, boolean forced)
+            throws HecIllegalStateException {
         events.incrementNumTries();
-        latch = new CountDownLatch(1);
         if (channels.isEmpty()) {
             throw new HecIllegalStateException(
                     "attempt to sendRoundRobin but no channel available.",
@@ -264,15 +266,19 @@ public class LoadBalancer implements Closeable {
     private void waitIfSpinCountTooHigh(int spinCount,
             List<HecChannel> channelsSnapshot) {
         if (spinCount % channelsSnapshot.size() == 0) {
-            LOG.warn("Waiting for available channel...");
             try {
-                latch.await(1, TimeUnit.SECONDS);
+                latch = new CountDownLatch(1);
+                if (!latch.await(1, TimeUnit.SECONDS)) {
+                    LOG.warn(
+                            "Round-robin load channel search waited 1 second at spin count {}, channel idx {}",
+                            spinCount, this.robin % channelsSnapshot.size());
+                }
+                latch = null;
             } catch (InterruptedException e) {
                 LOG.error(
-                        "LoadBalancer caught InterruptedException and resumed. Interruption message was: " + e.
+                        "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
                         getMessage());
             }
-            latch = new CountDownLatch(1); //replace the finished countdown latch
         }
     }
 
@@ -289,8 +295,11 @@ public class LoadBalancer implements Closeable {
     }
 
     void wakeUp() {
-        if (null != latch) {
-            latch.countDown();
+        //we need to take hold a reference to latch in tmp, which won't get nullled between the if block
+        //and calling latch.countdown
+        CountDownLatch tmp = latch;
+        if (null != tmp) {
+            tmp.countDown();
         }
     }
 
@@ -300,7 +309,8 @@ public class LoadBalancer implements Closeable {
         }
         staleChannels.putAll(channels);
         channels.clear();
-        List<InetSocketAddress> addrs = dnsLookup ? discoverer.getAddrs() : discoverer.getCachedAddrs();
+        List<InetSocketAddress> addrs = dnsLookup ? discoverer.getAddrs() : discoverer.
+                getCachedAddrs();
         createChannels(addrs);
     }
 

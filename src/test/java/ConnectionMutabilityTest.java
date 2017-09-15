@@ -1,7 +1,8 @@
-import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.sim.ValidatePropsEndpoint;
 import org.junit.Assert;
 import org.junit.Test;
@@ -16,7 +17,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     private int numEvents = 1000000;
     private int start = 0;
     private int stop = -1;
-    private long ackPollWait = 2000;//2 sec
+    private long ackPollWait = 10;
 
     @Test
     // Makes sure we are computing diffs as expected
@@ -25,14 +26,14 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         props1.setProperty(PropertyKeys.TOKEN, "a token");
         props1.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "30000");
         props1.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8088");
-        connection.setProperties(props1);
+        connection.getSettings().setProperties(props1);
 
         // Diff for the same properties
         Properties props2 = new Properties();
         props2.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8088");
         props2.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "30000");
         props2.setProperty(PropertyKeys.TOKEN, "a token");
-        Properties diff = connection.getPropertiesFileHelper().getDiff(props2);
+        Properties diff = connection.getSettings().getDiff(props2);
         Assert.assertTrue("Diff should be empty.", diff.isEmpty());
 
         // Diff for some different properties
@@ -44,50 +45,58 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         props3.setProperty(PropertyKeys.TOKEN, diffToken);
         props3.setProperty(PropertyKeys.COLLECTOR_URI, diffUrl);
         props3.setProperty(PropertyKeys.CHANNEL_DECOM_MS, diffChannelDecom);
-        diff = connection.getPropertiesFileHelper().getDiff(props3);
+        diff = connection.getSettings().getDiff(props3);
         Assert.assertTrue("Diff should contain token.", diff.getProperty(PropertyKeys.TOKEN).equals(diffToken));
         Assert.assertTrue("Diff should contain urls.", diff.getProperty(PropertyKeys.COLLECTOR_URI).equals(diffUrl));
         Assert.assertTrue("Diff should contain channel decom time.", diff.getProperty(PropertyKeys.CHANNEL_DECOM_MS).equals(diffChannelDecom));
         Assert.assertTrue("Diff should contain exactly 3 elements.", diff.size() == 3);
 
         // Diff for empty Properties
-        diff = connection.getPropertiesFileHelper().getDiff(new Properties());
+        diff = connection.getSettings().getDiff(new Properties());
         Assert.assertTrue("Diff for empty properties should be empty.", diff.isEmpty());
     }
 
     @Test
     public void setMultipleProperties() throws Throwable {
         setPropsOnEndpoint();
-        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(ackPollWait);
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
         // Set some new properties
         Properties props1 = new Properties();
         props1.setProperty(PropertyKeys.TOKEN, "a token");
         props1.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "120000");
         props1.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8188");
-        connection.setProperties(props1);
+        connection.getSettings().setProperties(props1);
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(ackPollWait);
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
         // Set the same properties
-        connection.setProperties(props1);
+        connection.getSettings().setProperties(props1);
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(ackPollWait);
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
         // Set some more new properties
         Properties props2 = new Properties();
         props2.setProperty(PropertyKeys.TOKEN, "different token");
         props2.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "240000");
         props2.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8288, https://127.0.0.1:8388");
-        connection.setProperties(props2);
+        connection.getSettings().setProperties(props2);
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(ackPollWait);
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
         close();
         checkAsserts();
@@ -96,22 +105,22 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     @Test
     public void changeEndpointType() throws Throwable {
         setPropsOnEndpoint();
-        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
         connection.flush();
 
-        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
         connection.flush();
 
-        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
         sendSomeEvents(getNumEventsToSend()/4);
         connection.flush();
 
-        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
         sendSomeEvents(getNumEventsToSend()/4);
 
@@ -122,13 +131,15 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     @Test
     public void changeToken() throws Throwable {
         setPropsOnEndpoint();
-        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/2);
         connection.flush();
-        sleep(ackPollWait);
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
-        connection.setToken("different token");
+        connection.getSettings().setToken("different token");
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/2);
         close();
@@ -137,23 +148,29 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
 
     @Test
     public void changeUrlsAndAckTimeout() throws Throwable {
-        connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(ackPollWait); // let ack polling finish
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
         setUrls("https://127.0.0.1:8188");
         setAckTimeout(120000);
 
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(ackPollWait);
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
         setAckTimeout(65000);
         setUrls("https://127.0.0.1:8288, https://127.0.0.1:8388");
 
         sendSomeEvents(getNumEventsToSend()/4);
-        sleep(ackPollWait);
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }
 
         setUrls("https://127.0.0.1:8488, https://127.0.0.1:8588, https://127.0.0.1:8688");
         setAckTimeout(80000);
@@ -175,9 +192,9 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     }
 
     private void setPropsOnEndpoint() {
-        ValidatePropsEndpoint.URLS = connection.getPropertiesFileHelper().getUrls();
-        ValidatePropsEndpoint.ACK_TIMEOUT_MS = connection.getPropertiesFileHelper().getAckTimeoutMS();
-        ValidatePropsEndpoint.TOKEN = connection.getPropertiesFileHelper().getToken();
+        ValidatePropsEndpoint.URLS = connection.getSettings().getUrls();
+        ValidatePropsEndpoint.ACK_TIMEOUT_MS = connection.getSettings().getAckTimeoutMS();
+        ValidatePropsEndpoint.TOKEN = connection.getSettings().getToken();
     }
 
     private void checkAsserts() throws Throwable {
@@ -192,18 +209,18 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     }
 
     private void setUrls(String urls) {
-        connection.setUrls(urls);
-        ValidatePropsEndpoint.URLS = connection.getPropertiesFileHelper().getUrls();
+        connection.getSettings().setUrls(urls);
+        ValidatePropsEndpoint.URLS = connection.getSettings().getUrls();
     }
 
     private void setAckTimeout(long ms) {
-        connection.setAckTimeoutMS(ms);
-        ValidatePropsEndpoint.ACK_TIMEOUT_MS = connection.getPropertiesFileHelper().getAckTimeoutMS();
+        connection.getSettings().setAckTimeoutMS(ms);
+        ValidatePropsEndpoint.ACK_TIMEOUT_MS = connection.getSettings().getAckTimeoutMS();
     }
 
     @Override
-    protected void configureConnection(ConnectionImpl connection) {
-        connection.setEventBatchSize(1024*32); //32k batching batching, roughly
+    protected void configureConnection(Connection connection) {
+        connection.getSettings().setEventBatchSize(1024*32); //32k batching batching, roughly
     }
 
     private void sendSomeEvents(int numEvents) throws InterruptedException, HecConnectionTimeoutException {

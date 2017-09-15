@@ -1,4 +1,4 @@
-import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import org.junit.Assert;
@@ -16,8 +16,8 @@ public abstract class AbstractMutabilityTest extends AbstractConnectionTest {
     abstract protected int getNumEventsToSend();
 
     @Override
-    protected void configureConnection(ConnectionImpl connection) {
-        connection.setEventBatchSize(1024*32); //32k batching batching, roughly
+    protected void configureConnection(Connection connection) {
+        connection.getSettings().setEventBatchSize(1024*32); //32k batching batching, roughly
     }
 
     @Override

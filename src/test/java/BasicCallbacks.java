@@ -1,5 +1,4 @@
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
@@ -7,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.EventBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +57,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   }
   
   @Override
-  public void acknowledged(EventBatchImpl events) {
+  public void acknowledged(EventBatch events) {
     if (null != lastId && lastId.compareTo(events.getId()) >= 0) {
       Assert.fail(
               "checkpoints received out of order. " + lastId + " before " + events.
@@ -73,7 +73,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   }
 
   @Override
-  public void failed(EventBatchImpl events, Exception ex) {
+  public void failed(EventBatch events, Exception ex) {
     failed = true;   
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
@@ -87,7 +87,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   }
 
   @Override
-  public void checkpoint(EventBatchImpl events) {
+  public void checkpoint(EventBatch events) {
     LOG.trace("SUCCESS CHECKPOINT " + events.getId());
     if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
       latch.countDown();

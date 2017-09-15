@@ -1,4 +1,3 @@
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
 import org.junit.Assert;
 import org.junit.Test;
@@ -61,7 +60,7 @@ public class InDetentionTest extends AbstractConnectionTest {
         Properties props = new Properties();
         props.putAll(getTestProps());
         props.putAll(getProps());
-        this.connection = new ConnectionImpl((ConnectionCallbacks) callbacks, props);
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
         configureConnection(connection);
     }
 

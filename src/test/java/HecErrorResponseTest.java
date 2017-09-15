@@ -1,6 +1,6 @@
-import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecErrorResponseException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -10,8 +10,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
+import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * Test class to that tests various error rseponse scenarios
@@ -39,7 +38,7 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
             @Override
-            public void failed(EventBatchImpl events, Exception e) {
+            public void failed(EventBatch events, Exception e) {
                 Assert.assertTrue(e.getMessage(),
                         e instanceof HecErrorResponseException);
                 LOG.trace("Got expected exception: " + e);
@@ -47,12 +46,12 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
             }
 
             @Override
-            public void checkpoint(EventBatchImpl events) {
+            public void checkpoint(EventBatch events) {
                 Assert.fail("We should fail before we checkpoint anything.");
             }
 
             @Override
-            public void acknowledged(EventBatchImpl events) {
+            public void acknowledged(EventBatch events) {
                 Assert.fail("We should fail before we get any acks.");
             }
 
@@ -99,7 +98,7 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
         Properties props = new Properties();
         props.putAll(getTestProps());
         props.putAll(getProps());
-        this.connection = new ConnectionImpl((ConnectionCallbacks) callbacks, props);
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
         configureConnection(connection);
     }
 

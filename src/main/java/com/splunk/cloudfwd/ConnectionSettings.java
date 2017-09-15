@@ -15,9 +15,13 @@
  */
 package com.splunk.cloudfwd;
 
+import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
+import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.Endpoints;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -35,8 +39,20 @@ public class ConnectionSettings {
 
     protected static final Logger LOG = LoggerFactory.getLogger(
             PropertiesFileHelper.class.getName());
-
     protected Properties defaultProps = new Properties();
+    protected Properties overrides;
+    protected ConnectionImpl connection;
+
+    public ConnectionSettings(Connection c, Properties overrides) {
+        this.overrides = overrides;
+        this.connection = (ConnectionImpl)c;
+        this.parsePropertiesFile();       
+    }
+
+    public ConnectionSettings(Connection c) {
+        this.connection = (ConnectionImpl)c;
+        this.parsePropertiesFile();
+    }
 
     public void putProperty(String k, String v) {
         this.defaultProps.put(k, v);
@@ -289,8 +305,127 @@ public class ConnectionSettings {
     }
 
     protected boolean isMockHttp() {
-        return Boolean.parseBoolean(this.defaultProps.getProperty(PropertyKeys.MOCK_HTTP_KEY,
+        return Boolean.parseBoolean(this.defaultProps.getProperty(
+                PropertyKeys.MOCK_HTTP_KEY,
                 "false").trim());
+    }
+
+    /**
+     * @param numChars the size of the EventBatchImpl in characters (not bytes)
+     */
+    public void setEventBatchSize(int numChars) {
+        putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.
+                valueOf(numChars));
+    }
+
+    /**
+     * Use this method to change multiple settings on the connection. See
+     * PropertyKeys class for more information.
+     *
+     * @param props
+     */
+    public void setProperties(Properties props) {
+        Properties diffs = getDiff(props);
+        boolean refreshChannels = false;
+        boolean dnsLookup = false;
+
+        for (String key : diffs.stringPropertyNames()) {
+            switch (key) {
+                case PropertyKeys.ACK_TIMEOUT_MS:
+                    setAckTimeoutMS(Long.parseLong(diffs.getProperty(key)));
+                    break;
+                case PropertyKeys.COLLECTOR_URI:
+                    putProperty(PropertyKeys.COLLECTOR_URI,
+                            diffs.getProperty(key));
+                    dnsLookup = true;
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.TOKEN:
+                    putProperty(PropertyKeys.TOKEN,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.HEC_ENDPOINT_TYPE:
+                    putProperty(PropertyKeys.HEC_ENDPOINT_TYPE,
+                            diffs.getProperty(key));
+                    break;
+                default:
+                    LOG.warn("Attempt to change property not supported: " + key);
+            }
+        }
+        if (refreshChannels) {
+            connection.getLoadBalancer().refreshChannels(dnsLookup);
+        }
+    }
+
+    /**
+     * Set event acknowledgement timeout. See PropertyKeys.ACK_TIMEOUT_MS for
+     * more information.
+     *
+     * @param ms
+     */
+    public synchronized void setAckTimeoutMS(long ms) {
+        if (ms != getAckTimeoutMS()) {
+            putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
+            connection.getTimeoutChecker().setTimeout(ms);
+        }
+    }
+
+      /**
+   * Set Http Event Collector token to use.
+   * May take up to PropertyKeys.CHANNEL_DECOM_MS milliseconds
+   * to go into effect.
+   * @param token
+   */
+  public void setToken(String token) {
+    if (!getToken().equals(token)) {
+      putProperty(PropertyKeys.TOKEN, token);
+      connection.getLoadBalancer().refreshChannels(false);
+    }
+  }
+
+  /**
+   * Set urls to send to. See PropertyKeys.COLLECTOR_URI
+   * for more information.
+   * @param urls comma-separated list of urls
+   */
+  public void setUrls(String urls) {
+    if (!urlsStringToList(urls).equals(
+            getUrls())) {
+      // a single url or a list of comma separated urls
+      putProperty(PropertyKeys.COLLECTOR_URI, urls);
+      connection.getLoadBalancer().refreshChannels(true);
+    }
+  }
+
+  
+    // All properties are populated by following order of precedence: 1) overrides, 2) lb.properties, then 3) defaults.
+    private void parsePropertiesFile() {
+        try {
+            InputStream is = getClass().getResourceAsStream("/lb.properties");
+            if (is != null) {
+                defaultProps.load(is);
+            }
+
+            if (overrides != null) {
+                defaultProps.putAll(overrides);
+            }
+
+            // If required properties are missing from lb.properties, overrides, and defaults, then throw exception.
+            for (String key : REQUIRED_KEYS) {
+                if (this.defaultProps.getProperty(key) == null) {
+                    throw new HecMissingPropertiesException(
+                            "Missing required key: " + key);
+                }
+            }
+
+            // For any non-required properties, we allow them to remain null if they are not present in overrides
+            // or lb.properties, because the property getters below will return the default values.
+        } catch (IOException ex) {
+            throw new HecIllegalStateException("Problem loading lb.properties",
+                    HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
+        }
+
     }
 
 }

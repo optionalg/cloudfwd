@@ -34,7 +34,7 @@ public interface ConnectionCallbacks {
    *
    * @param events
    */
-  public void acknowledged(EventBatchImpl events);
+  public void acknowledged(EventBatch events);
 
   /**
    * The **failed** function is called if there is a failure to deliver EventBatchImpl to
@@ -43,13 +43,13 @@ public interface ConnectionCallbacks {
    * @param events
    * @param ex
    */
-  public void failed(EventBatchImpl events, Exception ex);
+  public void failed(EventBatch  events, Exception ex);
 
   /**
    * The **checkpoint** function is called when there are no unacknowledged events in-flight with an id less than or equal to
    * events.getId().
    * @param events
    */
-  public void checkpoint(EventBatchImpl events);
+  public void checkpoint(EventBatch events);
 
 }

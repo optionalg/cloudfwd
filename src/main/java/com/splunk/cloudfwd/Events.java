@@ -22,7 +22,7 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
  * @author ghendrey
  */
 public class Events {
-    public EventBatch createBatch(){
+    public static EventBatch createBatch(){
         return new EventBatchImpl();
     }
 }

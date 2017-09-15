@@ -16,12 +16,11 @@
 
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
+
 import com.splunk.cloudfwd.RawEvent;
 import org.junit.Test;
 
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 
 /**
  *
@@ -41,7 +40,7 @@ public class SslCertTestManualCloudClusterELBSelfSigned extends AbstractConnecti
 
   @Test
   public void sendLotsOfMessagesWithBuffering() throws InterruptedException, HecConnectionTimeoutException {
-    connection.setEventBatchSize(1024*16);
+    connection.getSettings().setEventBatchSize(1024*16);
     super.sendEvents();
   }
 

@@ -1,7 +1,7 @@
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.impl.http.HttpClientFactory;
@@ -203,7 +203,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   private boolean isEventEndpoint() {
-    return connection.getHecEndpointType().equals(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    return connection.getSettings().getHecEndpointType().equals(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
   }
 
 }

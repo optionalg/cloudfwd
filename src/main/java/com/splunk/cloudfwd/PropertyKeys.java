@@ -216,6 +216,12 @@ public class PropertyKeys {
   public static final String RETRIES = "max_retries";
 
 
+  /* **************************** REQUIRED KEYS ************************* */
+
+  // Connection object cannot be instantiated without these keys being provided, either in overrides or lb.properties
+  public static final String[] REQUIRED_KEYS = {TOKEN, COLLECTOR_URI};
+
+
   /* **************************** DEFAULTS ************************* */
   /**
    * Default value for EVENT_BATCH_SIZE property.

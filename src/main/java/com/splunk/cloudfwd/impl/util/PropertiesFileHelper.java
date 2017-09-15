@@ -15,12 +15,10 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
-import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
 import static com.splunk.cloudfwd.PropertyKeys.*;
@@ -32,24 +30,15 @@ public class PropertiesFileHelper extends ConnectionSettings {
 
 
 
-  public PropertiesFileHelper(Properties overrides) {
-    this(); //setup all defaults by calling SenderFactory() empty constr
-    this.defaultProps.putAll(overrides);
+  public PropertiesFileHelper(Connection c, Properties overrides) {
+      super(c,overrides);
   }
 
   /**
    * create SenderFactory with default properties read from lb.properties file
    */
-  public PropertiesFileHelper() {
-    try {
-      InputStream is = getClass().getResourceAsStream("/lb.properties");
-      if (null == is) {
-        throw new RuntimeException("can't find /lb.properties"); // TODO: This will be removed
-      }
-      defaultProps.load(is);
-    } catch (IOException ex) {
-      throw new HecIllegalStateException("Problem loading lb.properties", HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
-    }
+  public PropertiesFileHelper(Connection c) {
+      super(c);
   }
   
 

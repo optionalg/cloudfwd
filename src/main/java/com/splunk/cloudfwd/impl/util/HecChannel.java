@@ -143,6 +143,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   @Override
   synchronized public void update(LifecycleEvent e) {
+    boolean wasAvailable = isAvailable();
     switch (e.getType()) {
       case ACK_POLL_OK: {
         ackReceived(e);
@@ -168,8 +169,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         this.healthy = false;
       }
     }
-    if (isAvailable()) {
-      loadBalancer.wakeUp();
+    if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
+      loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
     }
   }
 

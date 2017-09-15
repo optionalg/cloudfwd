@@ -19,17 +19,17 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
-import java.io.Closeable;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author ghendrey
  */
-public class ConnectionImpl implements Closeable, Connection {
+public class ConnectionImpl implements  Connection {
 
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImpl.class.
           getName());
@@ -59,12 +59,6 @@ public class ConnectionImpl implements Closeable, Connection {
         return getPropertiesFileHelper();
     }
 
-  /**
-   * Used to select either structured HEC /event endpoint or /raw HEC endpoint
-   */
-  public static enum HecEndpoint {
-    STRUCTURED_EVENTS_ENDPOINT, RAW_EVENTS_ENDPOINT
-  };
   private final LoadBalancer lb;
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
@@ -77,7 +71,7 @@ public class ConnectionImpl implements Closeable, Connection {
   }
 
   public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
-    this.propertiesFileHelper = new PropertiesFileHelper(settings);
+    this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
     init(callbacks, propertiesFileHelper);
     this.lb = new LoadBalancer(this);
   }
@@ -95,18 +89,6 @@ public class ConnectionImpl implements Closeable, Connection {
     //*before* those two functions (failed, or acknowledged) are invoked.
     this.callbacks = new CallbackInterceptor(callbacks); 
 
-  }
-
-  /**
-   * Set event acknowledgement timeout. See PropertyKeys.ACK_TIMEOUT_MS
-   * for more information.
-   * @param ms
-   */
-  public synchronized void setAckTimeoutMS(long ms) {
-    if (ms != propertiesFileHelper.getAckTimeoutMS()) {
-      this.propertiesFileHelper.putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
-      this.timeoutChecker.setTimeout(ms);
-    }
   }
 
   public long getAckTimeoutMS() {
@@ -174,7 +156,7 @@ public class ConnectionImpl implements Closeable, Connection {
       this.events = new EventBatchImpl();
     }
     this.events.add(event);
-    if (this.events.isFlushable(getEventBatchSize())) {
+    if (this.events.isFlushable(propertiesFileHelper.getEventBatchSize())) {
       return sendBatch(events);
     }
     return 0;
@@ -191,21 +173,21 @@ public class ConnectionImpl implements Closeable, Connection {
    * @throws HecConnectionTimeoutException
    */
     @Override
-  public synchronized int sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException {
+  public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
     if (closed) {
       throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
-    events.setSendTimestamp(System.currentTimeMillis());
+    ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
     //send the failed batch again
     this.events = null; //batch is in flight, null it out.
     //check to make sure the endpoint can absorb all the event formats in the batch
-    events.checkAndSetCompatibility(getHecEndpointType());
+    ((EventBatchImpl)events).checkAndSetCompatibility(propertiesFileHelper.getHecEndpointType());
     timeoutChecker.start();
-    timeoutChecker.add(events);
+    timeoutChecker.add((EventBatchImpl)events);
     LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
-    lb.sendBatch(events);
+    lb.sendBatch((EventBatchImpl)events);
     //return the number of characters posted to HEC for the events data
     return events.getLength();
   }
@@ -233,35 +215,8 @@ public class ConnectionImpl implements Closeable, Connection {
     return closed;
   }
 
-  /**
-   * @return the hecEndpointType
-   */
-  public HecEndpoint getHecEndpointType() {
-    return propertiesFileHelper.getHecEndpointType();
-  }
 
-  /**
-   * @param hecEndpointType the hecEndpointType to set
-   */
-  public void setHecEndpointType(
-          HecEndpoint hecEndpointType) {
-    propertiesFileHelper.setHecEndpointType(hecEndpointType);
-  }
 
-  /**
-   * @return the desired size of an EventBatchImpl, in characters (not bytes)
-   */
-  public int getEventBatchSize() {
-    return propertiesFileHelper.getEventBatchSize();
-  }
-
-  /**
-   * @param numChars the size of the EventBatchImpl in characters (not bytes)
-   */
-  public void setEventBatchSize(int numChars) {
-    propertiesFileHelper.putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.
-            valueOf(numChars));
-  }
 
   public long getBlockingTimeoutMS() {
     return propertiesFileHelper.getBlockingTimeoutMS();
@@ -271,71 +226,6 @@ public class ConnectionImpl implements Closeable, Connection {
     return propertiesFileHelper.getToken();
   }
 
-  /**
-   * Set Http Event Collector token to use.
-   * May take up to PropertyKeys.CHANNEL_DECOM_MS milliseconds
-   * to go into effect.
-   * @param token
-   */
-  public void setToken(String token) {
-    if (!propertiesFileHelper.getToken().equals(token)) {
-      propertiesFileHelper.putProperty(PropertyKeys.TOKEN, token);
-      lb.refreshChannels(false);
-    }
-  }
-
-  /**
-   * Set urls to send to. See PropertyKeys.COLLECTOR_URI
-   * for more information.
-   * @param urls comma-separated list of urls
-   */
-  public void setUrls(String urls) {
-    if (!propertiesFileHelper.urlsStringToList(urls).equals(
-            propertiesFileHelper.getUrls())) {
-      // a single url or a list of comma separated urls
-      propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      lb.refreshChannels(true);
-    }
-  }
-
-  /**
-   * Use this method to change multiple settings on the connection.
-   * See PropertyKeys class for more information.
-   * @param props
-   */
-  public void setProperties(Properties props) {
-    Properties diffs = propertiesFileHelper.getDiff(props);
-    boolean refreshChannels = false;
-    boolean dnsLookup = false;
-
-    for (String key : diffs.stringPropertyNames()) {
-      switch (key) {
-        case PropertyKeys.ACK_TIMEOUT_MS:
-          setAckTimeoutMS(Long.parseLong(diffs.getProperty(key)));
-          break;
-        case PropertyKeys.COLLECTOR_URI:
-          propertiesFileHelper.putProperty(PropertyKeys.COLLECTOR_URI,
-                  diffs.getProperty(key));
-          dnsLookup = true;
-          refreshChannels = true;
-          break;
-        case PropertyKeys.TOKEN:
-          propertiesFileHelper.putProperty(PropertyKeys.TOKEN,
-                  diffs.getProperty(key));
-          refreshChannels = true;
-          break;
-        case PropertyKeys.HEC_ENDPOINT_TYPE:
-          propertiesFileHelper.putProperty(PropertyKeys.HEC_ENDPOINT_TYPE,
-                  diffs.getProperty(key));
-          break;
-        default:
-          LOG.warn("Attempt to change property not supported: " + key);
-      }
-    }
-    if (refreshChannels) {
-      lb.refreshChannels(dnsLookup);
-    }
-  }
 
   public List<URL> getUrls() {
     return propertiesFileHelper.getUrls();
@@ -352,8 +242,19 @@ public class ConnectionImpl implements Closeable, Connection {
     return timeoutChecker.getUnackedEvents(c);
   } 
   
+  public Collection<EventBatchImpl> getUnackedEvents(){
+      return timeoutChecker.getUnackedEvents();
+  }
+  
     @Override
   public void release(Comparable id){
     //lb.getCheckpointManager().cancel(events);
   }
+
+    /**
+     * @return the lb
+     */
+    public LoadBalancer getLoadBalancer() {
+        return lb;
+    }
 }

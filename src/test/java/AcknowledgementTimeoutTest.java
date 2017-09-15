@@ -15,14 +15,13 @@
  */
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,7 +98,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         }
 
         @Override
-        public void failed(EventBatchImpl events, Exception e) {
+        public void failed(EventBatch events, Exception e) {
             //We expect a timeout
             Assert.assertTrue(e.getMessage(),
                     e instanceof HecAcknowledgmentTimeoutException);
@@ -111,14 +110,14 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         }
 
         @Override
-        public void checkpoint(EventBatchImpl events) {
+        public void checkpoint(EventBatch events) {
             LOG.trace("SUCCESS CHECKPOINT " + events.getId());
             Assert.fail(
                     "Got an unexpected checkpoint when we were waiting for timeout");
         }
 
         @Override
-        public void acknowledged(EventBatchImpl events) {
+        public void acknowledged(EventBatch events) {
             Assert.fail(
                     "Got an unexpected acknowledged when we were waiting for timeout");
 

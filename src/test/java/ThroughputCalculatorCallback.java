@@ -1,6 +1,5 @@
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.EventBatch;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -38,14 +37,14 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
   }
 
   @Override
-  public void failed(EventBatchImpl events, Exception ex) {
+  public void failed(EventBatch events, Exception ex) {
     LOG.warning("EventBatch failure recorded. Exception message: " + ex.
             getMessage());
     failedCount++;
   }
 
   @Override
-  public void acknowledged(EventBatchImpl events) {
+  public void acknowledged(EventBatch events) {
     super.acknowledged(events);
     Long size = batchSizes.remove(events.getId());
     if (size != null) {

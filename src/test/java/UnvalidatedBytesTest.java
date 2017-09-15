@@ -1,5 +1,5 @@
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
@@ -35,13 +35,13 @@ public class UnvalidatedBytesTest extends AbstractConnectionTest{
   
   @Test
   public void testUnvalidatedBytesToRaw() throws InterruptedException, HecConnectionTimeoutException{
-        super.connection.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        super.connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     sendEvents();
   }
   
   @Test
   public void testUnvalidatedBytesToEvents() throws InterruptedException, HecConnectionTimeoutException{
-    super.connection.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    super.connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     sendEvents();
   }  
   

@@ -18,12 +18,12 @@ package com.splunk.cloudfwd.impl.util;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,6 +112,10 @@ public class TimeoutChecker implements EventTracker {
         return eventBatches.values().stream().filter(b -> {
             return b.getHecChannel().getChannelId() == c.getChannelId();
         }).collect(Collectors.toList());
+    }
+    
+    public Collection<EventBatchImpl> getUnackedEvents() {    
+        return eventBatches.values();
     }
 
 }
