@@ -20,16 +20,21 @@ import java.util.Properties;
 
 /**
  * Factory for getting a Connection.
+ *
  * @author ghendrey
  */
 public class Connections {
-    
-    public static Connection create(ConnectionCallbacks c){
+
+    private Connections() {
+
+    }
+
+    public static Connection create(ConnectionCallbacks c) {
         return create(c, new Properties());
     }
-    
-    public static Connection create(ConnectionCallbacks c, Properties p){
+
+    public static Connection create(ConnectionCallbacks c, Properties p) {
         return new ConnectionImpl(c, p);
     }
-    
+
 }
