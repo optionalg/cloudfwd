@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,7 +58,7 @@ public class UnvalidatedBytesEvent implements Event{
   }
 
   @Override
-  public Connection.HecEndpoint getTarget() {
+  public ConnectionImpl.HecEndpoint getTarget() {
     throw new UnsupportedOperationException("UnvalidatedByteEvent does not implement getTarget"); 
   }
 

@@ -35,15 +35,13 @@ public class UnvalidatedBytesTest extends AbstractConnectionTest{
   
   @Test
   public void testUnvalidatedBytesToRaw() throws InterruptedException, HecConnectionTimeoutException{
-        super.connection.setHecEndpointType(
-            Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        super.connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     sendEvents();
   }
   
   @Test
   public void testUnvalidatedBytesToEvents() throws InterruptedException, HecConnectionTimeoutException{
-    super.connection.setHecEndpointType(
-            Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    super.connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     sendEvents();
   }  
   

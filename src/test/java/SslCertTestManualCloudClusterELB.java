@@ -39,7 +39,7 @@ public class SslCertTestManualCloudClusterELB extends AbstractConnectionTest {
 
   @Test
   public void sendLotsOfMessagesWithBuffering() throws InterruptedException, HecConnectionTimeoutException {
-    connection.setEventBatchSize(1024*16);
+    connection.getSettings().setEventBatchSize(1024*16);
     super.sendEvents();
   }
 

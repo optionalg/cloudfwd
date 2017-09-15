@@ -4,8 +4,8 @@ import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateExcep
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.EventBatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

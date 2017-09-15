@@ -1,5 +1,4 @@
 
-import com.splunk.cloudfwd.EventBatch;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
@@ -7,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.EventBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

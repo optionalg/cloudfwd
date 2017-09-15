@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,7 +75,7 @@ public class UnvalidatedByteBufferEvent implements Event {
   }
 
   @Override
-  public Connection.HecEndpoint getTarget() {
+  public ConnectionImpl.HecEndpoint getTarget() {
     throw new UnsupportedOperationException(
             "UnvalidatedByteBufferEvent does not implement getTarget");
   }

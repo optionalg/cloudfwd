@@ -15,6 +15,8 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.impl.EventBatchImpl;
+
 /**
  * Callers of Connection's send methods must provide an implementation of
  * ConnectionCallbacks to receive asynchronous notifications about their
@@ -25,23 +27,23 @@ package com.splunk.cloudfwd;
 public interface ConnectionCallbacks {
 
   /**
-   * The **acknowledged** function is called once for each EventBatch that has been
-   * replicated amongst Splunk Indexers. Events sent via Connection.send are
-   * internally batched, even if there is only one event in an EventBatch. This is
-   * why acknowledgments are per-EventBatch and not per-Event.
+   * The **acknowledged** function is called once for each EventBatchImpl that has been
+ replicated amongst Splunk Indexers. Events sent via Connection.send are
+ internally batched, even if there is only one event in an EventBatchImpl. This is
+ why acknowledgments are per-EventBatchImpl and not per-Event.
    *
    * @param events
    */
   public void acknowledged(EventBatch events);
 
   /**
-   * The **failed** function is called if there is a failure to deliver EventBatch to
-   * Splunk.
+   * The **failed** function is called if there is a failure to deliver EventBatchImpl to
+ Splunk.
    *
    * @param events
    * @param ex
    */
-  public void failed(EventBatch events, Exception ex);
+  public void failed(EventBatch  events, Exception ex);
 
   /**
    * The **checkpoint** function is called when there are no unacknowledged events in-flight with an id less than or equal to

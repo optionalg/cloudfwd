@@ -20,9 +20,8 @@ import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints;
+import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,7 +58,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
         props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints");
+                "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
 
         if (SlowEndpoints.sleep > 10000) {
             throw new RuntimeException("Let's not get carried away here");

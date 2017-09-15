@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.http.HttpClientFactory;
+import com.splunk.cloudfwd.impl.http.HttpClientFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -203,8 +203,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   private boolean isEventEndpoint() {
-    return connection.getHecEndpointType().equals(
-            Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    return connection.getSettings().getHecEndpointType().equals(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
   }
 
 }

@@ -31,7 +31,7 @@ public class NonBatchedVolumeTest extends AbstractConnectionTest{
 
   @Test
   public void sendWithoutBatching() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-    connection.setEventBatchSize(0);
+    connection.getSettings().setEventBatchSize(0);
     super.sendEvents();
   }
 

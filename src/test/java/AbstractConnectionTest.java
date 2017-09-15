@@ -12,6 +12,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import org.slf4j.Logger;
@@ -72,7 +73,7 @@ public abstract class AbstractConnectionTest {
     Properties props = new Properties();
     props.putAll(getTestProps());
     props.putAll(getProps());
-    this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+    this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();
@@ -211,7 +212,7 @@ public abstract class AbstractConnectionTest {
 
   private Event getUnvalidatedBytesEvent(int seqno) {
     Event event;
-    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+    if (connection.getSettings().getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getUnvalidatedBytesToRawEndpoint(seqno);
     } else {
       event = getUnvalidatedBytesToEventEndpoint(seqno);
@@ -221,7 +222,7 @@ public abstract class AbstractConnectionTest {
 
   protected Event getJsonEvent(int seqno) {
     Event event;
-    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+    if (connection.getSettings().getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getJsonToRawEndpoint(seqno);
     } else {
       event = getJsonToEvents(seqno);
@@ -231,7 +232,7 @@ public abstract class AbstractConnectionTest {
 
   protected Event getTextEvent(int seqno) {
     Event event;
-    if (connection.getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+    if (connection.getSettings().getHecEndpointType() == Connection.HecEndpoint.RAW_EVENTS_ENDPOINT) {
       event = getTimestampedRawEvent(seqno);
     } else {
       event = getTextToEvents(seqno);

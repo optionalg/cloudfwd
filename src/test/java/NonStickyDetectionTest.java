@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecNonStickySessionException;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
@@ -88,13 +87,13 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
     Properties props = new Properties();
     //simulate a non-sticky endpoint
     props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.sim.errorgen.nonsticky.NonStickEndpoints");
+            "com.splunk.cloudfwd.impl.sim.errorgen.nonsticky.NonStickEndpoints");
     return props;
   }
   
   @Override
   protected void configureConnection(Connection connection) {
-    connection.setEventBatchSize(0);
+    connection.getSettings().setEventBatchSize(0);
   }  
 
   @Override

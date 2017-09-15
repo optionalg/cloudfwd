@@ -38,11 +38,11 @@ public class InDetentionTest extends AbstractConnectionTest {
         switch(stateToTest) {
             case ALL_IN_DETENTION:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.indexer.InDetentionEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.indexer.InDetentionEndpoints");
                 break;
             case SOME_IN_DETENTION:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.indexer.SomeInDetentionEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.indexer.SomeInDetentionEndpoints");
                 break;
             default:
                 Assert.fail("Unsupported configuration error type");
@@ -60,7 +60,7 @@ public class InDetentionTest extends AbstractConnectionTest {
         Properties props = new Properties();
         props.putAll(getTestProps());
         props.putAll(getProps());
-        this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
         configureConnection(connection);
     }
 

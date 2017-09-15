@@ -66,13 +66,13 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
         List<URL> urls = new ArrayList<>();
         urls.add(new URL("https://inputs1.kinesis1.foo.com:8088"));
 
-        this.connection = new Connection(callbacks, overrides);
+        this.connection = Connections.create(callbacks, overrides);
 
-        Assert.assertEquals(100, this.connection.getPropertiesFileHelper().getEventBatchSize()); // Override took effect
-        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getPropertiesFileHelper().getChannelDecomMS()); // No override or lb.properties value - use default
-        Assert.assertEquals(urls, this.connection.getPropertiesFileHelper().getUrls()); //Override took effect
-        Assert.assertEquals("foo-token", this.connection.getPropertiesFileHelper().getToken()); //Override took effect
-        Assert.assertEquals(5000, this.connection.getPropertiesFileHelper().getAckPollMS()); // No override but use lb.properties value
+        Assert.assertEquals(100, this.connection.getSettings().getEventBatchSize()); // Override took effect
+        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // No override or lb.properties value - use default
+        Assert.assertEquals(urls, this.connection.getSettings().getUrls()); //Override took effect
+        Assert.assertEquals("foo-token", this.connection.getSettings().getToken()); //Override took effect
+        Assert.assertEquals(5000, this.connection.getSettings().getAckPollMS()); // No override but use lb.properties value
     }
 
     @Test
@@ -80,9 +80,9 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
         // Need connection object to pass into PropertiesFileHelper constructor for failed() callback
         Properties overrides = new Properties();
 
-        this.connection = new Connection(callbacks, overrides);
+        this.connection = Connections.create(callbacks, overrides);
 
-        Assert.assertEquals(1000000, this.connection.getPropertiesFileHelper().getEventBatchSize()); // Property is in lb.properties
-        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getPropertiesFileHelper().getChannelDecomMS()); // Property is not in lb.properties so use default
+        Assert.assertEquals(1000000, this.connection.getSettings().getEventBatchSize()); // Property is in lb.properties
+        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // Property is not in lb.properties so use default
     }
 }

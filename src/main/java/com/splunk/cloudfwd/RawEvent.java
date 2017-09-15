@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -130,8 +131,8 @@ public class RawEvent implements Event{
   }
 
   @Override
-  public Connection.HecEndpoint getTarget() {
-    return Connection.HecEndpoint.RAW_EVENTS_ENDPOINT;
+  public ConnectionImpl.HecEndpoint getTarget() {
+    return ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT;
   }
 
   @Override

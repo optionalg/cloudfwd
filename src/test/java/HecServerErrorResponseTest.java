@@ -71,19 +71,19 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         switch(errorToTest) {
             case ACKS_DISABLED:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.preflightfailure.AckDisabledEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure.AckDisabledEndpoints");
                 break;
             case INVALID_TOKEN:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.preflightfailure.InvalidTokenEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure.InvalidTokenEndpoints");
                 break;
             case INDEXER_BUSY_POST:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
                 break;
             case ACK_ID_DISABLED:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
                 break;
             default:
                 Assert.fail("Unsupported configuration error type");
@@ -98,7 +98,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         Properties props = new Properties();
         props.putAll(getTestProps());
         props.putAll(getProps());
-        this.connection = new Connection((ConnectionCallbacks) callbacks, props);
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
         configureConnection(connection);
     }
 

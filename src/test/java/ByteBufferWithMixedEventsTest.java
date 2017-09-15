@@ -33,7 +33,7 @@ public class ByteBufferWithMixedEventsTest extends AbstractReconciliationTest {
 
   @Test
   public void chalkFullOBytesForRawEndpoint() throws InterruptedException, HecConnectionTimeoutException {
-    connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+    connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    
@@ -41,7 +41,7 @@ public class ByteBufferWithMixedEventsTest extends AbstractReconciliationTest {
 
     @Test
   public void chalkFullOBytesForEventEndpoint() throws InterruptedException, HecConnectionTimeoutException {
-    connection.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    

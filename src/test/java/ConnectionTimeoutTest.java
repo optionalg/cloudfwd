@@ -41,7 +41,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
     props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, "100"); //block for 100 ms before HecConnectionTimeout
     //install an endpoint that takes 10 seconds to return an ack
     props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.sim.errorgen.slow.SlowEndpoints");
+            "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
     props.put(PropertyKeys.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "1");
     props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
     props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in

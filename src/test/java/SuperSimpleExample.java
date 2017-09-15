@@ -1,7 +1,7 @@
-
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.Connections;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import com.splunk.cloudfwd.EventWithMetadata;
@@ -76,9 +76,9 @@ public class SuperSimpleExample {
             "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
 
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
-    try (Connection c = new Connection(callbacks, customization);) {
-      c.setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
-      c.setAckTimeoutMS(10000); //10 sec
+    try (Connection c = Connections.create(callbacks, customization);) {
+      c.getSettings().setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
+      c.getSettings().setAckTimeoutMS(10000); //10 sec
       for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object
         //generate a 'raw' text event looking like "2017-08-10 11:21:04 foo bar baz"
         String eventData = dateFormat.format(new Date()) + " foo bar baz";
@@ -94,10 +94,10 @@ public class SuperSimpleExample {
     } //safely autocloses Connection, no event loss. (use Connection.closeNow() if you want to *lose* in-flight events)
 
     //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
-    try (Connection c = new Connection(callbacks, customization);) {
-      c.setEventBatchSize(1024 * 16); //16kB send buffering
-      c.setAckTimeoutMS(10000); //10 sec
-      c.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    try (Connection c = Connections.create(callbacks, customization);) {
+      c.getSettings().setEventBatchSize(1024 * 16); //16kB send buffering
+      c.getSettings().setAckTimeoutMS(10000); //10 sec
+      c.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       for (int seqno = 1; seqno <= numEvents; seqno++) {
         EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),
                 seqno);

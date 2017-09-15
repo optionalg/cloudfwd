@@ -1,11 +1,10 @@
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
-import com.splunk.cloudfwd.sim.errorgen.runtimeexceptions.ExceptionsEndpoint;
+import com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint;
 
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +37,7 @@ public class ResendOnCatchingRuntimExceptionTest extends AbstractConnectionTest 
     Properties props = new Properties();
     props.put(MOCK_HTTP_KEY, "true");
     props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.sim.errorgen.runtimeexceptions.ExceptionsEndpoint");
+            "com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint");
     props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
     props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
     //in the ExceptionsEndpoint, error prob is 0.5. So 20 gives us 1/2^20  chance of never getting the message through
@@ -58,7 +57,7 @@ public class ResendOnCatchingRuntimExceptionTest extends AbstractConnectionTest 
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     for (int i = 0; i < expected; i++) {
-      ///final EventBatch events =nextEventBatch(i+1);
+      ///final EventBatchImpl events =nextEventBatch(i+1);
       Event event = nextEvent(i + 1);
       LOG.trace("Send event {} i={}", event.getId(), i);
       while (true) {

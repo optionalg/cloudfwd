@@ -17,7 +17,7 @@ public abstract class AbstractMutabilityTest extends AbstractConnectionTest {
 
     @Override
     protected void configureConnection(Connection connection) {
-        connection.setEventBatchSize(1024*32); //32k batching batching, roughly
+        connection.getSettings().setEventBatchSize(1024*32); //32k batching batching, roughly
     }
 
     @Override

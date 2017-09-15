@@ -1,6 +1,5 @@
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.EventBatch;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;

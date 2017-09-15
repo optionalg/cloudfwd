@@ -78,7 +78,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
   }
 
   private void setEndpointType(HecEndpoint type) {
-    super.connection.setHecEndpointType(type);
+    super.connection.getSettings().setHecEndpointType(type);
   }
 
 }
