@@ -54,17 +54,23 @@ public class TimeoutChecker implements EventTracker {
     }
 
     private long getTimeoutMs() {
-        return connection.
-                getPropertiesFileHelper().getAckTimeoutMS();
+        //check for timeouts with a minimum frequency of 1 second
+        return connection.getPropertiesFileHelper().getAckTimeoutMS();
+    }
+
+    //how often we should rip through the list and check for timeouts
+    private long getCheckInterval() {
+        //minimum frequency, we check once per second. We can check more often, but never LESS oftern than that.
+        return Math.min(getTimeoutMs(), 1000);
     }
 
     public synchronized void start() {
-        timoutCheckScheduler.start(this::checkTimeouts, getTimeoutMs(),
+        timoutCheckScheduler.start(this::checkTimeouts, getCheckInterval(),
                 TimeUnit.MILLISECONDS);
     }
 
     private synchronized void checkTimeouts() {
-        if(quiesced && eventBatches.isEmpty()){
+        if (quiesced && eventBatches.isEmpty()) {
             LOG.debug("Stopping TimeoutChecker (no more unacked event batches)");
             timoutCheckScheduler.stop();
             return;
@@ -91,7 +97,7 @@ public class TimeoutChecker implements EventTracker {
     public void queisce() {
         LOG.debug("Quiescing TimeoutChecker");
         quiesced = true;
-        if(eventBatches.isEmpty()){
+        if (eventBatches.isEmpty()) {
             LOG.debug("Stopping TimeoutChecker (no EventBatches in flight)");
             timoutCheckScheduler.stop();
         }
@@ -105,6 +111,7 @@ public class TimeoutChecker implements EventTracker {
     @Override
     public void cancel(EventBatchImpl events) {
         this.eventBatches.remove(events.getId());
+
     }
 
     public List<EventBatchImpl> getUnackedEvents(HecChannel c) {
@@ -113,8 +120,8 @@ public class TimeoutChecker implements EventTracker {
             return b.getHecChannel().getChannelId() == c.getChannelId();
         }).collect(Collectors.toList());
     }
-    
-    public Collection<EventBatchImpl> getUnackedEvents() {    
+
+    public Collection<EventBatchImpl> getUnackedEvents() {
         return eventBatches.values();
     }
 

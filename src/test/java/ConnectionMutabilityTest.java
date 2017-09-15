@@ -17,7 +17,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     private int numEvents = 1000000;
     private int start = 0;
     private int stop = -1;
-    private long ackPollWait = 10;
+    private long ackPollWait = 1000;
 
     @Test
     // Makes sure we are computing diffs as expected
@@ -62,9 +62,6 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
 
         // Set some new properties
         Properties props1 = new Properties();
@@ -74,17 +71,13 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         connection.getSettings().setProperties(props1);
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
+
 
         // Set the same properties
         connection.getSettings().setProperties(props1);
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
+
 
         // Set some more new properties
         Properties props2 = new Properties();
@@ -94,10 +87,6 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         connection.getSettings().setProperties(props2);
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
-
         close();
         checkAsserts();
     }
@@ -108,17 +97,17 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
-        connection.flush();
+        
 
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/4);
-        connection.flush();
+        
 
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
         sendSomeEvents(getNumEventsToSend()/4);
-        connection.flush();
+        
 
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         super.eventType = Event.Type.UNKNOWN;
@@ -134,10 +123,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         sendSomeEvents(getNumEventsToSend()/2);
-        connection.flush();
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
+
 
         connection.getSettings().setToken("different token");
         setPropsOnEndpoint();
@@ -152,25 +138,16 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         super.eventType = Event.Type.TEXT;
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
 
         setUrls("https://127.0.0.1:8188");
         setAckTimeout(120000);
 
         sendSomeEvents(getNumEventsToSend()/4);
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
 
         setAckTimeout(65000);
         setUrls("https://127.0.0.1:8288, https://127.0.0.1:8388");
 
         sendSomeEvents(getNumEventsToSend()/4);
-        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
-            sleep(ackPollWait);
-        }
 
         setUrls("https://127.0.0.1:8488, https://127.0.0.1:8588, https://127.0.0.1:8688");
         setAckTimeout(80000);
@@ -229,11 +206,18 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
                         + "And test method GUID " + testMethodGUID);
 
         stop += numEvents;
+        System.out.println("Start = "+start + " stop = " + stop);
         for (int i = start; i <= stop; i++) {
             Event event = nextEvent(i + 1);
             connection.send(event);
         }
         start = stop + 1;
+        connection.flush();
+        //this should really be done with a latch on acn ack counter in the acknowledged callback
+        //but what the hell, test a different code path
+        while(!((ConnectionImpl)connection).getUnackedEvents().isEmpty()){
+            sleep(ackPollWait);
+        }        
     }
 
     private void close() throws InterruptedException, HecConnectionTimeoutException {
