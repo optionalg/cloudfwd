@@ -17,7 +17,7 @@ package com.splunk.cloudfwd.impl.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.HecErrorResponseException;
+import com.splunk.cloudfwd.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
@@ -103,7 +103,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
         } catch (IOException ex) {
             throw new RuntimeException(ex.getMessage(), ex);
         }
-        return new HecErrorResponseException(
+        return new HecServerErrorResponseException(
                 hecErrorResp.getText(), hecErrorResp.getCode(), url);
     }
 }

@@ -17,7 +17,7 @@ package com.splunk.cloudfwd.impl.http;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.HecErrorResponseException;
+import com.splunk.cloudfwd.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
@@ -151,7 +151,7 @@ public class HecIOManager implements Closeable {
   }
 
   //called by AckMiddleware when event post response comes back with the indexer-generated ackId
-  public void consumeEventPostResponse(String resp, EventBatchImpl events) throws HecErrorResponseException {
+  public void consumeEventPostResponse(String resp, EventBatchImpl events) throws HecServerErrorResponseException {
     //System.out.println("consuming event post response" + resp);
     EventPostResponseValueObject epr = null;
 
@@ -161,7 +161,7 @@ public class HecIOManager implements Closeable {
       });
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
-    } catch (HecErrorResponseException e) {
+    } catch (HecServerErrorResponseException e) {
       e.setMessage("ACK_POLL_DISABLED");
       e.setCode(14);
       e.setUrl(sender.getBaseUrl());

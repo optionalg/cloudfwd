@@ -15,6 +15,8 @@
  */
 package com.splunk.cloudfwd;
 
+import java.util.*;
+
 /**
  * These are non-successful responses from an HEC endpoint.
  *
@@ -39,17 +41,27 @@ package com.splunk.cloudfwd;
  *
  * @author eprokop
  */
-public class HecErrorResponseException extends Exception {
+
+
+public class HecServerErrorResponseException extends Exception {
     private int code;
     private String url;
     private String message;
+    private Type errorType;
 
-    public HecErrorResponseException() {}
+    private Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(7, 8, 9, 10, 11));
+    private Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 3, 4, 14));
+    private Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
 
-    public HecErrorResponseException(String message, int hecCode, String url) {
+    public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR };
+
+    public HecServerErrorResponseException() {}
+
+    public HecServerErrorResponseException(String message, int hecCode, String url) {
         super(message);
         this.code = hecCode;
         this.url = url;
+        setErrorType(hecCode);
     }
 
     public void setCode(int code) {
@@ -73,4 +85,16 @@ public class HecErrorResponseException extends Exception {
     }
 
     public String getMessage() { return message;}
+
+    public Type getErrorType() { return errorType; };
+
+    private void setErrorType(Integer hecCode) {
+        if (nonRecoverableErrors.contains(hecCode)) {
+            errorType = Type.NON_RECOVERABLE_ERROR;
+        } else if (recoverableConfigErrors.contains(hecCode)) {
+            errorType =  Type.RECOVERABLE_CONFIG_ERROR;
+        } else if (recoverableDataErrors.contains(hecCode)) {
+            errorType =  Type.RECOVERABLE_DATA_ERROR;
+        }
+    }
 }
