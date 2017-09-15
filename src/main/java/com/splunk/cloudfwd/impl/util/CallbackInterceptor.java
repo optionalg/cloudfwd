@@ -46,9 +46,6 @@ public class CallbackInterceptor implements ConnectionCallbacks {
             LOG.error("Caught exception from ConnectionCallbacks.acknowledged: " + e.getMessage());
             LOG.error(e.getMessage(), e);
         } finally {
-            if(((int)events.getId())==500000){
-                System.out.println("asdfsafasf");
-            }
             ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
         }
     }
@@ -70,9 +67,6 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     @Override
     public void checkpoint(EventBatch events) {
         try {
-            if(((int)events.getId())==500000){
-                System.out.println("sadfasdf");
-            }
             callbacks.checkpoint(events); //we don't need to wrap checkpoint at present
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.checkpoint: " + e.getMessage());

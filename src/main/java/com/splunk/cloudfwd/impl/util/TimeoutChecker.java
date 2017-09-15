@@ -43,7 +43,6 @@ public class TimeoutChecker implements EventTracker {
     private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
     private ConnectionImpl connection;
     private boolean quiesced;
-    private int cancelCount;
 
     public TimeoutChecker(ConnectionImpl c) {
         this.connection = c;
@@ -111,7 +110,6 @@ public class TimeoutChecker implements EventTracker {
 
     @Override
     public void cancel(EventBatchImpl events) {
-        LOG.trace("cancel count {},  removing {}",  ++cancelCount, events);
         this.eventBatches.remove(events.getId());
 
     }
