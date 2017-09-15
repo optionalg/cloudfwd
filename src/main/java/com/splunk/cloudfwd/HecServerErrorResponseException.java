@@ -49,9 +49,9 @@ public class HecServerErrorResponseException extends Exception {
     private String message;
     private Type errorType;
 
-    private Set<Integer> nonRecoverableError = new HashSet<>(Arrays.asList(7, 8, 9, 10, 11));
-    private Set<Integer> recoverableConfigError = new HashSet<>(Arrays.asList(1, 2, 3, 4, 14));
-    private Set<Integer> recoverableDataError = new HashSet<>(Arrays.asList(5, 6, 12, 13));
+    private Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(7, 8, 9, 10, 11));
+    private Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 3, 4, 14));
+    private Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
 
     public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR };
 
@@ -89,12 +89,12 @@ public class HecServerErrorResponseException extends Exception {
     public Type getErrorType() { return errorType; };
 
     private void setErrorType(Integer hecCode) {
-        if (nonRecoverableError.contains(hecCode)) {
-            this.errorType = Type.NON_RECOVERABLE_ERROR;
-        } else if (recoverableConfigError.contains(hecCode)) {
-            this.errorType =  Type.RECOVERABLE_CONFIG_ERROR;
-        } else if (recoverableDataError.contains(hecCode)) {
-            this.errorType =  Type.RECOVERABLE_DATA_ERROR;
+        if (nonRecoverableErrors.contains(hecCode)) {
+            errorType = Type.NON_RECOVERABLE_ERROR;
+        } else if (recoverableConfigErrors.contains(hecCode)) {
+            errorType =  Type.RECOVERABLE_CONFIG_ERROR;
+        } else if (recoverableDataErrors.contains(hecCode)) {
+            errorType =  Type.RECOVERABLE_DATA_ERROR;
         }
     }
 }
