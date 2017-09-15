@@ -248,7 +248,7 @@ public class ConnectionImpl implements  Connection {
   
     @Override
   public void release(Comparable id){
-    //lb.getCheckpointManager().cancel(events);
+    throw new RuntimeException("Not implemeneted");
   }
 
     /**
