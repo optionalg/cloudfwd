@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecErrorResponseException;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
