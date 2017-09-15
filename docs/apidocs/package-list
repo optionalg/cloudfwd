@@ -1,1 +1,14 @@
 com.splunk.cloudfwd
+com.splunk.cloudfwd.impl
+com.splunk.cloudfwd.impl.http
+com.splunk.cloudfwd.impl.http.lifecycle
+com.splunk.cloudfwd.impl.sim
+com.splunk.cloudfwd.impl.sim.errorgen
+com.splunk.cloudfwd.impl.sim.errorgen.ackslost
+com.splunk.cloudfwd.impl.sim.errorgen.indexer
+com.splunk.cloudfwd.impl.sim.errorgen.nonsticky
+com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure
+com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions
+com.splunk.cloudfwd.impl.sim.errorgen.slow
+com.splunk.cloudfwd.impl.sim.errorgen.unhealthy
+com.splunk.cloudfwd.impl.util
