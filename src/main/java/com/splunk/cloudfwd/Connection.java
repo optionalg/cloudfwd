@@ -184,7 +184,7 @@ public class Connection implements Closeable {
       throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
     events.setSendTimestamp(System.currentTimeMillis());
-    //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
+    //must null the events before lb.sendBatch. If not, event can continue to be added to the
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
     //send the failed batch again
     this.events = null; //batch is in flight, null it out.

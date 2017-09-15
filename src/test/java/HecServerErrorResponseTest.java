@@ -1,6 +1,6 @@
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecErrorResponseException;
+import com.splunk.cloudfwd.HecServerErrorResponseException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -18,8 +18,8 @@ import static com.splunk.cloudfwd.PropertyKeys.*;
  *
  * Created by eprokop on 9/1/17.
  */
-public class HecErrorResponseTest extends AbstractConnectionTest {
-    private static final Logger LOG = LoggerFactory.getLogger(HecErrorResponseTest.class.getName());
+public class HecServerErrorResponseTest extends AbstractConnectionTest {
+    private static final Logger LOG = LoggerFactory.getLogger(HecServerErrorResponseTest.class.getName());
 
     private int numEvents = 10;
     private enum Error {
@@ -40,7 +40,7 @@ public class HecErrorResponseTest extends AbstractConnectionTest {
             @Override
             public void failed(EventBatch events, Exception e) {
                 Assert.assertTrue(e.getMessage(),
-                        e instanceof HecErrorResponseException);
+                        e instanceof HecServerErrorResponseException);
                 LOG.trace("Got expected exception: " + e);
                 latch.countDown(); //allow the test to finish
             }

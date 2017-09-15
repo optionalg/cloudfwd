@@ -15,7 +15,8 @@
  */
 package com.splunk.cloudfwd.http;
 
-import com.splunk.cloudfwd.HecErrorResponseException;
+import com.splunk.cloudfwd.HecServerErrorResponseException;
+
 import java.util.Map;
 
 /**
@@ -26,9 +27,9 @@ public class EventPostResponseValueObject {
   private Map<String, Object> map;
 
 
-  EventPostResponseValueObject(Map<String, Object> map) throws HecErrorResponseException {
+  EventPostResponseValueObject(Map<String, Object> map) throws HecServerErrorResponseException {
     if(!map.containsKey("ackId") || map.get("ackId") == null) {
-        throw new HecErrorResponseException();
+        throw new HecServerErrorResponseException();
     }
     this.map = map;
   }
