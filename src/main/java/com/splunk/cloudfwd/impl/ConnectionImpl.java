@@ -22,6 +22,8 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.HecHealth;
+
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.HecChannel;
@@ -194,9 +196,23 @@ public class ConnectionImpl implements  Connection {
 
     @Override
   public synchronized void flush() throws HecConnectionTimeoutException {
-    if (null != events) {
+    if (null != events && events.getNumEvents() != 0) {
       sendBatch(events);
     }
+  }
+
+    /**
+     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made
+     * @param 
+     * @return
+     * @throws 
+     */
+  public synchronized List<HecHealth> healthCheck() {
+    if (closed) {
+      throw new HecConnectionStateException("Attempt to healthCheck on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
+    }
+    
+    return lb.checkHealth();
   }
 
   /**

@@ -1,4 +1,4 @@
-package com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure;
+package com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure;
 
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
@@ -34,7 +34,7 @@ public class AckDisabledEndpoints extends SimulatedHECEndpoints {
     }
 
     @Override
-    public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+    public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
         httpCallback.completed(new HecErrorResponse(
                 new AckDisabledEntity(), new BadRequestStatusLine()
         ));

@@ -64,22 +64,36 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
             case EVENT_POST_OK:
             case ACK_POLL_OK:
             case HEALTH_POLL_OK:
-            case PREFLIGHT_CHECK_OK:
+            case N2K_HEC_HEALTHY:
+            {
+              notifyObservers(e);
+              return;
+            }
             case ACK_POLL_DISABLED:
-            case HEALTH_POLL_INDEXER_BUSY: { //INDEXER_BUSY is a normal operating condition, not a failure
+            //INDEXER_BUSY is a normal operating condition, not a failure
+            case HEALTH_POLL_INDEXER_BUSY:
+            case SPLUNK_IN_DETENTION:
+              // invalid token state, only used for health check api
+              // otherwise should throw exception and call failed() callback
+            case N2K_INVALID_TOKEN:
+            case N2K_INVALID_AUTH:
+            {
+                if (e instanceof Response) {
+                  Response r = (Response) e;
+                  LOG.debug("Splunk instance not optimal. Url: "
+                    + r.getUrl()
+                    + ", Code: " + r.getHttpCode()
+                    + ", Reply: ", r.getResp());
+                }
                 notifyObservers(e);
                 return;
             }
+            default:
+              break;
         }
         if (e instanceof Response) {
             Response r = (Response) e;
-            if (r.getHttpCode() == 404) {
-                LOG.debug("The indexer is in detention. Url: "
-                        + r.getUrl()
-                        + ", Code: " + r.getHttpCode()
-                        + ", Reply: ", r.getResp());
-                notifyObservers(e);
-            } else if (r.getHttpCode() != 200) {
+            if (r.getHttpCode() != 200) {
                 LOG.error("Error from HEC endpoint in state "
                         + e.getType().name()
                         + ". Url: " + r.getUrl()

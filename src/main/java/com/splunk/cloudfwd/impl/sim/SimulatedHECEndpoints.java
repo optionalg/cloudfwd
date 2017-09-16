@@ -51,7 +51,7 @@ public class SimulatedHECEndpoints implements Endpoints{
   }
 
   @Override
-  public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     httpCallback.completed(
       new CannedOKHttpResponse(
         new CannedEntity("Simulated pre-flight check OK")));
