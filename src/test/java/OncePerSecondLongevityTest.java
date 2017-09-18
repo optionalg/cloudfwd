@@ -58,7 +58,7 @@ public class OncePerSecondLongevityTest extends AbstractConnectionTest{
     //simulate a non-sticky endpoint
     props.put(PropertyKeys.MOCK_HTTP_KEY,"false");
     props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //send immediately
-    props.put(PropertyKeys.ACK_TIMEOUT_MS, "10000"); //10 second timeout
+    props.put(PropertyKeys.ACK_TIMEOUT_MS, "180000"); //3 minute ack timeout
     props.put(PropertyKeys.UNRESPONSIVE_MS, "300000"); //kill dead channel when no activity for 5 minutes    
     return props;
   }
