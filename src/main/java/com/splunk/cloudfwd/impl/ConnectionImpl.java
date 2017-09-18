@@ -28,6 +28,7 @@ import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
+import com.splunk.cloudfwd.impl.util.EventBatchLog;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
@@ -44,8 +45,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ConnectionImpl implements  Connection {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ConnectionImpl.class.
-          getName());
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionImpl.class.getName());
 
   /**
    * @return the propertiesFileHelper
@@ -187,6 +187,7 @@ public class ConnectionImpl implements  Connection {
     timeoutChecker.start();
     timeoutChecker.add((EventBatchImpl)events);
     LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
+    EventBatchLog.LOG.trace("Sending EventBatch and Starting TimeoutChecker: {}", events);
     lb.sendBatch((EventBatchImpl)events);
     //return the number of characters posted to HEC for the events data
     return events.getLength();

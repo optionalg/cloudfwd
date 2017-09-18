@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.impl.util.EventTracker;
+import com.splunk.cloudfwd.impl.util.EventBatchLog;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -42,8 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class AcknowledgementTracker implements EventTracker {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-          AcknowledgementTracker.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(AcknowledgementTracker.class.getName());
 
   private final static ObjectMapper jsonMapper = new ObjectMapper();
   private final Map<Long, EventBatchImpl> polledAcks = new ConcurrentHashMap<>(); //key ackID
@@ -83,6 +83,7 @@ public class AcknowledgementTracker implements EventTracker {
   }
 
   public void preEventPost(EventBatchImpl events) {
+    EventBatchLog.LOG.trace("Register EventBatch before POST: {}", events);
     events.registerEventTracker(this);
     /*
     if (null != this.eventBatches.put(events.getId(), events)) {
@@ -115,6 +116,7 @@ public class AcknowledgementTracker implements EventTracker {
       for (long ackId : succeeded) {
         events = polledAcks.get(ackId);
         events.setAcknowledged(true);
+        EventBatchLog.LOG.trace("Marking EventBatch as Acknowledged: {}", events);
         if (null == events) {
           LOG.warn(
                   "Got acknowledgement on ackId: {} but we're no long tracking that ackId",

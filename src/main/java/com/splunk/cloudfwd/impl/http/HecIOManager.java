@@ -27,6 +27,7 @@ import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.impl.http.lifecycle.PreRequest;
+import com.splunk.cloudfwd.impl.util.EventBatchLog;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
@@ -52,7 +53,6 @@ import org.apache.http.concurrent.FutureCallback;
 public class HecIOManager implements Closeable {
 
   private static final Logger LOG = LoggerFactory.getLogger(HecIOManager.class.getName());
-
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpSender sender;
@@ -118,6 +118,7 @@ public class HecIOManager implements Closeable {
         sender.getChannelMetrics().update(new EventBatchFailure(
                 LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
         sender.getConnection().getCallbacks().failed(events, ex);
+        EventBatchLog.LOG.trace("EventBatch POST Failed: {}", events);
       }
 
       @Override
@@ -125,6 +126,7 @@ public class HecIOManager implements Closeable {
         Exception ex = new RuntimeException(
                 "HTTP post cancelled while posting events");
         sender.getConnection().getCallbacks().failed(events, ex);
+        EventBatchLog.LOG.trace("EventBatch POST Cancelled: {}", events);
       }
 
       @Override
@@ -132,14 +134,17 @@ public class HecIOManager implements Closeable {
         if (code == 200) {
           try {
             consumeEventPostResponse(reply, events);
+            EventBatchLog.LOG.trace("EventBatch POST Successful: {}", events);
           } catch (Exception ex) {
             LOG.error(ex.getMessage(), ex);
+            EventBatchLog.LOG.trace("EventBatch POST Completed But Could Not Consume Response: {}", events);
             sender.getConnection().getCallbacks().failed(events, ex);
           }
         } else {
           sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply,
                   events, sender.getBaseUrl()));
+          EventBatchLog.LOG.trace("EventBatch POST Not OK: {}", events);
         }
       }
     };
@@ -160,6 +165,7 @@ public class HecIOManager implements Closeable {
       });
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
+      EventBatchLog.LOG.trace("Set Ack ID on EventBatch: {}", events);
     } catch (HecServerErrorResponseException e) {
       e.setMessage("ACK_POLL_DISABLED");
       e.setCode(14);
@@ -177,6 +183,8 @@ public class HecIOManager implements Closeable {
 
     //System.out.println("ABOUT TO HANDLE EPR");
     ackTracker.handleEventPostResponse(epr, events);
+
+    EventBatchLog.LOG.trace("Start Ack polling on EventBatch: {}", events);
 
     // start polling for acks
     startPolling();

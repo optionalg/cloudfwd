@@ -19,6 +19,7 @@ package com.splunk.cloudfwd.impl.http;
  */
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.util.EventBatchLog;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -124,7 +125,7 @@ public final class HttpSender implements Endpoints {
     }
 
     eventsBatch.post(this.hecIOManager);
-
+    EventBatchLog.LOG.trace("POST EventBatch: {}", eventsBatch);
   }
 
   /**

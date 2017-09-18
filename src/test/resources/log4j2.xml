@@ -16,16 +16,22 @@ limitations under the License.
 -->
 <Configuration status="WARN">
   <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
+    <!--<Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
     </Console>
     <Console name="ConsoleExpensive" target="SYSTEM_OUT">
       <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1}::%method - %msg%n}"/>
-    </Console>    
+    </Console>-->
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
+    </Console>
   </Appenders>
   <Loggers>
-    <Root level="info">
-      <AppenderRef ref="Console"/>
-    </Root>
+    <!--<Root level="info">-->
+      <!--<AppenderRef ref="Console"/>-->
+    <!--</Root>-->
+    <Logger name="EVENT_BATCH_LOG" level="trace" additivity="false">
+      <AppenderRef ref="Console" />
+    </Logger>
   </Loggers>
 </Configuration>

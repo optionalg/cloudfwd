@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.util.EventBatchLog;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
@@ -44,9 +45,8 @@ import org.slf4j.LoggerFactory;
  */
 public class LoadBalancer implements Closeable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(
-            LoadBalancer.class.
-            getName());
+    private static final Logger LOG = LoggerFactory.getLogger(LoadBalancer.class.getName());
+
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
@@ -255,6 +255,7 @@ public class LoadBalancer implements Closeable {
         try {
             if (tryMe.send(events)) {
                 LOG.debug("sent EventBatch:{}  on channel: {}: ", events, tryMe);
+                EventBatchLog.LOG.trace("Sent EventBatch on Channel: {}", events);
                 return true;
             }
         } catch (RuntimeException e) {

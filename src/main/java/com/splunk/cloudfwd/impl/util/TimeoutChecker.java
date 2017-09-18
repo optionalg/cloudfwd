@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.util;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
+import com.splunk.cloudfwd.impl.util.EventBatchLog;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -34,9 +35,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TimeoutChecker implements EventTracker {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(
-            TimeoutChecker.class.
-            getName());
+    protected static final Logger LOG = LoggerFactory.getLogger(TimeoutChecker.class.getName());
 
     private PollScheduler timoutCheckScheduler = new PollScheduler(
             "Event Timeout Scheduler");
@@ -89,6 +88,7 @@ public class TimeoutChecker implements EventTracker {
                         failed(events,
                                 new HecAcknowledgmentTimeoutException(
                                         "EventBatch with id " + events.getId() + " timed out."));
+                EventBatchLog.LOG.warn("EventBatch timed out: {}", events);
                 iter.remove(); //remove it or else we will keep generating repeated timeout failures
             }
         }

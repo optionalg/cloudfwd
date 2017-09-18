@@ -29,6 +29,7 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.impl.util.EventBatchLog;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -396,7 +397,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                 e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
                 //we must force messages to be sent because the connection could have been gracefully closed
                 //already, in which case sendRoundRobbin will just ignore the sent messages
-               boolean forced = true;
+                EventBatchLog.LOG.trace("Resend Events from dead channel: {}", e);
+                boolean forced = true;
                 while (true) { //try to resend the message up to N times
                   try {
                     if (e.getNumTries() > maxRetries) {
