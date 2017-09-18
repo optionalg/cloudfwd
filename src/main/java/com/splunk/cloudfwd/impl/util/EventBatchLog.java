@@ -6,5 +6,5 @@ import org.slf4j.LoggerFactory;
  * Created by mhora on 9/15/17.
  */
 public class EventBatchLog {
-    public static final Logger LOG = LoggerFactory.getLogger("EVENT_BATCH_LOG");
+    public static Logger LOG = LoggerFactory.getLogger("EVENT_BATCH_LOG");
 }
