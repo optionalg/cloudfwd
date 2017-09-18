@@ -1,5 +1,6 @@
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
@@ -108,6 +109,15 @@ public abstract class AbstractConnectionTest {
               "There was a failure callback with exception class  " + callbacks.
               getException() + " and message " + callbacks.getFailMsg());
     }
+  }
+  
+  protected List<HecHealth> healthCheck() throws InterruptedException {
+    LOG.trace(
+        "HEC CHECK WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+        + "And test method GUID " + testMethodGUID);
+    List<HecHealth> healthStatus = connection.healthCheck();
+    connection.close(); //will flush    
+    return healthStatus;
   }
 
   protected void sendCombinationEvents() throws TimeoutException, InterruptedException, HecConnectionTimeoutException {

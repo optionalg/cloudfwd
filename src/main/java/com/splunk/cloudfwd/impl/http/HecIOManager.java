@@ -254,16 +254,23 @@ public class HecIOManager implements Closeable {
         break;
       case 503:
         sender.getChannelMetrics().update(new Response(
-                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY,
-                statusCode, reply, sender.getBaseUrl()));
+            LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY,
+            statusCode, reply, sender.getBaseUrl()));
         break;
-      default:
+      case 404:
+        sender.getChannelMetrics().update(new Response(
+            LifecycleEvent.Type.SPLUNK_IN_DETENTION,
+            statusCode, reply, sender.getBaseUrl()));
+        break;
+      case 400:
         // Other status codes are not indicative of unhealthy HEC,
         // but rather the URL/token is wrong.
         // This is actually a failure.
         sender.getChannelMetrics().update(new Response(
                 LifecycleEvent.Type.HEALTH_POLL_ERROR,
                 statusCode, reply, sender.getBaseUrl()));
+        break;
+      default:
         break;
     }
   }
@@ -293,43 +300,77 @@ public class HecIOManager implements Closeable {
     };
     sender.pollHealth(cb);
   }
+  
+  // does not trigger a throw exception, called on a need-to-know
+  // health check api
+  private void setHecCheckHealth(int statusCode, String reply) {
+    switch (statusCode) {
+      case 200:
+        LOG.info("HEC check is good");
+        sender.getChannelMetrics().update(new Response(
+                LifecycleEvent.Type.N2K_HEC_HEALTHY,
+                200, reply, sender.getBaseUrl()));
+        break;
+      case 400:
+        // determine code in reply, must be 14 for disabled
+        ObjectMapper mapper = new ObjectMapper();
+        HecErrorResponseValueObject hecErrorResp;
+        try {
+            hecErrorResp = mapper.readValue(reply,
+                    HecErrorResponseValueObject.class);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
+        if (14 == hecErrorResp.getCode()) {
+          sender.getChannelMetrics().update(new Response(
+              LifecycleEvent.Type.ACK_POLL_DISABLED,
+              statusCode, reply, sender.getBaseUrl()));
+        }
+        break;
+      case 404:
+        sender.getChannelMetrics().update(new Response(
+            LifecycleEvent.Type.SPLUNK_IN_DETENTION,
+            statusCode, reply, sender.getBaseUrl()));
+        break;
+      case 403: //HTTPSTATUS_FORBIDDEN
+        sender.getChannelMetrics().update(new Response(
+                LifecycleEvent.Type.N2K_INVALID_TOKEN,
+                statusCode, reply, sender.getBaseUrl()));
+        break;
+      case 401: //HTTPSTATUS_UNAUTHORIZED
+        sender.getChannelMetrics().update(new Response(
+                LifecycleEvent.Type.N2K_INVALID_AUTH,
+                statusCode, reply, sender.getBaseUrl()));
+        break;
+      default:
+        break;
+    }
+  }
 
-  /**
-   * Hits the /ack endpoint to check for a valid HEC token with acknowledgements
-   * enabled
-   */
-  public void preFlightCheck() {
-    LOG.info("PRE-FLIGHT CHECK...");
+  public void checkHealth() {
+    LOG.trace("check health", sender.getChannel());
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
       public void failed(Exception ex) {
-        LOG.error("failed to perform pre-flight check", ex);
+        LOG.error("HEC health check via /ack endpoint failed", ex);
         sender.getChannelMetrics().update(new RequestFailed(
-                LifecycleEvent.Type.PREFLIGHT_CHECK_FAILED, ex));
+                LifecycleEvent.Type.ACK_POLL_FAILURE, ex));
       }
 
       @Override
       public void cancelled() {
         sender.getConnection().getCallbacks().failed(null, new Exception(
-                "HEC pre-flight check request cancelled."));
+                "HEC health check via /ack endpoint cancelled."));
       }
 
       @Override
       public void completed(String reply, int code) {
-        LifecycleEvent.Type type;
-        if (code == 200) {
-          LOG.info("PRE-FLIGHT CHECK OK");
-          type = LifecycleEvent.Type.PREFLIGHT_CHECK_OK;
-        } else {
-          type = LifecycleEvent.Type.PREFLIGHT_CHECK_NOT_OK;
-        }
-        sender.getChannelMetrics().update(
-            new Response(type, code, reply, sender.getBaseUrl()));
+        setHecCheckHealth(code, reply);
       }
-    };
 
-    sender.preFlightCheck(cb);
+    };
+    sender.splunkCheck(cb);
   }
 
   /**

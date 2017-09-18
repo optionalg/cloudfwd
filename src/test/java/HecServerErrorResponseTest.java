@@ -71,11 +71,11 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         switch(errorToTest) {
             case ACKS_DISABLED:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure.AckDisabledEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.AckDisabledEndpoints");
                 break;
             case INVALID_TOKEN:
                 props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure.InvalidTokenEndpoints");
+                        "com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.InvalidTokenEndpoints");
                 break;
             case INDEXER_BUSY_POST:
                 props.put(MOCK_HTTP_CLASSNAME,

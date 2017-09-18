@@ -33,6 +33,7 @@ public abstract class LifecycleEvent {
     ACK_POLL_OK,
     ACK_POLL_NOT_OK,
     ACK_POLL_FAILURE,
+    // ack poll check can be done without EventBatch object
     ACK_POLL_DISABLED,
 
     // States without an EventBatch object
@@ -40,9 +41,12 @@ public abstract class LifecycleEvent {
     HEALTH_POLL_INDEXER_BUSY,
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
-    PREFLIGHT_CHECK_FAILED,
-    PREFLIGHT_CHECK_OK,
-    PREFLIGHT_CHECK_NOT_OK
+    SPLUNK_IN_DETENTION,
+
+    // Needed to know statuses, do not throw exception
+    N2K_HEC_HEALTHY,
+    N2K_INVALID_TOKEN,
+    N2K_INVALID_AUTH
   };
 
   private final Type type;

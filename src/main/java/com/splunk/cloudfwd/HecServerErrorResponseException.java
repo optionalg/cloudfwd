@@ -49,11 +49,12 @@ public class HecServerErrorResponseException extends Exception {
     private String message;
     private Type errorType;
 
-    private Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(3, 7, 8, 9, 10, 11));
-    private Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 4, 14));
+    private Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(3, 10, 11));
+    private Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 4, 7, 14));
     private Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
+    private Set<Integer> recoverableServerErrors = new HashSet<>(Arrays.asList(8, 9));
 
-    public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR };
+    public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR, RECOVERABLE_SERVER_ERROR };
 
     public HecServerErrorResponseException() {}
 
@@ -95,6 +96,8 @@ public class HecServerErrorResponseException extends Exception {
             errorType =  Type.RECOVERABLE_CONFIG_ERROR;
         } else if (recoverableDataErrors.contains(hecCode)) {
             errorType =  Type.RECOVERABLE_DATA_ERROR;
+        } else if (recoverableServerErrors.contains(hecCode)) {
+            errorType =  Type.RECOVERABLE_SERVER_ERROR;
         }
     }
 }
