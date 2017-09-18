@@ -163,7 +163,8 @@
                     <excludes>
                         <exclude>**/LargeBatchTest.java</exclude>
                         <exclude>**/ReconciliationTest.java</exclude> 
-                        <exclude>**/ByteBufferWithMixedEventsTest.java</exclude>                                                
+                        <exclude>**/ByteBufferWithMixedEventsTest.java</exclude> 
+                        <exclude>**/OncePerSecondLongevityTest.java</exclude>                                                                  
                     </excludes>
                 </configuration>
             </plugin>            
