@@ -15,8 +15,8 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import java.io.Closeable;
+import java.util.List;
 
 /**
  *
@@ -29,7 +29,7 @@ public interface Connection extends Closeable{
     enabled via either the setEventBatchSize method, or the EVENT_BATCH_SIZE property key. The buffer
     is flushed either by closing the Connection, calling flush, or calling send until EVENT_BATCH_SIZE bytes
     have accumulated in the Connections internal EventBatchImpl. When an EventBatchImpl is flushed, the connection's
-    ConnectionCallbacks will be invoked, asynchronusly. The send method may block for up to BLOCKING_TIMEOUT_MS
+    ConnectionCallbacks will be invoked, asynchronously. The send method may block for up to BLOCKING_TIMEOUT_MS
     milliseconds before throwing  an HecConnecionTimeoutException.
      * @param event
      * @return the number of bytes sent (will be zero unless buffer reaches EVENT_BATCH_SIZE and flushes)
@@ -78,11 +78,18 @@ public interface Connection extends Closeable{
     int sendBatch(EventBatch events) throws HecConnectionTimeoutException;
 
     /**
+     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made
+     * @param 
+     * @return
+     * @throws 
+     */
+    List<HecHealth> healthCheck();
+
+    /**
      * Returns a live ConnectionsSettings instance that can be used to change
      * the behavior of the connection while it is in use.
      *
      * @return ConnectionSettings
      */
     public ConnectionSettings getSettings();
-
 }

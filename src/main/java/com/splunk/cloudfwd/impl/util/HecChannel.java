@@ -30,6 +30,7 @@ import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.util.EventBatchLog;
+import com.splunk.cloudfwd.HecHealth;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -55,7 +56,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
   private volatile boolean closed;
   private volatile boolean quiesced;
+
   private volatile boolean healthy = false; // Responsive to indexer 503 "queue full" error.
+  private HecHealth health;
+
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
@@ -75,9 +79,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.channelMetrics.addObserver(this);
     this.full = loadBalancer.getPropertiesFileHelper().
             getMaxUnackedEventBatchPerChannel();
-    sender.setChannel(this);
-    sender.getHecIOManager().preFlightCheck();
-    memoizedToString = this.channelId + "@" + sender.getBaseUrl();
+    this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
+
+    this.health = new HecHealth(sender.getBaseUrl()
+        , HecHealth.Status.HEALTH_CHECK_PENDING);
+  }
+
+  public HecHealth getHealth() {
+    return health;
   }
 
   private static String newChannelId() {
@@ -96,6 +105,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (started) {
       return;
     }
+    this.sender.setChannel(this);
+    this.sender.getHecIOManager().checkHealth();
+
     //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
     ThreadFactory f = (Runnable r) -> new Thread(r, "Channel Reaper");
 
@@ -119,11 +131,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   public synchronized boolean send(EventBatchImpl events) {
-    if (!isAvailable()) {
-      return false;
-    }
     if (!started) {
       start();
+    }
+    if (!isAvailable()) {
+      return false;
     }
 
     //must increment only *after* we exit the blocking condition above
@@ -155,13 +167,39 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         checkForStickySessionViolation(e);
         break;
       }
-      case PREFLIGHT_CHECK_OK:
-      case HEALTH_POLL_OK: {
+      case HEALTH_POLL_OK:
+      case N2K_HEC_HEALTHY:
+      {
+        this.health.setStatus(HecHealth.Status.HEALTHY);
         this.healthy = true; //see isAvailable
         break;
       }
-      case ACK_POLL_DISABLED:
+      case SPLUNK_IN_DETENTION: {
+        this.health.setStatus(HecHealth.Status.IN_DETENTION);
         this.healthy = false;
+        break;
+      }
+      case HEALTH_POLL_INDEXER_BUSY: {
+        this.health.setStatus(HecHealth.Status.INDEXER_BUSY);
+        this.healthy = false;
+        break;
+      }
+      case ACK_POLL_DISABLED: {
+        this.health.setStatus(HecHealth.Status.ACK_DISABLED);
+        this.healthy = false;
+        break;
+      }
+      case N2K_INVALID_TOKEN: {
+        this.health.setStatus(HecHealth.Status.INVALID_TOKEN);
+        this.healthy = false;
+        break;
+      }
+      case N2K_INVALID_AUTH: {
+        this.health.setStatus(HecHealth.Status.INVALID_AUTH);
+        this.healthy = false;
+        break;
+      }
+      default:
         break;
     }
     if (e instanceof Response) {

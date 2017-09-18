@@ -33,7 +33,7 @@ import org.apache.http.concurrent.FutureCallback;
  */
 public class InDetentionEndpoints extends SimulatedHECEndpoints {
   @Override
-  public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     ((AbstractHttpCallback)httpCallback).completed(
         "Not Found",
         404);

@@ -304,12 +304,12 @@ public final class HttpSender implements Endpoints {
   }
 
   @Override
-  public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     if (!started()) {
       start();
     }
     if (isSimulated()) {
-      this.simulatedEndpoints.preFlightCheck(httpCallback);
+      this.simulatedEndpoints.splunkCheck(httpCallback);
       return;
     }
     Set<Long> dummyAckId = new HashSet<>();

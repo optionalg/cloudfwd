@@ -1,22 +1,20 @@
-package com.splunk.cloudfwd.impl.sim.errorgen.preflightfailure;
+package com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure;
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
-import com.splunk.cloudfwd.impl.sim.ForbiddenStatusLine;
+import com.splunk.cloudfwd.impl.sim.UnauthorizedStatusLine;
 import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
 
 
 /**
  *
- * Created by eprokop on 9/1/17.
+ * Created by meemax on 9/1/17.
  */
-public class InvalidTokenEndpoints extends SimulatedHECEndpoints {
+public class InvalidAuthEndpoints extends SimulatedHECEndpoints {
     @Override
     public void postEvents(HttpPostable events,
                            FutureCallback<HttpResponse> httpCallback) {
@@ -35,16 +33,16 @@ public class InvalidTokenEndpoints extends SimulatedHECEndpoints {
     }
 
     @Override
-    public void preFlightCheck(FutureCallback<HttpResponse> httpCallback) {
+    public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
         httpCallback.completed(new HecErrorResponse(
-                new InvalidTokenEntity(), new ForbiddenStatusLine()
+                new InvalidAuthEntity(), new UnauthorizedStatusLine()
         ));
     }
 
-    private static class InvalidTokenEntity extends CannedEntity {
+    private static class InvalidAuthEntity extends CannedEntity {
 
-        public InvalidTokenEntity() {
-            super("{\"text\":\"Invalid token\",\"code\":4}");
+        public InvalidAuthEntity() {
+            super("{\"text\":\"Invalid authorization\",\"code\":3}");
         }
     }
 }

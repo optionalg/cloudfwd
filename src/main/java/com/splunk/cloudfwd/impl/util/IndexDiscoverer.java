@@ -45,10 +45,15 @@ class IndexDiscoverer extends Observable {
   //and would be changing over time
   private Map<String, List<InetSocketAddress>> mappings;
   private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
+  private boolean forceUrlMapToOne = false;
 
   IndexDiscoverer(PropertiesFileHelper f) {
     this.propertiesFileHelper = f;
-
+    this.forceUrlMapToOne = this.propertiesFileHelper.isForcedUrlMapToSingleAddr();
+  }
+  
+  public void forceUrlMapToOne(boolean b) {
+    this.forceUrlMapToOne = b;
   }
 
   // avoids doing a DNS lookup if possible
@@ -89,7 +94,7 @@ class IndexDiscoverer extends Observable {
   synchronized List<InetSocketAddress> getAddrs(){
     // perform DNS lookup
     this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
-            propertiesFileHelper.isForcedUrlMapToSingleAddr());
+            this.forceUrlMapToOne);
     List<InetSocketAddress> addrs = new ArrayList<>();
     for (String url : this.mappings.keySet()) {
       addrs.addAll(mappings.get(url));
@@ -107,7 +112,7 @@ class IndexDiscoverer extends Observable {
   */
   synchronized void discover(){
     update(getInetAddressMap(propertiesFileHelper.getUrls(),
-        propertiesFileHelper.isForcedUrlMapToSingleAddr()), mappings);
+        this.forceUrlMapToOne), mappings);
   }
 
   List<Change> update(Map<String, List<InetSocketAddress>> current,

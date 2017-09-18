@@ -21,10 +21,9 @@ import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.impl.util.EventBatchLog;
-import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import com.splunk.cloudfwd.impl.http.HttpSender;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -38,6 +37,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
+import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 
 /**
  *
@@ -67,6 +69,24 @@ public class LoadBalancer implements Closeable {
         //this.discoverer.addObserver(this);
     }
 
+    public synchronized List<HecHealth> checkHealth() {
+      if (channels.isEmpty()) {
+        createChannels(discoverer.getAddrs());
+        // if channels are newly created, the status will be HEALTH_CHECK_PENDING
+      }
+      List<HecHealth> healthStatus = new ArrayList<HecHealth>();
+      checkHealthEach(healthStatus);
+
+      return healthStatus;
+    }
+
+    synchronized void checkHealthEach(List<HecHealth> healthStatus) {
+      for (HecChannel c : channels.values()) {
+        healthStatus.add(c.getHealth());
+      }
+    }
+
+    @SuppressWarnings("unused")
     private void updateChannels(IndexDiscoverer.Change change) {
         LOG.debug(change.toString());
     }
@@ -110,13 +130,13 @@ public class LoadBalancer implements Closeable {
     }
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
-        for (InetSocketAddress s : addrs) {
-            //add multiple channels for each InetSocketAddress
-            for (int i = 0; i < channelsPerDestination; i++) {
-                addChannel(s, false);
-            }
+      for (InetSocketAddress s : addrs) {
+        //add multiple channels for each InetSocketAddress
+        for (int i = 0; i < channelsPerDestination; i++) {
+            addChannel(s, false);
         }
     }
+}
 
     void addChannelFromRandomlyChosenHost() {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
@@ -161,6 +181,9 @@ public class LoadBalancer implements Closeable {
             LOG.debug("Adding channel {}", channel);
             channels.put(channel.getChannelId(), channel);
             //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
+
+            // have channel ready to send requests
+            channel.start();
 
         } catch (MalformedURLException ex) {
             LOG.error(ex.getMessage(), ex);
