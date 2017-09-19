@@ -138,7 +138,6 @@ public class ConnectionSettings {
         if (max < 1) {
             max = PropertyKeys.MIN_EVENT_BATCH_SIZE;
         }
-        LOG.trace("event_batch_size="+max);
         return max;
     }
 
