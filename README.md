@@ -67,6 +67,28 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 
 After a minute, you should see stock trade events in the Splunk UI.
 
+### Getting AWS logs into Splunk using Cloudfwd
+This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk deployment. 
+
+### Prerequisites 
+1.  Splunk Add-on for Amazon Kinesis Firehose
+
+### Steps
+1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
+2. In examples > resources > lb.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas. 
+3. In examples > resources > lb.properties, input your generated HEC token.
+```
+url=https://127.0.0.1:8088
+token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
+```
+4. In your preferred IDE, run LogWriter with the following arguments: ```<stream_name> <AWS_region_name> <AWS_profile_name> <name_of_log_file>```
+	4a. Example: ``` mystream us-west-2 default cloudwatchEventLogs  ```
+5. In your preferred IDE, run LogsProcessor with the following arguments: ```<AWS_app_name> <stream_name> <AWS_region_name> <AWS_profile_name>``` This may take a few minutes.
+	5a. Example: ```cloudfwd-example-consumer mystream us-west-2 default ```
+6. Open your Splunk environment, and search for your sourcetype in your Splunk environment.
+
+After a few minutes, you should see your log data in the Splunk UI.
+
 ## Troubleshoot Cloudfwd
 
 The following assumes familiarity with Splunk software. 
@@ -90,6 +112,20 @@ If you are sending data using the ```/event``` endpoint and you are not seeing y
 | Misc. Runtime Exceptions        | Runtime exceptions may be caught in the library for logging, and then and passed to failed() callback. Can be debugged with stacktrace.                                                                                                          | This is not recoverable.                                                                                                                                                                                                                                                                                                                                                     |
 
 #### Runtime exceptions thrown in blocking send() call (synchronous):
+=======
+###Error exceptions
+
+
+####Exceptions passed to failed() callback (asynchronous):
+| Exception                 | Description                                                                                                                                                                                                                                      |
+|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| HecAckTimeoutException    | This exception is thrown after waiting for ```PropertyKeys.ACK_TIMEOUT_MS``` milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                       |
+| HecDetentionException     | This exception is thrown your indexer cannot be reached. Either your indexer will not accept any events because of low disk space (automatic detention) or because an administrator put your indexer in manual detention.                        |
+| HecErrorResponseException | This exception is thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server-side error code (1-14) as well as the message. See the API documentation for a detailed description of each error code. |
+| HecIllegalStateException  | This exception is thrown if a duplicate ackId is received on a given HEC channel. This can indicate failure of a sticky load balancer to provide stickiness.                                                                                     |
+| IllegalStateException     | This exception is thrown when Cloudfwd has an internal ack error. The success ackId does not match the recorded ackId.                                                                                                                           |
+
+####Runtime exceptions thrown in blocking send() call (synchronous):
 
 | Exception                     | Description                                                                                                                        | How to fix                                                                  |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
