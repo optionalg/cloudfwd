@@ -115,15 +115,22 @@ public class HecIOManager implements Closeable {
       @Override
       public void failed(Exception ex) {
         //eventPostFailure(ex);
+        LOG.error("Event post failed on channel  {}", sender.getChannel(),  ex);
+        LOG.error("Failed to post event batch {}", events,  ex);
         sender.getChannelMetrics().update(new EventBatchFailure(
                 LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
-        sender.getConnection().getCallbacks().failed(events, ex);
+        sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded
+        //sender.getConnection().getCallbacks().failed(events, ex);
       }
 
       @Override
       public void cancelled() {
+         LOG.error("Event post cancelled on channel  {}", sender.getChannel());
+        LOG.error("Failed to post event batch {}", events);
         Exception ex = new RuntimeException(
-                "HTTP post cancelled while posting events");
+                "HTTP post cancelled while posting events  "+events);
+        sender.getChannelMetrics().update(new EventBatchFailure(
+                LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
         sender.getConnection().getCallbacks().failed(events, ex);
       }
 
@@ -228,6 +235,7 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void failed(Exception ex) {
+          LOG.error("Channel {} failed to poll acks", sender.getChannel(),  ex);
         LOG.error("failed to poll acks: "+ex.getMessage(), ex);
         //AckManager.this.ackPollFailed(ex);
         sender.getChannelMetrics().update(new RequestFailed(
@@ -237,8 +245,13 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void cancelled() {
+        LOG.error("Ack poll  cancelled on channel  {}", sender.getChannel());
+        Exception ex = new RuntimeException(
+                "HTTP post cancelled while polling for acks  on channel " + sender.getChannel());     
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.ACK_POLL_FAILURE, ex));        
         setAckPollInProgress(false);
-        LOG.error("ack poll cancelled.");
+
       }
     };
     sender.pollAcks(this, cb);
@@ -280,16 +293,18 @@ public class HecIOManager implements Closeable {
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
-      public void failed(Exception ex) {
-        LOG.error("failed to poll health", ex);
+      public void failed(Exception ex) {       
+        LOG.error("Channel {} failed to poll health", sender.getChannel(),  ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.HEALTH_POLL_FAILED, ex));
       }
 
       @Override
       public void cancelled() {
-        sender.getConnection().getCallbacks().failed(null, new Exception(
-                "HEC health endpoint request cancelled."));
+        Exception ex = new RuntimeException(
+                "HTTP post cancelled while polling for health on channel " + sender.getChannel());     
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.HEALTH_POLL_FAILED, ex));             
       }
 
       @Override

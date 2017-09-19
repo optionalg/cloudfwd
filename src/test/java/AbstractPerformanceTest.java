@@ -57,7 +57,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     int expected = getNumEventsToSend();
     long start = 0;
     long finish = 0;
-    float warmup = 0.2f;
+    float warmup = 0.01f;
     boolean windingDown;
     boolean warmingUp = true;
     for (int i = 0; i < expected; i++) {

@@ -22,6 +22,7 @@ import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
+import static com.splunk.cloudfwd.impl.util.HecChannel.LOG;
 
 /**
  *
@@ -68,24 +70,24 @@ public class LoadBalancer implements Closeable {
         this.checkpointManager = new CheckpointManager(c);
         //this.discoverer.addObserver(this);
     }
-    
+
     public synchronized List<HecHealth> checkHealth() {
-      if (channels.isEmpty()) {
-        createChannels(discoverer.getAddrs());
-        // if channels are newly created, the status will be HEALTH_CHECK_PENDING
-      }
-      List<HecHealth> healthStatus = new ArrayList<HecHealth>();
-      checkHealthEach(healthStatus);
-      
-      return healthStatus;
+        if (channels.isEmpty()) {
+            createChannels(discoverer.getAddrs());
+            // if channels are newly created, the status will be HEALTH_CHECK_PENDING
+        }
+        List<HecHealth> healthStatus = new ArrayList<HecHealth>();
+        checkHealthEach(healthStatus);
+
+        return healthStatus;
     }
-    
+
     synchronized void checkHealthEach(List<HecHealth> healthStatus) {
-      for (HecChannel c : channels.values()) {
-        healthStatus.add(c.getHealth());
-      }
+        for (HecChannel c : channels.values()) {
+            healthStatus.add(c.getHealth());
+        }
     }
-    
+
     @SuppressWarnings("unused")
     private void updateChannels(IndexDiscoverer.Change change) {
         LOG.debug(change.toString());
@@ -130,17 +132,17 @@ public class LoadBalancer implements Closeable {
     }
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
-      for (InetSocketAddress s : addrs) {
-        //add multiple channels for each InetSocketAddress
-        for (int i = 0; i < channelsPerDestination; i++) {
-            addChannel(s, false);
+        for (InetSocketAddress s : addrs) {
+            //add multiple channels for each InetSocketAddress
+            for (int i = 0; i < channelsPerDestination; i++) {
+                addChannel(s, false);
+            }
         }
     }
-}
 
     void addChannelFromRandomlyChosenHost() {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
-        LOG.debug("Adding channel to {0}", addr);
+        LOG.debug("Adding channel to {}", addr);
         addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
     }
 
@@ -184,7 +186,7 @@ public class LoadBalancer implements Closeable {
 
             // have channel ready to send requests
             channel.start();
-            
+
         } catch (MalformedURLException ex) {
             LOG.error(ex.getMessage(), ex);
         }
@@ -218,12 +220,16 @@ public class LoadBalancer implements Closeable {
         sendRoundRobin(events, false);
     }
 
-    synchronized void sendRoundRobin(EventBatchImpl events, boolean forced)
+    public synchronized boolean sendRoundRobin(EventBatchImpl events, boolean resend)
             throws HecConnectionTimeoutException {
-        prepareToFindChannel(events, forced);
+        events.incrementNumTries();
+        if (resend && !isResendable(events)) {
+            return false; //bail if this EventBatch has already reached a final state
+        }
+        prepareToFindChannel(events, resend);
         long startTime = System.currentTimeMillis();
         int spinCount = 0;
-        while (!closed || forced) {
+        while (!closed || resend) {
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
             //consisting of closed channels. Also, it must be a snapshot, not use the live
@@ -235,17 +241,17 @@ public class LoadBalancer implements Closeable {
             if (channelsSnapshot.isEmpty()) {
                 continue; //keep going until a channel is added
             }
-            if (tryChannelSend(channelsSnapshot, events, forced)) {
+            if (tryChannelSend(channelsSnapshot, events, resend)) {
                 break;
             }
             waitIfSpinCountTooHigh(++spinCount, channelsSnapshot);
-            throwExceptionIfTimeout(startTime, events, forced);
+            throwExceptionIfTimeout(startTime, events, resend);
         }
+        return true;
     }
 
     private void prepareToFindChannel(EventBatchImpl events, boolean forced)
             throws HecIllegalStateException {
-        events.incrementNumTries();
         if (channels.isEmpty()) {
             throw new HecIllegalStateException(
                     "attempt to sendRoundRobin but no channel available.",
@@ -363,6 +369,24 @@ public class LoadBalancer implements Closeable {
      */
     public PropertiesFileHelper getPropertiesFileHelper() {
         return this.connection.getPropertiesFileHelper();
+    }
+
+    private boolean isResendable(EventBatchImpl events) {
+         final int maxRetries = getPropertiesFileHelper(). getMaxRetries();
+        if (events.getNumTries() > maxRetries) {
+                              String msg = "Tried to send event id=" + events.
+                              getId() + " " + events.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
+                      LOG.warn(msg);
+                      getConnection().getCallbacks().failed(events,new HecMaxRetriesException(msg));
+                      return false;
+        }
+        events.getAcknowledgementTracker().cancel(events);
+        if (events.isAcknowledged() || events.isTimedOut(connection.
+                getSettings().getAckTimeoutMS())) {
+            return false; //do not resend messages that are in a final state 
+        }
+        events.prepareToResend(); //we are going to resend it,so mark it not yet flushed
+        return true;
     }
 
 }

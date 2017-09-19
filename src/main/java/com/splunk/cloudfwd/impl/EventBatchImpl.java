@@ -23,7 +23,6 @@ import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_
 import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_NOT_OK;
 import com.splunk.cloudfwd.HecConnectionStateException;
-import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.util.EventTracker;
 import com.splunk.cloudfwd.impl.util.HecChannel;
@@ -41,6 +40,8 @@ import org.apache.http.entity.AbstractHttpEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.http.AcknowledgementTracker;
+import java.util.Collections;
 
 /**
  * Use EventBatchImpl if you want a high degree of control over which events will be
@@ -68,6 +69,7 @@ public class EventBatchImpl implements EventBatch {
   protected Set<EventTracker> trackers = new HashSet<>();
   private HecChannel hecChannel;
   private LifecycleEvent.Type state = EVENT_BATCH_BORN; //initial lifecyle state
+  private List<Exception> sendExceptions = new ArrayList<>();
 
   public EventBatchImpl() {
   }
@@ -249,7 +251,7 @@ public class EventBatchImpl implements EventBatch {
   @Override
   public String toString() {
     return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged
-            + ", numTries=" + numTries + ", state=" + state + '}';
+            + ", numTries=" + numTries + ", state=" + state +  " numSendExceptions="+sendExceptions.size()+'}';
   }
 
   public void cancelEventTrackers() {
@@ -265,6 +267,15 @@ public class EventBatchImpl implements EventBatch {
               "EventTracker already registered on EventBatch " + this,
               HecIllegalStateException.Type.EVENT_TRACKER_ALREADY_REGISTERED);
     }
+  }
+  
+  public AcknowledgementTracker getAcknowledgementTracker(){
+      for(EventTracker t:trackers){
+          if(t instanceof AcknowledgementTracker){
+              return (AcknowledgementTracker) t;
+          }
+      }
+      throw new IllegalStateException("No acknowledgement tracker registered with EventBatch " + this);
   }
 
   /**
@@ -306,6 +317,17 @@ public class EventBatchImpl implements EventBatch {
 
     public void setSendTimestamp(long currentTimeMillis) {
         this.sendTimestamp = currentTimeMillis;
+    }
+
+    /**
+     * @return the sendExceptions
+     */
+    public List<Exception> getSendExceptions() {
+        return Collections.unmodifiableList(sendExceptions);
+    }
+    
+    public void addSendException(Exception e){
+        sendExceptions.add(e);
     }
 
   private class HttpEventBatchEntity extends AbstractHttpEntity {
