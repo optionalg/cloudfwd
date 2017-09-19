@@ -1,5 +1,6 @@
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.config.Registry;
@@ -54,7 +55,7 @@ import sun.security.provider.X509Factory;
  */
 public final class HttpClientFactory {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(HttpClientFactory.class.getName());
+    private static final Logger LOG = ConnectionImpl.getLogger(HttpClientFactory.class.getName());
 
     private String url;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size

@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +33,7 @@ import org.slf4j.LoggerFactory;
  */
 public class PollScheduler {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(PollScheduler.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(PollScheduler.class.getName());
   private ScheduledExecutorService scheduler;
   private boolean started;
   private final String name;

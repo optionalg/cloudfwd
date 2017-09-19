@@ -31,7 +31,7 @@ import org.apache.commons.io.IOUtils;
  * @author ghendrey
  */
 public class UnvalidatedByteBufferEvent implements Event {
-  private static final Logger LOG = LoggerFactory.getLogger(UnvalidatedByteBufferEvent.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(UnvalidatedByteBufferEvent.class.getName());
 
   private final ByteBuffer buf;
   private final Comparable id;

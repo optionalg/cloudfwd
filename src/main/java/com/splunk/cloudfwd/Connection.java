@@ -18,6 +18,9 @@ package com.splunk.cloudfwd;
 import java.io.Closeable;
 import java.util.List;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
+
 /**
  *
  * @author ghendrey
@@ -92,4 +95,9 @@ public interface Connection extends Closeable{
      * @return ConnectionSettings
      */
     public ConnectionSettings getSettings();
+
+    // Static methods must be defined in interface itself
+    public static void setLoggerFactory(HecLoggerFactory f) {
+        ConnectionImpl.setLoggerFactory(f);
+    };
 }

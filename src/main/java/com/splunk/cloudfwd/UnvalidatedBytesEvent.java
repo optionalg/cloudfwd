@@ -31,7 +31,7 @@ import org.apache.commons.io.IOUtils;
  */
 public class UnvalidatedBytesEvent implements Event{
 
-  private static final Logger LOG = LoggerFactory.getLogger(UnvalidatedBytesEvent.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(UnvalidatedBytesEvent.class.getName());
 
   private byte[] bytes;
   private Comparable id;

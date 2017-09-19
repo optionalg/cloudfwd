@@ -34,9 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TimeoutChecker implements EventTracker {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(
-            TimeoutChecker.class.
-            getName());
+    private static final Logger LOG = ConnectionImpl.getLogger(TimeoutChecker.class.getName());
 
     private PollScheduler timoutCheckScheduler = new PollScheduler(
             "Event Timeout Scheduler");

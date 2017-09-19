@@ -36,5 +36,4 @@ public class Connections {
     public static Connection create(ConnectionCallbacks c, Properties p) {
         return new ConnectionImpl(c, p);
     }
-
 }

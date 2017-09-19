@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class CallbackInterceptor implements ConnectionCallbacks {
-    private static final Logger LOG = LoggerFactory.getLogger(CallbackInterceptor.class);
+    private static final Logger LOG = ConnectionImpl.getLogger(CallbackInterceptor.class.getName());
 
     ConnectionCallbacks callbacks;
 

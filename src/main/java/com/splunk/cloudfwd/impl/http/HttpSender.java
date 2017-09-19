@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class HttpSender implements Endpoints {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(HttpSender.class.getName());
   
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";

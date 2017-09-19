@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
@@ -51,8 +52,7 @@ import org.apache.http.concurrent.FutureCallback;
  */
 public class HecIOManager implements Closeable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(HecIOManager.class.getName());
-
+  private static final Logger LOG = ConnectionImpl.getLogger(HecIOManager.class.getName());
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpSender sender;

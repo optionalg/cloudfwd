@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,8 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class AcknowledgementTracker implements EventTracker {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-          AcknowledgementTracker.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(AcknowledgementTracker.class.getName());
 
   private final static ObjectMapper jsonMapper = new ObjectMapper();
   private final Map<Long, EventBatchImpl> polledAcks = new ConcurrentHashMap<>(); //key ackID

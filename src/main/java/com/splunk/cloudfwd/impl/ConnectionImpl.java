@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
@@ -44,10 +45,9 @@ import org.slf4j.LoggerFactory;
  *
  * @author ghendrey
  */
-public class ConnectionImpl implements  Connection {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ConnectionImpl.class.
-          getName());
+public class ConnectionImpl implements Connection {
+  private static HecLoggerFactory loggerFactory;
+  private static final Logger LOG = ConnectionImpl.getLogger(ConnectionImpl.class.getName());
 
   /**
    * @return the propertiesFileHelper
@@ -84,12 +84,12 @@ public class ConnectionImpl implements  Connection {
     //the EventBatchImpl that succeeded or failed from the timoutChecker
     this.timeoutChecker = new TimeoutChecker(this);
     //when a failure occurs on an EventBatchImpl, everyone who was tracking that event batch needs to cancelEventTrackers
-    //tracking that EventBatchImpl. In other words, failed callback should wipe out all trace of the message from 
+    //tracking that EventBatchImpl. In other words, failed callback should wipe out all trace of the message from
     //the Connection and it becomes the implicit responsibility of the owner of the Connection to resend the
     //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
-    this.callbacks = new CallbackInterceptor(callbacks); 
+    this.callbacks = new CallbackInterceptor(callbacks);
 
   }
 
@@ -264,7 +264,7 @@ public class ConnectionImpl implements  Connection {
   
     @Override
   public void release(Comparable id){
-    throw new RuntimeException("Not implemeneted");
+    throw new RuntimeException("Not implemented");
   }
 
     /**
@@ -273,4 +273,16 @@ public class ConnectionImpl implements  Connection {
     public LoadBalancer getLoadBalancer() {
         return lb;
     }
+
+  public static void setLoggerFactory(HecLoggerFactory f) {
+    loggerFactory = f;
+  }
+
+  public static Logger getLogger(String name) {
+      if (ConnectionImpl.loggerFactory != null) {
+        return ConnectionImpl.loggerFactory.getLogger(name);
+      } else {
+        return LoggerFactory.getLogger(name);
+      }
+  }
 }

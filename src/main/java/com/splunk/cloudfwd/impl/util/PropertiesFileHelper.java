@@ -28,8 +28,6 @@ import static com.splunk.cloudfwd.PropertyKeys.*;
  */
 public class PropertiesFileHelper extends ConnectionSettings {
 
-
-
   public PropertiesFileHelper(Connection c, Properties overrides) {
       super(c,overrides);
   }
@@ -40,14 +38,11 @@ public class PropertiesFileHelper extends ConnectionSettings {
   public PropertiesFileHelper(Connection c) {
       super(c);
   }
-  
-
 
   public boolean isForcedUrlMapToSingleAddr() {
     return Boolean.parseBoolean(this.defaultProps.getProperty(
             MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
   }
-
 
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
@@ -75,9 +70,5 @@ public class PropertiesFileHelper extends ConnectionSettings {
   public HttpSender createSender() {
     return createSender(this.defaultProps);
   }
-
-
-
-
 
 }

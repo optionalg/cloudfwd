@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +39,7 @@ import org.slf4j.LoggerFactory;
  */
 class IndexDiscoverer extends Observable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(IndexDiscoverer.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(IndexDiscoverer.class.getName());
 
   //note, the key is a string representation of the URL. It is critical that the String, and not the URL
   //Object be used as the key. This is because URL implements equals based on comparing the set of

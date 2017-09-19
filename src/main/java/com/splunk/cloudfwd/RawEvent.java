@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class RawEvent implements Event{
-  private static final Logger LOG = LoggerFactory.getLogger(RawEvent.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(RawEvent.class.getName());
   private static final ObjectMapper jsonMapper = new ObjectMapper();
   
   final byte[] bytes;
