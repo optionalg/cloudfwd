@@ -139,11 +139,29 @@ public class HecIOManager implements Closeable {
         if (code == 200) {
           try {
             consumeEventPostResponse(reply, events);
-          } catch (Exception ex) {
+          } catch (Exception ex) { //basically we should never see this
             LOG.error(ex.getMessage(), ex);
             sender.getConnection().getCallbacks().failed(events, ex);
           }
         } else {
+            try {
+              Map<String, Object> map = mapper.readValue(reply,
+                      new TypeReference<Map<String, Object>>() {
+              });
+              if(!map.containsKey("ackId") || map.get("ackId") == null) {
+                  if(map.containsKey("code") && ((int)map.get("code"))==9){
+                    sender.getChannelMetrics().update( new Response(
+                                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
+                                    9, reply, sender.getBaseUrl()));   
+                     sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded  
+                     return; 
+                  }
+              }
+            } catch (Exception e) {
+              LOG.error(e.getMessage(), e);
+              return; 
+            }          
+            //we don't know what the heck went wrong
           sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply,
                   events, sender.getBaseUrl()));
@@ -165,20 +183,18 @@ public class HecIOManager implements Closeable {
       Map<String, Object> map = mapper.readValue(resp,
               new TypeReference<Map<String, Object>>() {
       });
+      if(!map.containsKey("ackId") || map.get("ackId") == null) {
+        LOG.error("response {} lacks ackId field, but http code was 200. We infer that ack polling has been disabled.");
+        sender.getChannelMetrics().update(new EventBatchResponse(
+         LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
+            events, sender.getBaseUrl()));          
+         return; //we handled the non-normal event post response
+      }
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
-    } catch (HecServerErrorResponseException e) {
-      e.setCode(14);
-      e.setUrl(sender.getBaseUrl());
-      LOG.error("Error from HEC endpoint in state " + LifecycleEvent.Type.ACK_POLL_DISABLED
-              + ", Url: " + e.getUrl() + ", Code: " + e.getCode());
-      sender.getChannelMetrics().update(new EventBatchResponse(
-              LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
-              events, sender.getBaseUrl()));
-      throw e;
-    } catch (IOException ex) {
-      LOG.error(ex.getMessage(), ex);
-      throw new RuntimeException(ex.getMessage(), ex);
+    } catch (Exception e) {
+      LOG.error(e.getMessage(), e);
+      return; 
     }
 
     //System.out.println("ABOUT TO HANDLE EPR");
@@ -191,6 +207,8 @@ public class HecIOManager implements Closeable {
             LifecycleEvent.Type.EVENT_POST_OK, 200, resp,
             events, sender.getBaseUrl()));
   }
+  
+ 
 
   public void consumeAckPollResponse(String resp) {
     try {
