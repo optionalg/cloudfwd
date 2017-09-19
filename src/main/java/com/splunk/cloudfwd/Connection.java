@@ -96,6 +96,7 @@ public interface Connection extends Closeable{
      */
     public ConnectionSettings getSettings();
 
+    // Static methods must be defined in interface itself
     public static void setLoggerFactory(HecLoggerFactory f) {
         ConnectionImpl.setLoggerFactory(f);
     };

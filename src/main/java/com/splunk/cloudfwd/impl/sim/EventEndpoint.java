@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 public class EventEndpoint implements Endpoint {
 
-  private static final Logger LOG = ConnectionImpl.getLogger(ConnectionImpl.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(EventEndpoint.class.getName());
 
   Random rand = new Random(System.currentTimeMillis());
   final ScheduledExecutorService executor;
