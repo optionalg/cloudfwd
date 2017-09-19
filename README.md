@@ -72,6 +72,7 @@ This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk
 
 ### Prerequisites 
 1.  Splunk Add-on for Amazon Kinesis Firehose
+2. A Kinesis stream and an IAM role.
 
 ### Steps
 1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
@@ -81,10 +82,10 @@ This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk
 url=https://127.0.0.1:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
-4. In your preferred IDE, run LogWriter with the following arguments: ```<stream_name> <AWS_region_name> <AWS_profile_name> <name_of_log_file>```
-	4a. Example: ``` mystream us-west-2 default cloudwatchEventLogs  ```
-5. In your preferred IDE, run LogsProcessor with the following arguments: ```<AWS_app_name> <stream_name> <AWS_region_name> <AWS_profile_name>``` This may take a few minutes.
-	5a. Example: ```cloudfwd-example-consumer mystream us-west-2 default ```
+4. In your preferred IDE, run LogWriter with the following arguments: ```<stream_name> <AWS_region_name> <AWS_profile_name> <name_of_log_file>```<br>x
+	a. Example: ``` mystream us-west-2 default cloudwatchEventLogs  ```
+5. In your preferred IDE, run LogsProcessor with the following arguments: ```<AWS_app_name> <stream_name> <AWS_region_name> <AWS_profile_name>``` This may take a few minutes.<br>
+	a. Example: ```cloudfwd-example-consumer mystream us-west-2 default ```
 6. Open your Splunk environment, and search for your sourcetype in your Splunk environment.
 
 After a few minutes, you should see your log data in the Splunk UI.
@@ -99,7 +100,7 @@ A ```true``` status generally indicates that the event(s) that correspond to tha
 
 If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```lb.properties```.
 
-### Error exceptions
+### 2. Error exceptions tables
 
 
 #### Exceptions passed to failed() callback (asynchronous):
