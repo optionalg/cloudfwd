@@ -119,14 +119,15 @@ public class HecIOManager implements Closeable {
         LOG.error("Failed to post event batch {}", events,  ex);
         sender.getChannelMetrics().update(new EventBatchFailure(
                 LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
+        events.addSendException(ex);
+        LOG.warn("resending events through load balancer {}", events);
         sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded
         //sender.getConnection().getCallbacks().failed(events, ex);
       }
 
       @Override
       public void cancelled() {
-         LOG.error("Event post cancelled on channel  {}", sender.getChannel());
-        LOG.error("Failed to post event batch {}", events);
+         LOG.error("Event post cancelled on channel  {}, event batch {}", sender.getChannel(), events);
         Exception ex = new RuntimeException(
                 "HTTP post cancelled while posting events  "+events);
         sender.getChannelMetrics().update(new EventBatchFailure(
@@ -153,6 +154,7 @@ public class HecIOManager implements Closeable {
                     sender.getChannelMetrics().update( new Response(
                                 LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
                                     9, reply, sender.getBaseUrl()));   
+                    LOG.warn("resending events through load balancer due to indexer busy {}", events);
                      sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded  
                      return; 
                   }
