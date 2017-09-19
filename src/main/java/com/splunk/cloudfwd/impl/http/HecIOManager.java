@@ -254,7 +254,7 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void failed(Exception ex) {
-          LOG.error("Channel {} failed to poll acks", sender.getChannel(),  ex);
+         LOG.error("Channel {} failed to poll acks", sender.getChannel(),  ex);
         LOG.error("failed to poll acks: "+ex.getMessage(), ex);
         //AckManager.this.ackPollFailed(ex);
         sender.getChannelMetrics().update(new RequestFailed(
