@@ -243,6 +243,7 @@ public class LoadBalancer implements Closeable {
                 try {
                     //if you don't sleep here, we will be in a hard loop and it locks out threads that are trying to add channels
                     //(This was observed through debugging).
+                    LOG.warn("no channels in load balancer");
                     Thread.sleep(100); 
                 } catch (InterruptedException ex) {
                     java.util.logging.Logger.getLogger(LoadBalancer.class.getName()).
