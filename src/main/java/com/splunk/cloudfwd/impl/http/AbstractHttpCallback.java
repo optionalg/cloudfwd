@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.impl.http;
 
 import java.io.IOException;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.util.EntityUtils;
@@ -29,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractHttpCallback implements FutureCallback<HttpResponse> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractHttpCallback.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(AbstractHttpCallback.class.getName());
 
   @Override
   final public void completed(HttpResponse response) {

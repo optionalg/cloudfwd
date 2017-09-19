@@ -17,6 +17,7 @@ package com.splunk.cloudfwd;
 
 import java.io.Closeable;
 import java.util.List;
+import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
 
 /**
  *
@@ -92,4 +93,6 @@ public interface Connection extends Closeable{
      * @return ConnectionSettings
      */
     public ConnectionSettings getSettings();
+
+//    public void setLoggerFactory(HecLoggerFactory f);
 }

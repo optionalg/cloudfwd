@@ -19,6 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.HecIllegalStateException;
@@ -29,7 +31,7 @@ import com.splunk.cloudfwd.HecIllegalStateException;
  */
 class IndexDiscoveryScheduler {
 
-  private static final Logger LOG = LoggerFactory.getLogger(IndexDiscoveryScheduler.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(IndexDiscoveryScheduler.class.getName());
   
   private IndexDiscoverer discoverer;
   private ScheduledExecutorService scheduler;

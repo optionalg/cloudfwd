@@ -52,8 +52,8 @@ import com.splunk.cloudfwd.EventBatch;
  */
 public class EventBatchImpl implements EventBatch {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(EventBatchImpl.class.
-          getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(EventBatchImpl.class.getName());
+
   protected Comparable id; //will be set to the id of the last (most recent) Event added to the batch
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
   protected boolean flushed = false;

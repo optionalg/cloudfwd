@@ -46,9 +46,8 @@ import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_
  */
 public class LoadBalancer implements Closeable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(
-            LoadBalancer.class.
-            getName());
+    private static final Logger LOG = ConnectionImpl.getLogger(LoadBalancer.class.getName());
+
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();

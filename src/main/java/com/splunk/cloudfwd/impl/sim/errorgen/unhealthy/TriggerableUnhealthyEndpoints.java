@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.unhealthy;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
 import com.splunk.cloudfwd.impl.sim.HealthEndpoint;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
@@ -28,7 +29,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class TriggerableUnhealthyEndpoints extends SimulatedHECEndpoints {
-  private static final Logger LOG = LoggerFactory.getLogger(TriggerableUnhealthyEndpoints.class.getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(TriggerableUnhealthyEndpoints.class.getName());
 
   public static boolean healthy = true;
 

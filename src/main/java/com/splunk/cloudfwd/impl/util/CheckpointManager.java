@@ -38,8 +38,7 @@ import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.ACK_PO
  */
 public class CheckpointManager implements LifecycleEventObserver {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(
-            CheckpointManager.class.getName());
+    private static final Logger LOG = ConnectionImpl.getLogger(CheckpointManager.class.getName());
 
     volatile private SortedMap<Comparable, EventBatchImpl> orderedEvents = new TreeMap<>(); //key EventBatchImpl.id, value is EventBatchImpl
     private final ConnectionImpl connection;

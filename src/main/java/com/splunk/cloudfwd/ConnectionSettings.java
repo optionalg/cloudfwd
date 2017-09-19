@@ -29,19 +29,16 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author ghendrey
  */
 public class ConnectionSettings {
-
-    protected static final Logger LOG = LoggerFactory.getLogger(
-            PropertiesFileHelper.class.getName());
     protected Properties defaultProps = new Properties();
     protected Properties overrides;
     protected ConnectionImpl connection;
+    private static final Logger LOG = ConnectionImpl.getLogger(PropertiesFileHelper.class.getName());
 
     public ConnectionSettings(Connection c, Properties overrides) {
         this.overrides = overrides;

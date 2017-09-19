@@ -46,8 +46,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class HecChannel implements Closeable, LifecycleEventObserver {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(HecChannel.class.
-          getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(HecChannel.class.getName());
 
   private ExecutorService ackPollExecutor;
   private final HttpSender sender;

@@ -9,6 +9,9 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,6 +45,12 @@ import java.nio.ByteBuffer;
  */
 public abstract class AbstractConnectionTest {
 
+  private class HecLoggerFactoryImpl implements HecLoggerFactory {
+    public Logger getLogger(String name) {
+      return LoggerFactory.getLogger(name);
+    }
+  }
+
   protected static final Logger LOG = LoggerFactory.getLogger(AbstractConnectionTest.class.getName());
 
   /**
@@ -70,11 +79,14 @@ public abstract class AbstractConnectionTest {
 
   @Before
   public void setUp() {
+    ConnectionImpl.setLoggerFactory(new HecLoggerFactoryImpl());
+
     this.callbacks = getCallbacks();
     Properties props = new Properties();
     props.putAll(getTestProps());
     props.putAll(getProps());
     this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+//    this.connection.setLoggerFactory(new HecLoggerFactoryImpl());
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();

@@ -16,6 +16,9 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
+import org.slf4j.LoggerFactory;
+
 import java.util.Properties;
 
 /**
@@ -36,5 +39,4 @@ public class Connections {
     public static Connection create(ConnectionCallbacks c, Properties p) {
         return new ConnectionImpl(c, p);
     }
-
 }

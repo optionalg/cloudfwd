@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim;
 
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -33,8 +34,8 @@ import org.slf4j.LoggerFactory;
  */
 public class EventEndpoint implements Endpoint {
 
-  private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.
-          getName());
+  private static final Logger LOG = ConnectionImpl.getLogger(ConnectionImpl.class.getName());
+
   Random rand = new Random(System.currentTimeMillis());
   final ScheduledExecutorService executor;
   private AcknowledgementEndpoint ackEndpoint;
