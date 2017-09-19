@@ -147,7 +147,7 @@ public class LoadBalancer implements Closeable {
         addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
     }
 
-    private synchronized void addChannel(InetSocketAddress s, boolean force) {
+    private void addChannel(InetSocketAddress s, boolean force) {
         //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
         //we must add a new one, before we cancelEventTrackers the old one. If we did not have the force
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
