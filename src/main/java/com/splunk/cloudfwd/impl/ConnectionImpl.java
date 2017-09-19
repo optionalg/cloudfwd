@@ -72,6 +72,12 @@ public class ConnectionImpl implements Connection {
     this(callbacks, new Properties());
   }
 
+  public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
+    this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
+    init(callbacks, propertiesFileHelper);
+    this.lb = new LoadBalancer(this);
+  }
+
   private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
     this.events = new EventBatchImpl();
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
@@ -85,12 +91,6 @@ public class ConnectionImpl implements Connection {
     //*before* those two functions (failed, or acknowledged) are invoked.
     this.callbacks = new CallbackInterceptor(callbacks);
 
-  }
-
-  public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
-    this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
-    init(callbacks, propertiesFileHelper);
-    this.lb = new LoadBalancer(this);
   }
 
   public long getAckTimeoutMS() {

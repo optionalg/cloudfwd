@@ -16,9 +16,6 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
-import org.slf4j.LoggerFactory;
-
 import java.util.Properties;
 
 /**
