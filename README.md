@@ -82,10 +82,12 @@ This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk
 url=https://127.0.0.1:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
-4. In your preferred IDE, run LogWriter with the following arguments: ```<stream_name> <AWS_region_name> <AWS_profile_name> <name_of_log_file>```<br>x
-	a. Example: ``` mystream us-west-2 default cloudwatchEventLogs  ```
+4. In your preferred IDE, run LogWriter with the following arguments: ```<stream_name> <AWS_region_name> <AWS_profile_name> <name_of_log_file>```<br>
+	a. Example: ``` mystream us-west-2 default cloudwatchEventLogs  ```<br>
+	b. If you get a dependency incompatability error with version mismatch, set your environment variable to ```AWS_CBOR_DISABLE=true```
 5. In your preferred IDE, run LogsProcessor with the following arguments: ```<AWS_app_name> <stream_name> <AWS_region_name> <AWS_profile_name>``` This may take a few minutes.<br>
-	a. Example: ```cloudfwd-example-consumer mystream us-west-2 default ```
+	a. Example: ```cloudfwd-example-consumer mystream us-west-2 default ```<br>
+	b. If you get a dependency incompatability error with version mismatch, set your environment variable to ```AWS_CBOR_DISABLE=true```
 6. Open your Splunk environment, and search for your sourcetype in your Splunk environment.
 
 After a few minutes, you should see your log data in the Splunk UI.
@@ -111,22 +113,8 @@ If you are sending data using the ```/event``` endpoint and you are not seeing y
 | HecNonStickySessionException    | If duplicate ack-id is received on a given HEC channel. This can indicate failure of a sticky load balancer to provide stickiness.                                                                                                               | This is recoverable and is most likely caused by ELB that does not have sticky sessions enabled. Close the connection and reconfigure your elastic load balancer to have sticky sessions enabled.                                                                                                                                                                            |
 | HecServerErrorResponseException | This exception is thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server side error code (1-14) as well as the message. See the API documentation for a detailed description of each error code. | It depends. Some error codes are recoverable user configuration errors (e.g. missing token), recoverable user data errors (e.g. incorrect data format passed), or recoverable server errors (e.g. server temporarily busy). While other error codes are non-recoverable internal library errors that require a fix in the library code or abandoning an existing connection. |
 | Misc. Runtime Exceptions        | Runtime exceptions may be caught in the library for logging, and then and passed to failed() callback. Can be debugged with stacktrace.                                                                                                          | This is not recoverable.                                                                                                                                                                                                                                                                                                                                                     |
-
 #### Runtime exceptions thrown in blocking send() call (synchronous):
-=======
-###Error exceptions
-
-
-####Exceptions passed to failed() callback (asynchronous):
-| Exception                 | Description                                                                                                                                                                                                                                      |
-|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| HecAckTimeoutException    | This exception is thrown after waiting for ```PropertyKeys.ACK_TIMEOUT_MS``` milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                       |
-| HecDetentionException     | This exception is thrown your indexer cannot be reached. Either your indexer will not accept any events because of low disk space (automatic detention) or because an administrator put your indexer in manual detention.                        |
-| HecErrorResponseException | This exception is thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server-side error code (1-14) as well as the message. See the API documentation for a detailed description of each error code. |
-| HecIllegalStateException  | This exception is thrown if a duplicate ackId is received on a given HEC channel. This can indicate failure of a sticky load balancer to provide stickiness.                                                                                     |
-| IllegalStateException     | This exception is thrown when Cloudfwd has an internal ack error. The success ackId does not match the recorded ackId.                                                                                                                           |
-
-####Runtime exceptions thrown in blocking send() call (synchronous):
+                                                        
 
 | Exception                     | Description                                                                                                                        | How to fix                                                                  |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
