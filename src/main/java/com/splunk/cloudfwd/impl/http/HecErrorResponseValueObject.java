@@ -27,6 +27,12 @@ public class HecErrorResponseValueObject {
     HecErrorResponseValueObject() {
     }
 
+    @Override
+    public String toString() {
+        return "HecErrorResponseValueObject{" + "text=" + text + ", code=" + code + '}';
+    }
+
+    
     /**
      * @return the code
      */
@@ -39,6 +45,20 @@ public class HecErrorResponseValueObject {
      */
     public String getText() {
         return text;
+    }
+
+    /**
+     * @param text the text to set
+     */
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    /**
+     * @param code the code to set
+     */
+    public void setCode(int code) {
+        this.code = code;
     }
 
 }
