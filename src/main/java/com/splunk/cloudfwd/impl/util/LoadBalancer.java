@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import static com.splunk.cloudfwd.impl.util.HecChannel.LOG;
+import java.util.logging.Level;
 
 /**
  *
@@ -142,7 +143,7 @@ public class LoadBalancer implements Closeable {
 
     void addChannelFromRandomlyChosenHost() {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
-        LOG.debug("Adding channel to {}", addr);
+        LOG.debug("Adding channel for socket address  {}", addr);
         addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
     }
 
@@ -155,7 +156,7 @@ public class LoadBalancer implements Closeable {
         PropertiesFileHelper propsHelper = this.connection.
                 getPropertiesFileHelper();
         if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
-            LOG.debug(
+            LOG.warn(
                     "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
                     getMaxTotalChannels() + ")");
             return;
@@ -239,6 +240,14 @@ public class LoadBalancer implements Closeable {
             List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.
                     values());
             if (channelsSnapshot.isEmpty()) {
+                try {
+                    //if you don't sleep here, we will be in a hard loop and it locks out threads that are trying to add channels
+                    //(This was observed through debugging).
+                    Thread.sleep(100); 
+                } catch (InterruptedException ex) {
+                    java.util.logging.Logger.getLogger(LoadBalancer.class.getName()).
+                            log(Level.SEVERE, null, ex);
+                }
                 continue; //keep going until a channel is added
             }
             if (tryChannelSend(channelsSnapshot, events, resend)) {

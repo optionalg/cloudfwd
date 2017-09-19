@@ -17,7 +17,6 @@ package com.splunk.cloudfwd.impl.sim;
 
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.Endpoints;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;

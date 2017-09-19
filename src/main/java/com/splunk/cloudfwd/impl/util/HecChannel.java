@@ -19,9 +19,7 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.HecNonStickySessionException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
@@ -114,6 +112,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (decomMs > 0) {
       reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
       reaperScheduler.schedule(() -> {
+          LOG.info("decommissioning channel (channel_decom_ms={}): {}", decomMs, HecChannel.this);
         closeAndReplace();
       }, decomMs, TimeUnit.MILLISECONDS);
     }
@@ -231,12 +230,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
   }
 
-  synchronized void closeAndReplace() {
+  //this cannot be synchronized - it will deadlock when addChannelFromRandomlyChosenHost()
+  //tries get the LoadBalancer's monitor but the monitor is held by a thread in LoadBalancer's sendRoundRobin
+  //waiting for monitor on this's send.
+  void closeAndReplace() {
     if (closed || quiesced) {
       return;
     }
-    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
+    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+
   }
 
   /**
