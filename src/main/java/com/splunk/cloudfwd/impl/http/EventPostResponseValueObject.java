@@ -29,7 +29,7 @@ public class EventPostResponseValueObject {
 
   EventPostResponseValueObject(Map<String, Object> map) throws HecServerErrorResponseException {
     if(!map.containsKey("ackId") || map.get("ackId") == null) {
-        throw new HecServerErrorResponseException();
+        throw new HecServerErrorResponseException("ACK_POLL_DISABLED");
     }
     this.map = map;
   }

@@ -55,7 +55,9 @@ public class HecServerErrorResponseException extends Exception {
 
     public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR, RECOVERABLE_SERVER_ERROR };
 
-    public HecServerErrorResponseException() {}
+    public HecServerErrorResponseException(String message) {
+        super(message);
+    }
 
     public HecServerErrorResponseException(String message, int hecCode, String url) {
         super(message);
