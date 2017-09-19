@@ -67,11 +67,11 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
       if (sent > 0) {
         warmingUp = (((float) i) / expected) < warmup;
         if (warmingUp) {
-          LOG.trace("WARMING UP");
+          LOG.info("WARMING UP");
         }
         windingDown = (((float) i) / expected) > (1 - warmup);
         if (windingDown) {
-          LOG.trace("WINDING DOWN");
+          LOG.info("WINDING DOWN");
         }
         if (start == 0L && !warmingUp) { //true first time we exit the warmup period and enter valid sampling period
           start = System.currentTimeMillis(); //start timing after warmup
@@ -112,10 +112,10 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     if (sec <= 0) {
       return;
     }
-    LOG.trace("Sent " + nChars + " chars in " + time + " ms");
-    LOG.trace("Chars-per-second: " + nChars / sec);
+    LOG.info("Sent " + nChars + " chars in " + time + " ms");
+    LOG.info("Chars-per-second: " + nChars / sec);
     float mbps = ((float) nChars * 8) / (sec * 1000000f);
-    LOG.trace("mbps: " + mbps);
+    LOG.info("mbps: " + mbps);
     if (mbps < 0) {
       throw new IllegalStateException("Negative throughput is not allowed");
     }

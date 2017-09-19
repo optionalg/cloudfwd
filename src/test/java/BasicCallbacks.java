@@ -88,7 +88,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   @Override
   public void checkpoint(EventBatch events) {
-    LOG.trace("SUCCESS CHECKPOINT " + events.getId());
+    LOG.info("SUCCESS CHECKPOINT " + events.getId());
     if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
       latch.countDown();
     }
