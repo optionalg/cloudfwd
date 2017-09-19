@@ -77,15 +77,28 @@ A ```true``` status generally indicates that the event(s) that correspond to tha
 
 If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```lb.properties```.
 
-###Error exceptions
+### Error exceptions
 
+
+#### Exceptions passed to failed() callback (asynchronous):
 | Exception                 | Description                                                                                                                                                                                                                                      |
 |---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| HecAckTimeoutException    | This exception is thrown after waiting for PropertyKeys.ACK_TIMEOUT_MS milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                             |
-| HecDetentionException     | This exception is thrown when your indexer cannot be reached. Either your indexer will not accept any events because of low disk space (automatic detention) or because an administrator put your indexer in manual detention.                        |
-| HecErrorResponseException | This exception is thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server side error code (1-14) as well as the message. See the API documentation for a detailed description of each error code. |
+| HecAckTimeoutException    | This exception is thrown after waiting for ```PropertyKeys.ACK_TIMEOUT_MS``` milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                       |
+| HecDetentionException     | This exception is thrown your indexer cannot be reached. Either your indexer will not accept any events because of low disk space (automatic detention) or because an administrator put your indexer in manual detention.                        |
+| HecErrorResponseException | This exception is thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server-side error code (1-14) as well as the message. See the API documentation for a detailed description of each error code. |
 | HecIllegalStateException  | This exception is thrown if a duplicate ackId is received on a given HEC channel. This can indicate failure of a sticky load balancer to provide stickiness.                                                                                     |
-| IllegalStateException     | This exception is thrown when Cloudfwd has an internal ack error. The success ackId does not match the recorded ackId.                                                                                                                           | 
+| IllegalStateException     | This exception is thrown when Cloudfwd has an internal ack error. The success ackId does not match the recorded ackId.                                                                                                                           |
+
+#### Runtime exceptions thrown in blocking send() call (synchronous):
+
+| Exception                     | Description                                                                                                                        | How to fix                                                                  |
+|-------------------------------|------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| HecConnectionStateException   | This exception gets thrown when there is an illegal state with the connection that indicates caller error, with an enum of types.  | Should be resolved by the caller.                                           |
+| HecConnectionTimeoutException | This exception gets thrown when a send() timeout has occurred (exceeded BLOCKING_TIMEOUT_MS).                                      | Restart the connection.                                                     |
+| HecIllegalStateException      | This exception gets thrown when Cloudfwd is in an illegal state, with an enum of types                                             | These errors are not recoverable and are purely meant for logging purposes. |
+| Runtime Exceptions (Misc)     | This exception gets thrown by libraries used by Cloudfwd (example: Apache HTTP Client).                                            | These errors are not recoverable.                                           |
+
+
 
 ## Built With
 
