@@ -46,7 +46,6 @@ import java.util.*;
 public class HecServerErrorResponseException extends Exception {
     private int code;
     private String url;
-    private String message;
     private Type errorType;
 
     private Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(3, 10, 11));
@@ -64,6 +63,8 @@ public class HecServerErrorResponseException extends Exception {
         this.url = url;
         setErrorType(hecCode);
     }
+    
+    
 
     public void setCode(int code) {
         this.code = code;
@@ -73,9 +74,6 @@ public class HecServerErrorResponseException extends Exception {
         this.url = url;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
-    }
 
     public int getCode() {
         return code;
@@ -84,8 +82,6 @@ public class HecServerErrorResponseException extends Exception {
     public String getUrl() {
         return url;
     }
-
-    public String getMessage() { return message;}
 
     public Type getErrorType() { return errorType; };
 
