@@ -35,7 +35,7 @@ import org.slf4j.Logger;
  * @author ghendrey
  */
 public class ConnectionSettings {
-    private static final Logger LOG = ConnectionImpl.getLogger(PropertiesFileHelper.class.getName());
+    private static final Logger LOG = ConnectionImpl.getLogger(ConnectionSettings.class.getName());
     protected Properties defaultProps = new Properties();
     protected Properties overrides;
     protected ConnectionImpl connection;
