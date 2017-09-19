@@ -115,15 +115,23 @@ public class HecIOManager implements Closeable {
       @Override
       public void failed(Exception ex) {
         //eventPostFailure(ex);
+        LOG.error("Event post failed on channel  {}", sender.getChannel(),  ex);
+        LOG.error("Failed to post event batch {}", events,  ex);
         sender.getChannelMetrics().update(new EventBatchFailure(
                 LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
-        sender.getConnection().getCallbacks().failed(events, ex);
+        events.addSendException(ex);
+        LOG.warn("resending events through load balancer {}", events);
+        sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded
+        //sender.getConnection().getCallbacks().failed(events, ex);
       }
 
       @Override
       public void cancelled() {
+         LOG.error("Event post cancelled on channel  {}, event batch {}", sender.getChannel(), events);
         Exception ex = new RuntimeException(
-                "HTTP post cancelled while posting events");
+                "HTTP post cancelled while posting events  "+events);
+        sender.getChannelMetrics().update(new EventBatchFailure(
+                LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
         sender.getConnection().getCallbacks().failed(events, ex);
       }
 
@@ -132,11 +140,30 @@ public class HecIOManager implements Closeable {
         if (code == 200) {
           try {
             consumeEventPostResponse(reply, events);
-          } catch (Exception ex) {
+          } catch (Exception ex) { //basically we should never see this
             LOG.error(ex.getMessage(), ex);
             sender.getConnection().getCallbacks().failed(events, ex);
           }
         } else {
+            try {
+              Map<String, Object> map = mapper.readValue(reply,
+                      new TypeReference<Map<String, Object>>() {
+              });
+              if(!map.containsKey("ackId") || map.get("ackId") == null) {
+                  if(map.containsKey("code") && ((int)map.get("code"))==9){
+                    sender.getChannelMetrics().update( new Response(
+                                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
+                                    9, reply, sender.getBaseUrl()));   
+                    LOG.warn("resending events through load balancer due to indexer busy {}", events);
+                     sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded  
+                     return; 
+                  }
+              }
+            } catch (Exception e) {
+              LOG.error(e.getMessage(), e);
+              return; 
+            }          
+            //we don't know what the heck went wrong
           sender.getChannelMetrics().update(new EventBatchResponse(
                   LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply,
                   events, sender.getBaseUrl()));
@@ -158,21 +185,18 @@ public class HecIOManager implements Closeable {
       Map<String, Object> map = mapper.readValue(resp,
               new TypeReference<Map<String, Object>>() {
       });
+      if(!map.containsKey("ackId") || map.get("ackId") == null) {
+        LOG.error("response {} lacks ackId field, but http code was 200. We infer that ack polling has been disabled.");
+        sender.getChannelMetrics().update(new EventBatchResponse(
+         LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
+            events, sender.getBaseUrl()));          
+         return; //we handled the non-normal event post response
+      }
       epr = new EventPostResponseValueObject(map);
       events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
-    } catch (HecServerErrorResponseException e) {
-      e.setMessage("ACK_POLL_DISABLED");
-      e.setCode(14);
-      e.setUrl(sender.getBaseUrl());
-      LOG.error("Error from HEC endpoint in state " + LifecycleEvent.Type.ACK_POLL_DISABLED
-              + ", Url: " + e.getUrl() + ", Code: " + e.getCode());
-      sender.getChannelMetrics().update(new EventBatchResponse(
-              LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
-              events, sender.getBaseUrl()));
-      throw e;
-    } catch (IOException ex) {
-      LOG.error(ex.getMessage(), ex);
-      throw new RuntimeException(ex.getMessage(), ex);
+    } catch (Exception e) {
+      LOG.error(e.getMessage(), e);
+      return; 
     }
 
     //System.out.println("ABOUT TO HANDLE EPR");
@@ -185,6 +209,8 @@ public class HecIOManager implements Closeable {
             LifecycleEvent.Type.EVENT_POST_OK, 200, resp,
             events, sender.getBaseUrl()));
   }
+  
+ 
 
   public void consumeAckPollResponse(String resp) {
     try {
@@ -228,6 +254,7 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void failed(Exception ex) {
+         LOG.error("Channel {} failed to poll acks", sender.getChannel(),  ex);
         LOG.error("failed to poll acks: "+ex.getMessage(), ex);
         //AckManager.this.ackPollFailed(ex);
         sender.getChannelMetrics().update(new RequestFailed(
@@ -237,8 +264,13 @@ public class HecIOManager implements Closeable {
 
       @Override
       public void cancelled() {
+        LOG.error("Ack poll  cancelled on channel  {}", sender.getChannel());
+        Exception ex = new RuntimeException(
+                "HTTP post cancelled while polling for acks  on channel " + sender.getChannel());     
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.ACK_POLL_FAILURE, ex));        
         setAckPollInProgress(false);
-        LOG.error("ack poll cancelled.");
+
       }
     };
     sender.pollAcks(this, cb);
@@ -280,16 +312,18 @@ public class HecIOManager implements Closeable {
 
     FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
       @Override
-      public void failed(Exception ex) {
-        LOG.error("failed to poll health", ex);
+      public void failed(Exception ex) {       
+        LOG.error("Channel {} failed to poll health", sender.getChannel(),  ex);
         sender.getChannelMetrics().update(new RequestFailed(
                 LifecycleEvent.Type.HEALTH_POLL_FAILED, ex));
       }
 
       @Override
       public void cancelled() {
-        sender.getConnection().getCallbacks().failed(null, new Exception(
-                "HEC health endpoint request cancelled."));
+        Exception ex = new RuntimeException(
+                "HTTP post cancelled while polling for health on channel " + sender.getChannel());     
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.HEALTH_POLL_FAILED, ex));             
       }
 
       @Override

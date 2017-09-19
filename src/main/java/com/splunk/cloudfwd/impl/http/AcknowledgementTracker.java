@@ -114,13 +114,13 @@ public class AcknowledgementTracker implements EventTracker {
       }
       for (long ackId : succeeded) {
         events = polledAcks.get(ackId);
-        events.setAcknowledged(true);
         if (null == events) {
           LOG.warn(
                   "Got acknowledgement on ackId: {} but we're no long tracking that ackId",
                   ackId);
           return;
         }
+        events.setAcknowledged(true);    
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
         //events.getAckId can be null if the event is being resent by DeadChannel detector 
         //and EventBatchImpl.prepareForResend has been called

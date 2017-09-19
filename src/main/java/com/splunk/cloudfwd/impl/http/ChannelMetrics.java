@@ -111,8 +111,10 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
         ObjectMapper mapper = new ObjectMapper();
         HecErrorResponseValueObject hecErrorResp;
         try {
+            LOG.trace("unmarshalling HecErrorResponseValueObject from " + reply);
             hecErrorResp = mapper.readValue(reply,
                     HecErrorResponseValueObject.class);
+            LOG.trace("HecErrorResponseValueObject is {}", hecErrorResp);
         } catch (IOException ex) {
             throw new RuntimeException(ex.getMessage(), ex);
         }

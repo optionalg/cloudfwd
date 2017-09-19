@@ -19,7 +19,6 @@ import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
 import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.Endpoints;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;

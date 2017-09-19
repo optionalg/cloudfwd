@@ -19,9 +19,7 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.HecNonStickySessionException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
@@ -113,6 +111,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (decomMs > 0) {
       reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
       reaperScheduler.schedule(() -> {
+          LOG.info("decommissioning channel (channel_decom_ms={}): {}", decomMs, HecChannel.this);
         closeAndReplace();
       }, decomMs, TimeUnit.MILLISECONDS);
     }
@@ -230,12 +229,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
   }
 
-  synchronized void closeAndReplace() {
+  //this cannot be synchronized - it will deadlock when addChannelFromRandomlyChosenHost()
+  //tries get the LoadBalancer's monitor but the monitor is held by a thread in LoadBalancer's sendRoundRobin
+  //waiting for monitor on this's send.
+  void closeAndReplace() {
     if (closed || quiesced) {
       return;
     }
-    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
+    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+
   }
 
   /**
@@ -419,34 +422,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     private void resendInFlightEvents() {
       long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
               getAckTimeoutMS();
-      final int maxRetries = loadBalancer.getPropertiesFileHelper().
-              getMaxRetries();
       loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
               HecChannel.this).forEach((e) -> {
-                //Note - in case you are tempted to cancel the checkpoint manager prior to resend, don't. If you do, the 
-                //checkpoint can move higher than the event batch you try to resend. That will cause HecIllegalStateException
-                //loadBalancer.getCheckpointManager().cancel(e); 
-                sender.getHecIOManager().getAcknowledgementTracker().cancel(e);//also need to cancelEventTrackers ack tracker
-                if (e.isAcknowledged() || e.isTimedOut(timeout)) {
-                  return; //do not resend messages that are in a final state 
-                }
-                e.prepareToResend(); //we are going to resend it,so mark it not yet flushed
                 //we must force messages to be sent because the connection could have been gracefully closed
                 //already, in which case sendRoundRobbin will just ignore the sent messages
-               boolean forced = true;
-                while (true) { //try to resend the message up to N times
+                while (true) { 
                   try {
-                    if (e.getNumTries() > maxRetries) {
-                      String msg = "Tried to send event id=" + e.
-                              getId() + " " + e.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
-                      LOG.warn(msg);
-                      loadBalancer.getConnection().getCallbacks().failed(e,
-                              new HecMaxRetriesException(msg));
-                    } else {
-                      LOG.warn("resending  event {}", e);
-                      loadBalancer.sendRoundRobin(e, forced);
-                    }
-                    break;
+                      loadBalancer.sendRoundRobin(e, true);
+                      break;
                   } catch (HecConnectionTimeoutException ex) {
                      LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
                   }

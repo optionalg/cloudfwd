@@ -298,6 +298,7 @@ public final class HttpSender implements Endpoints {
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
     final HttpGet httpGet = new HttpGet(getUrl);
+    LOG.trace("Polling health {}", httpGet);
     setHttpHeaders(httpGet);
     httpClient.execute(httpGet, httpCallback);
   }

@@ -2,7 +2,7 @@
 import com.splunk.cloudfwd.EventBatch;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -25,8 +25,8 @@ import java.util.logging.Logger;
  */
 public class ThroughputCalculatorCallback extends BasicCallbacks {
 
-  private static final Logger LOG = Logger.getLogger(
-          ThroughputCalculatorCallback.class.getName());
+    protected static final org.slf4j.Logger LOG = LoggerFactory.getLogger(ThroughputCalculatorCallback.class.
+          getName());
 
   Map<Comparable, Long> batchSizes = new ConcurrentHashMap<>();
   long ackedSize = 0;
@@ -38,8 +38,12 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
 
   @Override
   public void failed(EventBatch events, Exception ex) {
-    LOG.warning("EventBatch failure recorded. Exception message: " + ex.
-            getMessage());
+      
+    LOG.error("EventBatch failure recorded. Exception message: " + ex.
+            getMessage(), ex);
+    if(null != events){
+        LOG.error("Failed event batch: {}", events);
+    }
     failedCount++;
   }
 
