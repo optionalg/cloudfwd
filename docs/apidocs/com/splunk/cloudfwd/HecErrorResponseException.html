@@ -126,26 +126,54 @@ var activeTableTab = "activeTableTab";
 <br>
 <pre>public class <span class="typeNameLabel">HecErrorResponseException</span>
 extends <a href="http://docs.oracle.com/javase/8/docs/api/java/lang/Exception.html?is-external=true" title="class or interface in java.lang">Exception</a></pre>
-<div class="block">Encapsulates a non-200 response from an HEC endpoint.
-
- The following error status codes and messages may
- be returned from an HEC endpoint:
-
- Code:    Message:
- 1        Token disabled
- 2        Token is required
- 3        Invalid authorization
- 4        Invalid token
- 5        No data
- 6        Invalid data format
- 7        Incorrect index
- 8        Internal server error
- 9        Server is busy
- 10       Data channel is missing
- 11       Invalid data channel
- 12       Event field is required
- 13       Event field cannot be blank
- 14       ACK is disabled</div>
+<div class="block">/**
+ * <p>These are non-successful responses from an HEC endpoint.</p>
+ *
+ * The following error status codes and messages may
+ * be returned from an HEC endpoint:
+ * <p>
+  *<table summary="ErrorCodes" border="1">
+  * <tr>
+  *  <th>Code</th>
+  *  <th>Message</th>
+  * </tr>
+  *  <td> 1 </td> <td> Token disabled. This is a recoverable configuration error.</td>
+  * </tr>
+  *<tr>
+  * <td> 2 </td> <td> Token is required. This is a recoverable configuration error.</td>
+  *</tr>
+  * <td> 3 </td> <td> Invalid authorization. This is a non-recoverable error.</td>
+  *</tr>
+  *<tr>
+  * <td> 4 </td> <td> Invalid token. This is a recoverable configuration error.</td>
+  *</tr>
+  * <td> 5 </td> <td> No data. This is a recoverable data error.</td>
+  *</tr>
+  *<tr>
+  * <td> 6 </td> <td> Invalid data format. This is a recoverable data error.</td>
+  *</tr>
+  * <td> 7 </td> <td> Incorrect index. This is a recoverable configuration error.</td>
+  *</tr>
+  *<tr>
+  * <td> 8 </td> <td> Internal server error. This is a recoverable server error.</td>
+  *</tr>
+  * <td> 9 </td> <td> Server is busy. This is a recoverable server error.</td>
+  *</tr>
+  *<tr>
+  * <td> 10 </td> <td> Data channel is missing. This is a non-recoverable error.</td>
+  *</tr>
+  * <td> 11 </td> <td> Invalid data channel. This is a non-recoverable error.</td>
+  *</tr>
+  *<tr>
+  * <td> 12 </td> <td> Event field is required. This is a recoverable data error.</td>
+  *</tr>
+  * <td> 13 </td> <td> Event field cannot be blank. This is a recoverable data error.</td>
+  *</tr>
+  *<tr>
+  * <td> 14 </td> <td> ACK is disabled. This is a recoverable configuration error.</td>
+  *</tr>
+  *</table>
+ *</p></div>
 <dl>
 <dt><span class="simpleTagLabel">Author:</span></dt>
 <dd>eprokop</dd>
