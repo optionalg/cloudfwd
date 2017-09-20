@@ -6,12 +6,10 @@ Use Cloudfwd to reliably send data to Splunk Http Event Collector (HEC) with ind
 
 ### Prerequisites
 
-1. An external Splunk Enterprise or Splunk Cloud 6.x deployment configured with a HTTP Event Collector token to receive data.
+1. An external Splunk Enterprise or Splunk Cloud 6.4+ deployment configured with a HTTP Event Collector token to receive data.
 2. [Maven](https://maven.apache.org/index.html)
 3. [Java 8](http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html)
 4. [HEC Token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector)
-5. Link_to_Required_Add-On
-
 
 ### Installation
 
