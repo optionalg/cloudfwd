@@ -25,6 +25,7 @@ import org.apache.http.conn.util.PublicSuffixMatcherLoader;
 import org.apache.http.cookie.CookieSpecProvider;
 import org.apache.http.impl.cookie.RFC6265CookieSpecProvider;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import sun.security.provider.X509Factory;
 
@@ -59,7 +60,8 @@ public final class HttpClientFactory {
 
     private String url;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
-    private Integer maxConnTotal = 4;
+    private Integer maxConnTotal = 8;
+    private int maxConnPerRoute=2;    
     // Require a Valid SSL Cert by default
     private boolean disableCertVerification = false;
     // Optional SSL Certificate Authority public key
@@ -172,9 +174,8 @@ public final class HttpClientFactory {
      * @return default http client
      */
     public final CloseableHttpAsyncClient build_default_client(){
-        return HttpAsyncClients.custom()
+        return builderWithCustomOptions()
                 .setDefaultCookieSpecRegistry(buildRegistry())
-                .setMaxConnTotal(maxConnTotal)                
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
                 .setHostnameVerifier(new SslStaticHostVerifier(this.host))
@@ -205,9 +206,8 @@ public final class HttpClientFactory {
 
         SSLContext ssl_context  = build_ssl_context(cert);
 
-        return HttpAsyncClients.custom()
+        return builderWithCustomOptions()
                 .setDefaultCookieSpecRegistry(buildRegistry())
-                .setMaxConnTotal(maxConnTotal)
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
                 .setHostnameVerifier(new SslStaticHostVerifier(this.host))
@@ -224,11 +224,16 @@ public final class HttpClientFactory {
      * @throws KeyManagementException
      */
     public final CloseableHttpAsyncClient build_http_client_insecure() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-        return HttpAsyncClients.custom()
+        return builderWithCustomOptions()
                 .setDefaultCookieSpecRegistry(buildRegistry())
-                .setMaxConnTotal(maxConnTotal)
                 .setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
                 .setSSLContext(build_ssl_context_allow_all())
                 .build();
+    }
+    
+    private HttpAsyncClientBuilder builderWithCustomOptions(){
+        return HttpAsyncClients.custom()
+                .setMaxConnTotal(maxConnTotal)
+               .setMaxConnPerRoute(maxConnPerRoute);
     }
 }
