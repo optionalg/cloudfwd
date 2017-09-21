@@ -14,10 +14,10 @@ Use Cloudfwd to reliably send data to Splunk Http Event Collector (HEC) with ind
 ### Installation
 
 Make sure that you have the necessary prerequisites before setting up Cloudfwd. 
-
-1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
-3. In examples > kinesis > resources > lb.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas. 
-4. In examples > kinesis > resources > lb.properties, input your generated HEC token.
+1. After downloading Cloudfwd, run ```mvn build``` in your source directory to build all the files. This will also run a series of tests that use a mock Splunk server.
+2. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token.
+3. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas.
+4. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
 url=https://127.0.0.1:8088, https://localhost:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
@@ -47,15 +47,15 @@ This example will use the same configurations set up in the [Amazon Kinesis Stre
 1. Steps 1 and 2 in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html)
 
 ### Steps
-1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
-2. In examples > kinesis > resources > lb.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas. 
-3. In examples > kinesis > resources > lb.properties, input your generated HEC token.
+1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token.
+2. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas.
+3. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
 url=https://127.0.0.1:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 4. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
-5. Save your modified lb.properties file. 
+5. Save your modified cloudfwd.properties file.
 6. In your preferred IDE, open the Java project in the /examples/ folder. 
 7. Run the StockTradeWriter class with the following arguments: ```<stream_name> <AWS_region_name> <your_profile_name> ```.
 8. Run the StockTradeProcessor class with the following arguments: ```<application_name> <stream_name> <AWS_region_name> <profile_name> ```. This may take a few minutes.
@@ -74,8 +74,8 @@ This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk
 
 ### Steps
 1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
-2. In examples > kinesis > resources > lb.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas. 
-3. In examples > kinesis > resources > lb.properties, input your generated HEC token.
+2. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas.
+3. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
 url=https://127.0.0.1:8088
 token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
@@ -98,7 +98,7 @@ The following assumes familiarity with Splunk software.
 
 A ```true``` status generally indicates that the event(s) that correspond to that ackID were replicated at the desired replication factor. However, a ```true``` status may also result from event(s) that were dropped in the indexing process due to misconfiguration or another error.  For example, if the event formatting was not consistent with the format specified by ```INDEXED_EXTRACTIONS``` (in ```props.conf```), then the event would be dropped and an error logged in ```splunkd.log```. 
 
-If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```lb.properties```.
+If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```cloudfwd.properties```.
 
 ### 2. Error exceptions tables
 
