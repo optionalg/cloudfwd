@@ -40,8 +40,9 @@ import org.slf4j.LoggerFactory;
  */
 public final class HttpSender implements Endpoints {
 
-  private static final Logger LOG = ConnectionImpl.getLogger(HttpSender.class.getName());
-  
+  // Default to SLF4J Logger, and set custom LoggerFactory when channel (and therefore Connection instance) is available
+  private Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
+
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8"; //FIX ME application/json not all the time
@@ -184,7 +185,7 @@ public final class HttpSender implements Endpoints {
     // attempt to create and start an http client
     try {
       httpClient = new HttpClientFactory(eventUrl, disableCertificateValidation,
-              cert, host).build();
+              cert, host, this).build();
       httpClient.start();
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
@@ -350,6 +351,9 @@ public final class HttpSender implements Endpoints {
   
   public void setChannel(HecChannel c) {
     this.channel = c;
+    this.LOG = getConnection().getLogger(HttpSender.class.getName());
+    // Channel is now available so Connection instance loggerFactory can be set
+    this.hecIOManager.setLogger(getConnection());
   }
 
   public String getToken() {

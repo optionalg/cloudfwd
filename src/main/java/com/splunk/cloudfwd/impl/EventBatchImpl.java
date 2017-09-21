@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd.impl;
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
 import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_BATCH_BORN;
@@ -52,8 +51,8 @@ import java.util.Collections;
  * @author ghendrey
  */
 public class EventBatchImpl implements EventBatch {
-
-  private static final Logger LOG = ConnectionImpl.getLogger(EventBatchImpl.class.getName());
+  // Default to SLF4J Logger, and set custom LoggerFactory when Channel (and therefore Connection instance) is available.
+  private Logger LOG = LoggerFactory.getLogger(EventBatchImpl.class.getName());
 
   protected Comparable id; //will be set to the id of the last (most recent) Event added to the batch
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
@@ -71,9 +70,6 @@ public class EventBatchImpl implements EventBatch {
   private LifecycleEvent.Type state = EVENT_BATCH_BORN; //initial lifecyle state
   private List<Exception> sendExceptions = new ArrayList<>();
 
-  public EventBatchImpl() {
-  }
-
   @Override
   public synchronized void prepareToResend() {
     this.flushed = false;
@@ -85,7 +81,7 @@ public class EventBatchImpl implements EventBatch {
   public boolean isTimedOut(long timeout) {
     long flightTime = System.currentTimeMillis() - sendTimestamp;
     boolean isTimedOut = flightTime >= timeout;
-    if(isTimedOut){
+    if (isTimedOut) {
         LOG.warn("Timed Out at {} ms: {}", flightTime, this);    
     }
     return isTimedOut;
@@ -94,7 +90,7 @@ public class EventBatchImpl implements EventBatch {
   @Override
   public synchronized void add(Event event) {
     if (flushed) {
-      throw  new HecConnectionStateException("Can't add Event to flushed EventBatch",
+      throw new HecConnectionStateException("Can't add Event to flushed EventBatch",
               HecConnectionStateException.Type.ALREADY_SENT);
     }
     if (null != knownTarget && knownTarget != event.getTarget()) { //and it's intended endpoint target doesn't match
@@ -297,6 +293,7 @@ public class EventBatchImpl implements EventBatch {
    */
   public void setHecChannel(HecChannel hecChannel) {
     this.hecChannel = hecChannel;
+    LOG = this.getHecChannel().getConnection().getLogger(EventBatchImpl.class.getName());
   }
 
   public void setState(LifecycleEvent.Type eventType) {

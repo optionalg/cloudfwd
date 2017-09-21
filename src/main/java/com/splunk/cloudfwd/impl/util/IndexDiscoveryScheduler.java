@@ -30,13 +30,15 @@ import com.splunk.cloudfwd.HecIllegalStateException;
  * @author ghendrey
  */
 class IndexDiscoveryScheduler {
-
-  private static final Logger LOG = ConnectionImpl.getLogger(IndexDiscoveryScheduler.class.getName());
-  
+  private final Logger LOG;
   private IndexDiscoverer discoverer;
   private ScheduledExecutorService scheduler;
   private boolean started;
   private boolean stopped;
+
+  public IndexDiscoveryScheduler(ConnectionImpl c) {
+    this.LOG = c.getLogger(IndexDiscoveryScheduler.class.getName());
+  }
 
   public synchronized void start(IndexDiscoverer d){
     if(started){

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.io.IOUtils;
@@ -31,7 +30,8 @@ import org.apache.commons.io.IOUtils;
  * @author ghendrey
  */
 public class UnvalidatedByteBufferEvent implements Event {
-  private static final Logger LOG = ConnectionImpl.getLogger(UnvalidatedByteBufferEvent.class.getName());
+  // No access to Connection instance so must use SLF4J logger
+  private static final Logger LOG = LoggerFactory.getLogger(UnvalidatedByteBufferEvent.class.getName());
 
   private final ByteBuffer buf;
   private final Comparable id;

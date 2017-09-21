@@ -34,8 +34,8 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class EventWithMetadata implements Event {
-
-  private static final Logger LOG = ConnectionImpl.getLogger(EventWithMetadata.class.getName());
+  // No access to Connection instance so must use SLF4J logger
+  private static final Logger LOG = LoggerFactory.getLogger(EventWithMetadata.class.getName());
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   public static final String TIME = "time";

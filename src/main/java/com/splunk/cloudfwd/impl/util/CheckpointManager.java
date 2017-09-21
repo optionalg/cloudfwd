@@ -37,15 +37,14 @@ import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.ACK_PO
  * @author ghendrey
  */
 public class CheckpointManager implements LifecycleEventObserver {
-
-    private static final Logger LOG = ConnectionImpl.getLogger(CheckpointManager.class.getName());
-
+    private Logger LOG;
     volatile private SortedMap<Comparable, EventBatchImpl> orderedEvents = new TreeMap<>(); //key EventBatchImpl.id, value is EventBatchImpl
     private final ConnectionImpl connection;
     private Comparable checkpoint;
     private boolean enabled;
 
     CheckpointManager(ConnectionImpl c) {
+        this.LOG = c.getLogger(CheckpointManager.class.getName());
         this.connection = c;
         this.enabled = c.getPropertiesFileHelper().isCheckpointEnabled();
     }

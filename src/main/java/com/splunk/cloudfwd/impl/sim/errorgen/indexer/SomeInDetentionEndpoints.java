@@ -36,10 +36,10 @@ import org.slf4j.LoggerFactory;
  * @author meemax
  */
 public class SomeInDetentionEndpoints extends InDetentionEndpoints {
-  private static final Logger LOG = ConnectionImpl.getLogger(SomeInDetentionEndpoints.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(SomeInDetentionEndpoints.class.getName());
   private static final AtomicInteger count = new AtomicInteger(0); //must be static to ensure the counter is global
   private boolean inDetention = true;
-  
+
   @Override
   public synchronized void start() {
     if(0 == count.getAndIncrement() % 2){ //every other created endpoint will be detention

@@ -51,14 +51,11 @@ import org.apache.http.concurrent.FutureCallback;
  * @author ghendrey
  */
 public class HecIOManager implements Closeable {
-
-  private static final Logger LOG = ConnectionImpl.getLogger(HecIOManager.class.getName());
-
+  private Logger LOG = LoggerFactory.getLogger(HecIOManager.class.getName());
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpSender sender;
   private final PollScheduler ackPollController = new PollScheduler("ack poller");
-  private final PollScheduler healthPollController = new PollScheduler(
-          "health poller");
+  private final PollScheduler healthPollController = new PollScheduler("health poller");
   private final AcknowledgementTracker ackTracker;
   private volatile boolean ackPollInProgress;
 
@@ -110,7 +107,7 @@ public class HecIOManager implements Closeable {
             toString());
      */
 
-    FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
+    FutureCallback<HttpResponse> cb = new AbstractHttpCallback(sender.getConnection()) {
 
       @Override
       public void failed(Exception ex) {
@@ -238,7 +235,7 @@ public class HecIOManager implements Closeable {
     sender.getChannelMetrics().update(new PreRequest(
             LifecycleEvent.Type.PRE_ACK_POLL));
 
-    FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
+    FutureCallback<HttpResponse> cb = new AbstractHttpCallback(sender.getConnection()) {
       @Override
       public void completed(String reply, int code) {
         LOG.trace("channel: {} reply:{} ", HecIOManager.this.sender.getChannel(), reply);
@@ -310,7 +307,7 @@ public class HecIOManager implements Closeable {
   public void pollHealth() {
     LOG.trace("polling health on {}...", sender.getChannel());
 
-    FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
+    FutureCallback<HttpResponse> cb = new AbstractHttpCallback(sender.getConnection()) {
       @Override
       public void failed(Exception ex) {       
         LOG.error("Channel {} failed to poll health", sender.getChannel(),  ex);
@@ -384,7 +381,7 @@ public class HecIOManager implements Closeable {
   public void checkHealth() {
     LOG.trace("check health", sender.getChannel());
 
-    FutureCallback<HttpResponse> cb = new AbstractHttpCallback() {
+    FutureCallback<HttpResponse> cb = new AbstractHttpCallback(sender.getConnection()) {
       @Override
       public void failed(Exception ex) {
         LOG.error("HEC health check via /ack endpoint failed", ex);
@@ -429,5 +426,13 @@ public class HecIOManager implements Closeable {
   public void close() {
     this.ackPollController.stop();
     this.healthPollController.stop();
+  }
+
+  // Channel is now available, so can set Connection instance loggerFactory now
+  public void setLogger(ConnectionImpl c) {
+    this.LOG = c.getLogger(HecIOManager.class.getName());
+    this.ackTracker.setLogger(c);
+    this.ackPollController.setLogger(c);
+    this.healthPollController.setLogger(c);
   }
 }

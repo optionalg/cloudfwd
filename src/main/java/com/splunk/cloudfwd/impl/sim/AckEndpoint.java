@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class AckEndpoint implements AcknowledgementEndpoint {
 
-  private static final Logger LOG = ConnectionImpl.getLogger(AckEndpoint.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(AckEndpoint.class.getName());
 
   ScheduledExecutorService executor;
   protected AtomicLong ackId = new AtomicLong(0);

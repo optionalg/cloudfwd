@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.ackslost;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
 import com.splunk.cloudfwd.impl.sim.AcknowledgementEndpoint;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
@@ -28,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class LossyEndpoints extends SimulatedHECEndpoints{
-  private static final Logger LOG = ConnectionImpl.getLogger(LossyEndpoints.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(LossyEndpoints.class.getName());
   private static final AtomicInteger count = new AtomicInteger(0); //must be static to insure the counter is global
   
   @Override

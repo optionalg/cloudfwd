@@ -31,13 +31,14 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class CallbackInterceptor implements ConnectionCallbacks {
-    private static final Logger LOG = ConnectionImpl.getLogger(CallbackInterceptor.class.getName());
+    private static Logger LOG;
 
     ConnectionCallbacks callbacks;
 
-    public CallbackInterceptor(ConnectionCallbacks callbacks) {
+    public CallbackInterceptor(ConnectionCallbacks callbacks, ConnectionImpl c) {
+        this.LOG = c.getLogger(CallbackInterceptor.class.getName());
         this.callbacks = callbacks;
-    }       
+    }
 
     @Override
     public void acknowledged(EventBatch events) {
