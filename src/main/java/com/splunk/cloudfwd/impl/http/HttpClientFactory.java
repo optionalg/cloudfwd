@@ -59,7 +59,7 @@ public final class HttpClientFactory {
 
     private String url;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
-    private Integer maxConnTotal = 0;
+    private Integer maxConnTotal = 4;
     // Require a Valid SSL Cert by default
     private boolean disableCertVerification = false;
     // Optional SSL Certificate Authority public key
@@ -174,7 +174,7 @@ public final class HttpClientFactory {
     public final CloseableHttpAsyncClient build_default_client(){
         return HttpAsyncClients.custom()
                 .setDefaultCookieSpecRegistry(buildRegistry())
-                .setMaxConnTotal(maxConnTotal)
+                .setMaxConnTotal(maxConnTotal)                
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
                 .setHostnameVerifier(new SslStaticHostVerifier(this.host))
