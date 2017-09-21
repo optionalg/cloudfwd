@@ -60,8 +60,8 @@ public final class HttpClientFactory {
 
     private String url;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
-    private Integer maxConnTotal = 8;
-    private int maxConnPerRoute=2;    
+    private Integer maxConnTotal = 0;
+    private int maxConnPerRoute=1;    
     // Require a Valid SSL Cert by default
     private boolean disableCertVerification = false;
     // Optional SSL Certificate Authority public key
@@ -233,7 +233,7 @@ public final class HttpClientFactory {
     
     private HttpAsyncClientBuilder builderWithCustomOptions(){
         return HttpAsyncClients.custom()
-                .setMaxConnTotal(maxConnTotal)
-               .setMaxConnPerRoute(maxConnPerRoute);
+                .setMaxConnTotal(maxConnTotal);
+               //.setMaxConnPerRoute(maxConnPerRoute);
     }
 }
