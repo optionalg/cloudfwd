@@ -86,7 +86,7 @@
             <version>1.1.1</version>
             <type>jar</type>
         </dependency>
-        <dependency>
+        <!--dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore</artifactId>
             <version>4.4.3</version>
@@ -97,7 +97,7 @@
             <artifactId>httpclient</artifactId>
             <version>4.5.3</version>
             <type>jar</type>
-        </dependency>
+        </dependency-->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpasyncclient</artifactId>
@@ -129,7 +129,7 @@
                 <version>3.0.0-M1</version>
                 <configuration>
                     <reportOutputDirectory>docs</reportOutputDirectory>
-                    <excludePackageNames>com.splunk.cloudfwd.impl:com.amazonaws.services.kinesis.samples.*</excludePackageNames>
+                    <excludePackageNames>com.splunk.cloudfwd.impl:com.amazonaws.services.kinesis.samples.*:org.*</excludePackageNames>
                 </configuration>
             </plugin>
             <!--plugin>

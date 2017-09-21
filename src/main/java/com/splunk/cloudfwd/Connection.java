@@ -81,10 +81,7 @@ public interface Connection extends Closeable{
     int sendBatch(EventBatch events) throws HecConnectionTimeoutException;
 
     /**
-     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made
-     * @param 
-     * @return
-     * @throws 
+     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made@return     
      */
     List<HecHealth> healthCheck();
 
