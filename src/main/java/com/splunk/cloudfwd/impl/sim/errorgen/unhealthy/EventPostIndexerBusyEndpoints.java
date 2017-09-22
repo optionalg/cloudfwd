@@ -37,8 +37,9 @@ public class EventPostIndexerBusyEndpoints extends SimulatedHECEndpoints {
         public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
             // In this scenario, assume that the indexer queue filled up AFTER our
             // last health or ack poll, and we are now trying to post events to a full indexer
-            cb.completed(new HecErrorResponse(
+            Runnable r = ()->cb.completed(new HecErrorResponse(
                         new IndexerBusyEntity(), new IndexerBusyStatusLine()));
+            delayResponse(r);
         }
     }
 

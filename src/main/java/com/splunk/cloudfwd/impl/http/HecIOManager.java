@@ -27,6 +27,7 @@ import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchRequest;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.http.lifecycle.PreRequest;
 import java.io.Closeable;
 import java.io.IOException;
@@ -101,72 +102,8 @@ public class HecIOManager implements Closeable {
     this.ackTracker.preEventPost(events);
     sender.getChannelMetrics().update(new EventBatchRequest(
             LifecycleEvent.Type.PRE_EVENT_POST, events));
-    /*
-    System.out.println(
-            "channel=" + getSender().getChannel() + " events: " + this.
-            toString());
-     */
-
-    FutureCallback<HttpResponse> cb = new AbstractHttpCallback(sender.getConnection()) {
-
-      @Override
-      public void failed(Exception ex) {
-        //eventPostFailure(ex);
-        LOG.error("Event post failed on channel  {}", sender.getChannel(),  ex);
-        LOG.error("Failed to post event batch {}", events,  ex);
-        sender.getChannelMetrics().update(new EventBatchFailure(
-                LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
-        events.addSendException(ex);
-        LOG.warn("resending events through load balancer {}", events);
-        sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded
-        //sender.getConnection().getCallbacks().failed(events, ex);
-      }
-
-      @Override
-      public void cancelled() {
-         LOG.error("Event post cancelled on channel  {}, event batch {}", sender.getChannel(), events);
-        Exception ex = new RuntimeException(
-                "HTTP post cancelled while posting events  "+events);
-        sender.getChannelMetrics().update(new EventBatchFailure(
-                LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
-        sender.getConnection().getCallbacks().failed(events, ex);
-      }
-
-      @Override
-      public void completed(String reply, int code) {
-        if (code == 200) {
-          try {
-            consumeEventPostResponse(reply, events);
-          } catch (Exception ex) { //basically we should never see this
-            LOG.error(ex.getMessage(), ex);
-            sender.getConnection().getCallbacks().failed(events, ex);
-          }
-        } else {
-            try {
-              Map<String, Object> map = mapper.readValue(reply,
-                      new TypeReference<Map<String, Object>>() {
-              });
-              if(!map.containsKey("ackId") || map.get("ackId") == null) {
-                  if(map.containsKey("code") && ((int)map.get("code"))==9){
-                    sender.getChannelMetrics().update( new Response(
-                                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
-                                    9, reply, sender.getBaseUrl()));   
-                    LOG.warn("resending events through load balancer due to indexer busy {}", events);
-                     sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded  
-                     return; 
-                  }
-              }
-            } catch (Exception e) {
-              LOG.error(e.getMessage(), e);
-              return; 
-            }          
-            //we don't know what the heck went wrong
-          sender.getChannelMetrics().update(new EventBatchResponse(
-                  LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply,
-                  events, sender.getBaseUrl()));
-        }
-      }
-    };
+    
+    FutureCallback<HttpResponse> cb = new HecHttpEventPostCallbacks(sender.getConnection(), events);
 
     sender.postEvents(events, cb);
     sender.getChannelMetrics().update(new EventBatchRequest(
@@ -435,4 +372,83 @@ public class HecIOManager implements Closeable {
     this.ackPollController.setLogger(c);
     this.healthPollController.setLogger(c);
   }
+
+    private class HecHttpEventPostCallbacks extends AbstractHttpCallback {
+
+        private final EventBatchImpl events;
+
+        public HecHttpEventPostCallbacks(ConnectionImpl connection,
+                EventBatchImpl events) {
+            super(connection);
+            this.events = events;
+        }
+
+        @Override
+        public void failed(Exception ex) {
+            try{
+                LOG.error("Event post failed on channel  {}", sender.getChannel(),  ex);
+                LOG.error("Failed to post event batch {}", events,  ex);
+                sender.getChannelMetrics().update(new EventBatchFailure(
+                        LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
+                events.addSendException(ex);
+                LOG.warn("resending events through load balancer {}", events);
+                sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded
+            }catch(Exception e){
+                LOG.error(e.getMessage(), e);
+                sender.getConnection().getCallbacks().failed(events, e);
+            }
+        }//end failed();
+
+        @Override
+        public void cancelled() {
+            try{
+                LOG.error("Event post cancelled on channel  {}, event batch {}", sender.getChannel(), events);
+                Exception ex = new RuntimeException(
+                        "HTTP post cancelled while posting events  "+events);
+                sender.getChannelMetrics().update(new EventBatchFailure(
+                        LifecycleEvent.Type.EVENT_POST_FAILURE, events, ex));
+                sender.getConnection().getCallbacks().failed(events, ex);
+            }catch(Exception e){
+                LOG.error(e.getMessage(), e);
+                sender.getConnection().getCallbacks().failed(events, e);
+            }
+        }//end cancelled()
+
+        @Override
+        public void completed(String reply, int code) {
+            try {
+                if (code == 200) {
+                    consumeEventPostResponse(reply, events);
+                } else {
+                    handleNon200ServerResp(reply, code);
+                }
+            } catch (Exception ex) { //basically we should never see this
+                LOG.error(ex.getMessage(), ex);
+                sender.getConnection().getCallbacks().failed(events, ex);
+            }
+        }//end completed()
+
+        private void handleNon200ServerResp(String reply, int code) throws HecConnectionTimeoutException, IOException {
+            Map<String, Object> map = mapper.readValue(reply,
+                    new TypeReference<Map<String, Object>>() {
+                    });
+            if (!map.containsKey("ackId") || map.get("ackId") == null) {
+                if (map.containsKey("code") && ((int) map.get("code")) == 9) {
+                    sender.getChannelMetrics().update(new Response(
+                            LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
+                            9, reply, sender.getBaseUrl()));
+                    LOG.warn(
+                            "resending events through load balancer due to indexer busy {}",
+                            events);
+                    sender.getConnection().getLoadBalancer().
+                            sendRoundRobin(events, true);  //will callback failed if max retries exceeded
+                    return;
+                }
+            }
+            //we don't know what the heck went wrong
+            sender.getChannelMetrics().update(new EventBatchResponse(
+                    LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply,
+                    events, sender.getBaseUrl()));
+        }//end handleNon200ServerResp
+    }//end HecHttpCallbacks
 }

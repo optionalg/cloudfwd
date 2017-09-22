@@ -279,7 +279,7 @@ public class LoadBalancer implements Closeable {
 
             recoverAndThrowException(events, forced,
                     new HecConnectionTimeoutException(
-                            "Send timeout exceeded."));
+                            PropertyKeys.BLOCKING_TIMEOUT_MS + " timeout exceeded on send. Timeout was " + timeout));
         }
     }
 
