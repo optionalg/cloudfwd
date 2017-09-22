@@ -68,8 +68,6 @@ public class AWSSourcetypeTest extends AbstractReconciliationTest {
     private String[] vpcFlowFields = { "version", "account_id", "interface_id", "src_ip", "dest_ip", "src_port",
         "dest_port", "protocol_code", "packets", "bytes", "start_time", "end_time", "vpcflow_action", "log_status",
         "duration", "src", "dest", "protocol", "protocol_full_name", "action", "aws_account_id" };
-    private String[] cloudwatchFields = { "Average", "Maximum", "Minimum", "cpu_load_percent", "vm_id", "vendor",
-            "product", "app", "aws_account_id" };
     private String [] cloudtrailFields = { "user", "userName", "errorCode", "user_type", "src", "msg", "start_time",
         "user_group_id", "dest", "dvc", "src_user", "object", "vendor", "product", "app", "aws_account_id", "region" };
 
@@ -100,9 +98,8 @@ public class AWSSourcetypeTest extends AbstractReconciliationTest {
 
     @Test
     public void cloudwatchToRaw() throws IOException, InterruptedException {
-        this.EXPECTED_FIELDS = cloudwatchFields;
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-        connection.getSettings().setToken(createTestToken("aws:cloudwatch"));
+        connection.getSettings().setToken(createTestToken("aws:cloudwatch:events"));
         sendFromFile(cloudwatchFileName);
         Set<String> results = getEventsFromSplunk();
         verifyResults(eventStringsFromFile(cloudwatchFileName), results);
