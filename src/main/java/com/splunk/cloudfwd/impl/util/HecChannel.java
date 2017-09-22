@@ -355,7 +355,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       if (ackId == 1) {
         if (seenAckIdOne) {
           Exception e = new HecNonStickySessionException(
-                  "ackId " + ackId + " has already been received on channel " + this);
+                  "ackId " + ackId + " has already been received on channel " + HecChannel.this);
           HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
                   events, e);
         } else {
