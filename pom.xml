@@ -176,11 +176,14 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.12.4</version>
                 <configuration>
+                    <argLine>-Xmx16G</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
                         <exclude>**/LargeBatchTest.java</exclude>
+                        <exclude>**/MultiThreadedVolumeTest.java</exclude>
                         <exclude>**/ReconciliationTest.java</exclude> 
                         <exclude>**/ByteBufferWithMixedEventsTest.java</exclude> 
-                        <exclude>**/OncePerSecondLongevityTest.java</exclude>                                                                  
+                        <exclude>**/OncePerSecondLongevityTest.java</exclude>
+                        <exclude>**/AWSSourcetypeTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>            

@@ -49,7 +49,7 @@ public class PollScheduler {
     this.corePoolSize = corePoolSize;
     if (corePoolSize == 0) {
       throw new HecIllegalStateException(
-              "Core pool size of zero is dissallowed to do bug https://bugs.openjdk.java.net/browse/JDK-8129861",
+              "Core pool size of zero is disallowed due to bug https://bugs.openjdk.java.net/browse/JDK-8129861",
               HecIllegalStateException.Type.CORE_POOL_SIZE_ZERO);
     }
   }

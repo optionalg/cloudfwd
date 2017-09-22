@@ -96,7 +96,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     }
   }
 
-  private void showThroughput(long finish, long start) {
+  protected void showThroughput(long finish, long start) {
     //throughput is computed from the currently *acknowledged* size
     long nChars = ((ThroughputCalculatorCallback) super.callbacks).
             getAcknowledgedSize();
