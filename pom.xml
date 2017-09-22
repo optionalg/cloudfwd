@@ -180,7 +180,8 @@
                         <exclude>**/LargeBatchTest.java</exclude>
                         <exclude>**/ReconciliationTest.java</exclude> 
                         <exclude>**/ByteBufferWithMixedEventsTest.java</exclude> 
-                        <exclude>**/OncePerSecondLongevityTest.java</exclude>                                                                  
+                        <exclude>**/OncePerSecondLongevityTest.java</exclude>
+                        <exclude>**/AWSSourcetypeTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>            
