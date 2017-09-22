@@ -429,19 +429,21 @@ public class HecIOManager implements Closeable {
         }//end completed()
 
         private void handleNon200ServerResp(String reply, int code) throws HecConnectionTimeoutException, IOException {
-            Map<String, Object> map = mapper.readValue(reply,
-                    new TypeReference<Map<String, Object>>() {
-                    });
+            Map<String, Object> map;
+            try{
+                map  = mapper.readValue(reply,
+                        new TypeReference<Map<String, Object>>() {
+                        });
+            }catch(Exception e){ //handle garbled/cut-off server response. We see this on ELB
+                LOG.warn("Failed to read server response due to  {}", e);
+                //we don't have "proof" the server is busy, but if response garbled we should act as though busy                
+                markBusyAndResend(reply); 
+                return;
+            }
             if (!map.containsKey("ackId") || map.get("ackId") == null) {
                 if (map.containsKey("code") && ((int) map.get("code")) == 9) {
-                    sender.getChannelMetrics().update(new Response(
-                            LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
-                            9, reply, sender.getBaseUrl()));
-                    LOG.warn(
-                            "resending events through load balancer due to indexer busy {}",
-                            events);
-                    sender.getConnection().getLoadBalancer().
-                            sendRoundRobin(events, true);  //will callback failed if max retries exceeded
+                    LOG.warn("server busy: " + reply);
+                    markBusyAndResend(reply);
                     return;
                 }
             }
@@ -450,5 +452,15 @@ public class HecIOManager implements Closeable {
                     LifecycleEvent.Type.EVENT_POST_NOT_OK, code, reply,
                     events, sender.getBaseUrl()));
         }//end handleNon200ServerResp
+
+        private void markBusyAndResend(String reply) throws HecConnectionTimeoutException {
+            //tell rest of the system "server busy". Not exactly true but will cause channel to get marked unhealthy
+            sender.getChannelMetrics().update(new Response(
+                    LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY, //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
+                    9, reply, sender.getBaseUrl()));
+            //resend
+            LOG.warn("resending events through load balancer {}", events);
+            sender.getConnection().getLoadBalancer().sendRoundRobin(events, true);  //will callback failed if max retries exceeded
+        }
     }//end HecHttpCallbacks
 }
