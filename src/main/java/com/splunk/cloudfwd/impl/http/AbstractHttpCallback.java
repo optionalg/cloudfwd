@@ -22,7 +22,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -30,7 +29,11 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractHttpCallback implements FutureCallback<HttpResponse> {
 
-  private static final Logger LOG = ConnectionImpl.getLogger(AbstractHttpCallback.class.getName());
+  private final Logger LOG;
+
+  AbstractHttpCallback(ConnectionImpl connection) {
+    LOG = connection.getLogger(AbstractHttpCallback.class.getName());
+  }
 
   @Override
   final public void completed(HttpResponse response) {

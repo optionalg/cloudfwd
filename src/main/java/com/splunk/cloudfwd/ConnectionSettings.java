@@ -34,7 +34,7 @@ import org.slf4j.Logger;
  * @author ghendrey
  */
 public class ConnectionSettings {
-    private static final Logger LOG = ConnectionImpl.getLogger(ConnectionSettings.class.getName());
+    private final Logger LOG;
     protected Properties defaultProps = new Properties();
     protected Properties overrides;
     protected ConnectionImpl connection;
@@ -42,11 +42,13 @@ public class ConnectionSettings {
     public ConnectionSettings(Connection c, Properties overrides) {
         this.overrides = overrides;
         this.connection = (ConnectionImpl)c;
-        this.parsePropertiesFile();       
+        this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
+        this.parsePropertiesFile();
     }
 
     public ConnectionSettings(Connection c) {
         this.connection = (ConnectionImpl)c;
+        this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
         this.parsePropertiesFile();
     }
 

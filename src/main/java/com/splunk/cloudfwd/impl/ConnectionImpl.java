@@ -46,8 +46,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class ConnectionImpl implements Connection {
-  private static HecLoggerFactory loggerFactory;
-  private static final Logger LOG = ConnectionImpl.getLogger(ConnectionImpl.class.getName());
+  private HecLoggerFactory loggerFactory;
 
   /**
    * @return the propertiesFileHelper
@@ -61,6 +60,7 @@ public class ConnectionImpl implements Connection {
         return getPropertiesFileHelper();
     }
 
+  private final Logger LOG;
   private final LoadBalancer lb;
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
@@ -73,6 +73,7 @@ public class ConnectionImpl implements Connection {
   }
 
   public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
+    this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
     init(callbacks, propertiesFileHelper);
     this.lb = new LoadBalancer(this);
@@ -89,8 +90,7 @@ public class ConnectionImpl implements Connection {
     //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
-    this.callbacks = new CallbackInterceptor(callbacks);
-
+    this.callbacks = new CallbackInterceptor(callbacks, this);
   }
 
   public long getAckTimeoutMS() {
@@ -274,13 +274,13 @@ public class ConnectionImpl implements Connection {
         return lb;
     }
 
-  public static void setLoggerFactory(HecLoggerFactory f) {
+  public void setLoggerFactory(HecLoggerFactory f) {
     loggerFactory = f;
   }
 
-  public static Logger getLogger(String name) {
-      if (ConnectionImpl.loggerFactory != null) {
-        return ConnectionImpl.loggerFactory.getLogger(name);
+  public Logger getLogger(String name) {
+      if (loggerFactory != null) {
+        return loggerFactory.getLogger(name);
       } else {
         return LoggerFactory.getLogger(name);
       }

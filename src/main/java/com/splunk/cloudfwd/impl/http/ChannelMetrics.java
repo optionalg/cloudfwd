@@ -35,7 +35,7 @@ import java.io.IOException;
  */
 public class ChannelMetrics extends LifecycleEventObservable implements LifecycleEventObserver {
 
-    private static final Logger LOG = ConnectionImpl.getLogger(ChannelMetrics.class.getName());
+    private final Logger LOG;
 
     /*
   private long eventPostCount;
@@ -55,6 +55,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
     // private long healthPollFailureCount;
     public ChannelMetrics(ConnectionImpl c) {
         super(c);
+        this.LOG = c.getLogger(ChannelMetrics.class.getName());
     }
 
     @Override

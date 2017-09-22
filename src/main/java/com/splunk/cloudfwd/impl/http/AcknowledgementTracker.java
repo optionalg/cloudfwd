@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +23,7 @@ import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
 import com.splunk.cloudfwd.impl.util.EventTracker;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class AcknowledgementTracker implements EventTracker {
 
-  private static final Logger LOG = ConnectionImpl.getLogger(AcknowledgementTracker.class.getName());
+  private Logger LOG = LoggerFactory.getLogger(AcknowledgementTracker.class.getName());
 
   private final static ObjectMapper jsonMapper = new ObjectMapper();
   private final Map<Long, EventBatchImpl> polledAcks = new ConcurrentHashMap<>(); //key ackID
@@ -182,11 +182,14 @@ public class AcknowledgementTracker implements EventTracker {
         json.put("acks", this.ackIds); //{"acks":[1,2,3...]} THIS IS THE MESSAGE WE POST TO HEC
         return jsonMapper.writeValueAsString(json);
       } catch (JsonProcessingException ex) {
-        LOG.error(ex.getMessage(), ex);
         throw new RuntimeException(ex.getMessage(), ex);
       }
     }
 
+  }
+
+  public void setLogger(ConnectionImpl c) {
+    this.LOG = c.getLogger(AcknowledgementTracker.class.getName());
   }
 
 }

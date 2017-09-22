@@ -26,23 +26,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author ghendrey
  */
 public class TimeoutChecker implements EventTracker {
-
-    private static final Logger LOG = ConnectionImpl.getLogger(TimeoutChecker.class.getName());
-
-    private PollScheduler timoutCheckScheduler = new PollScheduler(
-            "Event Timeout Scheduler");
+    private final Logger LOG;
+    private PollScheduler timeoutCheckScheduler = new PollScheduler("Event Timeout Scheduler");
     private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
     private ConnectionImpl connection;
     private boolean quiesced;
 
     public TimeoutChecker(ConnectionImpl c) {
+        this.LOG = c.getLogger(TimeoutChecker.class.getName());
+        timeoutCheckScheduler.setLogger(c);
+
         this.connection = c;
     }
 
@@ -63,14 +62,14 @@ public class TimeoutChecker implements EventTracker {
     }
 
     public synchronized void start() {
-        timoutCheckScheduler.start(this::checkTimeouts, getCheckInterval(),
+        timeoutCheckScheduler.start(this::checkTimeouts, getCheckInterval(),
                 TimeUnit.MILLISECONDS);
     }
 
     private synchronized void checkTimeouts() {
         if (quiesced && eventBatches.isEmpty()) {
             LOG.debug("Stopping TimeoutChecker (no more unacked event batches)");
-            timoutCheckScheduler.stop();
+            timeoutCheckScheduler.stop();
             return;
         }
         LOG.debug("checking timeouts for {} EventBatches", eventBatches.size());
@@ -97,7 +96,7 @@ public class TimeoutChecker implements EventTracker {
         quiesced = true;
         if (eventBatches.isEmpty()) {
             LOG.debug("Stopping TimeoutChecker (no EventBatches in flight)");
-            timoutCheckScheduler.stop();
+            timeoutCheckScheduler.stop();
         }
     }
 

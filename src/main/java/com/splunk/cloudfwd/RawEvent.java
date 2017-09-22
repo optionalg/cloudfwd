@@ -29,7 +29,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * Provides various static methods for obtaining a RawEvent. If content is JSON, it is validated. A newline is appended if
  * nothing is present. A RawEvent should be sent to the /raw HEC events endpoint. The event is 'raw' in the sense that includes
@@ -37,13 +36,14 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class RawEvent implements Event{
-  private static final Logger LOG = ConnectionImpl.getLogger(RawEvent.class.getName());
+  // No access to Connection instance so must use SLF4J logger
+  private static final Logger LOG = LoggerFactory.getLogger(RawEvent.class.getName());
   private static final ObjectMapper jsonMapper = new ObjectMapper();
   
   final byte[] bytes;
   private Comparable id;
   private final Event.Type type;
-  
+
   /**
    * Convenience method that will handle either bytes of a JSON object or bytes of a UTF-8 string.
    * The bytes are first parsed as a JSON object. If that fails, the bytes are parsed into a string assuming

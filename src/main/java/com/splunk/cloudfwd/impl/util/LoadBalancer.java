@@ -46,26 +46,26 @@ import java.util.logging.Level;
  * @author ghendrey
  */
 public class LoadBalancer implements Closeable {
-
-    private static final Logger LOG = ConnectionImpl.getLogger(LoadBalancer.class.getName());
-
+    private final Logger LOG;
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
     private final CheckpointManager checkpointManager; //consolidate metrics across all channels
     private final IndexDiscoverer discoverer;
-    private final IndexDiscoveryScheduler discoveryScheduler = new IndexDiscoveryScheduler();
+    private final IndexDiscoveryScheduler discoveryScheduler;
     private int robin; //incremented (mod channels) to perform round robin
     private final ConnectionImpl connection;
     private boolean closed;
     private volatile CountDownLatch latch;
 
     public LoadBalancer(ConnectionImpl c) {
+        this.LOG = c.getLogger(LoadBalancer.class.getName());
         this.connection = c;
         this.channelsPerDestination = c.getPropertiesFileHelper().
                 getChannelsPerDestination();
-        this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper());
+        this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
         this.checkpointManager = new CheckpointManager(c);
+        this.discoveryScheduler = new IndexDiscoveryScheduler(c);
         //this.discoverer.addObserver(this);
     }
 

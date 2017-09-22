@@ -79,13 +79,12 @@ public abstract class AbstractConnectionTest {
 
   @Before
   public void setUp() {
-    Connection.setLoggerFactory(new HecLoggerFactoryImpl());
-
     this.callbacks = getCallbacks();
     Properties props = new Properties();
     props.putAll(getTestProps());
     props.putAll(getProps());
     this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+    this.connection.setLoggerFactory(new HecLoggerFactoryImpl());
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();

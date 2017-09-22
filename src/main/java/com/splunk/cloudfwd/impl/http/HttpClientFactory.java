@@ -1,6 +1,5 @@
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.config.Registry;
@@ -18,7 +17,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.conn.util.PublicSuffixMatcher;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
@@ -55,9 +53,7 @@ import sun.security.provider.X509Factory;
  *
  */
 public final class HttpClientFactory {
-
-    private static final Logger LOG = ConnectionImpl.getLogger(HttpClientFactory.class.getName());
-
+    private final Logger LOG;
     private String url;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
     private Integer maxConnTotal = 0;
@@ -81,7 +77,8 @@ public final class HttpClientFactory {
      */
     public HttpClientFactory(String url,
                              boolean disableCertVerification,
-                             String cert, String host) {
+                             String cert, String host, HttpSender sender) {
+        LOG = sender.getConnection().getLogger(HttpClientFactory.class.getName());
         this.url = url;
         this.disableCertVerification = disableCertVerification;
         this.cert = cert;

@@ -28,17 +28,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @author ghendrey
  */
 public class LifecycleEventObservable {
-
-  private static final Logger LOG = ConnectionImpl.getLogger(LifecycleEventObservable.class.getName());
-
+  private final Logger LOG;
   private final Collection<LifecycleEventObserver> observers = new ConcurrentLinkedQueue<>();
   protected final ConnectionImpl connection;
 
   public LifecycleEventObservable(ConnectionImpl connection) {
     this.connection = connection;
+    this.LOG = connection.getLogger(LifecycleEventObservable.class.getName());
   }
-
-
 
   public void addObserver(LifecycleEventObserver o) {
     this.observers.add(o);

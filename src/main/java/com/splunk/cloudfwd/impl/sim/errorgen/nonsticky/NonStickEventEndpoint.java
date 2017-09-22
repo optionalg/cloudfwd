@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.nonsticky;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
 import com.splunk.cloudfwd.impl.sim.EventEndpoint;
 import java.util.ArrayList;
@@ -32,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class NonStickEventEndpoint extends EventEndpoint {
-  private static final Logger LOG = ConnectionImpl.getLogger(NonStickEventEndpoint.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(NonStickEventEndpoint.class.getName());
 
   public static int NUM_ACK_ENDPOINTS = 2;
   public static int N = 1;

@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
@@ -30,7 +29,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class ExceptionsEndpoint extends SimulatedHECEndpoints {
-  private static final Logger LOG = ConnectionImpl.getLogger(ExceptionsEndpoint.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(ExceptionsEndpoint.class.getName());
 
   Random rand = new Random(0); //reproducible
   

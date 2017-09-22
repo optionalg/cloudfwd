@@ -28,19 +28,15 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
-
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 
 /**
  *
  * @author ghendrey
  */
 class IndexDiscoverer extends Observable {
-
-  private static final Logger LOG = ConnectionImpl.getLogger(IndexDiscoverer.class.getName());
-
+  private final Logger LOG;
   //note, the key is a string representation of the URL. It is critical that the String, and not the URL
   //Object be used as the key. This is because URL implements equals based on comparing the set of
   //InetSocketAddresses resolved. This means that equality for URL changes based on DNS host resolution
@@ -49,7 +45,8 @@ class IndexDiscoverer extends Observable {
   private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
   private boolean forceUrlMapToOne = false;
 
-  IndexDiscoverer(PropertiesFileHelper f) {
+  IndexDiscoverer(PropertiesFileHelper f, ConnectionImpl c) {
+    this.LOG = c.getLogger(IndexDiscoverer.class.getName());
     this.propertiesFileHelper = f;
     this.forceUrlMapToOne = this.propertiesFileHelper.isForcedUrlMapToSingleAddr();
   }
@@ -176,8 +173,7 @@ class IndexDiscoverer extends Observable {
           }).add(sockAddr);
         }
       } catch (UnknownHostException ex) {
-        LOG.error("Unknown Host: ''{0}''", url.getHost());
-        LOG.error(ex.getMessage(), ex);
+        throw new RuntimeException("Unknown Host: " + url.getHost(), ex);
       }
     }
     return mapping;
