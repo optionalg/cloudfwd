@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.impl.http.AcknowledgementTracker;
 import java.util.Collections;
+import java.util.Iterator;
 
 /**
  * Use EventBatchImpl if you want a high degree of control over which events will be
@@ -75,6 +76,7 @@ public class EventBatchImpl implements EventBatch {
     this.flushed = false;
     this.acknowledged = false;
     this.ackId = null;
+    cancelAcknowledgementTracker();    
   }
 
   @Override
@@ -265,10 +267,14 @@ public class EventBatchImpl implements EventBatch {
     }
   }
   
-  public AcknowledgementTracker getAcknowledgementTracker(){
-      for(EventTracker t:trackers){
+  private void cancelAcknowledgementTracker(){
+
+      for(Iterator<EventTracker> it = trackers.iterator(); it.hasNext();){
+          EventTracker t = it.next();
           if(t instanceof AcknowledgementTracker){
-              return (AcknowledgementTracker) t;
+              it.remove();
+              t.cancel(this);
+              return;
           }
       }
       throw new IllegalStateException("No acknowledgement tracker registered with EventBatch " + this);

@@ -387,12 +387,11 @@ public class LoadBalancer implements Closeable {
                       getConnection().getCallbacks().failed(events,new HecMaxRetriesException(msg));
                       return false;
         }
-        events.getAcknowledgementTracker().cancel(events);
         if (events.isAcknowledged() || events.isTimedOut(connection.
                 getSettings().getAckTimeoutMS())) {
             return false; //do not resend messages that are in a final state 
         }
-        events.prepareToResend(); //we are going to resend it,so mark it not yet flushed
+        events.prepareToResend(); //we are going to resend it,so mark it not yet flushed, cancel its acknowledgement tracker, etc
         return true;
     }
 

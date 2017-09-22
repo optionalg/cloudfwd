@@ -62,7 +62,7 @@ public class AcknowledgementTracker implements EventTracker {
               iterator(); it.hasNext();) {
         Map.Entry<Long, EventBatchImpl> entry = it.next();
         if (e.getId() == entry.getValue().getId()) {
-          it.remove();
+          it.remove();         
         }
       }
     //}
