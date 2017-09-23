@@ -41,6 +41,9 @@ public abstract class LifecycleEvent {
     HEALTH_POLL_INDEXER_BUSY,
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
+    PREFLIGHT_CHECK_OK,
+    PREFLIGHT_CHECK_FAILED,
+    PREFLIGHT_CHECK_ERROR,
     SPLUNK_IN_DETENTION,
 
     // Needed to know statuses, do not throw exception
