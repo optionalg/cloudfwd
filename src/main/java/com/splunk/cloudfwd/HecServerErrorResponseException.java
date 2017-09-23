@@ -18,15 +18,15 @@ package com.splunk.cloudfwd;
 import java.util.*;
 
 /**
- * <p>These are non-successful responses from an HEC endpoint.</p>
+ *These are non-successful responses from an HEC endpoint.
  *
- * The following error status codes and messages may
+ * The following error status codes and messages might
  * be returned from an HEC endpoint:
  *
  *<table summary="ErrorCodes" border="1">
  * <tr>
  *  <th>Code</th>
- *  <th>Message</th>
+ *  <th>Message</th> 
  * </tr>
  *  <td> 1 </td> <td> Token disabled. This is a recoverable configuration error.</td>
  * </tr>
@@ -59,7 +59,7 @@ import java.util.*;
  * <td> 12 </td> <td> Event field is required. This is a recoverable data error.</td>
  *</tr>
  * <td> 13 </td> <td> Event field cannot be blank. This is a recoverable data error.</td>
- *</tr>
+ *</tr></table>
  * @author eprokop
  */
 
