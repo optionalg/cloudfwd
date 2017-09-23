@@ -58,8 +58,6 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                     Assert.assertTrue(e.getMessage(),
                             e instanceof HecAcknowledgmentTimeoutException);
                     LOG.trace("Got expected exception: " + e);
-                    super.exception = e;
-                    super.failMsg = e.getMessage();                    
                 }else{ //for bad tokens, etc that this test tests for
                     //FIXME TODO make this a little more specific by checking the code
                     LOG.trace("Got exception: " +  e);
@@ -67,7 +65,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                             e instanceof HecServerErrorResponseException);
                     LOG.trace("Got expected exception: " + e);
                 }
-                latch.countDown(); //allow the test to finish                
+                super.failed(events, e);
             }
 
             @Override
@@ -78,6 +76,11 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             @Override
             public void acknowledged(EventBatch events) {
                 Assert.fail("We should fail before we get any acks.");
+            }
+
+            @Override
+            protected boolean isFailureExpected() {
+                return true;
             }
 
         };
@@ -136,6 +139,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     @Test
     public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.ACKS_DISABLED;
+        ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
         try {
             super.sendEvents();
@@ -144,15 +148,16 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to acks disabled on token (per test design): "
                 + e.getMessage());
         }
-        Assert.assertTrue("Should receive a failed callback for acks disabled.", getCallbacks().isFailed());
-        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", getCallbacks().getException() instanceof HecServerErrorResponseException);
-        HecServerErrorResponseException e = (HecServerErrorResponseException)(getCallbacks().getException());
+        Assert.assertTrue("Should receive a failed callback for acks disabled.", callbacks.isFailed());
+        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
+        HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
         Assert.assertTrue("Exception code should be 14.", e.getCode() == 14);
     }
 
     @Test
     public void sendToInvalidToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.INVALID_TOKEN;
+        ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
         try {
             super.sendEvents();
@@ -161,9 +166,9 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to invalid token (per test design): "
                 + e.getMessage());
         }
-        Assert.assertTrue("Should receive a failed callback for invalid token.", getCallbacks().isFailed());
-        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", getCallbacks().getException() instanceof HecServerErrorResponseException);
-        HecServerErrorResponseException e = (HecServerErrorResponseException)(getCallbacks().getException());
+        Assert.assertTrue("Should receive a failed callback for invalid token.", callbacks.isFailed());
+        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
+        HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
         Assert.assertTrue("Exception code should be 4.", e.getCode() == 4);
     }
 
