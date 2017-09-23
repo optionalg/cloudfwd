@@ -120,7 +120,7 @@ public class HecIOManager implements Closeable {
               new TypeReference<Map<String, Object>>() {
       });
       if(!map.containsKey("ackId") || map.get("ackId") == null) {
-        LOG.error("response {} lacks ackId field, but http code was 200. We infer that ack polling has been disabled.");
+        LOG.error("response {} lacks ackId field, but http code was 200. We infer that ack polling has been disabled.", resp);
         sender.getChannelMetrics().update(new EventBatchResponse(
          LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
             events, sender.getBaseUrl()));          
@@ -337,6 +337,43 @@ public class HecIOManager implements Closeable {
         setHecCheckHealth(code, reply);
       }
 
+    };
+    sender.splunkCheck(cb);
+  }
+
+  public void preflightCheck() {
+    LOG.trace("preflight check health", sender.getChannel());
+
+    FutureCallback<HttpResponse> cb = new AbstractHttpCallback(sender.getConnection()) {
+      @Override
+      public void failed(Exception ex) {
+        LOG.error("HEC preflight health check via /ack endpoint failed", ex);
+        sender.getChannelMetrics().update(new RequestFailed(
+                LifecycleEvent.Type.PREFLIGHT_CHECK_FAILED, ex));
+      }
+
+      @Override
+      public void cancelled() {
+        sender.getConnection().getCallbacks().failed(null, new Exception(
+                "HEC preflight health check via /ack endpoint cancelled."));
+      }
+
+      @Override
+      public void completed(String reply, int code) {
+        switch (code) {
+        case 200:
+          LOG.info("preflight check is good");
+          sender.getChannelMetrics().update(new Response(
+                  LifecycleEvent.Type.PREFLIGHT_CHECK_OK,
+                  200, reply, sender.getBaseUrl()));
+          break;
+        default:
+          sender.getChannelMetrics().update(new Response(
+              LifecycleEvent.Type.PREFLIGHT_CHECK_ERROR,
+              code, reply, sender.getBaseUrl()));
+          break;
+        }
+      }
     };
     sender.splunkCheck(cb);
   }

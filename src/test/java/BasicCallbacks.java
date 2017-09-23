@@ -48,12 +48,27 @@ public class BasicCallbacks implements ConnectionCallbacks {
     this.latch = new CountDownLatch(1);
   }
 
+    public void checkFailures() {
+        if(shouldFail() && !isFailed()){
+            Assert.fail("A failed callback was expected, but none occurred.");
+        }
+        if (isFailed() && !isFailureExpected(exception)) {
+            Assert.fail(
+                    "There was a failure callback with exception class  " + 
+                    getException() + " and message " + getFailMsg());
+        }
+    }
   /**
    * Sublcasses can override to return true if expecting an exception (to suppress printing of stacktrace).
+     * @param e The Exception that was received by failed() callback
    * @return
    */
-  protected boolean isFailureExpected(){
+  protected boolean isFailureExpected(Exception e){
     return false;
+  }
+  
+  public boolean shouldFail(){
+      return false;
   }
   
   @Override
@@ -78,7 +93,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
     exception = ex;
-    if(!isFailureExpected()){
+    if(!isFailureExpected(ex)){
       ex.printStackTrace(); //print the stack trace if we were not expecting failure
     }
     //make sure we set the failed, failMsg and Exception *before* we unlatch    

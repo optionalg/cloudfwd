@@ -58,13 +58,15 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
               if(!ackTimeoutLongerThanConnectionTimeout){
                     Assert.assertTrue(e.getMessage(),
                             e instanceof HecAcknowledgmentTimeoutException);
-              }else{ //for bad tokens, etc that this test tests for
-                  //FIXME TODO make this a little more specific by checking the code
-                  Assert.assertTrue(e.getMessage(),
-                          e instanceof HecServerErrorResponseException);
-              }
-              LOG.trace("Got expected exception: " + e);
-              latch.countDown();
+                    LOG.trace("Got expected exception: " + e);
+                }else{ //for bad tokens, etc that this test tests for
+                    //FIXME TODO make this a little more specific by checking the code
+                    LOG.trace("Got exception: " +  e);
+                    Assert.assertTrue(e.getMessage(),
+                            e instanceof HecServerErrorResponseException);
+                    LOG.trace("Got expected exception: " + e);
+                }
+                super.failed(events, e);
             }
 
             @Override
@@ -78,9 +80,18 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             }
 
             @Override
-            protected boolean isFailureExpected() {
-                return true;
+            protected boolean isFailureExpected(Exception e) {
+                if(ackTimeoutLongerThanConnectionTimeout){
+                    return e instanceof HecServerErrorResponseException;
+                }else{
+                    return e instanceof HecAcknowledgmentTimeoutException;
+                }
             }
+            
+            @Override
+              public boolean shouldFail(){
+                return true;
+             }
 
         };
     }
@@ -147,6 +158,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to acks disabled on token (per test design): "
                 + e.getMessage());
         }
+        Assert.assertTrue("Should receive a failed callback for acks disabled.", callbacks.isFailed());
         Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
         HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
         Assert.assertTrue("Exception code should be 14.", e.getCode() == 14);
@@ -164,6 +176,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to invalid token (per test design): "
                 + e.getMessage());
         }
+        Assert.assertTrue("Should receive a failed callback for invalid token.", callbacks.isFailed());
         Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
         HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
         Assert.assertTrue("Exception code should be 4.", e.getCode() == 4);
