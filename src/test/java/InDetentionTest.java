@@ -85,7 +85,6 @@ public class InDetentionTest extends AbstractConnectionTest {
         createConnection();
         try {
             super.sendEvents();
-            //super.callbacks.latch.countDown();
         } catch (HecConnectionTimeoutException e) {
             Assert.fail("Events should have been sent.");
         }
