@@ -120,7 +120,7 @@ public class HecIOManager implements Closeable {
               new TypeReference<Map<String, Object>>() {
       });
       if(!map.containsKey("ackId") || map.get("ackId") == null) {
-        LOG.error("response {} lacks ackId field, but http code was 200. We infer that ack polling has been disabled.");
+        LOG.error("response {} lacks ackId field, but http code was 200. We infer that ack polling has been disabled.", resp);
         sender.getChannelMetrics().update(new EventBatchResponse(
          LifecycleEvent.Type.ACK_POLL_DISABLED, 400, resp,
             events, sender.getBaseUrl()));          

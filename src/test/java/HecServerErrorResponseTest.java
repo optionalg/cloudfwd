@@ -79,9 +79,18 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             }
 
             @Override
-            protected boolean isFailureExpected() {
-                return true;
+            protected boolean isFailureExpected(Exception e) {
+                if(ackTimeoutLongerThanConnectionTimeout){
+                    return e instanceof HecServerErrorResponseException;
+                }else{
+                    return e instanceof HecAcknowledgmentTimeoutException;
+                }
             }
+            
+            @Override
+              public boolean shouldFail(){
+                return true;
+             }
 
         };
     }
