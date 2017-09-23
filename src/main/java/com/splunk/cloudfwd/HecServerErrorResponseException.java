@@ -26,7 +26,7 @@ import java.util.*;
  *<table summary="ErrorCodes" border="1">
  * <tr>
  *  <th>Code</th>
- *  <th>Message</th>
+ *  <th>Message</th> 
  * </tr>
  *  <td> 1 </td> <td> Token disabled. This is a recoverable configuration error.</td>
  * </tr>
