@@ -42,10 +42,10 @@ public abstract class LifecycleEvent {
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
     SPLUNK_IN_DETENTION,
+    INVALID_TOKEN,
 
     // Needed to know statuses, do not throw exception
     N2K_HEC_HEALTHY,
-    N2K_INVALID_TOKEN,
     N2K_INVALID_AUTH
   };
 

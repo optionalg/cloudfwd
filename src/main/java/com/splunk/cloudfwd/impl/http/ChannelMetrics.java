@@ -69,13 +69,11 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
               notifyObservers(e);
               return;
             }
-            case ACK_POLL_DISABLED:
             //INDEXER_BUSY is a normal operating condition, not a failure
             case HEALTH_POLL_INDEXER_BUSY:
             case SPLUNK_IN_DETENTION:
               // invalid token state, only used for health check api
               // otherwise should throw exception and call failed() callback
-            case N2K_INVALID_TOKEN:
             case N2K_INVALID_AUTH:
             {
                 if (e instanceof Response) {
@@ -87,6 +85,13 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
                 }
                 notifyObservers(e);
                 return;
+            }
+            case INVALID_TOKEN:
+            case ACK_POLL_DISABLED:
+            {
+              // TODO: don't do anything for now
+              // should still invoke failure
+              break;
             }
             default:
               break;

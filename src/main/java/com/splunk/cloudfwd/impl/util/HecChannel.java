@@ -185,7 +185,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         this.healthy = false;
         break;
       }
-      case N2K_INVALID_TOKEN: {
+      case INVALID_TOKEN: {
         this.health.setStatus(HecHealth.Status.INVALID_TOKEN);
         this.healthy = false;
         break;

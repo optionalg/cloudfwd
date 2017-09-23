@@ -33,11 +33,11 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
     protected int getNumEventsToSend() {
         if(!ackTimeoutLongerThanConnectionTimeout){
-            //In this case we are tring to generate an ack timeout.
-            //due to timing we cannot guarnantee that any messages except the first one sent would generate an ack timeout.
+            //In this case we are trying to generate an ack timeout.
+            //due to timing we cannot guarantee that any messages except the first one sent would generate an ack timeout.
             //This is due to fact that the server response from the first message will (server busy/503/code:9) will mark
             //channel unhealthy and eventually HecConnectionTimeoutException will be seen. It's even less deterministic than
-            //that because the async 503 response might come after the 1st message has been sent, or afer the 20th, etc.
+            //that because the async 503 response might come after the 1st message has been sent, or after the 20th, etc.
             //So all you can say is that at *some* point the channel will get marked unhealthy. So *some* number (1 or more)
             //of initially sent messages will ack timeout because they sneak in before the channel marked unhealthy. To make
             //it testable we just test 1 event, and have a different test that insures that HecConnectionSendException happens
@@ -53,21 +53,18 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         return new BasicCallbacks(getNumEventsToSend()) {
             @Override
             public void failed(EventBatch events, Exception e) {
-                if(!ackTimeoutLongerThanConnectionTimeout){
-                    LOG.trace("Got exception: " +  e);
+              exception = e;
+              LOG.trace("Got exception: " +  e);
+              if(!ackTimeoutLongerThanConnectionTimeout){
                     Assert.assertTrue(e.getMessage(),
                             e instanceof HecAcknowledgmentTimeoutException);
-                    LOG.trace("Got expected exception: " + e);
-                    super.exception = e;
-                    super.failMsg = e.getMessage();                    
-                }else{ //for bad tokens, etc that this test tests for
-                    //FIXME TODO make this a little more specific by checking the code
-                    LOG.trace("Got exception: " +  e);
-                    Assert.assertTrue(e.getMessage(),
-                            e instanceof HecServerErrorResponseException);
-                    LOG.trace("Got expected exception: " + e);
-                }
-                latch.countDown(); //allow the test to finish                
+              }else{ //for bad tokens, etc that this test tests for
+                  //FIXME TODO make this a little more specific by checking the code
+                  Assert.assertTrue(e.getMessage(),
+                          e instanceof HecServerErrorResponseException);
+              }
+              LOG.trace("Got expected exception: " + e);
+              latch.countDown();
             }
 
             @Override
@@ -78,6 +75,11 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             @Override
             public void acknowledged(EventBatch events) {
                 Assert.fail("We should fail before we get any acks.");
+            }
+
+            @Override
+            protected boolean isFailureExpected() {
+                return true;
             }
 
         };
@@ -136,6 +138,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     @Test
     public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.ACKS_DISABLED;
+        ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
         try {
             super.sendEvents();
@@ -144,11 +147,15 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to acks disabled on token (per test design): "
                 + e.getMessage());
         }
+        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
+        HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
+        Assert.assertTrue("Exception code should be 14.", e.getCode() == 14);
     }
 
     @Test
     public void sendToInvalidToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.INVALID_TOKEN;
+        ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
         try {
             super.sendEvents();
@@ -157,6 +164,9 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to invalid token (per test design): "
                 + e.getMessage());
         }
+        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
+        HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
+        Assert.assertTrue("Exception code should be 4.", e.getCode() == 4);
     }
 
     @Test
@@ -173,13 +183,13 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                         + e.getMessage());            
                 Assert.assertTrue("Got Expected HecConnectionTimeoutException", e instanceof HecConnectionTimeoutException);
             }else{
-                Assert.fail("got Unknown exception when expecting failed callback for HecAcknowledgementTimoutException: " + e);
+                Assert.fail("got Unknown exception when expecting failed callback for HecAcknowledgementTimeoutException: " + e);
             }
         }
     }
     
     @Test
-    public void postToBusyIndexerButHealthCheckOKAndExcpectAckTimeout() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+    public void postToBusyIndexerButHealthCheckOKAndExpectAckTimeout() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.INDEXER_BUSY_POST;
         ackTimeoutLongerThanConnectionTimeout = false;
         createConnection();
@@ -191,6 +201,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     @Test
     public void postNoAckIdEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.ACK_ID_DISABLED;
+        ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
         try {
             super.sendEvents();
@@ -199,5 +210,6 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                     + "due to indexer being busy (per test design): "
                     + e.getMessage());
         }
+        // TODO: we are currently not calling any failed callbacks in this case. Do we want to?
     }
 }

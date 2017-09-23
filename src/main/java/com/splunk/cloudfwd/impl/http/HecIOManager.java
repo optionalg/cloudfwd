@@ -302,7 +302,7 @@ public class HecIOManager implements Closeable {
         break;
       case 403: //HTTPSTATUS_FORBIDDEN
         sender.getChannelMetrics().update(new Response(
-                LifecycleEvent.Type.N2K_INVALID_TOKEN,
+                LifecycleEvent.Type.INVALID_TOKEN,
                 statusCode, reply, sender.getBaseUrl()));
         break;
       case 401: //HTTPSTATUS_UNAUTHORIZED

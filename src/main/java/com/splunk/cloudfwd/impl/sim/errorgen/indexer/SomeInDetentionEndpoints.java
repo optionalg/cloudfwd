@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.indexer;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
 import com.splunk.cloudfwd.impl.sim.AcknowledgementEndpoint;
@@ -29,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simulate communicating with indexer in manual detention

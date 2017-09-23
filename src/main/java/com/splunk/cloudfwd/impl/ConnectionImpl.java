@@ -208,11 +208,14 @@ public class ConnectionImpl implements Connection {
      * @throws 
      */
   public synchronized List<HecHealth> healthCheck() {
+    throw new RuntimeException("Not yet implemented");
+/*    
     if (closed) {
       throw new HecConnectionStateException("Attempt to healthCheck on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
     
     return lb.checkHealth();
+*/
   }
 
   /**
