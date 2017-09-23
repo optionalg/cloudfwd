@@ -59,6 +59,9 @@ import java.util.*;
  * <td> 12 </td> <td> Event field is required. This is a recoverable data error.</td>
  *</tr>
  * <td> 13 </td> <td> Event field cannot be blank. This is a recoverable data error.</td>
+ *</tr>
+ *<tr>
+ * <td> 14 </td> <td> ACK is disabled.</td>
  *</tr></table>
  * @author eprokop
  */

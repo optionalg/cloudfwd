@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simulate communicating with indexer in manual detention

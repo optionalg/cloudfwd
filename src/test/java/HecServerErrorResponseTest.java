@@ -144,6 +144,10 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to acks disabled on token (per test design): "
                 + e.getMessage());
         }
+        Assert.assertTrue("Should receive a failed callback for acks disabled.", getCallbacks().isFailed());
+        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", getCallbacks().getException() instanceof HecServerErrorResponseException);
+        HecServerErrorResponseException e = (HecServerErrorResponseException)(getCallbacks().getException());
+        Assert.assertTrue("Exception code should be 14.", e.getCode() == 14);
     }
 
     @Test
@@ -157,6 +161,10 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to invalid token (per test design): "
                 + e.getMessage());
         }
+        Assert.assertTrue("Should receive a failed callback for invalid token.", getCallbacks().isFailed());
+        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", getCallbacks().getException() instanceof HecServerErrorResponseException);
+        HecServerErrorResponseException e = (HecServerErrorResponseException)(getCallbacks().getException());
+        Assert.assertTrue("Exception code should be 4.", e.getCode() == 4);
     }
 
     @Test
@@ -173,7 +181,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                         + e.getMessage());            
                 Assert.assertTrue("Got Expected HecConnectionTimeoutException", e instanceof HecConnectionTimeoutException);
             }else{
-                Assert.fail("got Unknown exception when expecting failed callback for HecAcknowledgementTimoutException: " + e);
+                Assert.fail("got Unknown exception when expecting failed callback for HecAcknowledgementTimeoutException: " + e);
             }
         }
     }
@@ -199,5 +207,6 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                     + "due to indexer being busy (per test design): "
                     + e.getMessage());
         }
+        // TODO: we are currently not calling any failed callbacks in this case. Do we want to?
     }
 }
