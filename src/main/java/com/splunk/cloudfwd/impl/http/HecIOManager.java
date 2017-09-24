@@ -341,43 +341,6 @@ public class HecIOManager implements Closeable {
     sender.splunkCheck(cb);
   }
 
-  public void preflightCheck() {
-    LOG.trace("preflight check health", sender.getChannel());
-
-    FutureCallback<HttpResponse> cb = new AbstractHttpCallback(sender.getConnection()) {
-      @Override
-      public void failed(Exception ex) {
-        LOG.error("HEC preflight health check via /ack endpoint failed", ex);
-        sender.getChannelMetrics().update(new RequestFailed(
-                LifecycleEvent.Type.PREFLIGHT_CHECK_FAILED, ex));
-      }
-
-      @Override
-      public void cancelled() {
-        sender.getConnection().getCallbacks().failed(null, new Exception(
-                "HEC preflight health check via /ack endpoint cancelled."));
-      }
-
-      @Override
-      public void completed(String reply, int code) {
-        switch (code) {
-        case 200:
-          LOG.info("preflight check is good");
-          sender.getChannelMetrics().update(new Response(
-                  LifecycleEvent.Type.PREFLIGHT_CHECK_OK,
-                  200, reply, sender.getBaseUrl()));
-          break;
-        default:
-          sender.getChannelMetrics().update(new Response(
-              LifecycleEvent.Type.PREFLIGHT_CHECK_ERROR,
-              code, reply, sender.getBaseUrl()));
-          break;
-        }
-      }
-    };
-    sender.splunkCheck(cb);
-  }
-
   /**
    * @return the sender
    */

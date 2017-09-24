@@ -101,7 +101,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return;
     }
     this.sender.setChannel(this);
-    this.sender.getHecIOManager().preflightCheck();
+    this.sender.getHecIOManager().checkHealth();
 
     //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
     ThreadFactory f = (Runnable r) -> new Thread(r, "Channel Reaper");
