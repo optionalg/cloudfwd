@@ -25,6 +25,7 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -163,10 +164,12 @@ public class LoadBalancer implements Closeable {
         try {
             //URLS for channel must be based on IP address not hostname since we
             //have many-to-one relationship between IP address and hostname via DNS records
+            String hostAddr = s.getAddress().getHostAddress();
+            if (s.getAddress() instanceof Inet6Address) {
+                hostAddr = "[" + hostAddr + "]"; // java.net.URL requires braces for IPv6 host addresses
+            }
 
-            url = new URL(
-                    "https://" + s.getAddress().getHostAddress() + ":" + s.
-                    getPort());
+            url = new URL("https://" + hostAddr + ":" + s.getPort());
             LOG.debug("Trying to add URL: " + url);
             //We should provide a hostname for http client, so it can properly set Host header
             //this host is required for many proxy server and virtual servers implementations
@@ -187,6 +190,8 @@ public class LoadBalancer implements Closeable {
 
         } catch (MalformedURLException ex) {
             LOG.error(ex.getMessage(), ex);
+            throw new HecConnectionStateException(ex.getMessage(),
+                HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
     }
 

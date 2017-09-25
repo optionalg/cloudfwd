@@ -292,10 +292,22 @@ public class ConnectionSettings {
         for (String urlString : splits) {
             try {
                 URL url = new URL(urlString.trim());
+                if (url.getPort() == -1) {
+                    int port;
+                    if (url.getProtocol().equals("https")) {
+                        port = 443;
+                    } else {
+                        port = 80;
+                    }
+                    LOG.warn("No port provided for url: " + urlString.trim()
+                        + ". Defaulting to port " + port);
+                    url = new URL(url.getProtocol(), url.getHost(), port, url.getFile());
+                }
                 urlList.add(url);
             } catch (MalformedURLException ex) {
                 LOG.error(ex.getMessage(), ex);
-                throw new RuntimeException(ex);
+                throw new HecConnectionStateException(ex.getMessage(),
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
             }
         }
         urlList.sort(Comparator.comparing(URL::toString));
