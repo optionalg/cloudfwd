@@ -204,8 +204,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         public void failed(EventBatch events, Exception ex) {
             if(null ==events){
                 LOG.error("failed {}", ex);
+            }else{
+                LOG.error("EventBatch with id=" + events.getId() + "failed");
             }
-            LOG.error("EventBatch with id=" + events.getId() + "failed");
             super.failed(events, ex);
             SenderWorker s = waitingSenders.get(events.getId());
             if (s != null) {
