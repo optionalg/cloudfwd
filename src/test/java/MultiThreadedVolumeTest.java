@@ -202,6 +202,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
         @Override
         public void failed(EventBatch events, Exception ex) {
+            if(null ==events){
+                return;
+            }
             LOG.error("EventBatch with id=" + events.getId() + "failed");
             super.failed(events, ex);
             SenderWorker s = waitingSenders.get(events.getId());

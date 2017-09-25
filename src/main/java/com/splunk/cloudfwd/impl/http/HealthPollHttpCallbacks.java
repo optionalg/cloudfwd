@@ -55,7 +55,7 @@ class HealthPollHttpCallbacks extends AbstractHttpCallback {
                             LifecycleEvent.Type.HEALTH_POLL_FAILED,
                             ex));
         } catch (Exception e) {
-            invokeFailedCallback(ex);
+            invokeFailedCallback(null, ex);
         }
     }
 
@@ -71,7 +71,7 @@ class HealthPollHttpCallbacks extends AbstractHttpCallback {
                             LifecycleEvent.Type.HEALTH_POLL_FAILED,
                             ex));
         } catch (Exception ex) {
-            invokeFailedCallback(ex);
+            invokeFailedCallback(null, ex);
         }
     }
 
@@ -80,7 +80,7 @@ class HealthPollHttpCallbacks extends AbstractHttpCallback {
         try {
             handleHealthPollResponse(code, reply);
         } catch (IOException ex) {
-            invokeFailedCallback(ex);
+            invokeFailedCallback(reply, ex);
         }
     }
 
@@ -96,23 +96,30 @@ class HealthPollHttpCallbacks extends AbstractHttpCallback {
                 type = HEALTH_POLL_INDEXER_BUSY;
                 break;
             default:
-                HecErrorResponseValueObject r = mapper.readValue(reply,
-                        HecErrorResponseValueObject.class);
-                type = NonBusyServerErrors.type(statusCode, reply);
-                Exception e = new HecServerErrorResponseException(r.getText(),
-                        r.getCode(), sender.getBaseUrl());
-                invokeFailedCallback(e);
+                type = handleServerErrorResponse(reply, statusCode, sender);
         }
         Response lifecycleEvent = new Response(type, statusCode, reply,
                 sender.getBaseUrl());
         sender.getChannelMetrics().update(lifecycleEvent);
     }
 
+    private LifecycleEvent.Type handleServerErrorResponse(String reply,
+            int statusCode, HttpSender sender) throws IOException {
+        LifecycleEvent.Type type;
+        HecErrorResponseValueObject r = mapper.readValue(reply,
+                HecErrorResponseValueObject.class);
+        type = NonBusyServerErrors.type(statusCode, reply);
+        Exception e = new HecServerErrorResponseException(r.getText(),
+                r.getCode(), sender.getBaseUrl());
+        invokeFailedCallback(reply, e);
+        return type;
+    }
+
     //Hardened to catch exceptions that could come from the application's failed callback
-    private void invokeFailedCallback(Exception ex) {
+    private void invokeFailedCallback(String reply, Exception ex) {
         try {
             LOG.error(
-                    "Health poll failed with exception {}",
+                    "Server reply was {}. Health poll failed with exception {}",
                     ex);
             manager.getSender().getConnection().getCallbacks().
                     failed(null, ex);
