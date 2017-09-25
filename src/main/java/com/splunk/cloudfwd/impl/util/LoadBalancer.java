@@ -222,12 +222,16 @@ public class LoadBalancer implements Closeable {
             throws HecConnectionTimeoutException {
         events.incrementNumTries();
         if (resend && !isResendable(events)) {
+            LOG.trace("Not resendable {}", events);
             return false; //bail if this EventBatch has already reached a final state
         }
         prepareToFindChannel(events, resend);
         long startTime = System.currentTimeMillis();
         int spinCount = 0;
-        while (!closed || resend) {
+        while (true) {//!closed || resend
+            if(closed && !resend){
+                return false;
+            }
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
             //consisting of closed channels. Also, it must be a snapshot, not use the live
@@ -236,7 +240,7 @@ public class LoadBalancer implements Closeable {
             //must not be do avoid deadlocks).
             List<HecChannel> channelsSnapshot = new ArrayList<>(this.channels.
                     values());
-            if (channelsSnapshot.isEmpty()) {
+            if (channelsSnapshot.isEmpty()) {                
                 try {
                     //if you don't sleep here, we will be in a hard loop and it locks out threads that are trying to add channels
                     //(This was observed through debugging).
@@ -251,7 +255,7 @@ public class LoadBalancer implements Closeable {
             if (tryChannelSend(channelsSnapshot, events, resend)) {
                 break;
             }
-            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot);
+            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             throwExceptionIfTimeout(startTime, events, resend);
         }
         return true;
@@ -290,8 +294,10 @@ public class LoadBalancer implements Closeable {
         tryMe = channelsSnapshot.get(channelIdx);
         try {
             if (tryMe.send(events)) {
-                LOG.debug("sent EventBatch:{}  on channel: {}: ", events, tryMe);
+                LOG.debug("sent EventBatch:{}  on channel: {} available={} ", events, tryMe, tryMe.isAvailable());
                 return true;
+            }else{
+                LOG.trace("channel not healthy {}", tryMe);
             }
         } catch (RuntimeException e) {
             recoverAndThrowException(events, forced, e);
@@ -300,14 +306,14 @@ public class LoadBalancer implements Closeable {
     }
 
     private void waitIfSpinCountTooHigh(int spinCount,
-            List<HecChannel> channelsSnapshot) {
+            List<HecChannel> channelsSnapshot, EventBatchImpl events) {
         if (spinCount % channelsSnapshot.size() == 0) {
             try {
                 latch = new CountDownLatch(1);
                 if (!latch.await(1, TimeUnit.SECONDS)) {
                     LOG.warn(
-                            "Round-robin load channel search waited 1 second at spin count {}, channel idx {}",
-                            spinCount, this.robin % channelsSnapshot.size());
+                            "Round-robin load balancer waited 1 second at spin count {}, channel idx {}, eventBatch {}",
+                            spinCount, this.robin % channelsSnapshot.size(), events.getId());
                 }
                 latch = null;
             } catch (InterruptedException e) {

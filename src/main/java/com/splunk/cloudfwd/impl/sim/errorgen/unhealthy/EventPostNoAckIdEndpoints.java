@@ -43,7 +43,7 @@ public class EventPostNoAckIdEndpoints extends SimulatedHECEndpoints {
     private static class NoAckIdEntity extends CannedEntity {
 
         public NoAckIdEntity() {
-            super("{\"text\":\"Success\",\"code\":0}}");
+            super("{\"text\":\"Success\",\"code\":0}");
         }
     }
 

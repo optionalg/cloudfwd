@@ -42,7 +42,7 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
       String reply = EntityUtils.toString(response.getEntity(), "utf-8");
       completed(reply, code);
     } catch (IOException e) {      
-      LOG.error("failed to unmarshal response", e);
+      LOG.error("Unable to get String from HTTP response entity", e);
     }      
   }
 

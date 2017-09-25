@@ -1,5 +1,8 @@
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.lifecycle.Response;
+
 /*
  * Copyright 2017 Splunk, Inc..
  *
@@ -31,7 +34,7 @@ public class HecErrorResponseValueObject {
     public String toString() {
         return "HecErrorResponseValueObject{" + "text=" + text + ", code=" + code + '}';
     }
-
+    
     
     /**
      * @return the code

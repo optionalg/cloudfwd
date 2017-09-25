@@ -257,6 +257,7 @@ public final class HttpSender implements Endpoints {
     AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();
     try {
       if (ackReq.isEmpty()) {
+          LOG.trace("no ackIds to poll for");
         return;
       } else {        
         hecIoMgr.setAckPollInProgress(true);

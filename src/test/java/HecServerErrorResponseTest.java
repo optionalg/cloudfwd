@@ -1,4 +1,5 @@
 import com.splunk.cloudfwd.*;
+import static com.splunk.cloudfwd.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecServerErrorResponseException;
 import org.junit.Assert;
@@ -27,7 +28,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         ACKS_DISABLED,
         INVALID_TOKEN,
         INDEXER_BUSY_POST,
-        ACK_ID_DISABLED
+        ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS
     }
     private Error errorToTest;
 
@@ -51,10 +52,12 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
+            /*
             @Override
             public void failed(EventBatch events, Exception e) {
               exception = e;
               LOG.trace("Got exception: " +  e);
+              
               if(!ackTimeoutLongerThanConnectionTimeout){
                     Assert.assertTrue(e.getMessage(),
                             e instanceof HecAcknowledgmentTimeoutException);
@@ -68,6 +71,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 }
                 super.failed(events, e);
             }
+*/
 
             @Override
             public void checkpoint(EventBatch events) {
@@ -81,6 +85,13 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
             @Override
             protected boolean isFailureExpected(Exception e) {
+                if(errorToTest==Error.ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS){
+                    return e instanceof HecConnectionStateException 
+                            && ((HecConnectionStateException)e).getType()==CONFIGURATION_EXCEPTION;
+                }
+                if(errorToTest==Error.INDEXER_BUSY_POST){
+                    return e instanceof HecAcknowledgmentTimeoutException;
+                }
                 if(ackTimeoutLongerThanConnectionTimeout){
                     return e instanceof HecServerErrorResponseException;
                 }else{
@@ -119,7 +130,8 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 props.put(MOCK_HTTP_CLASSNAME,
                         "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
                 break;
-            case ACK_ID_DISABLED:
+            case ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS: 
+                //in this case, the pre-flight check will pass, and we are simulating were we detect acks disabled on event post
                 props.put(MOCK_HTTP_CLASSNAME,
                         "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
                 break;
@@ -207,13 +219,14 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         ackTimeoutLongerThanConnectionTimeout = false;
         createConnection();
         super.sendEvents();
-        connection.closeNow(); //have to do this else we are going to get         
-        Assert.assertTrue("didn't get failed callback with HecAcknowledgementTimeoutException", callbacks.getException() instanceof HecAcknowledgmentTimeoutException );
+        connection.closeNow(); //have to do this else we are going to get      
+        Exception e = callbacks.getException();
+        Assert.assertTrue("didn't get failed callback with HecAcknowledgementTimeoutException, instead got " + e,  e instanceof HecAcknowledgmentTimeoutException );
     }    
 
     @Test
     public void postNoAckIdEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        errorToTest = Error.ACK_ID_DISABLED;
+        errorToTest = Error.ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
         try {

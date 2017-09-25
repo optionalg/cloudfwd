@@ -57,45 +57,20 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
         super(c);
         this.LOG = c.getLogger(ChannelMetrics.class.getName());
     }
-
+    
     @Override
     public void update(LifecycleEvent e) {
         switch (e.getType()) {
             case EVENT_POST_OK:
             case ACK_POLL_OK:
             case HEALTH_POLL_OK:
-            case PREFLIGHT_CHECK_OK:
             case N2K_HEC_HEALTHY:
+            case EVENT_POST_FAILURE:
+            case EVENT_POST_ACKS_DISABLED: //this *is* a 200/OK so it won't get covered by non-200 responses below
             {
-              notifyObservers(e);
-              return;
-            }
-            //INDEXER_BUSY is a normal operating condition, not a failure
-            case HEALTH_POLL_INDEXER_BUSY:
-            case SPLUNK_IN_DETENTION:
-              // invalid token state, only used for health check api
-              // otherwise should throw exception and call failed() callback
-            case N2K_INVALID_AUTH:
-            {
-                if (e instanceof Response) {
-                  Response r = (Response) e;
-                  LOG.debug("Splunk instance not optimal. Url: "
-                    + r.getUrl()
-                    + ", Code: " + r.getHttpCode()
-                    + ", Reply: ", r.getResp());
-                }
                 notifyObservers(e);
                 return;
             }
-            case INVALID_TOKEN:
-            case ACK_POLL_DISABLED:
-            {
-              // TODO: don't do anything for now
-              // should still invoke failure
-              break;
-            }
-            default:
-              break;
         }
         if (e instanceof Response) {
             Response r = (Response) e;
@@ -105,15 +80,12 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
                         + ". Url: " + r.getUrl()
                         + ", Code: " + r.getHttpCode()
                         + ", Reply: " + r.getResp());
-                EventBatchImpl events = (e instanceof EventBatchResponse)
-                        ? ((EventBatchResponse) e).getEvents() : null;
-                connection.getCallbacks().failed(events, getException(r.
-                        getHttpCode(), r.getResp(), r.getUrl()));
                 notifyObservers(e); //might as well tell everyone there was a problem
             }
         }
     }
 
+    /*
     private Exception getException(int httpCode, String reply, String url) {
         ObjectMapper mapper = new ObjectMapper();
         HecErrorResponseValueObject hecErrorResp;
@@ -128,4 +100,5 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
         return new HecServerErrorResponseException(
                 hecErrorResp.getText(), hecErrorResp.getCode(), url);
     }
+*/
 }

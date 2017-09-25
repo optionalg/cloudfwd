@@ -16,32 +16,71 @@
 package com.splunk.cloudfwd.impl.http;
 
 import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
 
 import java.util.Map;
 
 /**
- *
+ * if ack's disabled we get back {"text":"Success", "code":0}. If ack's enabled, on success we get back {"ackId":42}
  * @author ghendrey
  */
 public class EventPostResponseValueObject {
-  private Map<String, Object> map;
+  private String text; //if ack's disabled we see this field in resp    
+  private int code = -1;//...and this field
+  private long ackId = -1; //from a normal event post response we just expect to see the ackid
 
-
-  EventPostResponseValueObject(Map<String, Object> map) throws HecServerErrorResponseException {
-    if(!map.containsKey("ackId") || map.get("ackId") == null) {
-        throw new HecServerErrorResponseException("ackId not present in server response.");
+    public EventPostResponseValueObject() {
     }
+  
+    /**
+     * If acks are disabled on server, server will response with {"text":"Success","code":0}"
+     * @return
+     */
+    public boolean isAckIdReceived(){
+      return ackId >= 0;
+    }
+    
+    public boolean isAckDisabled(){
+        return code==0 && text.equalsIgnoreCase("success") && ackId == -1;
+    }
+    
+
+/*
+  EventPostResponseValueObject(Map<String, Object> map){
     this.map = map;
   }
+  */
   
   
 
-  /**
-   * @return the ackId
-   */
-  public Long getAckId() {
-    return Long.parseLong(map.get("ackId").toString());
-  }
+//  /**
+//   * @return the ackId
+//   */
+//    
+//  public Long getAckId() {
+//    return Long.parseLong(map.get("ackId").toString());
+//  }
+
+    /**
+     * @return the text
+     */
+    public String getText() {
+        return text;
+    }
+
+    /**
+     * @return the code
+     */
+    public int getCode() {
+        return code;
+    }
+
+    /**
+     * @return the ackId
+     */
+    public long getAckId() {
+        return ackId;
+    }
 
 
   

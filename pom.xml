@@ -184,6 +184,7 @@
                         <exclude>**/ByteBufferWithMixedEventsTest.java</exclude> 
                         <exclude>**/OncePerSecondLongevityTest.java</exclude>
                         <exclude>**/AWSSourcetypeTest.java</exclude>
+                        <exclude>**/HecServerErrorResponseHecCheckTest.java</exclude>                         
                     </excludes>
                 </configuration>
             </plugin>            

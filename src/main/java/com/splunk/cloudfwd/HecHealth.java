@@ -29,7 +29,8 @@ public class HecHealth {
     ACK_DISABLED,
     INVALID_TOKEN,
     INVALID_AUTH,
-    IN_DETENTION
+    IN_DETENTION,
+    EVENT_POST_FAILURE,
   }
   
   private Status status;

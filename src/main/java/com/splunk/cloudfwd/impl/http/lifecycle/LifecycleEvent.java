@@ -23,12 +23,15 @@ public abstract class LifecycleEvent {
 
   public enum Type {
 	// States tied to an EventBatch object
+// States tied to an EventBatch object
     EVENT_BATCH_BORN,
     PRE_EVENT_POST,
     EVENT_POSTED,
     EVENT_POST_NOT_OK,
     EVENT_POST_FAILURE,
     EVENT_POST_OK,
+    EVENT_POST_ACKS_DISABLED,
+    EVENT_TIMED_OUT,
     PRE_ACK_POLL,
     ACK_POLL_OK,
     ACK_POLL_NOT_OK,
@@ -41,15 +44,13 @@ public abstract class LifecycleEvent {
     HEALTH_POLL_INDEXER_BUSY,
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
-    PREFLIGHT_CHECK_OK,
-    PREFLIGHT_CHECK_FAILED,
-    PREFLIGHT_CHECK_ERROR,
     SPLUNK_IN_DETENTION,
     INVALID_TOKEN,
 
     // Needed to know statuses, do not throw exception
     N2K_HEC_HEALTHY,
-    N2K_INVALID_AUTH
+    N2K_INVALID_AUTH,
+    UNHANDLED_NON_200
   };
 
   private final Type type;

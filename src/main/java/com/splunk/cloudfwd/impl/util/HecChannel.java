@@ -159,12 +159,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         break;
       }
       case EVENT_POST_OK: {
-        //System.out.println("OBSERVED EVENT_POST_OK");
         checkForStickySessionViolation(e);
         break;
       }
       case HEALTH_POLL_OK:
-      case PREFLIGHT_CHECK_OK:
       case N2K_HEC_HEALTHY:
       {
         this.health.setStatus(HecHealth.Status.HEALTHY);
@@ -195,6 +193,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         this.health.setStatus(HecHealth.Status.INVALID_AUTH);
         this.healthy = false;
         break;
+      }
+      case EVENT_POST_FAILURE:{
+        this.health.setStatus(HecHealth.Status.EVENT_POST_FAILURE);
+        this.healthy = false;
+        //when event posts fail we also need to decrement unackedCount because
+        //it is a metric of the number of 'in flight' events batches. When an event POST
+        //fails, that event batch is no longer in flight on this channel.
+        this.unackedCount.decrementAndGet();
+        break;         
       }
       default:
         break;
