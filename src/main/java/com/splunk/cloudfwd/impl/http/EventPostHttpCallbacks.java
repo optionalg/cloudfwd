@@ -24,9 +24,11 @@ import com.splunk.cloudfwd.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchFailure;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_ACKS_DISABLED;
+import com.splunk.cloudfwd.LifecycleEvent;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_ACKS_DISABLED;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_NOT_OK;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
+import java.io.IOException;
 import org.slf4j.Logger;
 
 /**
@@ -52,13 +54,11 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
 
     private final Logger LOG;
     private final EventBatchImpl events;
-    private final HecIOManager manager;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public EventPostHttpCallbacks(HecIOManager m,
             EventBatchImpl events) {
-        super(m.getSender().getConnection());
-        this.manager = m;
+        super(m);
         this.events = events;
         LOG = m.getSender().getConnection().getLogger(
                 EventPostHttpCallbacks.class.getName());
@@ -76,7 +76,9 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
                     markBusyAndResend(reply, code);
                     break;
                 default:
-                    eventPostNotOK(reply, code, sender);
+                     invokeFailedWithHecServerResponseException(reply, code, sender);
+                     sender.getChannelMetrics(). update(
+                             new EventBatchResponse(EVENT_POST_NOT_OK,code, reply, events, sender.getBaseUrl()));
             }
         } catch (Exception e) {
             invokeFailedCallback(events, e);
@@ -106,30 +108,6 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
         }
     } //end cancelled()    
 
-    private void eventPostNotOK(String reply, int code, HttpSender sender) {
-        Exception e = new HecServerErrorResponseException(reply,
-                code, manager.getSender().getBaseUrl());
-        invokeFailedCallback(events, e);
-        sender.getChannelMetrics().
-                update(new EventBatchResponse(
-                        LifecycleEvent.Type.EVENT_POST_NOT_OK,
-                        code, reply, events, sender.getBaseUrl()));
-    }
-
-    //Hardened to catch exceptions that could come from the application's failed callback
-    private void invokeFailedCallback(EventBatch events, Exception ex) {
-        try {
-            LOG.error("{} failed with exception {}", events, ex);
-            manager.getSender().getConnection().getCallbacks().
-                    failed(events, ex);
-        } catch (Exception e) {
-            //if the applicatoin's callback is throwing an exception we have no way to handle this, other
-            //than log an error
-            LOG.error(
-                    "Caught exception in ConnectionCallbacks.failed for post events  {}",
-                    ex);
-        }
-    }
 
     private void resend(Exception ex) {
         HttpSender sender = manager.getSender();
@@ -191,6 +169,11 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
         throw new HecConnectionStateException(
                 "Event POST responded without ackId (acknowledgements are disabled on HEC endpoint).",
                 CONFIGURATION_EXCEPTION);
+    }
+
+    @Override
+    protected String getName() {
+        return "Event Post";
     }
 
 } //end HecHttpCallbacks

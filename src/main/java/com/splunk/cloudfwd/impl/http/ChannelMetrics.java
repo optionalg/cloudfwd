@@ -20,7 +20,7 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObservable;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
@@ -64,7 +64,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
             case EVENT_POST_OK:
             case ACK_POLL_OK:
             case HEALTH_POLL_OK:
-            case N2K_HEC_HEALTHY:
+            case PREFLIGHT_HEC_HEALTHY:
             case EVENT_POST_FAILURE:
             case EVENT_POST_ACKS_DISABLED: //this *is* a 200/OK so it won't get covered by non-200 responses below
             {

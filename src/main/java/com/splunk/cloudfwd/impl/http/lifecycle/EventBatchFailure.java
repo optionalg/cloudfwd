@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd.impl.http.lifecycle;
 
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 
 /**
  *
@@ -30,6 +29,13 @@ public class EventBatchFailure extends EventBatchRequest{
     super(type, events);
     this.exception = e;
   }
+
+    @Override
+    public String toString() {
+        return "EventBatchFailure{" +super.toString()+ " exception=" + exception + '}';
+    }
+  
+  
 
   /**
    * @return the exception

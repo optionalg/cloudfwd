@@ -15,6 +15,8 @@
  */
 package com.splunk.cloudfwd.impl.http.lifecycle;
 
+import com.splunk.cloudfwd.LifecycleEvent;
+
 /**
  *
  * @author ghendrey

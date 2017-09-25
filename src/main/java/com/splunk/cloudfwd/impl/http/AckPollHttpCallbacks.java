@@ -16,8 +16,9 @@
 package com.splunk.cloudfwd.impl.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.LifecycleEvent;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_FAILURE;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_NOT_OK;
 import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
@@ -30,12 +31,10 @@ import org.slf4j.Logger;
 class AckPollHttpCallbacks extends AbstractHttpCallback {
 
     private static final ObjectMapper mapper = new ObjectMapper();
-    private final HecIOManager manager;
     private final Logger LOG;
 
     public AckPollHttpCallbacks(final HecIOManager m) {
-        super(m.getSender().getConnection());
-        this.manager = m;
+        super(m);
         this.LOG = m.getSender().getConnection().getLogger(
                 AckPollHttpCallbacks.class.getName());
     }
@@ -48,7 +47,9 @@ class AckPollHttpCallbacks extends AbstractHttpCallback {
             if (code == 200) {
                 consumeAckPollResponse(reply);
             } else {
-                ackPollResponseNotOK(reply, sender, code);
+                invokeFailedWithHecServerResponseException(reply, code, sender);
+                LifecycleEvent r = new Response(ACK_POLL_NOT_OK,code, reply, sender.getBaseUrl());
+                sender.getChannelMetrics().update(r);
             }            
         } catch (Exception e) {
             invokeFailedCallback(e);
@@ -64,10 +65,8 @@ class AckPollHttpCallbacks extends AbstractHttpCallback {
             LOG.error("Channel {} failed to poll acks because {}",
                     sender.getChannel(), ex);
             //Note that we dot invoke any failed callbacks. We just treat an ack poll failure as an indicator of unhealthy channel
-            sender.getChannelMetrics().
-                    update(new RequestFailed(
-                            LifecycleEvent.Type.ACK_POLL_FAILURE,
-                            ex));                        
+            LifecycleEvent r = new RequestFailed(ACK_POLL_FAILURE, ex); //fixme TODO nobody listening for this
+            sender.getChannelMetrics().update(r);                        
         } catch (Exception e) {
             invokeFailedCallback(e);
         }finally{
@@ -98,32 +97,11 @@ class AckPollHttpCallbacks extends AbstractHttpCallback {
             throw new RuntimeException(ex.getMessage(), ex);
         }
     }
-    
-    private void ackPollResponseNotOK(String reply, HttpSender sender, int code) {
-        LOG.error("non-200 response from ack poll {}", reply);
-        Exception e = new HecServerErrorResponseException(reply,
-                code, manager.getSender().getBaseUrl());
-        invokeFailedCallback(e);        
-        sender.getChannelMetrics().
-                update(new Response(LifecycleEvent.Type.ACK_POLL_NOT_OK,
-                        code, reply, sender.getBaseUrl()));
-    }    
+        
 
-    //Hardened to catch exceptions that could come from the application's failed callback
-    private void invokeFailedCallback(Exception ex) {
-        try {
-            LOG.error(
-                    "ack polling failed with exception {}",
-                    ex);
-            manager.getSender().getConnection().getCallbacks().
-                    failed(null, ex);
-        } catch (Exception e) {
-            //if the application's callback is throwing an exception we have no way to handle this, other
-            //than log an error
-            LOG.error(
-                    "Caught exception in ConnectionCallbacks.failed for ack polling, {}",
-                    ex);
-        }
+    @Override
+    protected String getName() {
+        return "Ack Poll";
     }
 
 }

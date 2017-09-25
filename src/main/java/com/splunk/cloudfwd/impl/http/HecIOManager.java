@@ -17,15 +17,12 @@ package com.splunk.cloudfwd.impl.http;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
-import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
-import com.splunk.cloudfwd.impl.http.lifecycle.Response;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchRequest;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.impl.http.lifecycle.PreRequest;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -137,7 +134,7 @@ public class HecIOManager implements Closeable {
 
     public void checkHealth() {
         LOG.trace("check health", sender.getChannel());
-        FutureCallback<HttpResponse> cb = new PreflightHealthCheckHttpCallbacks(sender);
+        FutureCallback<HttpResponse> cb = new PreflightHealthCheckHttpCallbacks(this);
         sender.splunkCheck(cb);
     }
 

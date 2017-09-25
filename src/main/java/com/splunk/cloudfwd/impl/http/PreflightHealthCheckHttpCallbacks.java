@@ -15,15 +15,12 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.N2K_HEC_HEALTHY;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
+import com.splunk.cloudfwd.LifecycleEvent;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
 import org.slf4j.Logger;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.UNHANDLED_NON_200;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_HEC_HEALTHY;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -45,15 +42,11 @@ import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.UNHAND
  * @author ghendrey
  */
 class PreflightHealthCheckHttpCallbacks extends AbstractHttpCallback {
-
-    private final HttpSender sender;
     private final Logger LOG;
-    private final ObjectMapper mapper = new ObjectMapper();
 
-    public PreflightHealthCheckHttpCallbacks(HttpSender sender) {
-        super(sender.getConnection());
-        this.sender = sender;
-        this.LOG = sender.getConnection().getLogger(
+    public PreflightHealthCheckHttpCallbacks(HecIOManager m) {
+        super(m);
+        this.LOG = m.getSender().getConnection().getLogger(
                 PreflightHealthCheckHttpCallbacks.class.
                 getName());
     }
@@ -76,30 +69,20 @@ class PreflightHealthCheckHttpCallbacks extends AbstractHttpCallback {
             case 404: //detention ... NOT one of the server responses that looks like {"text":"foo", "code":i}
                 type = SPLUNK_IN_DETENTION;
                 break;
-            case 503:  //have to treat 503/busy same as N2K_HEC_HEALTHY else preflight can freeze channel
+            case 503:  //have to treat 503/busy same as PREFLIGHT_HEC_HEALTHY else preflight can freeze channel
             case 200:
                 LOG.info("HEC check is good");
-                type = N2K_HEC_HEALTHY;
+                type = PREFLIGHT_HEC_HEALTHY;
                 break;
             default:
-                type = handeCommonServerNon200s(reply, statusCode);
+                type = super.invokeFailedWithHecServerResponseException(reply,
+                        statusCode, manager.getSender());
         }
         Response lifecycleEvent = new Response(type, statusCode, reply,
-                sender.getBaseUrl());
-        sender.getChannelMetrics().update(lifecycleEvent);
+                manager.getSender().getBaseUrl());
+        manager.getSender().getChannelMetrics().update(lifecycleEvent);
     }
 
-    private LifecycleEvent.Type handeCommonServerNon200s(String reply,
-            int statusCode) throws IOException {
-        LifecycleEvent.Type type;
-        HecErrorResponseValueObject r = mapper.readValue(reply,
-                HecErrorResponseValueObject.class);
-        type = NonBusyServerErrors.type(statusCode, reply);
-        Exception e = new HecServerErrorResponseException(r.getText(),
-                r.getCode(), sender.getBaseUrl());
-        invokeFailedCallback(e);
-        return type;
-    }
 
     @Override
     public void failed(Exception ex) {
@@ -116,21 +99,10 @@ class PreflightHealthCheckHttpCallbacks extends AbstractHttpCallback {
                 "HEC pre-flight health check via /ack endpoint cancelled."));
     }
 
-    //Hardened to catch exceptions that could come from the application's failed callback
-    private void invokeFailedCallback(Exception ex) {
-        try {
-            LOG.error(
-                    "HEC pre-flight health check via /ack endpoint failed with exception {}",
-                    ex);
-            sender.getConnection().getCallbacks().
-                    failed(null, ex);
-        } catch (Exception e) {
-            //if the application's callback is throwing an exception we have no way to handle this, other
-            //than log an error
-            LOG.error(
-                    "Caught exception in ConnectionCallbacks.failed for HEC pre-flight health check {}",
-                    ex);
-        }
+
+    @Override
+    protected String getName() {
+        return "Preflight checks";
     }
 
 }

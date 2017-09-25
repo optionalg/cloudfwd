@@ -189,7 +189,9 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + e.getMessage());
         }
         Assert.assertTrue("Should receive a failed callback for invalid token.", callbacks.isFailed());
-        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
+        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException but got "
+                + callbacks.getException().getClass().getCanonicalName(),
+                callbacks.getException() instanceof HecServerErrorResponseException);
         HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
         Assert.assertTrue("Exception code should be 4.", e.getCode() == 4);
     }

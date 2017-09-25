@@ -16,40 +16,45 @@
 package com.splunk.cloudfwd;
 
 /**
- * An Event can be a JSON document or a blob of text. Every Event must have a comparable id. For each
- * Event sent to the Connection, the id must be greater than the previously sent id. That is, ids must
- * be monotonically ascending. Ids can be integers, strings, or any other comparable.
+ * Describes the health  
  * @author ghendrey
  */
 public class HecHealth {
-  public enum Status {
-    HEALTH_CHECK_PENDING,
-    HEALTHY,
-    INDEXER_BUSY,
-    ACK_DISABLED,
-    INVALID_TOKEN,
-    INVALID_AUTH,
-    IN_DETENTION,
-    EVENT_POST_FAILURE,
-  }
+
   
-  private Status status;
+  private LifecycleEvent status;
+  private boolean healthy;
   private String url;
   
-  public HecHealth(String url, Status status) {
+  public HecHealth(String url, LifecycleEvent status) {
     this.url = url;
     this.status = status;
   }
+
+    @Override
+    public String toString() {
+        return "HecHealth{" + "status=" + status + ", healthy=" + healthy + ", url=" + url + '}';
+    }
   
-  public Status status() {
+  
+  
+  public LifecycleEvent status() {
     return this.status;
   }
   
-  public void setStatus(Status status) {
+  public void setStatus(LifecycleEvent status, boolean healthy) {
     this.status = status;
+    this.healthy = healthy;
   }
   
-  public String url() {
+  public String getUrl() {
     return this.url;
   }
+
+    /**
+     * @return the healthy
+     */
+    public boolean isHealthy() {
+        return healthy;
+    }
 }

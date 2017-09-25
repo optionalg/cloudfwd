@@ -20,7 +20,7 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecNonStickySessionException;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
@@ -35,7 +35,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -51,7 +50,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private volatile boolean closed;
   private volatile boolean quiesced;
 
-  private volatile boolean healthy = false; // Responsive to indexer 503 "queue full" error.
+  //private volatile boolean healthy = false; // Responsive to indexer 503 "queue full" error.
   private HecHealth health;
   
   private final LoadBalancer loadBalancer;
@@ -77,7 +76,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     
     this.health = new HecHealth(sender.getBaseUrl()
-        , HecHealth.Status.HEALTH_CHECK_PENDING);
+        , new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));
   }
   
   public HecHealth getHealth() {
@@ -163,43 +162,28 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         break;
       }
       case HEALTH_POLL_OK:
-      case N2K_HEC_HEALTHY:
+      case PREFLIGHT_HEC_HEALTHY:
       {
-        this.health.setStatus(HecHealth.Status.HEALTHY);
-        this.healthy = true; //see isAvailable
+        this.health.setStatus(e, true);
         break;
       }
-      case SPLUNK_IN_DETENTION: {
-        this.health.setStatus(HecHealth.Status.IN_DETENTION);
-        this.healthy = false;
+      case SPLUNK_IN_DETENTION:
+      case HEALTH_POLL_INDEXER_BUSY:
+      case ACK_DISABLED: 
+      case INVALID_TOKEN: 
+      case INVALID_AUTH: {
+        this.health.setStatus(e, false);
         break;
       }
-      case HEALTH_POLL_INDEXER_BUSY: {
-        this.health.setStatus(HecHealth.Status.INDEXER_BUSY);
-        this.healthy = false;
-        break;
-      }
-      case ACK_POLL_DISABLED: {
-        this.health.setStatus(HecHealth.Status.ACK_DISABLED);
-        this.healthy = false;
-        break;
-      }
-      case INVALID_TOKEN: {
-        this.health.setStatus(HecHealth.Status.INVALID_TOKEN);
-        this.healthy = false;
-        break;
-      }
-      case N2K_INVALID_AUTH: {
-        this.health.setStatus(HecHealth.Status.INVALID_AUTH);
-        this.healthy = false;
-        break;
-      }
-      case EVENT_POST_FAILURE:{
-        this.health.setStatus(HecHealth.Status.EVENT_POST_FAILURE);
-        this.healthy = false;
+      case EVENT_POST_FAILURE:
+      case EVENT_POST_NOT_OK:
+      case ELB_GATEWAY_TIMEOUT:{
+        this.health.setStatus(e, false);
         //when event posts fail we also need to decrement unackedCount because
         //it is a metric of the number of 'in flight' events batches. When an event POST
-        //fails, that event batch is no longer in flight on this channel.
+        //fails, that event batch is no longer in flight on this channel. If we don't do this, channel 
+        //can never again become isAvailable()=true,  even if it is healthy because it will 
+        //think it is 'full' of unacked events.
         this.unackedCount.decrementAndGet();
         break;         
       }
@@ -209,7 +193,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (e instanceof Response) {
       if (((Response) e).getHttpCode() != 200) {
         LOG.warn("Marking channel unhealthy: " + e);
-        this.healthy = false;
+        this.health.setStatus(e, false);
       }
     }
     if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
@@ -328,7 +312,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   boolean isAvailable() {
-    return !quiesced && !closed && healthy && this.unackedCount.get() < full;
+    return !quiesced && !closed && health.isHealthy() && this.unackedCount.get() < full;
   }
 
   @Override

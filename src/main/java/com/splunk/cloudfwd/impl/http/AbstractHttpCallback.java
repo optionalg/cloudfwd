@@ -15,9 +15,11 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.LifecycleEvent;
 import java.io.IOException;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.util.EntityUtils;
@@ -30,9 +32,11 @@ import org.slf4j.Logger;
 public abstract class AbstractHttpCallback implements FutureCallback<HttpResponse> {
 
   private final Logger LOG;
+  protected final HecIOManager manager;
 
-  AbstractHttpCallback(ConnectionImpl connection) {
-    LOG = connection.getLogger(AbstractHttpCallback.class.getName());
+  AbstractHttpCallback(HecIOManager m) {
+    LOG = m.getSender().getConnection().getLogger(AbstractHttpCallback.class.getName());
+    this.manager = m;
   }
 
   @Override
@@ -47,5 +51,47 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
   }
 
   public abstract void completed(String reply, int code);
+
+    /**
+     * Subclass should return the name indicative of it's purpose, such as "Health Poll" or "Event Post"
+     * @return
+     */
+    protected abstract String getName();
+
+    protected LifecycleEvent.Type invokeFailedWithHecServerResponseException(String reply,
+            int statusCode, HttpSender sender) throws IOException {
+        HecServerErrorResponseException e = NonBusyServerErrors.toErrorException(reply,
+                statusCode, sender.getBaseUrl());
+        invokeFailedCallback(e);
+        return e.getType();
+    }
+
+    //Hardened to catch exceptions that could come from the application's failed callback
+    protected void invokeFailedCallback(Exception ex) {
+        try {
+            LOG.error("Function '{}' Exception '{}'", getName(),  ex);
+            manager.getSender().getConnection().getCallbacks().failed(null, ex);
+        } catch (Exception e) {
+            //if the application's callback is throwing an exception we have no way to handle this, other
+            //than log an error
+            LOG.error("Exception '{}'in ConnectionCallbacks.failed() for  '{}'",
+                    ex, getName());
+        }
+    }
+        
+
+    //Hardened to catch exceptions that could come from the application's failed callback
+    protected void invokeFailedCallback(EventBatch events, Exception ex) {
+        try {
+            LOG.error("Function '{}' Events  '{}' Exception '{}'", events, ex);
+            manager.getSender().getConnection().getCallbacks().
+                    failed(events, ex);
+        } catch (Exception e) {
+            //if the applicatoin's callback is throwing an exception we have no way to handle this, other
+            //than log an error
+            LOG.error("Exception '{}'in ConnectionCallbacks.failed() for  '{}' for events {}",
+                    ex, events, getName());
+        }           
+    }
 
 }

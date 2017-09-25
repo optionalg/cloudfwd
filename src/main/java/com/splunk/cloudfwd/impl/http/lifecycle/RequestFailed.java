@@ -15,6 +15,8 @@
  */
 package com.splunk.cloudfwd.impl.http.lifecycle;
 
+import com.splunk.cloudfwd.LifecycleEvent;
+
 /**
  *
  * @author ghendrey
@@ -27,6 +29,13 @@ public class RequestFailed extends LifecycleEvent{
     super(type);
     this.exception = e; 
   }
+
+    @Override
+    public String toString() {
+        return "RequestFailed{"+super.toString() + " exception=" + exception + '}';
+    }
+  
+  
 
   /**
    * @return the exception

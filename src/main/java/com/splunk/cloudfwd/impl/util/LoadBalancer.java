@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import java.util.logging.Level;
 
 /**
@@ -72,7 +72,7 @@ public class LoadBalancer implements Closeable {
     public synchronized List<HecHealth> checkHealth() {
         if (channels.isEmpty()) {
             createChannels(discoverer.getAddrs());
-            // if channels are newly created, the status will be HEALTH_CHECK_PENDING
+            // if channels are newly created, the status will be PREFLIGHT_HEALTH_CHECK_PENDING
         }
         List<HecHealth> healthStatus = new ArrayList<HecHealth>();
         checkHealthEach(healthStatus);

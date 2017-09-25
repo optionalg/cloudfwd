@@ -1,6 +1,6 @@
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 
 /*

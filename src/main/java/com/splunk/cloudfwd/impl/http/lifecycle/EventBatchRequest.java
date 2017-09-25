@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.http.lifecycle;
 
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 
 /**
@@ -30,6 +31,13 @@ public class EventBatchRequest extends LifecycleEvent implements EventBatchLifec
     this.eventBatch = events;
     events.setState(type);
   }
+
+    @Override
+    public String toString() {
+        return "EventBatchRequest{" + super.toString()+" eventBatch=" + eventBatch + '}';
+    }
+  
+  
 
   /**
    * @return the eventBatch

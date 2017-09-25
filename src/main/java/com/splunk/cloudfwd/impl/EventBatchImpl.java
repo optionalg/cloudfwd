@@ -17,10 +17,10 @@ package com.splunk.cloudfwd.impl;
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_BATCH_BORN;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_NOT_OK;
+import com.splunk.cloudfwd.LifecycleEvent;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_BATCH_BORN;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_NOT_OK;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.util.EventTracker;

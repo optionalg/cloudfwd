@@ -16,13 +16,15 @@
 package com.splunk.cloudfwd.impl.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.ACK_POLL_DISABLED;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.INVALID_TOKEN;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.N2K_INVALID_AUTH;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.UNHANDLED_NON_200;
+import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.LifecycleEvent;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.ELB_GATEWAY_TIMEOUT;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.UNHANDLED_NON_200;
 import java.io.IOException;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_DISABLED;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -46,8 +48,23 @@ import java.io.IOException;
 public class NonBusyServerErrors {
 
     private static final ObjectMapper mapper = new ObjectMapper();
+    
+    public static HecServerErrorResponseException toErrorException(String reply,
+            int statusCode, String url) throws IOException {
 
-    public static LifecycleEvent.Type type(int statusCode, String reply) throws IOException {
+        //first check for ELB-specific errors
+        LifecycleEvent.Type type = elbType(statusCode);
+        if (type == UNHANDLED_NON_200) { //if the status code was not one recognized by elbType
+            //then check for splunk-specific errors
+            type = hecType(statusCode, reply);
+        }
+        HecErrorResponseValueObject r = mapper.readValue(reply,
+                HecErrorResponseValueObject.class);
+        return new HecServerErrorResponseException(r.getText(),
+                r.getCode(), reply, type,  url);
+    }
+
+    private static LifecycleEvent.Type hecType(int statusCode, String reply) throws IOException {
         HecErrorResponseValueObject r = mapper.readValue(reply,
                 HecErrorResponseValueObject.class);
         LifecycleEvent.Type type = UNHANDLED_NON_200;
@@ -55,7 +72,7 @@ public class NonBusyServerErrors {
             case 400:
                 // determine code in reply, must be 14 for disabled
                 if (14 == r.getCode()) {
-                    type = ACK_POLL_DISABLED;
+                    type = ACK_DISABLED;
                 }
                 break;
             case 404:
@@ -68,10 +85,20 @@ public class NonBusyServerErrors {
                 break;
             case 401:
                 //HTTPSTATUS_UNAUTHORIZED
-                type = N2K_INVALID_AUTH;
+                type = INVALID_AUTH;
                 break;
         }
         return type;
     }
+    
+    private static LifecycleEvent.Type elbType(int statusCode) throws IOException {
+        LifecycleEvent.Type type = UNHANDLED_NON_200;
+        switch (statusCode) {
+            case 503:
+                type= ELB_GATEWAY_TIMEOUT;
+                break;
+        }
+        return type;
+    }        
 
 }

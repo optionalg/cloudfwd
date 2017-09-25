@@ -18,7 +18,7 @@ package com.splunk.cloudfwd.impl.util;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_TIMED_OUT;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_TIMED_OUT;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
