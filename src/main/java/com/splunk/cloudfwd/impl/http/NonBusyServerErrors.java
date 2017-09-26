@@ -94,7 +94,7 @@ public class NonBusyServerErrors {
     private static LifecycleEvent.Type elbType(int statusCode) throws IOException {
         LifecycleEvent.Type type = UNHANDLED_NON_200;
         switch (statusCode) {
-            case 503:
+            case 504:
                 type= ELB_GATEWAY_TIMEOUT;
                 break;
         }
