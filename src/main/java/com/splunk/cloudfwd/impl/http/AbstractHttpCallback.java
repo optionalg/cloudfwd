@@ -45,7 +45,7 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
     try {
       String reply = EntityUtils.toString(response.getEntity(), "utf-8");
       if(null == reply || reply.isEmpty()){
-          LOG.error("reply with code {} was empty for function '{}'", getName());
+          LOG.error("reply with code {} was empty for function '{}'",code,  getName());
       }
       completed(reply, code);      
     } catch (IOException e) {      
