@@ -44,7 +44,10 @@ public abstract class AbstractHttpCallback implements FutureCallback<HttpRespons
     int code = response.getStatusLine().getStatusCode();
     try {
       String reply = EntityUtils.toString(response.getEntity(), "utf-8");
-      completed(reply, code);
+      if(null == reply || reply.isEmpty()){
+          LOG.error("reply with code {} was empty for function '{}'", getName());
+      }
+      completed(reply, code);      
     } catch (IOException e) {      
       LOG.error("Unable to get String from HTTP response entity", e);
     }      

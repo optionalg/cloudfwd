@@ -204,6 +204,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         public void failed(EventBatch events, Exception ex) {
             if(null ==events){
                 LOG.error("failed {}", ex);
+                return;
             }else{
                 LOG.error("EventBatch with id=" + events.getId() + "failed");
             }
