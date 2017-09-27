@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.indexer;
 
-import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
+import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
@@ -70,6 +70,7 @@ public class RollingRestartEndpoints extends SimulatedHECEndpoints {
         public void run() {
             if (downIndexer < numOfUrl) {
               downIndexer++;
+              LOG.debug("downed indexer id {}", downIndexer);
             }
             else { // downIndexer > numOfUrl
               // just go through indexers once like a rolling restart
@@ -87,15 +88,19 @@ public class RollingRestartEndpoints extends SimulatedHECEndpoints {
 
     // alternately create a channel through the indexers
     indexId = nextIndexerId++;
+    LOG.debug("Assigned indexer id {}", indexId);
     if (nextIndexerId == numOfUrl)
       nextIndexerId = 0;
   }
 
   @Override
   public synchronized void start() {
+      if(started){
+          return;
+      }
     // assign indexer id, a group of channels should have
     assignIndexerId();
-    LOG.trace("Indexer ID: %d", indexId);
+    LOG.debug("STARTING Indexer ID: {}", indexId);
 
     // create down endpoints
     downAckEndpoint = new DownIndexerAckEndpoint();
@@ -118,7 +123,7 @@ public class RollingRestartEndpoints extends SimulatedHECEndpoints {
   public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     if (indexId == downIndexer) {
       LOG.trace("splunkCheck, indexer down");
-      ((AbstractHttpCallback)httpCallback).failed(new Exception("Unable to connect"));
+      ((HttpCallbacksAbstract)httpCallback).failed(new Exception("Unable to connect"));
     }
     else {
       httpCallback.completed(
@@ -143,7 +148,7 @@ public class RollingRestartEndpoints extends SimulatedHECEndpoints {
   public void pollAcks(HecIOManager ackMgr,
           FutureCallback<HttpResponse> httpCallback) {
     if (indexId == downIndexer) {
-      LOG.trace("postEvents, indexer down");
+      LOG.trace("postAcks, indexer down");
       downAckEndpoint.pollAcks(ackMgr, httpCallback);
     }
     else {

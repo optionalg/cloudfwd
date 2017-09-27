@@ -37,7 +37,7 @@ public interface ConnectionCallbacks {
   public void acknowledged(EventBatch events);
 
   /**
-   * The **failed** function is called if there is a failure to deliver EventBatchImpl to
+   * The **failed** function is called if there is a failure to deliver EventBatch to
  Splunk.
    *
    * @param events
@@ -47,9 +47,22 @@ public interface ConnectionCallbacks {
 
   /**
    * The **checkpoint** function is called when there are no unacknowledged events in-flight with an id less than or equal to
-   * events.getId().
+   * events.getId(). If checkpoints are disabled, the checkpoint callback behaves identically to the acknowledged callback.
    * @param events
    */
   public void checkpoint(EventBatch events);
+  
+    /**
+     * Invoked when a system problem occurs.
+     * @param e
+     */
+    public void systemError(Exception e);
+    
+    /**
+     * Invoked when a system condition occurs that could be indicative of a problem. For example, server responses such 
+     * as 503/Indexer -busy are not errors, but the application may want to record their occurrence 
+     * @param e
+     */
+    public void systemWarning(Exception e);
 
 }

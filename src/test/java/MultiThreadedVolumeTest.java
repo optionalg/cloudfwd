@@ -42,7 +42,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         externalHealthPoller.start(() -> {
             List<HecHealth> healthList = connection.healthCheck();
             for (HecHealth health : healthList) {
-                LOG.info("Health: url=" + health.url() + "status=" + health.status());
+                LOG.info("Health: url=" + health.getUrl() + "status=" + health.status());
             }
         }, 30, TimeUnit.SECONDS);
     }
@@ -202,7 +202,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
         @Override
         public void failed(EventBatch events, Exception ex) {
-            LOG.error("EventBatch with id=" + events.getId() + "failed");
+            if(null ==events){
+                LOG.error("failed {}", ex);
+                return;
+            }else{
+                LOG.error("EventBatch with id=" + events.getId() + "failed");
+            }
             super.failed(events, ex);
             SenderWorker s = waitingSenders.get(events.getId());
             if (s != null) {

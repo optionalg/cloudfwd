@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.util.EventTracker;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import java.util.Collection;

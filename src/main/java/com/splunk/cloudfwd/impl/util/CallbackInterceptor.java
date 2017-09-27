@@ -20,7 +20,6 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Server EventTrackers keep track of EventBatches by their ids. When an
@@ -55,12 +54,17 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     @Override
     public void failed(EventBatch events, Exception ex) {
         try {
+            if(null != events && ((EventBatchImpl)events).isFailed()){
+                LOG.debug("Ignoring failed call on already failed events {}", events);
+                return;
+            }
             this.callbacks.failed(events, ex);
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.failed: " + e.getMessage());
             LOG.error(e.getMessage(), e);
         } finally {
             if (null != events) {
+                ((EventBatchImpl)events).setFailed(true);
                 ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
             }
         }
@@ -78,6 +82,16 @@ public class CallbackInterceptor implements ConnectionCallbacks {
 
     public ConnectionCallbacks unwrap() {
         return this.callbacks;
+    }
+
+    @Override
+    public void systemError(Exception e) {
+        callbacks.systemError(e);
+    }
+
+    @Override
+    public void systemWarning(Exception e) {
+        callbacks.systemWarning(e);
     }
 
 }

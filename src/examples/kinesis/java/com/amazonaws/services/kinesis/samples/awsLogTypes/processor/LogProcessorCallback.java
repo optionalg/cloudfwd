@@ -11,6 +11,7 @@ import org.apache.commons.logging.LogFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
+import junit.framework.Assert;
 
 /**
  * Created by eprokop on 8/8/17.
@@ -39,6 +40,16 @@ public class LogProcessorCallback implements ConnectionCallbacks {
                 + " (shardId=" + shardId + "): "
                 + ex.getMessage());
     }
+    
+    @Override
+    public void systemWarning(Exception e) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }    
+    
+    @Override
+    public void systemError(Exception e) {
+        LOG.error("system error: {}", e);        
+    }    
 
     @Override
     public void checkpoint(EventBatch events) {
@@ -65,4 +76,5 @@ public class LogProcessorCallback implements ConnectionCallbacks {
     public void addCheckpointer(String sequenceNumber, IRecordProcessorCheckpointer checkpointer) {
         checkpointerMap.put(sequenceNumber, checkpointer);
     }
+
 }

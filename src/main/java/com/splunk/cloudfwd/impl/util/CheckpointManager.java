@@ -17,7 +17,7 @@ package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import java.util.Iterator;
@@ -30,7 +30,7 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import static com.splunk.cloudfwd.HecIllegalStateException.Type.EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.ACK_POLL_OK;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_OK;
 
 /**
  *

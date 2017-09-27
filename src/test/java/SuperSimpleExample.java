@@ -61,6 +61,16 @@ public class SuperSimpleExample {
         LOG.trace("CHECKPOINT: " + events.getId() + " (all events up to and including this ID are acknowledged)");
         //}
       }
+
+        @Override
+        public void systemError(Exception e) {
+            LOG.error("Got system error", e);
+        }
+
+        @Override
+        public void systemWarning(Exception e) {
+            LOG.error("Got system warning", e);
+        }
     }; //end callbacks
 
     //overide defaults in lb.properties

@@ -17,10 +17,10 @@ package com.splunk.cloudfwd.impl;
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_BATCH_BORN;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_FAILURE;
-import static com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEvent.Type.EVENT_POST_NOT_OK;
+import com.splunk.cloudfwd.LifecycleEvent;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_BATCH_BORN;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_NOT_OK;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import com.splunk.cloudfwd.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.util.EventTracker;
@@ -59,6 +59,7 @@ public class EventBatchImpl implements EventBatch {
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
   protected boolean flushed = false;
   protected boolean acknowledged;
+  private boolean failed;
   private long sendTimestamp = System.currentTimeMillis();
   protected int numEvents;
   protected int numTries; //events are resent by DeadChannelDetector
@@ -77,6 +78,7 @@ public class EventBatchImpl implements EventBatch {
     this.acknowledged = false;
     this.ackId = null;
     cancelAcknowledgementTracker();    
+    //we don't reset failed. Once failed, always failed
   }
 
   @Override
@@ -248,7 +250,7 @@ public class EventBatchImpl implements EventBatch {
 
   @Override
   public String toString() {
-    return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged
+    return "EventBatch{" + "id=" + id + ", ackId=" + ackId + ", acknowledged=" + acknowledged+ ", failed=" + failed
             + ", numTries=" + numTries + ", state=" + state +  " numSendExceptions="+sendExceptions.size()+'}';
   }
 
@@ -331,6 +333,20 @@ public class EventBatchImpl implements EventBatch {
     
     public void addSendException(Exception e){
         sendExceptions.add(e);
+    }
+
+    /**
+     * @return the failed
+     */
+    public boolean isFailed() {
+        return failed;
+    }
+
+    /**
+     * @param failed the failed to set
+     */
+    public void setFailed(boolean failed) {
+        this.failed = failed;
     }
 
   private class HttpEventBatchEntity extends AbstractHttpEntity {

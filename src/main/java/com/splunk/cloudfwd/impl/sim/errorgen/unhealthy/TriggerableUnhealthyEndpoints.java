@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.unhealthy;
 
-import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
+import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.sim.HealthEndpoint;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
@@ -43,12 +43,12 @@ public class TriggerableUnhealthyEndpoints extends SimulatedHECEndpoints {
     public void pollHealth(FutureCallback<HttpResponse> cb) {
       if (healthy) {
         LOG.trace("HEALTH POLL OK");
-        ((AbstractHttpCallback) cb).completed(               
+        ((HttpCallbacksAbstract) cb).completed(               
                 "If we care about the actual content, this will break something.",
                 200);
       } else {
         LOG.trace("HEALTH POLL UNHEALTHY (503)");
-        ((AbstractHttpCallback) cb).completed(
+        ((HttpCallbacksAbstract) cb).completed(
                 "Simulated Indexer unhealthy queue is busy.",
                 503);
       }
