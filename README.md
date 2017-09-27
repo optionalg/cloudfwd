@@ -100,6 +100,8 @@ A ```true``` status generally indicates that the events that correspond to that 
 
 If you are sending data using the ```/event``` endpoint and you are not seeing your data in the Splunk software, verify that the settings you are using are correct in  ```INDEXED_EXTRACTIONS``` and ```cloudfwd.properties```.
 
+See [event formatting](https://github.com/splunk/cloudfwd/wiki/Event-Formatting) for information on how to format your events before sending them to the /event or /raw endpoint.
+
 ### Error exceptions tables
 
 
