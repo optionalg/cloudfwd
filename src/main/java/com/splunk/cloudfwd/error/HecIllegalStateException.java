@@ -23,18 +23,57 @@ package com.splunk.cloudfwd.error;
 public class HecIllegalStateException extends IllegalStateException {
 
   public enum Type {
+    /**
+     * This type gets thrown after after an unacknowledged EventBatch when
+     */
     EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED,
+    /**
+     * This type gets thrown after an attempt to send RoundRobin occurs, but there is no channel available.
+     */
     LOAD_BALANCER_NO_CHANNELS,
+    /**
+     * This type gets thrown when ackID does not match RecordedAckID.
+     */
     ACK_ID_MISMATCH,
+    /**
+     * This type gets thrown when EventTracker is already registered on EventBatch.
+     */
     EVENT_TRACKER_ALREADY_REGISTERED,
+    /**
+     * This type gets thrown when the channel is null in HTTPSender.
+     */
     NULL_CHANNEL,
+    /**
+     * This type gets thrown when there is an incorrect event type object in RawEvent.
+     */
     INCORRECT_EVENT_TYPE_OBJECT,
+    /**
+     * This type gets thrown when the sender's channel ID does not match.
+     */
     CHANNEL_MISMATCH,
+    /**
+     * This type gets thrown when EventBatch has no target endpoint.
+     */
     NO_TARGET,
+    /**
+     * This type gets thrown when AckPollController is already started in IndexDiscoveryScheduler.
+     */
     ALREADY_POLLING_ACKS,
+    /**
+     * This type gets thrown when CorePoolSize's private variable is set to 0.
+     */
     CORE_POOL_SIZE_ZERO,
+    /**
+     * This type gets thrown when un-acked count on a channel is an illegal negative value.
+     */
     NEGATIVE_UNACKED_COUNT,
+    /**
+     * This type gets thrown when there is an attempts to remove non-empty channels that contain un-acked payloads.
+     */
     REMOVE_NON_EMPTY_CHANNEL,
+    /**
+     * This type gets thrown when InputStream experiences an error in loading cloudfwd.properties resources (example: wrong file name).
+     */
     CANNOT_LOAD_PROPERTIES
   }
   private final Type type;
