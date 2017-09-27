@@ -20,51 +20,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- *These are non-successful responses from an HEC endpoint.
- *
- * The following error status codes and messages might
- * be returned from an HEC endpoint:
- *
- *<table summary="ErrorCodes" border="1">
- * <tr>
- *  <th>Code</th>
- *  <th>Message</th> 
- * </tr>
- *  <td> 1 </td> <td> Token disabled. This is a recoverable configuration error.</td>
- * </tr>
- *<tr>
- * <td> 2 </td> <td> Token is required. This is a recoverable configuration error.</td>
- *</tr>
- * <td> 3 </td> <td> Invalid authorization. This is a non-recoverable error.</td>
- *</tr>
- *<tr>
- * <td> 4 </td> <td> Invalid token. This is a recoverable configuration error.</td>
- *</tr>
- * <td> 5 </td> <td> No data. This is a recoverable data error.</td>
- *</tr>
- *<tr>
- * <td> 6 </td> <td> Invalid data format. This is a recoverable data error.</td>
- *</tr>
- * <td> 7 </td> <td> Incorrect index. This is a recoverable configuration error.</td>
- *</tr>
- *<tr>
- * <td> 8 </td> <td> Internal server error. This is a recoverable server error.</td>
- *</tr>
- * <td> 9 </td> <td> Server is busy. This is a recoverable server error.</td>
- *</tr>
- *<tr>
- * <td> 10 </td> <td> Data channel is missing. This is a non-recoverable error.</td>
- *</tr>
- * <td> 11 </td> <td> Invalid data channel. This is a non-recoverable error.</td>
- *</tr>
- *<tr>
- * <td> 12 </td> <td> Event field is required. This is a recoverable data error.</td>
- *</tr>
- * <td> 13 </td> <td> Event field cannot be blank. This is a recoverable data error.</td>
- *</tr>
- *<tr>
- * <td> 14 </td> <td> ACK is disabled.</td>
- *</tr></table>
+*
  * @author eprokop
  */
 
