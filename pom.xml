@@ -182,6 +182,7 @@
                         <exclude>**/LargeBatchTest.java</exclude>
                         <exclude>**/MultiThreadedVolumeTest.java</exclude>
                         <exclude>**/OncePerSecondLongevityTest.java</exclude>
+                        <exclude>**/HecServerErrorResponseHecCheckTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
