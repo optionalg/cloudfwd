@@ -21,6 +21,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_BUSY;
 import java.io.IOException;
 import org.slf4j.Logger;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_OK;
+import org.apache.http.ConnectionClosedException;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -60,7 +61,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                  warn(reply, statusCode);
                 type=LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT;                
             case 200:
-                LOG.info("HEC preflight check is good");
+                LOG.info("HEC preflight check is good on {}", getChannel());
                 type = PREFLIGHT_OK;
                 break;
             default: //various non-200 errors such as 400/ack-is-disabled
@@ -86,8 +87,13 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
 
     @Override
     public void failed(Exception ex) {
+        if(ex instanceof ConnectionClosedException){
+            LOG.debug("Caught ConnectionClosedException."
+                    + " This is expected when a channel is closed while a pre-flight check is in process.");
+            return;
+        }
         LOG.error(
-                "HEC pre-flight health check via /ack endpoint failed with exception {}",
+                "HEC pre-flight health check via /ack endpoint failed with exception {} on {}",ex.getMessage(), getChannel(),
                 ex);
         error(ex);
     }

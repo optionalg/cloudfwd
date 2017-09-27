@@ -265,6 +265,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   protected void interalForceClose() {
+    finishClose();
     try {
       this.sender.close();
     } catch (Exception e) {
@@ -272,7 +273,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     this.loadBalancer.removeChannel(getChannelId(), true);
     this.channelMetrics.removeObserver(this);
-    finishClose();
+
   }
 
   @Override
