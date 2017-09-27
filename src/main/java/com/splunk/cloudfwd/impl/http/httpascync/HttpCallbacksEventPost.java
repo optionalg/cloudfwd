@@ -136,7 +136,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
 
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
-        LOG.info("{} Event post response: {}", getChannel(), resp);
+        LOG.debug("{} Event post response: {}", getChannel(), resp);
 
         HttpSender sender = manager.getSender();
         EventPostResponseValueObject epr = mapper.readValue(resp,

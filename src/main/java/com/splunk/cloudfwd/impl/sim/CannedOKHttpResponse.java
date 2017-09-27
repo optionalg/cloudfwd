@@ -100,7 +100,7 @@ public class CannedOKHttpResponse implements HttpResponse{
 
     @Override
     public Header[] getHeaders(String string) {
-        LOG.warn("getHeaders returns no headers -- this is a MOCK.");
+        LOG.debug("getHeaders returns no headers -- this is a MOCK.");
         return new Header[]{};
       //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
