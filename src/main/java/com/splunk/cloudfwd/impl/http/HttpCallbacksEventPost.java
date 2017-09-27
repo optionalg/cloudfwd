@@ -16,20 +16,21 @@
 package com.splunk.cloudfwd.impl.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecConnectionStateException;
 import static com.splunk.cloudfwd.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.HecServerBusyException;
-import com.splunk.cloudfwd.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchFailure;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.LifecycleEvent;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_ACKS_DISABLED;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_NOT_OK;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_OK;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
-import java.io.IOException;
 import org.slf4j.Logger;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.GATEWAY_TIMEOUT;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -50,18 +51,17 @@ import org.slf4j.Logger;
     14	400	Bad Request	                     ACK is disabled 
  * @author ghendrey
  */
-class EventPostHttpCallbacks extends AbstractHttpCallback {
+class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     private final Logger LOG;
     private final EventBatchImpl events;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public EventPostHttpCallbacks(HecIOManager m,
+    public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {
         super(m);
         this.events = events;
-        LOG = m.getSender().getConnection().getLogger(
-                EventPostHttpCallbacks.class.getName());
+        LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }
 
     @Override
@@ -72,16 +72,20 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
                 case 200:
                     consumeEventPostOkResponse(reply, code);
                     break;
-                case 503:
-                    markBusyAndResend(reply, code);
+                case 503:    
+                    warn(reply, code);
+                    markBusyAndResend(reply, code, INDEXER_BUSY);
                     break;
+                case 504:                 
+                    warn(reply, code);
+                    markBusyAndResend(reply, code, GATEWAY_TIMEOUT);
+                    break;                    
                 default:
-                     invokeFailedWithHecServerResponseException(reply, code, sender);
-                     sender.getChannelMetrics(). update(
-                             new EventBatchResponse(EVENT_POST_NOT_OK,code, reply, events, sender.getBaseUrl()));
+                     error(reply, code);
+                     notify(EVENT_POST_NOT_OK,code, reply, events);
             }
         } catch (Exception e) {
-            invokeFailedCallback(events, e);
+            invokeFailedEventsCallback(events, e);
         }
     } //end completed()    
 
@@ -98,13 +102,10 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
                     sender.getChannel(), events);
             Exception ex = new RuntimeException(
                     "HTTP post cancelled while posting events  " + events);
-            sender.getChannelMetrics().
-                    update(new EventBatchFailure(
-                            LifecycleEvent.Type.EVENT_POST_FAILURE,
-                            events, ex));
-            invokeFailedCallback(events, ex);
+            notifyFailed(EVENT_POST_FAILURE,events, ex);
+            invokeFailedEventsCallback(events, ex);
         } catch (Exception e) {
-            invokeFailedCallback(events, e);
+            invokeFailedEventsCallback(events, e);
         }
     } //end cancelled()    
 
@@ -114,27 +115,21 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
         try {
             LOG.error("channel  {} Failed to post event batch {}",
                     sender.getChannel(), events);
-            sender.getChannelMetrics().
-                    update(new EventBatchFailure(
-                            LifecycleEvent.Type.EVENT_POST_FAILURE,
-                            events, ex));
+            notifyFailed(EVENT_POST_FAILURE,events, ex);
             events.addSendException(ex);
             LOG.warn("resending events through load balancer {}", events);
             sender.getConnection().getLoadBalancer().
                     sendRoundRobin(events, true); //will callback failed if max retries exceeded
         } catch (Exception e) {
-            invokeFailedCallback(events, e);
+            invokeFailedEventsCallback(events, e);
         }
     }
 
-    private void markBusyAndResend(String reply, int code) {
+    private void markBusyAndResend(String reply, int code, LifecycleEvent.Type t) {
         HttpSender sender = manager.getSender();
         //tell rest of the system "server busy". Not exactly true but will cause channel to get marked unhealthy
-        sender.getChannelMetrics().
-                update(new Response(LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY,
-                        //FIXME -- it's not really a "HEALTH_POLL". Prolly change this Type to be named just "INDEXER_BUSY"
-                        code, reply, sender.getBaseUrl()));
-
+        Response r = new Response(t,code, reply, sender.getBaseUrl());
+        sender.getChannelMetrics().update(r);
         resend(new HecServerBusyException(reply));
     }
 
@@ -155,17 +150,12 @@ class EventPostHttpCallbacks extends AbstractHttpCallback {
         // start polling for acks
         manager.startPolling();
 
-        sender.getChannelMetrics().update(new EventBatchResponse(
-                LifecycleEvent.Type.EVENT_POST_OK, 200, resp,
-                events, sender.getBaseUrl()));
+        notify(EVENT_POST_OK, 200, resp, events);
     }
 
     private void throwConfigurationException(HttpSender sender, int httpCode, String resp) 
             throws HecConnectionStateException {
-        sender.getChannelMetrics().
-                update(new EventBatchResponse(
-                        EVENT_POST_ACKS_DISABLED,
-                        httpCode, resp, events, sender.getBaseUrl()));
+        notify(EVENT_POST_ACKS_DISABLED,httpCode, resp, events);
         throw new HecConnectionStateException(
                 "Event POST responded without ackId (acknowledgements are disabled on HEC endpoint).",
                 CONFIGURATION_EXCEPTION);

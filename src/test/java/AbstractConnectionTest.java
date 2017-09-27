@@ -115,6 +115,7 @@ public abstract class AbstractConnectionTest {
     connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);
     this.callbacks.checkFailures();
+    this.callbacks.checkWarnings();
   }
   
   protected List<HecHealth> healthCheck() throws InterruptedException {

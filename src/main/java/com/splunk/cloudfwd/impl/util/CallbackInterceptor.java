@@ -84,4 +84,14 @@ public class CallbackInterceptor implements ConnectionCallbacks {
         return this.callbacks;
     }
 
+    @Override
+    public void systemError(Exception e) {
+        callbacks.systemError(e);
+    }
+
+    @Override
+    public void systemWarning(Exception e) {
+        callbacks.systemWarning(e);
+    }
+
 }

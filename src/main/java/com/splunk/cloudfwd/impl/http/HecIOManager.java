@@ -17,11 +17,8 @@ package com.splunk.cloudfwd.impl.http;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchRequest;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.impl.http.lifecycle.PreRequest;
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
 
@@ -95,14 +92,8 @@ public class HecIOManager implements Closeable {
 
     public void postEvents(EventBatchImpl events) {
         this.ackTracker.preEventPost(events);
-        sender.getChannelMetrics().update(new EventBatchRequest(
-                LifecycleEvent.Type.PRE_EVENT_POST, events));
-
-        FutureCallback<HttpResponse> cb = new EventPostHttpCallbacks(this, events);
-
+        FutureCallback<HttpResponse> cb = new HttpCallbacksEventPost(this, events);
         sender.postEvents(events, cb);
-        sender.getChannelMetrics().update(new EventBatchRequest(
-                LifecycleEvent.Type.EVENT_POSTED, events));
     }
 
     public AcknowledgementTracker.AckRequest getAckPollRequest() {
@@ -115,26 +106,21 @@ public class HecIOManager implements Closeable {
 
     //called by the AckPollScheduler
     public void pollAcks() {
-
-        LOG.trace("POLLING ACKS...");
-        sender.getChannelMetrics().update(new PreRequest(
-                LifecycleEvent.Type.PRE_ACK_POLL));
-
-        FutureCallback<HttpResponse> cb = new AckPollHttpCallbacks(this);
+        LOG.trace("POLLING ACKS on {}", sender.getChannel());
+        FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
         sender.pollAcks(this, cb);
     }
 
     public void pollHealth() {
-        LOG.trace("polling health on {}...", sender.getChannel());
-
-        FutureCallback<HttpResponse> cb = new HealthPollHttpCallbacks(this);
+        LOG.trace("polling health on {}", sender.getChannel());
+        FutureCallback<HttpResponse> cb = new HttpCallbacksHealthPoll(this);
         sender.pollHealth(cb);
     }
 
 
-    public void checkHealth() {
+    public void preflightCheck() {
         LOG.trace("check health", sender.getChannel());
-        FutureCallback<HttpResponse> cb = new PreflightHealthCheckHttpCallbacks(this);
+        FutureCallback<HttpResponse> cb = new HttpCallbacksPreflightHealthCheck(this);
         sender.splunkCheck(cb);
     }
 

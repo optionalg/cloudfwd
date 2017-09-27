@@ -237,6 +237,17 @@ public class ConnectionSettings {
         }
         return max;
     }
+    
+    public int getMaxPreflightRetries() {
+        int max = Integer.parseInt(defaultProps.
+                getProperty(PropertyKeys.PREFLIGHT_RETRIES,
+                        PropertyKeys.DEFAULT_PREFLIGHT_RETRIES).trim());
+        if (max < 1) {
+            LOG.debug(PropertyKeys.PREFLIGHT_RETRIES + ": unlimited");
+            max = Integer.MAX_VALUE;
+        }
+        return max;
+    }    
 
     public boolean isCheckpointEnabled() {
         return Boolean.parseBoolean(this.defaultProps.getProperty(

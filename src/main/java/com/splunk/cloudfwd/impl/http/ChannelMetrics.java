@@ -64,7 +64,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
             case EVENT_POST_OK:
             case ACK_POLL_OK:
             case HEALTH_POLL_OK:
-            case PREFLIGHT_HEC_HEALTHY:
+            case PREFLIGHT_OK:
             case EVENT_POST_FAILURE:
             case EVENT_POST_ACKS_DISABLED: //this *is* a 200/OK so it won't get covered by non-200 responses below
             {

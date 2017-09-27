@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.indexer;
 
-import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
+import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
@@ -34,7 +34,7 @@ import org.apache.http.concurrent.FutureCallback;
 public class InDetentionEndpoints extends SimulatedHECEndpoints {
   @Override
   public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
-    ((AbstractHttpCallback)httpCallback).completed(
+    ((HttpCallbacksAbstract)httpCallback).completed(
         "Not Found",
         404);
   }
@@ -58,7 +58,7 @@ public class InDetentionEndpoints extends SimulatedHECEndpoints {
     @Override
     public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
       System.out.println("/ack rest endpoint returns 404 on detention");
-      ((AbstractHttpCallback) cb).completed(
+      ((HttpCallbacksAbstract) cb).completed(
               "Not Found",
               404);
     }
@@ -73,7 +73,7 @@ public class InDetentionEndpoints extends SimulatedHECEndpoints {
     @Override
     public void pollHealth(FutureCallback<HttpResponse> cb) {
       System.out.println("/health rest endpoint returns 404 on detention");
-      ((AbstractHttpCallback) cb).completed(
+      ((HttpCallbacksAbstract) cb).completed(
               "Not Found",
               404);
     }
@@ -84,7 +84,7 @@ public class InDetentionEndpoints extends SimulatedHECEndpoints {
     public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
       System.out.println("/event rest endpoint returns 404 on detention");
       Runnable respond = () -> {
-        ((AbstractHttpCallback) cb).completed(
+        ((HttpCallbacksAbstract) cb).completed(
             "Not Found",
             404);
       };

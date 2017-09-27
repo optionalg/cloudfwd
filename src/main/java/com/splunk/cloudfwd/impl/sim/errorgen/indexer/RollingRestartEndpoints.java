@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.indexer;
 
-import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
+import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
@@ -123,7 +123,7 @@ public class RollingRestartEndpoints extends SimulatedHECEndpoints {
   public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     if (indexId == downIndexer) {
       LOG.trace("splunkCheck, indexer down");
-      ((AbstractHttpCallback)httpCallback).failed(new Exception("Unable to connect"));
+      ((HttpCallbacksAbstract)httpCallback).failed(new Exception("Unable to connect"));
     }
     else {
       httpCallback.completed(

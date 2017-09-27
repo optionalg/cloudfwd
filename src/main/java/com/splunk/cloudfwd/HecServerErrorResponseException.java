@@ -75,12 +75,22 @@ public class HecServerErrorResponseException extends Exception {
     private static Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
     private static Set<Integer> recoverableServerErrors = new HashSet<>(Arrays.asList(8, 9));
     
+    private String message;
     private int code;
     private String serverReply;
     private LifecycleEvent.Type type;
     private String url;
     private Type errorType;
+    private String context;
 
+    @Override
+    public String toString() {
+        return "HecServerErrorResponseException{" + "message=" + message + ", code=" + code + ", serverReply=" 
+                + serverReply + ", type=" + type + ", url=" + url + ", errorType=" + errorType + ", context=" + context + '}';
+    }
+
+    
+    
     /**
      * @return the serverReply
      */
@@ -94,6 +104,34 @@ public class HecServerErrorResponseException extends Exception {
     public LifecycleEvent.Type getType() {
         return type;
     }
+
+    /**
+     * @return the message
+     */
+    public String getMessage() {
+        return message;
+    }
+
+    /**
+     * @param message the message to set
+     */
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    /**
+     * @return the context
+     */
+    public String getContext() {
+        return context;
+    }
+
+    /**
+     * @param context the context to set
+     */
+    public void setContext(String context) {
+        this.context = context;
+    }
     
 
 
@@ -102,7 +140,7 @@ public class HecServerErrorResponseException extends Exception {
 
 
     public HecServerErrorResponseException(String message, int hecCode, String serverReply, LifecycleEvent.Type type, String url) {
-        super(message);
+        this.message = message;
         this.code = hecCode;
         this.serverReply = serverReply;
         this.type = type;        

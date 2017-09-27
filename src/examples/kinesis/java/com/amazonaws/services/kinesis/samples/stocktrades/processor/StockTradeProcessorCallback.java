@@ -75,4 +75,14 @@ public class StockTradeProcessorCallback implements ConnectionCallbacks {
     public void addCheckpointer(String sequenceNumber, IRecordProcessorCheckpointer checkpointer) {
         checkpointerMap.put(sequenceNumber, checkpointer);
     }
+
+    @Override
+    public void systemError(Exception e) {
+        LOG.error("System error: {}", e);
+    }
+
+    @Override
+    public void systemWarning(Exception e) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

@@ -25,7 +25,7 @@ import com.splunk.cloudfwd.impl.http.lifecycle.Response;
  */
 public class HecErrorResponseValueObject {
     private String text;
-    private int code;
+    private int code = -1;
 
     HecErrorResponseValueObject() {
     }

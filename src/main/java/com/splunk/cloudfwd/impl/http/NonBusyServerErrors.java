@@ -18,13 +18,14 @@ package com.splunk.cloudfwd.impl.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.ELB_GATEWAY_TIMEOUT;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.UNHANDLED_NON_200;
 import java.io.IOException;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_DISABLED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.GATEWAY_TIMEOUT;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -52,24 +53,29 @@ public class NonBusyServerErrors {
     public static HecServerErrorResponseException toErrorException(String reply,
             int statusCode, String url) throws IOException {
 
-        //first check for ELB-specific errors
-        LifecycleEvent.Type type = elbType(statusCode);
-        if (type == UNHANDLED_NON_200) { //if the status code was not one recognized by elbType
-            //then check for splunk-specific errors
-            type = hecType(statusCode, reply);
+        LifecycleEvent.Type type =  hecType(statusCode, reply);       
+        
+        if(reply != null && !reply.isEmpty()){
+            try{
+                HecErrorResponseValueObject r = mapper.readValue(reply,
+                    HecErrorResponseValueObject.class);
+                return new HecServerErrorResponseException(r.getText(),
+                    r.getCode(), reply, type,  url);
+            }catch(Exception e){ //response like 404/"not found" will fail to unmarshal into HecErrorResponseValueObject (not hjson)
+                return new HecServerErrorResponseException("", -1, reply, type, url);
+            }
+        }else{
+            //server response without text such as 504 gateway timeout
+            return new HecServerErrorResponseException("", -1, reply, type, url);
         }
-        HecErrorResponseValueObject r = mapper.readValue(reply,
-                HecErrorResponseValueObject.class);
-        return new HecServerErrorResponseException(r.getText(),
-                r.getCode(), reply, type,  url);
     }
 
     private static LifecycleEvent.Type hecType(int statusCode, String reply) throws IOException {
-        HecErrorResponseValueObject r = mapper.readValue(reply,
-                HecErrorResponseValueObject.class);
-        LifecycleEvent.Type type = UNHANDLED_NON_200;
+        LifecycleEvent.Type type = null;
         switch (statusCode) {
             case 400:
+                HecErrorResponseValueObject r = mapper.readValue(reply,
+                HecErrorResponseValueObject.class);                
                 // determine code in reply, must be 14 for disabled
                 if (14 == r.getCode()) {
                     type = ACK_DISABLED;
@@ -87,18 +93,27 @@ public class NonBusyServerErrors {
                 //HTTPSTATUS_UNAUTHORIZED
                 type = INVALID_AUTH;
                 break;
+            case 503:
+                type = INDEXER_BUSY;
+                break;       
+            case 504:
+                type = GATEWAY_TIMEOUT;
+                break;     
+            default:
+                type = UNHANDLED_NON_200;                
         }
         return type;
     }
     
+    /*
     private static LifecycleEvent.Type elbType(int statusCode) throws IOException {
         LifecycleEvent.Type type = UNHANDLED_NON_200;
         switch (statusCode) {
             case 504:
-                type= ELB_GATEWAY_TIMEOUT;
+                type= GATEWAY_TIMEOUT;
                 break;
         }
         return type;
-    }        
-
+    }     
+    */
 }

@@ -92,6 +92,9 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 if(errorToTest==Error.INDEXER_BUSY_POST){
                     return e instanceof HecAcknowledgmentTimeoutException;
                 }
+                if(errorToTest==Error.INVALID_TOKEN){
+                    return e instanceof HecServerErrorResponseException;
+                }
                 if(ackTimeoutLongerThanConnectionTimeout){
                     return e instanceof HecServerErrorResponseException;
                 }else{

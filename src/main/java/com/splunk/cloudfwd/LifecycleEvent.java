@@ -22,92 +22,25 @@ package com.splunk.cloudfwd;
 public class LifecycleEvent {
 
   public enum Type {
-     // States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
-// States tied to an EventBatch object
-     // States tied to an EventBatch object
     EVENT_BATCH_BORN,
     PRE_EVENT_POST,
-    EVENT_POSTED,
     EVENT_POST_NOT_OK,
     EVENT_POST_FAILURE,
     EVENT_POST_OK,
     EVENT_POST_ACKS_DISABLED,
     EVENT_TIMED_OUT,
-    PRE_ACK_POLL,
     ACK_POLL_OK,
     ACK_POLL_NOT_OK,
     ACK_POLL_FAILURE,
-    // ack poll check can be done without EventBatch object
     ACK_DISABLED,
-     UNHANDLED_NON_200,
+    UNHANDLED_NON_200,
     
      //ELB state
-     ELB_GATEWAY_TIMEOUT,
+     GATEWAY_TIMEOUT, //504 from ELB when it cuts off response due to timeout
 
     // States without an EventBatch object
     HEALTH_POLL_OK,
-    HEALTH_POLL_INDEXER_BUSY,
+    INDEXER_BUSY,
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
     SPLUNK_IN_DETENTION,
@@ -115,7 +48,10 @@ public class LifecycleEvent {
 
     // Needed to know statuses, do not throw exception
     PREFLIGHT_HEALTH_CHECK_PENDING,
-    PREFLIGHT_HEC_HEALTHY,
+    PREFLIGHT_GATEWAY_TIMEOUT,
+    PREFLIGHT_BUSY,
+    PREFLIGHT_OK,
+    PREFLIGHT_NOT_OK,
     INVALID_AUTH
 
   };

@@ -40,6 +40,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   private Comparable lastId;
   protected String failMsg;
   protected Exception exception;
+  protected Exception systemWarning;
   
 
   public BasicCallbacks(int expected) {
@@ -70,6 +71,25 @@ public class BasicCallbacks implements ConnectionCallbacks {
   public boolean shouldFail(){
       return false;
   }
+  
+  protected boolean isWarnExpected(Exception e){
+    return false;
+  }
+  
+  public boolean shouldWarnl(){
+      return false;
+  }
+  
+    public void checkWarnings() {
+        if(shouldWarnl()&& !isWarnExpected(exception)){
+            Assert.fail("A failed callback was expected, but none occurred.");
+        }
+        if (isFailed() && !isFailureExpected(exception)) {
+            Assert.fail(
+                    "There was a failure callback with exception class  " + 
+                    getException() + " and message " + getFailMsg());
+        }
+    }  
   
   @Override
   public void acknowledged(EventBatch events) {
@@ -126,6 +146,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
   public boolean isFailed() {
     return failed;
   }
+  
+  public boolean isWarned(){
+      return systemWarning != null;
+  }
 
   /**
    * @return the failMsg
@@ -140,5 +164,27 @@ public class BasicCallbacks implements ConnectionCallbacks {
   public Exception getException() {
     return exception;
   }
+
+    @Override
+    public void systemError(Exception ex) {
+        LOG.error("SYSTEM ERROR {}",ex.getMessage());
+        failed = true;   
+        failMsg = "EventBatch failed to send. Exception message: " + ex.
+                getMessage();
+        exception = ex;
+        if(!isFailureExpected(ex)){
+          ex.printStackTrace(); //print the stack trace if we were not expecting failure
+        }        
+        latch.countDown();
+    }
+
+    @Override
+    public void systemWarning(Exception e) {
+        LOG.warn("SYSTEM WARNING {}", e);
+        this.systemWarning = e;
+        if(!isWarnExpected(e)){
+            e.printStackTrace();
+        }
+    }
 
 }

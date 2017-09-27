@@ -16,11 +16,10 @@
 package com.splunk.cloudfwd.impl.http;
 
 import com.splunk.cloudfwd.LifecycleEvent;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
-import com.splunk.cloudfwd.impl.http.lifecycle.Response;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_BUSY;
 import java.io.IOException;
 import org.slf4j.Logger;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_HEC_HEALTHY;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_OK;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -41,16 +40,35 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_HEC_HEALTHY;
     14	400	Bad Request	                     ACK is disabled 
  * @author ghendrey
  */
-class PreflightHealthCheckHttpCallbacks extends AbstractHttpCallback {
+class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
     private final Logger LOG;
 
-    public PreflightHealthCheckHttpCallbacks(HecIOManager m) {
+    public HttpCallbacksPreflightHealthCheck(HecIOManager m) {
         super(m);
-        this.LOG = m.getSender().getConnection().getLogger(
-                PreflightHealthCheckHttpCallbacks.class.
+        this.LOG =getConnection().getLogger(HttpCallbacksPreflightHealthCheck.class.
                 getName());
     }
 
+    private void handleResponse(int statusCode, String reply) throws IOException {
+        LifecycleEvent.Type type;
+        switch (statusCode) {            
+            case 503:  
+                warn(reply, statusCode);
+                type= PREFLIGHT_BUSY;                
+            case 504:  
+                 warn(reply, statusCode);
+                type=LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT;                
+            case 200:
+                LOG.info("HEC preflight check is good");
+                type = PREFLIGHT_OK;
+                break;
+            default: //various non-200 errors such as 400/ack-is-disabled
+                type = error(reply, statusCode);
+        }
+        notify(type, statusCode, reply);
+    }
+    
+    
     @Override
     public void completed(String reply, int code) {
         try {
@@ -59,29 +77,10 @@ class PreflightHealthCheckHttpCallbacks extends AbstractHttpCallback {
             LOG.error(
                     "failed to unmarshal server response in pre-flight health check {}",
                     reply);
-            invokeFailedCallback(ex);
+            error(ex);
         }
     }
-
-    private void handleResponse(int statusCode, String reply) throws IOException {
-        LifecycleEvent.Type type;
-        switch (statusCode) {
-            case 404: //detention ... NOT one of the server responses that looks like {"text":"foo", "code":i}
-                type = SPLUNK_IN_DETENTION;
-                break;
-            case 503:  //have to treat 503/busy same as PREFLIGHT_HEC_HEALTHY else preflight can freeze channel
-            case 200:
-                LOG.info("HEC check is good");
-                type = PREFLIGHT_HEC_HEALTHY;
-                break;
-            default:
-                type = super.invokeFailedWithHecServerResponseException(reply,
-                        statusCode, manager.getSender());
-        }
-        Response lifecycleEvent = new Response(type, statusCode, reply,
-                manager.getSender().getBaseUrl());
-        manager.getSender().getChannelMetrics().update(lifecycleEvent);
-    }
+    
 
 
     @Override
@@ -89,13 +88,13 @@ class PreflightHealthCheckHttpCallbacks extends AbstractHttpCallback {
         LOG.error(
                 "HEC pre-flight health check via /ack endpoint failed with exception {}",
                 ex);
-        invokeFailedCallback(ex);
+        error(ex);
     }
 
     @Override
     public void cancelled() {
         LOG.warn("HEC pre-flight health check cancelled");
-        invokeFailedCallback(new Exception(
+        error(new Exception(
                 "HEC pre-flight health check via /ack endpoint cancelled."));
     }
 
