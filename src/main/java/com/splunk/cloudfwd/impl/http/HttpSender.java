@@ -203,6 +203,7 @@ public final class HttpSender implements Endpoints {
       try {
         httpClient.close();
       } catch (IOException e) {
+          LOG.error("Failed to shutdown HttpSender {}", e.getMessage());
       }
       httpClient = null;
     }

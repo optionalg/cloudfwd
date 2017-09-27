@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.impl.http.HttpClientFactory;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -34,7 +35,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.junit.After;
@@ -72,7 +75,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   protected int numToSend = 10;
   private String TOKEN_NAME; // per-test generated HEC Token Name
   private String TOKEN_VALUE = null; // per-test generated HEC Token
-  protected HttpClient httpClient; // per test class httpClient shared across tests
+  protected CloseableHttpClient httpClient; // per test class httpClient shared across tests
   protected String INDEX_NAME; // per-test generated index name
   protected String[] EXPECTED_FIELDS = null; // per-test list of field names that search
   protected ObjectMapper json = new ObjectMapper();
@@ -80,6 +83,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
 
   public AbstractReconciliationTest() {
     super();
+    LOG.info("NEXT RECONCILIATION TEST...");
     // Build a client to share among tests
     httpClient = buildSplunkClient();
     if (ENABLE_TEST_HTTP_DEBUG) enableTestHttpDebug();
@@ -94,6 +98,12 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   public void tearDown(){
     deleteTestToken();
     deleteTestIndex();
+      try {
+          httpClient.close();
+      } catch (IOException ex) {
+          LOG.error("Error closing connection used by tests to setup splunk",ex);
+          Assert.fail(ex.getMessage());
+      }
   }
 
   @Override
@@ -116,8 +126,8 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   /*
    * Builds a Splunk Client for REST Mgmt.
    */
-  protected HttpClient buildSplunkClient() {
-    HttpClient httpClient = null;
+  protected CloseableHttpClient buildSplunkClient() {
+    CloseableHttpClient httpClient = null;
     try {
       // credentials
       CredentialsProvider credsProvider = new BasicCredentialsProvider();
