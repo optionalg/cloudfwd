@@ -22,7 +22,7 @@ import com.amazonaws.services.kinesisfirehose.model.Record;
 
 public class PutRecordFromFile {
     private static AmazonKinesisFirehose firehoseClient;
-    private static FirehoseSplunkSettings settings = new FirehoseSplunkSettings();
+    private static FirehoseSplunkSettings firehoseSettings = new FirehoseSplunkSettings();
     private static final int BATCH_PUT_MAX_SIZE = 500;
 
     /**
@@ -33,7 +33,7 @@ public class PutRecordFromFile {
      */
     public static void putRecordBatchIntoDeliveryStream() throws IOException {
         try (InputStream inputStream = PutRecordFromFile.class.getResourceAsStream(
-                settings.getPropertyFor("data")))
+                firehoseSettings.getPropertyFor("data")))
         {
 
             if (inputStream == null) {
@@ -71,7 +71,7 @@ public class PutRecordFromFile {
 
     private static PutRecordBatchResult putRecordBatch(List<Record> recordList) {
         PutRecordBatchRequest putRecordBatchRequest = new PutRecordBatchRequest();
-        putRecordBatchRequest.setDeliveryStreamName(settings.getPropertyFor("aws_fh_stream_name"));
+        putRecordBatchRequest.setDeliveryStreamName(firehoseSettings.getPropertyFor("aws_fh_stream_name"));
         putRecordBatchRequest.setRecords(recordList);
 
         // Put Record Batch records. Max No.Of Records we can put in a
@@ -80,14 +80,15 @@ public class PutRecordFromFile {
     }
 
     public static void main (String args[]) throws InterruptedException, IOException{
+        firehoseSettings.validateProperties();
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        String serviceEndpoint = settings.getPropertyFor("aws_fh_endpoint");
+        String serviceEndpoint = firehoseSettings.getPropertyFor("aws_fh_endpoint");
         AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
                 serviceEndpoint, null);
         AmazonKinesisFirehoseClient.builder().withClientConfiguration(clientConfiguration).build();
         firehoseClient = AmazonKinesisFirehoseClient.builder()
                 .withClientConfiguration(clientConfiguration)
-                .withRegion(settings.getPropertyFor("aws_fh_stream_region"))
+                .withRegion(firehoseSettings.getPropertyFor("aws_fh_stream_region"))
                 .withEndpointConfiguration(endpointConfiguration)
                 .build();
         System.out.println("Putting records in deliveryStream");

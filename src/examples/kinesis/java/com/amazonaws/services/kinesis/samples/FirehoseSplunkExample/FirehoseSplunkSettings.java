@@ -1,6 +1,7 @@
 package com.amazonaws.services.kinesis.samples.FirehoseSplunkExample;
 
 import java.io.*;
+import java.util.Enumeration;
 import java.util.Properties;
 
 
@@ -21,6 +22,15 @@ public class FirehoseSplunkSettings {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void validateProperties() throws IllegalArgumentException {
+        Enumeration keys = properties.keys();
+        while (keys.hasMoreElements()) {
+            String elem = (String)keys.nextElement();
+            if (properties.getProperty(elem).isEmpty())
+                throw new IllegalArgumentException("Incorrect value in fh.properties for: " + elem);
         }
     }
 
