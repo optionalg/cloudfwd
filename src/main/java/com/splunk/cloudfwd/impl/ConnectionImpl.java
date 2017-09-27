@@ -179,6 +179,12 @@ public class ConnectionImpl implements Connection {
     if (closed) {
       throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
+
+    // Empty batch, just return
+    if (events.getLength() == 0) {
+      return 0;
+    }
+
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
