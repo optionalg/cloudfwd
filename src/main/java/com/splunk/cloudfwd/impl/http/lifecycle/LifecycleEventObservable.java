@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.http.lifecycle;
 
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;

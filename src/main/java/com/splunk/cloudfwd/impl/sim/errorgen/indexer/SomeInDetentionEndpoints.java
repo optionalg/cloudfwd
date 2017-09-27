@@ -15,7 +15,8 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.indexer;
 
-import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
+
+import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
 import com.splunk.cloudfwd.impl.sim.AcknowledgementEndpoint;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
@@ -54,7 +55,7 @@ public class SomeInDetentionEndpoints extends InDetentionEndpoints {
   @Override
   public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     if (this.inDetention) {
-      ((AbstractHttpCallback)httpCallback).completed(
+      ((HttpCallbacksAbstract)httpCallback).completed(
           "Not Found",
           404);
     }

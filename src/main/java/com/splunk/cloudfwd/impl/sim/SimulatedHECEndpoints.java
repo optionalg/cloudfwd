@@ -29,7 +29,7 @@ public class SimulatedHECEndpoints implements Endpoints{
   protected AcknowledgementEndpoint ackEndpoint;
   protected EventEndpoint eventEndpoint;
   protected HealthEndpoint healthEndpoint;
-  private boolean started;
+  protected boolean started;
   
 
   @Override
@@ -53,7 +53,7 @@ public class SimulatedHECEndpoints implements Endpoints{
   public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     httpCallback.completed(
       new CannedOKHttpResponse(
-        new CannedEntity("Simulated pre-flight check OK")));
+        new CannedEntity("{\"acks\":[0:false]}")));
   }
 
   @Override

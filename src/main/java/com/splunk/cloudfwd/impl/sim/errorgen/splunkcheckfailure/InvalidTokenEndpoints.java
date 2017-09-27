@@ -4,7 +4,7 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
-import com.splunk.cloudfwd.impl.sim.ForbiddenStatusLine;
+import com.splunk.cloudfwd.impl.sim.Forbidden403StatusLine;
 import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
@@ -37,7 +37,7 @@ public class InvalidTokenEndpoints extends SimulatedHECEndpoints {
     @Override
     public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
         httpCallback.completed(new HecErrorResponse(
-                new InvalidTokenEntity(), new ForbiddenStatusLine()
+                new InvalidTokenEntity(), new Forbidden403StatusLine()
         ));
     }
 

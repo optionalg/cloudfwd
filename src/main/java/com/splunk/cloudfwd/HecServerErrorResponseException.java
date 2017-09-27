@@ -15,78 +15,88 @@
  */
 package com.splunk.cloudfwd;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- *These are non-successful responses from an HEC endpoint.
- *
- * The following error status codes and messages might
- * be returned from an HEC endpoint:
- *
- *<table summary="ErrorCodes" border="1">
- * <tr>
- *  <th>Code</th>
- *  <th>Message</th> 
- * </tr>
- *  <td> 1 </td> <td> Token disabled. This is a recoverable configuration error.</td>
- * </tr>
- *<tr>
- * <td> 2 </td> <td> Token is required. This is a recoverable configuration error.</td>
- *</tr>
- * <td> 3 </td> <td> Invalid authorization. This is a non-recoverable error.</td>
- *</tr>
- *<tr>
- * <td> 4 </td> <td> Invalid token. This is a recoverable configuration error.</td>
- *</tr>
- * <td> 5 </td> <td> No data. This is a recoverable data error.</td>
- *</tr>
- *<tr>
- * <td> 6 </td> <td> Invalid data format. This is a recoverable data error.</td>
- *</tr>
- * <td> 7 </td> <td> Incorrect index. This is a recoverable configuration error.</td>
- *</tr>
- *<tr>
- * <td> 8 </td> <td> Internal server error. This is a recoverable server error.</td>
- *</tr>
- * <td> 9 </td> <td> Server is busy. This is a recoverable server error.</td>
- *</tr>
- *<tr>
- * <td> 10 </td> <td> Data channel is missing. This is a non-recoverable error.</td>
- *</tr>
- * <td> 11 </td> <td> Invalid data channel. This is a non-recoverable error.</td>
- *</tr>
- *<tr>
- * <td> 12 </td> <td> Event field is required. This is a recoverable data error.</td>
- *</tr>
- * <td> 13 </td> <td> Event field cannot be blank. This is a recoverable data error.</td>
- *</tr></table>
+*
  * @author eprokop
  */
 
 
 public class HecServerErrorResponseException extends Exception {
+    private static Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(3, 10, 11));
+    private static Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 4, 7, 14));
+    private static Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
+    private static Set<Integer> recoverableServerErrors = new HashSet<>(Arrays.asList(8, 9));
+    
+    private String text;
     private int code;
+    private String serverReply;
+    private LifecycleEvent.Type type;
     private String url;
     private Type errorType;
+    private String context;
 
-    private Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(3, 10, 11));
-    private Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 4, 7, 14));
-    private Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
-    private Set<Integer> recoverableServerErrors = new HashSet<>(Arrays.asList(8, 9));
+
+
 
     public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR, RECOVERABLE_SERVER_ERROR };
 
-    public HecServerErrorResponseException(String message) {
-        super(message);
-    }
 
-    public HecServerErrorResponseException(String message, int hecCode, String url) {
-        super(message);
+    public HecServerErrorResponseException(String text, int hecCode, String serverReply, LifecycleEvent.Type type, String url) {
+        this.text = text;
         this.code = hecCode;
+        this.serverReply = serverReply;
+        this.type = type;        
         this.url = url;
         setErrorType(hecCode);
     }
     
+    @Override
+    public String toString() {
+        return "HecServerErrorResponseException{" + "text=" + text + ", code=" + code + ", serverReply=" 
+                + serverReply + ", type=" + type + ", url=" + url + ", errorType=" + errorType + ", context=" + context + '}';
+    }
+    
+    
+    /**
+     * @return the serverReply
+     */
+    public String getServerReply() {
+        return serverReply;
+    }
+
+    /**
+     * @return the type
+     */
+    public LifecycleEvent.Type getType() {
+        return type;
+    }
+
+    /**
+     * @return the message
+     */
+    public String getMessage() {
+        return toString();
+    }
+
+    /**
+     * @return the context
+     */
+    public String getContext() {
+        return context;
+    }
+
+    /**
+     * @param context the context to set
+     */
+    public void setContext(String context) {
+        this.context = context;
+    }
+    
+
     
 
     public void setCode(int code) {

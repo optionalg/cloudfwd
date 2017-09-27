@@ -214,6 +214,12 @@ public class PropertyKeys {
    * @see DEFAULT_RETRIES
    */
   public static final String RETRIES = "max_retries";
+  
+  /**
+   * The maximum number of attempts to try preflight checks
+   * @see DEFAULT_RETRIES
+   */
+  public static final String PREFLIGHT_RETRIES = "max_preflight_tries";  
 
 
   /* **************************** REQUIRED KEYS ************************* */
@@ -278,6 +284,13 @@ public class PropertyKeys {
    * @see RETRIES
    */
   public static final String DEFAULT_RETRIES = "10";
+  
+ /**
+   * Default value for the PREFLIGHT_RETRIES property.
+   *
+   * @see RETRIES
+   */
+  public static final String DEFAULT_PREFLIGHT_RETRIES = "3";  
 
   /**
    * Default value for the MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL property.

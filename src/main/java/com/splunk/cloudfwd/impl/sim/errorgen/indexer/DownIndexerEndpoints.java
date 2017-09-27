@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.indexer;
 
-import com.splunk.cloudfwd.impl.http.AbstractHttpCallback;
+import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
@@ -35,7 +35,7 @@ public class DownIndexerEndpoints extends SimulatedHECEndpoints {
   @Override
   public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     System.out.println("splunk check fails because down");
-    ((AbstractHttpCallback)httpCallback).failed(new Exception("Unable to connect"));
+    ((HttpCallbacksAbstract)httpCallback).failed(new Exception("Unable to connect"));
   }
 
   @Override
@@ -58,7 +58,7 @@ class DownIndexerAckEndpoint extends AckEndpoint {
   @Override
   public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
     System.out.println("/ack rest endpoint fails because down");
-    ((AbstractHttpCallback) cb).failed(new Exception("Unable to connect"));
+    ((HttpCallbacksAbstract) cb).failed(new Exception("Unable to connect"));
   }
 
   @Override
@@ -71,7 +71,7 @@ class DownIndexerHealthEndpoint extends HealthEndpoint {
   @Override
   public void pollHealth(FutureCallback<HttpResponse> cb) {
     System.out.println("/health rest endpoint fails because down");
-    ((AbstractHttpCallback) cb).failed(new Exception("Unable to connect"));
+    ((HttpCallbacksAbstract) cb).failed(new Exception("Unable to connect"));
   }
 }
 
@@ -80,7 +80,7 @@ class DownIndexerEventEndpoint extends EventEndpoint {
   public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
     System.out.println("/event rest endpoint fails because down");
     Runnable respond = () -> {
-      ((AbstractHttpCallback) cb).failed(new Exception("Unable to connect"));
+      ((HttpCallbacksAbstract) cb).failed(new Exception("Unable to connect"));
     };
     delayResponse(respond);
   }

@@ -114,11 +114,8 @@ public abstract class AbstractConnectionTest {
     }
     connection.close(); //will flush
     this.callbacks.await(10, TimeUnit.MINUTES);
-    if (callbacks.isFailed()) {
-      Assert.fail(
-              "There was a failure callback with exception class  " + callbacks.
-              getException() + " and message " + callbacks.getFailMsg());
-    }
+    this.callbacks.checkFailures();
+    this.callbacks.checkWarnings();
   }
   
   protected List<HecHealth> healthCheck() throws InterruptedException {

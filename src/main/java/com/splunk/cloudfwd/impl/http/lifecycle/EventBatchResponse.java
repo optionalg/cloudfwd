@@ -29,6 +29,13 @@ public class EventBatchResponse extends Response implements EventBatchLifecycleE
     this.events = events;
     events.setState(eventType);
   }
+
+    @Override
+    public String toString() {
+        return "EventBatchResponse{" +super.toString()+ " events=" + events + '}';
+    }
+  
+  
   
     /**
    * @return the events

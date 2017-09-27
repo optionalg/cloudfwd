@@ -6,7 +6,7 @@ import org.apache.http.StatusLine;
 /**
  * Created by eprokop on 9/1/17.
  */
-public class ForbiddenStatusLine implements StatusLine {
+public class Forbidden403StatusLine implements StatusLine {
     @Override
     public ProtocolVersion getProtocolVersion() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.

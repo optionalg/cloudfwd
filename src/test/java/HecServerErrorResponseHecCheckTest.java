@@ -1,4 +1,7 @@
 import com.splunk.cloudfwd.*;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_DISABLED;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -11,6 +14,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
 
 /**
  * Test class to that tests various error rseponse scenarios
@@ -84,7 +88,7 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         createConnection();
         List<HecHealth> status = super.healthCheck();
         for (HecHealth hh : status) {
-          if (hh.status() != HecHealth.Status.ACK_DISABLED) {
+          if (hh.status().getType() != ACK_DISABLED) {
             Assert.fail("We expected ACK_DISABLED");
           }
         }
@@ -96,7 +100,7 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         createConnection();
         List<HecHealth> status = super.healthCheck();
         for (HecHealth hh : status) {
-          if (hh.status() != HecHealth.Status.INVALID_TOKEN) {
+          if (hh.status().getType() != INVALID_TOKEN) {
             Assert.fail("We expected INVALID_TOKEN");
           }
         }
@@ -108,7 +112,7 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         createConnection();
         List<HecHealth> status = super.healthCheck();
         for (HecHealth hh : status) {
-          if (hh.status() != HecHealth.Status.INVALID_AUTH) {
+          if (hh.status().getType() != INVALID_AUTH) {
             Assert.fail("We expected INVALID_AUTH");
           }
         }
@@ -120,7 +124,7 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         createConnection();
         List<HecHealth> status = super.healthCheck();
         for (HecHealth hh : status) {
-          if (hh.status() != HecHealth.Status.IN_DETENTION) {
+          if (hh.status().getType() != SPLUNK_IN_DETENTION) {
             Assert.fail("We expected IN_DETENTION");
           }
         }

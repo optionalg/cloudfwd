@@ -13,40 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http.lifecycle;
+package com.splunk.cloudfwd;
 
 /**
  *
  * @author ghendrey
  */
-public abstract class LifecycleEvent {
+public class LifecycleEvent {
 
   public enum Type {
-	// States tied to an EventBatch object
     EVENT_BATCH_BORN,
     PRE_EVENT_POST,
-    EVENT_POSTED,
     EVENT_POST_NOT_OK,
     EVENT_POST_FAILURE,
     EVENT_POST_OK,
-    PRE_ACK_POLL,
+    EVENT_POST_ACKS_DISABLED,
+    EVENT_TIMED_OUT,
     ACK_POLL_OK,
     ACK_POLL_NOT_OK,
     ACK_POLL_FAILURE,
-    // ack poll check can be done without EventBatch object
-    ACK_POLL_DISABLED,
+    ACK_DISABLED,
+    UNHANDLED_NON_200,
+    
+     //ELB state
+     GATEWAY_TIMEOUT, //504 from ELB when it cuts off response due to timeout
 
     // States without an EventBatch object
     HEALTH_POLL_OK,
-    HEALTH_POLL_INDEXER_BUSY,
+    INDEXER_BUSY,
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
     SPLUNK_IN_DETENTION,
+    INVALID_TOKEN,
 
     // Needed to know statuses, do not throw exception
-    N2K_HEC_HEALTHY,
-    N2K_INVALID_TOKEN,
-    N2K_INVALID_AUTH
+    PREFLIGHT_HEALTH_CHECK_PENDING,
+    PREFLIGHT_GATEWAY_TIMEOUT,
+    PREFLIGHT_BUSY,
+    PREFLIGHT_OK,
+    PREFLIGHT_NOT_OK,
+    INVALID_AUTH
+
   };
 
   private final Type type;
