@@ -26,7 +26,7 @@ import org.junit.Test;
  *
  * @author ghendrey
  */
-public class ByteBufferWithMixedEventsTest extends AbstractReconciliationTest {
+public class ByteBufferWithMixedEventsIT extends AbstractReconciliationTest {
 
   int n = 25;
   int eventCounter = 0;
@@ -34,14 +34,16 @@ public class ByteBufferWithMixedEventsTest extends AbstractReconciliationTest {
   @Test
   public void chalkFullOBytesForRawEndpoint() throws InterruptedException, HecConnectionTimeoutException {
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+    connection.getSettings().setToken(createTestToken("__singleline"));
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    
   }
 
-    @Test
+  @Test
   public void chalkFullOBytesForEventEndpoint() throws InterruptedException, HecConnectionTimeoutException {
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    connection.getSettings().setToken(createTestToken(null));
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    
