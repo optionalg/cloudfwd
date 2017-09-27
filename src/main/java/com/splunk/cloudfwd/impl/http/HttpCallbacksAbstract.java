@@ -149,7 +149,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     //Hardened to catch exceptions that could come from the application's failed callback
     protected void invokeFailedEventsCallback(EventBatch events, Exception ex) {
         try {
-            LOG.error("Failed events in Function '{}' Events  '{}' Exception '{}'",getName(), events, ex);
+            LOG.error("Failed events in Function '{}' Events  '{}' Exception '{}'",getName(), events, ex.getMessage());
             getCallbacks().
                     failed(events, ex);
         } catch (Exception e) {
@@ -162,7 +162,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     
     protected void warn(Exception ex) {
         try {
-            LOG.warn("System Warning in Function '{}' Exception '{}'", getName(), ex);
+            LOG.warn("System Warning in Function '{}' Exception '{}'", getName(), ex.getMessage());
             getCallbacks().systemWarning(ex);
         } catch (Exception e) {
             //if the applicatoin's callback is throwing an exception we have no way to handle this, other

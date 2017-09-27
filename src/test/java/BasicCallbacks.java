@@ -179,11 +179,11 @@ public class BasicCallbacks implements ConnectionCallbacks {
     }
 
     @Override
-    public void systemWarning(Exception e) {
-        LOG.warn("SYSTEM WARNING {}", e);
-        this.systemWarning = e;
-        if(!isWarnExpected(e)){
-            e.printStackTrace();
+    public void systemWarning(Exception ex) {
+        LOG.warn("SYSTEM WARNING {}", ex.getMessage());
+        this.systemWarning = ex;
+        if(!isWarnExpected(ex)){
+            ex.printStackTrace();
         }
     }
 

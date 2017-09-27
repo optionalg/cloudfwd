@@ -75,7 +75,7 @@ public class HecServerErrorResponseException extends Exception {
     private static Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
     private static Set<Integer> recoverableServerErrors = new HashSet<>(Arrays.asList(8, 9));
     
-    private String message;
+    private String text;
     private int code;
     private String serverReply;
     private LifecycleEvent.Type type;
@@ -83,12 +83,26 @@ public class HecServerErrorResponseException extends Exception {
     private Type errorType;
     private String context;
 
+
+
+
+    public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR, RECOVERABLE_SERVER_ERROR };
+
+
+    public HecServerErrorResponseException(String text, int hecCode, String serverReply, LifecycleEvent.Type type, String url) {
+        this.text = text;
+        this.code = hecCode;
+        this.serverReply = serverReply;
+        this.type = type;        
+        this.url = url;
+        setErrorType(hecCode);
+    }
+    
     @Override
     public String toString() {
-        return "HecServerErrorResponseException{" + "message=" + message + ", code=" + code + ", serverReply=" 
+        return "HecServerErrorResponseException{" + "text=" + text + ", code=" + code + ", serverReply=" 
                 + serverReply + ", type=" + type + ", url=" + url + ", errorType=" + errorType + ", context=" + context + '}';
     }
-
     
     
     /**
@@ -109,14 +123,7 @@ public class HecServerErrorResponseException extends Exception {
      * @return the message
      */
     public String getMessage() {
-        return message;
-    }
-
-    /**
-     * @param message the message to set
-     */
-    public void setMessage(String message) {
-        this.message = message;
+        return toString();
     }
 
     /**
@@ -134,20 +141,6 @@ public class HecServerErrorResponseException extends Exception {
     }
     
 
-
-
-    public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR, RECOVERABLE_SERVER_ERROR };
-
-
-    public HecServerErrorResponseException(String message, int hecCode, String serverReply, LifecycleEvent.Type type, String url) {
-        this.message = message;
-        this.code = hecCode;
-        this.serverReply = serverReply;
-        this.type = type;        
-        this.url = url;
-        setErrorType(hecCode);
-    }
-    
     
 
     public void setCode(int code) {
