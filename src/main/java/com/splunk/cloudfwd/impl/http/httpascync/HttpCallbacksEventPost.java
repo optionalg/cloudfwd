@@ -70,7 +70,6 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     @Override
     public void completed(String reply, int code) {
         try {
-            HttpSender sender = manager.getSender();
             switch (code) {
                 case 200:
                     consumeEventPostOkResponse(reply, code);
