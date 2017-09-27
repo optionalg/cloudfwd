@@ -81,10 +81,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
   }
   
     public void checkWarnings() {
-        if(shouldWarnl()&& !isWarnExpected(exception)){
-            Assert.fail("A failed callback was expected, but none occurred.");
+        if(shouldWarnl()&& !isWarned()){
+            Assert.fail("A warn callback was expected, but none occurred.");
         }
-        if (isFailed() && !isFailureExpected(exception)) {
+        if (isWarned() && !isWarnExpected(exception)) {
             Assert.fail(
                     "There was a failure callback with exception class  " + 
                     getException() + " and message " + getFailMsg());

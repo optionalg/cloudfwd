@@ -1,14 +1,18 @@
 package com.splunk.cloudfwd.impl.sim.errorgen;
 
+import com.splunk.cloudfwd.impl.sim.CannedOKHttpResponse;
 import org.apache.http.*;
 import org.apache.http.params.HttpParams;
 
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by eprokop on 9/1/17.
  */
 public class HecErrorResponse implements HttpResponse {
+   protected static final Logger LOG = LoggerFactory.getLogger(HecErrorResponse.class.getName());
   HttpEntity entity;
   StatusLine sl;
 
@@ -79,7 +83,8 @@ public class HecErrorResponse implements HttpResponse {
 
         @Override
         public Header[] getHeaders(String string) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            LOG.warn("getHeaders returns no headers -- this is a MOCK.");
+            return new Header[]{};
     }
 
         @Override

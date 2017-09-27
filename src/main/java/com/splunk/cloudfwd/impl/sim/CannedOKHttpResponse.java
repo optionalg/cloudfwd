@@ -23,13 +23,15 @@ import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.StatusLine;
 import org.apache.http.params.HttpParams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author ghendrey
  */
 public class CannedOKHttpResponse implements HttpResponse{
-  
+  protected static final Logger LOG = LoggerFactory.getLogger(CannedOKHttpResponse.class.getName());
   HttpEntity entity;
 
   public CannedOKHttpResponse(HttpEntity entity) {
@@ -98,7 +100,9 @@ public class CannedOKHttpResponse implements HttpResponse{
 
     @Override
     public Header[] getHeaders(String string) {
-      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        LOG.warn("getHeaders returns no headers -- this is a MOCK.");
+        return new Header[]{};
+      //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
