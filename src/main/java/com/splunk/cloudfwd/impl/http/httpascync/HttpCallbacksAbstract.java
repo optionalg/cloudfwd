@@ -30,6 +30,8 @@ import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import java.io.IOException;
+import java.util.Arrays;
+import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
@@ -52,19 +54,21 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
   @Override
   final public void completed(HttpResponse response) {
-    int code = response.getStatusLine().getStatusCode();
-    try {
-      String reply = EntityUtils.toString(response.getEntity(), "utf-8");
-      if(null == reply || reply.isEmpty()){
-          LOG.error("reply with code {} was empty for function '{}'",code,  getName());
-      }
-      if(code != 200){
-          LOG.error("NON-200 response code: {} server reply: {}", code, reply);
-      }
-      completed(reply, code);      
-    } catch (IOException e) {      
-      LOG.error("Unable to get String from HTTP response entity", e);
-    }      
+    try {    
+        int code = response.getStatusLine().getStatusCode();
+        Header[] headers = response.getHeaders("Cookie");      
+        LOG.info("{} Cookies {}", getChannel(), Arrays.toString(headers));
+        String reply = EntityUtils.toString(response.getEntity(), "utf-8");
+        if(null == reply || reply.isEmpty()){
+            LOG.error("reply with code {} was empty for function '{}'",code,  getName());
+        }
+        if(code != 200){
+            LOG.error("NON-200 response code: {} server reply: {}", code, reply);
+        }
+        completed(reply, code);      
+      } catch (IOException e) {      
+        LOG.error("Unable to get String from HTTP response entity", e);
+      }      
   }
 
   public abstract void completed(String reply, int code);
