@@ -116,7 +116,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
     protected LifecycleEvent.Type error(String reply,
             int statusCode) throws IOException {
-        HecServerErrorResponseException e = NonBusyServerErrors.toErrorException(reply,
+        HecServerErrorResponseException e = ServerErrors.toErrorException(reply,
                 statusCode, getBaseUrl());
         e.setContext(getName());
         error(e);
@@ -125,7 +125,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     
     protected LifecycleEvent.Type warn(String reply,
             int statusCode) throws IOException {
-        HecServerErrorResponseException e = NonBusyServerErrors.toErrorException(reply,
+        HecServerErrorResponseException e = ServerErrors.toErrorException(reply,
                 statusCode, getBaseUrl());
         e.setContext(getName());
         warn(e);

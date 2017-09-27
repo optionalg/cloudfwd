@@ -46,7 +46,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
     14	400	Bad Request	                     ACK is disabled 
  * @author ghendrey
  */
-public class NonBusyServerErrors {
+public class ServerErrors {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     
@@ -105,15 +105,4 @@ public class NonBusyServerErrors {
         return type;
     }
     
-    /*
-    private static LifecycleEvent.Type elbType(int statusCode) throws IOException {
-        LifecycleEvent.Type type = UNHANDLED_NON_200;
-        switch (statusCode) {
-            case 504:
-                type= GATEWAY_TIMEOUT;
-                break;
-        }
-        return type;
-    }     
-    */
 }
