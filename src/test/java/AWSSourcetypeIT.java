@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.splunk.cloudfwd.*;
 import org.apache.http.HttpResponse;
@@ -54,8 +53,8 @@ import java.util.concurrent.TimeUnit;
  *
  * Created by eprokop on 9/14/17.
  */
-public class AWSSourcetypeTest extends AbstractReconciliationTest {
-    private static final Logger LOG = LoggerFactory.getLogger(AWSSourcetypeTest.class.
+public class AWSSourcetypeIT extends AbstractReconciliationTest {
+    private static final Logger LOG = LoggerFactory.getLogger(AWSSourcetypeIT.class.
             getName());
 
     // filenames

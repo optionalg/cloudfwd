@@ -42,7 +42,7 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
     protected Properties getProps() {
     Properties props = new Properties(); //default behavior is no "hard coded" test-specific properties
     props.put(PropertyKeys.EVENT_BATCH_SIZE,  "16000");
-    props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
+    props.put(PropertyKeys.MOCK_HTTP_KEY, "true");
     super.eventType = Event.Type.UNKNOWN;
     return props;
   }  

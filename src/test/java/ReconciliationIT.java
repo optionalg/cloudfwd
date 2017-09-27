@@ -31,10 +31,10 @@ import java.util.concurrent.TimeoutException;
  *
  * @author eprokop
  */
-public class ReconciliationTest extends AbstractReconciliationTest {
+public class ReconciliationIT extends AbstractReconciliationTest {
     private String singleLineSourcetype = "__singleline"; //SHOULD_LINEMERGE=false  in props.conf
 
-    public ReconciliationTest() {
+    public ReconciliationIT() {
     }
 
     @Test
