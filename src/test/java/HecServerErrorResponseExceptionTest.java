@@ -1,4 +1,4 @@
-import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_OK;
 import org.junit.Assert;
 import org.junit.Test;

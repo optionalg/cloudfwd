@@ -15,6 +15,9 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecMissingPropertiesException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
 import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
 import com.splunk.cloudfwd.impl.ConnectionImpl;

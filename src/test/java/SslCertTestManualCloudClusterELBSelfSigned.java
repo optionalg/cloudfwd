@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 
 import com.splunk.cloudfwd.RawEvent;

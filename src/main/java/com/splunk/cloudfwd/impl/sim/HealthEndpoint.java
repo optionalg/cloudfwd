@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim;
 
-import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 

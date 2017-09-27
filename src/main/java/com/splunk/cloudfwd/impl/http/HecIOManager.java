@@ -15,6 +15,10 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksPreflightHealthCheck;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksHealthPoll;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
@@ -63,7 +67,7 @@ public class HecIOManager implements Closeable {
         return ackTracker.toString();
     }
 
-    synchronized void startPolling() {
+    public synchronized void startPolling() {
         if (!ackPollController.isStarted()) {
             Runnable poller = () -> {
                 if (this.getAcknowledgementTracker().isEmpty()) {

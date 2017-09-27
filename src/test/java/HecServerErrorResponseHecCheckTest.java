@@ -1,3 +1,4 @@
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.*;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_DISABLED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;

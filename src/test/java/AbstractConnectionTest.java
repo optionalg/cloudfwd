@@ -17,7 +17,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

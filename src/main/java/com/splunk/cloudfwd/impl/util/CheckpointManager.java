@@ -27,9 +27,9 @@ import org.slf4j.LoggerFactory;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.HecIllegalStateException;
-import com.splunk.cloudfwd.HecConnectionStateException;
-import static com.splunk.cloudfwd.HecIllegalStateException.Type.EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import static com.splunk.cloudfwd.error.HecIllegalStateException.Type.EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_OK;
 
 /**

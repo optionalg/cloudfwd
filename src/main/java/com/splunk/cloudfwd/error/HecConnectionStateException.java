@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd;
+package com.splunk.cloudfwd.error;
 
 /**
- * Represents an illegal state in Cloudfwd that requires resolution by the client.
+ * Represents an illegal state in Cloudfwd that requires resolution by the client. Can be thrown either directly from 
+ * the Thread that calls Connection methods, or can be passed to a Connection.failed callback.
  *
  * @author ghendrey
  */

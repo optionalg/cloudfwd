@@ -20,8 +20,8 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecConnectionStateException;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
 

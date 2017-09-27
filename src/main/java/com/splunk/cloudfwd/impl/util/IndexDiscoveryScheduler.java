@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 
 /**
  *

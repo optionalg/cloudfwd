@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

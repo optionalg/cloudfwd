@@ -13,14 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http;
+package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.impl.http.HecIOManager;
+import com.splunk.cloudfwd.impl.http.HttpSender;
+import com.splunk.cloudfwd.impl.http.ServerErrors;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchFailure;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;

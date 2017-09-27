@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.unhealthy;
 
-import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.sim.HealthEndpoint;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;

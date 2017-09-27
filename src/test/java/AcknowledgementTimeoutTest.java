@@ -16,8 +16,8 @@
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecAcknowledgmentTimeoutException;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
