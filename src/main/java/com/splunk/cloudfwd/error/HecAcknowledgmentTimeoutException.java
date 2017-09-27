@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd;
+package com.splunk.cloudfwd.error;
 
 /**
- *
+ * This exception will be passed to ConnectionCallbacks.failed when an EventBatch has timed out.
  * @author ghendrey
  */
-public class HecMaxRetriesException extends Exception{
+public class HecAcknowledgmentTimeoutException extends RuntimeException{
 
-  public HecMaxRetriesException(String message) {
+  public HecAcknowledgmentTimeoutException(String message) {
     super(message);
   }
-  
   
 }

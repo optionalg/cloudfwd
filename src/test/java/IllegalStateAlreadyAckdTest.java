@@ -1,7 +1,7 @@
 
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.HecConnectionStateException;
-import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;

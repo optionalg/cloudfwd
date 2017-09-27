@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.indexer;
 
-import com.splunk.cloudfwd.impl.http.HttpCallbacksAbstract;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;

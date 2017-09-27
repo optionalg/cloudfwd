@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import java.io.Closeable;
 import java.util.List;
 

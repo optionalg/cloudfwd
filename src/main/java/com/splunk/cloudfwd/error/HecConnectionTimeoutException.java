@@ -13,30 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.sim;
-
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
+package com.splunk.cloudfwd.error;
 
 /**
  *
  * @author ghendrey
  */
-public class HealthEndpoint implements Endpoint{
+public class HecConnectionTimeoutException extends RuntimeException{
 
-  public void pollHealth(FutureCallback<HttpResponse> cb) {
-    ((HttpCallbacksAbstract)cb).completed("If we care about the actual conent, this will break something.", 200);
-  }
-
-  @Override
-  public void close() {
-    //no-op for now
-  }
-
-  @Override
-  public void start() {
-    //no-op
+  public HecConnectionTimeoutException(String message) {
+    super(message);
   }
   
 }

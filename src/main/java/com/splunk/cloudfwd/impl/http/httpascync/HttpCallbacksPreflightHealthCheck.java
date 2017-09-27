@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http;
+package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_BUSY;
 import java.io.IOException;
 import org.slf4j.Logger;
@@ -40,7 +41,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_OK;
     14	400	Bad Request	                     ACK is disabled 
  * @author ghendrey
  */
-class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
+public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
     private final Logger LOG;
 
     public HttpCallbacksPreflightHealthCheck(HecIOManager m) {

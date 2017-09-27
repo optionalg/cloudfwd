@@ -1,4 +1,4 @@
-package com.splunk.cloudfwd;
+package com.splunk.cloudfwd.error;
 
 /**
  * Created by mhora on 9/8/17.

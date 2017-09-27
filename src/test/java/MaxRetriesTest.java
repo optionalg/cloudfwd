@@ -1,6 +1,6 @@
 
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecMaxRetriesException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;

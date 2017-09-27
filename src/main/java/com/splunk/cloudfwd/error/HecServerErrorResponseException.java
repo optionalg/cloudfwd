@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd;
+package com.splunk.cloudfwd.error;
 
+import com.splunk.cloudfwd.LifecycleEvent;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;

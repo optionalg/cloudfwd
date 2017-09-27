@@ -15,6 +15,9 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecMissingPropertiesException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
 import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -207,11 +210,16 @@ public class ConnectionSettings {
      * @return
      */
     public String getSSLCertContent() {
+        String certKey = PropertyKeys.SSL_CERT_CONTENT;
         if (isCloudInstance()) {
-            return defaultProps.getProperty(PropertyKeys.CLOUD_SSL_CERT_CONTENT).
-                    trim();
+            certKey = PropertyKeys.CLOUD_SSL_CERT_CONTENT;
         }
-        return defaultProps.getProperty(PropertyKeys.SSL_CERT_CONTENT).trim();
+
+        String sslCertContent = defaultProps.getProperty(certKey);
+        if (sslCertContent != null) {
+            return sslCertContent.trim();
+        }
+        return "";
     }
 
     public void enableHttpDebug() {

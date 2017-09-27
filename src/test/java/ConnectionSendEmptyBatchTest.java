@@ -13,16 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd;
+
+import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.Events;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
- *
- * @author ghendrey
+ * Created by kchen on 9/27/17.
  */
-public class HecConnectionTimeoutException extends RuntimeException{
+public class ConnectionSendEmptyBatchTest extends AbstractConnectionTest {
+    @Test
+    public void sendBatch() {
+        EventBatch batch = Events.createBatch();
+        int size = connection.sendBatch(batch);
+        if (size != 0) {
+            Assert.fail("Expect 0 bytes, but got: " + size);
+        }
+    }
 
-  public HecConnectionTimeoutException(String message) {
-    super(message);
-  }
-  
+    @Override
+    protected int getNumEventsToSend() {
+        return 2;
+    }
 }

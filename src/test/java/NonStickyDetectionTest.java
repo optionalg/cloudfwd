@@ -17,8 +17,8 @@
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecNonStickySessionException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import java.util.Properties;
 import org.junit.After;

@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http;
+package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.HecConnectionStateException;
-import static com.splunk.cloudfwd.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
-import com.splunk.cloudfwd.HecServerBusyException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
+import com.splunk.cloudfwd.error.HecServerBusyException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchFailure;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.EventPostResponseValueObject;
+import com.splunk.cloudfwd.impl.http.HecIOManager;
+import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_ACKS_DISABLED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_NOT_OK;
@@ -51,7 +54,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.GATEWAY_TIMEOUT;
     14	400	Bad Request	                     ACK is disabled 
  * @author ghendrey
  */
-class HttpCallbacksEventPost extends HttpCallbacksAbstract {
+public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     private final Logger LOG;
     private final EventBatchImpl events;

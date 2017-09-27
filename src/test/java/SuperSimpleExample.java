@@ -5,7 +5,7 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.RawEvent;
 import java.util.Properties;
 import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;

@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http;
+package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.HecIOManager;
+import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_FAILED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_OK;
 import java.io.IOException;
@@ -26,7 +28,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
  *
  * @author ghendrey
  */
-class HttpCallbacksHealthPoll extends HttpCallbacksAbstract {
+public class HttpCallbacksHealthPoll extends HttpCallbacksAbstract {
     private final Logger LOG;
 
     public HttpCallbacksHealthPoll(final HecIOManager m) {

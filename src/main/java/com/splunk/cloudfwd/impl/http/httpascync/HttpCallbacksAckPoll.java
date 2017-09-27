@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http;
+package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
+import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_NOT_OK;
 import java.io.IOException;
 import org.slf4j.Logger;
@@ -24,7 +26,7 @@ import org.slf4j.Logger;
  *
  * @author ghendrey
  */
-class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
+public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private final Logger LOG;

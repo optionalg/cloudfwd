@@ -15,7 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
 
 import java.util.Map;

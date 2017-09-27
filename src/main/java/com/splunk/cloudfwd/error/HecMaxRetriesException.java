@@ -13,16 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd;
+package com.splunk.cloudfwd.error;
 
 /**
  *
  * @author ghendrey
  */
-public class HecServerBusyException extends Exception{
+public class HecMaxRetriesException extends Exception{
 
-    public HecServerBusyException(String message) {
-        super(message);
-    }
-    
+  public HecMaxRetriesException(String message) {
+    super(message);
+  }
+  
+  
 }

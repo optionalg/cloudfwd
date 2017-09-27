@@ -17,12 +17,12 @@ package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecConnectionStateException;
-import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.HecHealth;
-import com.splunk.cloudfwd.HecMaxRetriesException;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
 import java.net.Inet6Address;

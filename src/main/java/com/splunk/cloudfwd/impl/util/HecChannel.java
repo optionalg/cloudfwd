@@ -18,17 +18,17 @@ package com.splunk.cloudfwd.impl.util;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecNonStickySessionException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
-import com.splunk.cloudfwd.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.HecHealth;
-import com.splunk.cloudfwd.HecMaxRetriesException;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import java.io.Closeable;
@@ -194,6 +194,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       case PREFLIGHT_BUSY:
       case PREFLIGHT_GATEWAY_TIMEOUT:
           if(++preflightCount <=getSettings().getMaxPreflightRetries()){
+              LOG.warn("retrying channel preflight checks on {}", this);
               this.sender.getHecIOManager().preflightCheck(); //retry preflight check
           }else{
               String msg = this + " preflight retried exceeded " + PropertyKeys.PREFLIGHT_RETRIES+"="

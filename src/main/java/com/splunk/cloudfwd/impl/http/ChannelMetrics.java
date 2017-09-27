@@ -17,7 +17,7 @@ package com.splunk.cloudfwd.impl.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.LifecycleEvent;

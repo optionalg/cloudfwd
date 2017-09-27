@@ -29,7 +29,7 @@ import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.Events;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

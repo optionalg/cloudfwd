@@ -20,8 +20,8 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecConnectionStateException;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
 
@@ -179,6 +179,12 @@ public class ConnectionImpl implements Connection {
     if (closed) {
       throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
+
+    // Empty batch, just return
+    if (events.getLength() == 0) {
+      return 0;
+    }
+
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to

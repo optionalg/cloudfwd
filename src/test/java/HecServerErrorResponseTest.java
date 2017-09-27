@@ -1,7 +1,9 @@
+import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.*;
-import static com.splunk.cloudfwd.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
-import com.splunk.cloudfwd.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecServerErrorResponseException;
+import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;

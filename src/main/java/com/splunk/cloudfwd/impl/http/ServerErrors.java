@@ -16,7 +16,7 @@
 package com.splunk.cloudfwd.impl.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.HecServerErrorResponseException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.SPLUNK_IN_DETENTION;

@@ -17,6 +17,8 @@ package com.splunk.cloudfwd.impl.http;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.util.HecChannel;

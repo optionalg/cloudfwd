@@ -1,4 +1,6 @@
 
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.*;
 
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;

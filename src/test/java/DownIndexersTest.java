@@ -1,3 +1,4 @@
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.sim.errorgen.indexer.RollingRestartEndpoints;
 
