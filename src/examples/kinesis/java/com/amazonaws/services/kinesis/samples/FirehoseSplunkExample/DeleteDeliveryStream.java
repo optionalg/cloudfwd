@@ -11,7 +11,7 @@ import com.amazonaws.services.kinesisfirehose.model.*;
 public class DeleteDeliveryStream {
 
     private static AmazonKinesisFirehose firehoseClient;
-    private static FirehoseSplunkSettings settings = new FirehoseSplunkSettings();
+    private static FirehoseSplunkSettings firehoseSettings = new FirehoseSplunkSettings();
 
     public static void deleteDeliveryStream(String streamName) {
         DeleteDeliveryStreamRequest deleteDeliveryStreamRequest = new DeleteDeliveryStreamRequest()
@@ -20,17 +20,17 @@ public class DeleteDeliveryStream {
         System.out.println(deleteDeliveryStreamResult.toString());
     }
     public static void main(String args[]) throws InterruptedException{
+        firehoseSettings.validateProperties();
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        String serviceEndpoint = settings.getPropertyFor("aws_fh_endpoint");
+        String serviceEndpoint = firehoseSettings.getPropertyFor("aws_fh_endpoint");
         AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
                 serviceEndpoint, null);
         AmazonKinesisFirehoseClient.builder().withClientConfiguration(clientConfiguration).build();
         firehoseClient = AmazonKinesisFirehoseClient.builder()
                 .withClientConfiguration(clientConfiguration)
-                .withRegion(settings.getPropertyFor("aws_fh_stream_region"))
+                .withRegion(firehoseSettings.getPropertyFor("aws_fh_stream_region"))
                 .withEndpointConfiguration(endpointConfiguration)
                 .build();
-        deleteDeliveryStream(settings.getPropertyFor("aws_fh_stream_name"));
+        deleteDeliveryStream(firehoseSettings.getPropertyFor("aws_fh_stream_name"));
     }
 }
-

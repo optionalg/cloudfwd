@@ -11,23 +11,23 @@ import com.amazonaws.services.kinesisfirehose.model.*;
 public class UpdateDeliveryStream {
 
     private static AmazonKinesisFirehose firehoseClient;
-    private static FirehoseSplunkSettings settings = new FirehoseSplunkSettings();
+    private static FirehoseSplunkSettings firehoseSettings = new FirehoseSplunkSettings();
 
     public static void updateDeliveryStream(String streamName) {
         SplunkRetryOptions splunkRetryOptions = new SplunkRetryOptions()
                 .withDurationInSeconds(Integer.valueOf(
-                        settings.getPropertyFor("splunk_retry_timer")));
+                        firehoseSettings.getPropertyFor("splunk_retry_timer")));
 
         SplunkDestinationUpdate splunkDestinationUpdate = new SplunkDestinationUpdate()
                 .withRetryOptions(splunkRetryOptions)
-                .withHECEndpoint(settings.getPropertyFor("hec_endpoint"))
-                .withHECEndpointType(HECEndpointType.valueOf(settings.getPropertyFor("hecendpoint_type")))
-                .withHECToken(settings.getPropertyFor("hec_token"));
+                .withHECEndpoint(firehoseSettings.getPropertyFor("hec_endpoint"))
+                .withHECEndpointType(HECEndpointType.valueOf(firehoseSettings.getPropertyFor("hecendpoint_type")))
+                .withHECToken(firehoseSettings.getPropertyFor("hec_token"));
 
         UpdateDestinationRequest updateDestinationRequest = new UpdateDestinationRequest()
                 .withDeliveryStreamName(streamName)
-                .withCurrentDeliveryStreamVersionId(settings.getPropertyFor("aws_fh_stream_version"))
-                .withDestinationId(settings.getPropertyFor("aws_fh_dest_id"))
+                .withCurrentDeliveryStreamVersionId(firehoseSettings.getPropertyFor("aws_fh_stream_version"))
+                .withDestinationId(firehoseSettings.getPropertyFor("aws_fh_dest_id"))
                 .withSplunkDestinationUpdate(splunkDestinationUpdate);
 
         UpdateDestinationResult updateDestinationResult = firehoseClient.updateDestination(updateDestinationRequest);
@@ -35,16 +35,17 @@ public class UpdateDeliveryStream {
     }
 
     public static void main(String args[]) throws InterruptedException{
+        firehoseSettings.validateProperties();
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        String serviceEndpoint = settings.getPropertyFor("aws_fh_endpoint");
+        String serviceEndpoint = firehoseSettings.getPropertyFor("aws_fh_endpoint");
         AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
                 serviceEndpoint, null);
         AmazonKinesisFirehoseClient.builder().withClientConfiguration(clientConfiguration).build();
         firehoseClient = AmazonKinesisFirehoseClient.builder()
                 .withClientConfiguration(clientConfiguration)
-                .withRegion(settings.getPropertyFor("aws_fh_stream_region"))
+                .withRegion(firehoseSettings.getPropertyFor("aws_fh_stream_region"))
                 .withEndpointConfiguration(endpointConfiguration)
                 .build();
-        updateDeliveryStream(settings.getPropertyFor("aws_fh_stream_name"));
+        updateDeliveryStream(firehoseSettings.getPropertyFor("aws_fh_stream_name"));
     }
 }

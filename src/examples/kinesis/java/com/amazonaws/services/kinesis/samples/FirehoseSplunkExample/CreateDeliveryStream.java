@@ -11,59 +11,59 @@ import com.amazonaws.services.kinesisfirehose.model.*;
 public class CreateDeliveryStream {
 
     private static AmazonKinesisFirehose firehoseClient;
-    private static FirehoseSplunkSettings settings = new FirehoseSplunkSettings();
+    private static FirehoseSplunkSettings firehoseSettings = new FirehoseSplunkSettings();
 
     public static void createDeliveryStream(String streamName) {
         SplunkRetryOptions splunkRetryOptions = new SplunkRetryOptions()
                 .withDurationInSeconds(Integer.valueOf(
-                        settings.getPropertyFor("splunk_retry_timer")));
+                        firehoseSettings.getPropertyFor("splunk_retry_timer")));
 
         BufferingHints bufferingHints = new BufferingHints()
-                .withIntervalInSeconds(Integer.valueOf(settings.getPropertyFor("aws_s3_buffer_interval")))
-                .withSizeInMBs(Integer.valueOf(settings.getPropertyFor("aws_s3_buffer_size")));
+                .withIntervalInSeconds(Integer.valueOf(firehoseSettings.getPropertyFor("aws_s3_buffer_interval")))
+                .withSizeInMBs(Integer.valueOf(firehoseSettings.getPropertyFor("aws_s3_buffer_size")));
 
         CloudWatchLoggingOptions cloudWatchLoggingOptions = new CloudWatchLoggingOptions()
-                .withEnabled(Boolean.valueOf(settings.getPropertyFor("aws_cw_log_enabled")))
-                .withLogGroupName(settings.getPropertyFor("aws_cw_log_group_name"))
-                .withLogStreamName(settings.getPropertyFor("aws_cw_log_stream_name"));
+                .withEnabled(Boolean.valueOf(firehoseSettings.getPropertyFor("aws_cw_log_enabled")))
+                .withLogGroupName(firehoseSettings.getPropertyFor("aws_cw_log_group_name"))
+                .withLogStreamName(firehoseSettings.getPropertyFor("aws_cw_log_stream_name"));
 
         EncryptionConfiguration encryptionConfiguration = new EncryptionConfiguration()
-                .withNoEncryptionConfig(settings.getPropertyFor("aws_s3_encryption"));
+                .withNoEncryptionConfig(firehoseSettings.getPropertyFor("aws_s3_encryption"));
 
         S3DestinationConfiguration s3DestinationConfiguration = new S3DestinationConfiguration()
-                .withRoleARN(settings.getPropertyFor("aws_s3_iam_role"))
-                .withBucketARN(settings.getPropertyFor("aws_s3_bucket"))
+                .withRoleARN(firehoseSettings.getPropertyFor("aws_s3_iam_role"))
+                .withBucketARN(firehoseSettings.getPropertyFor("aws_s3_bucket"))
                 .withBufferingHints(bufferingHints)
                 .withEncryptionConfiguration(encryptionConfiguration);
 
         SplunkDestinationConfiguration splunkDestinationConfiguration = new SplunkDestinationConfiguration()
-                .withHECEndpoint(settings.getPropertyFor("hec_endpoint"))
-                .withHECEndpointType(HECEndpointType.valueOf(settings.getPropertyFor("hecendpoint_type")))
-                .withHECToken(settings.getPropertyFor("hec_token"))
+                .withHECEndpoint(firehoseSettings.getPropertyFor("hec_endpoint"))
+                .withHECEndpointType(HECEndpointType.valueOf(firehoseSettings.getPropertyFor("hecendpoint_type")))
+                .withHECToken(firehoseSettings.getPropertyFor("hec_token"))
                 .withRetryOptions(splunkRetryOptions)
-                .withS3BackupMode(settings.getPropertyFor("aws_s3_backup"))
+                .withS3BackupMode(firehoseSettings.getPropertyFor("aws_s3_backup"))
                 .withCloudWatchLoggingOptions(cloudWatchLoggingOptions)
                 .withS3Configuration(s3DestinationConfiguration);
         CreateDeliveryStreamRequest createDeliveryStreamRequest = new CreateDeliveryStreamRequest()
                 .withDeliveryStreamName(streamName)
-                .withDeliveryStreamType(settings.getPropertyFor("aws_fh_stream_type"))
+                .withDeliveryStreamType(firehoseSettings.getPropertyFor("aws_fh_stream_type"))
                 .withSplunkDestinationConfiguration(splunkDestinationConfiguration);
         CreateDeliveryStreamResult createDeliveryStreamResult = firehoseClient.createDeliveryStream(createDeliveryStreamRequest);
         System.out.println(createDeliveryStreamResult.getDeliveryStreamARN().toString());
     }
 
     public static void main(String args[]) throws InterruptedException {
+        firehoseSettings.validateProperties();
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        String serviceEndpoint = settings.getPropertyFor("aws_fh_endpoint");
+        String serviceEndpoint = firehoseSettings.getPropertyFor("aws_fh_endpoint");
         AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
                 serviceEndpoint, null);
         AmazonKinesisFirehoseClient.builder().withClientConfiguration(clientConfiguration).build();
         firehoseClient = AmazonKinesisFirehoseClient.builder()
                 .withClientConfiguration(clientConfiguration)
-                .withRegion(settings.getPropertyFor("aws_fh_stream_region"))
+                .withRegion(firehoseSettings.getPropertyFor("aws_fh_stream_region"))
                 .withEndpointConfiguration(endpointConfiguration)
                 .build();
-        createDeliveryStream(settings.getPropertyFor("aws_fh_stream_name"));
+        createDeliveryStream(firehoseSettings.getPropertyFor("aws_fh_stream_name"));
     }
 }
-
