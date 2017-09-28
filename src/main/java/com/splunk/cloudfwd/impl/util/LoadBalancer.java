@@ -15,13 +15,13 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
@@ -70,21 +70,18 @@ public class LoadBalancer implements Closeable {
         //this.discoverer.addObserver(this);
     }
 
-    public synchronized List<HecHealth> checkHealth() {
+    public synchronized List<HecHealth> getHealth() {
         if (channels.isEmpty()) {
             createChannels(discoverer.getAddrs());
             // if channels are newly created, the status will be PREFLIGHT_HEALTH_CHECK_PENDING
         }
-        List<HecHealth> healthStatus = new ArrayList<HecHealth>();
-        checkHealthEach(healthStatus);
-
-        return healthStatus;
+        final List<HecHealth> h = new ArrayList<>();
+        channels.values().forEach(c->h.add(c.getHealth()));
+        return h;
     }
 
-    synchronized void checkHealthEach(List<HecHealth> healthStatus) {
-        for (HecChannel c : channels.values()) {
-            healthStatus.add(c.getHealth());
-        }
+    synchronized void checkHealthEach(List<HecHealthImpl> healthStatus) {
+
     }
 
     @SuppressWarnings("unused")

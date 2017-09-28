@@ -27,7 +27,6 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
@@ -55,7 +54,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private volatile boolean quiesced;
 
   //private volatile boolean healthy = false; // Responsive to indexer 503 "queue full" error.
-  private HecHealth health;
+  private HecHealthImpl health;
   
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
@@ -80,11 +79,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             getMaxUnackedEventBatchPerChannel();
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     
-    this.health = new HecHealth(sender.getBaseUrl()
+    this.health = new HecHealthImpl(channelId, sender.getBaseUrl()
         , new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));
   }
   
-  public HecHealth getHealth() {
+  public HecHealthImpl getHealth() {
     return health;
   }
 

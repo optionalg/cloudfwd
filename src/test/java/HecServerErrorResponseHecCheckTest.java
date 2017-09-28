@@ -1,3 +1,4 @@
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.*;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_DISABLED;
@@ -87,9 +88,9 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
     public void checkAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.ACKS_DISABLED;
         createConnection();
-        List<HecHealth> status = super.healthCheck();
-        for (HecHealth hh : status) {
-          if (hh.status().getType() != ACK_DISABLED) {
+        List<HecHealthImpl> status = super.healthCheck();
+        for (HecHealthImpl hh : status) {
+          if (hh.getStatus().getType() != ACK_DISABLED) {
             Assert.fail("We expected ACK_DISABLED");
           }
         }
@@ -99,9 +100,9 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
     public void checkInvalidToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.INVALID_TOKEN;
         createConnection();
-        List<HecHealth> status = super.healthCheck();
-        for (HecHealth hh : status) {
-          if (hh.status().getType() != INVALID_TOKEN) {
+        List<HecHealthImpl> status = super.healthCheck();
+        for (HecHealthImpl hh : status) {
+          if (hh.getStatus().getType() != INVALID_TOKEN) {
             Assert.fail("We expected INVALID_TOKEN");
           }
         }
@@ -111,9 +112,9 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
     public void checkInvalidAuth() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.INVALID_AUTH;
         createConnection();
-        List<HecHealth> status = super.healthCheck();
-        for (HecHealth hh : status) {
-          if (hh.status().getType() != INVALID_AUTH) {
+        List<HecHealthImpl> status = super.healthCheck();
+        for (HecHealthImpl hh : status) {
+          if (hh.getStatus().getType() != INVALID_AUTH) {
             Assert.fail("We expected INVALID_AUTH");
           }
         }
@@ -123,9 +124,9 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
     public void checkInDetention() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         errorToTest = Error.IN_DETENTION;
         createConnection();
-        List<HecHealth> status = super.healthCheck();
-        for (HecHealth hh : status) {
-          if (hh.status().getType() != SPLUNK_IN_DETENTION) {
+        List<HecHealthImpl> status = super.healthCheck();
+        for (HecHealthImpl hh : status) {
+          if (hh.getStatus().getType() != SPLUNK_IN_DETENTION) {
             Assert.fail("We expected IN_DETENTION");
           }
         }

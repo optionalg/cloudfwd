@@ -1,6 +1,6 @@
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
+import com.splunk.cloudfwd.HecLoggerFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -127,11 +127,11 @@ public abstract class AbstractConnectionTest {
     this.callbacks.checkWarnings();
   }
   
-  protected List<HecHealth> healthCheck() throws InterruptedException {
+  protected List<HecHealthImpl> healthCheck() throws InterruptedException {
     LOG.trace(
         "HEC CHECK WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
         + "And test method GUID " + testMethodGUID);
-    List<HecHealth> healthStatus = connection.healthCheck();
+    List<HecHealthImpl> healthStatus = connection.healthCheck();
     connection.close(); //will flush    
     return healthStatus;
   }

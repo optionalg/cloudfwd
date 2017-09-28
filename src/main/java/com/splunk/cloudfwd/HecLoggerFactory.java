@@ -1,9 +1,9 @@
-package com.splunk.cloudfwd.impl.util;
+package com.splunk.cloudfwd;
 
 import org.slf4j.Logger;
 
 /**
- * Created by mhora on 9/18/17.
+ * @author mhora
  */
 public interface HecLoggerFactory {
     Logger getLogger(String name);

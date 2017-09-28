@@ -1,3 +1,4 @@
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import org.junit.After;
@@ -40,9 +41,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private void startHealthCheck() {
         externalHealthPoller = new PollScheduler("Connection health checker");
         externalHealthPoller.start(() -> {
-            List<HecHealth> healthList = connection.healthCheck();
-            for (HecHealth health : healthList) {
-                LOG.info("Health: url=" + health.getUrl() + "status=" + health.status());
+            List<HecHealthImpl> healthList = connection.healthCheck();
+            for (HecHealthImpl health : healthList) {
+                LOG.info("Health: url=" + health.getUrl() + "status=" + health.getStatus());
             }
         }, 30, TimeUnit.SECONDS);
     }

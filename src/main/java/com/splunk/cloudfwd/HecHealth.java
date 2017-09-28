@@ -15,46 +15,23 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.LifecycleEvent;
+
 /**
- * Describes the health  
+ *
  * @author ghendrey
  */
-public class HecHealth {
+public interface HecHealth {
 
-  
-  private LifecycleEvent status;
-  private boolean healthy;
-  private String url;
-  
-  public HecHealth(String url, LifecycleEvent status) {
-    this.url = url;
-    this.status = status;
-  }
+    LifecycleEvent getStatus();
 
-    @Override
-    public String toString() {
-        return "HecHealth{" + "status=" + status + ", healthy=" + healthy + ", url=" + url + '}';
-    }
-  
-  
-  
-  public LifecycleEvent status() {
-    return this.status;
-  }
-  
-  public void setStatus(LifecycleEvent status, boolean healthy) {
-    this.status = status;
-    this.healthy = healthy;
-  }
-  
-  public String getUrl() {
-    return this.url;
-  }
+    String getUrl();
+    
+    public String getChannelId();
 
     /**
      * @return the healthy
      */
-    public boolean isHealthy() {
-        return healthy;
-    }
+    boolean isHealthy();
+    
 }

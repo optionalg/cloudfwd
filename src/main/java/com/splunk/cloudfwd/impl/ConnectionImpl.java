@@ -20,10 +20,11 @@ import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.HecHealth;
-import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
+import com.splunk.cloudfwd.HecLoggerFactory;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
@@ -213,7 +214,7 @@ public class ConnectionImpl implements Connection {
      * @return
      * @throws 
      */
-  public synchronized List<HecHealth> healthCheck() {
+  public synchronized List<HecHealthImpl> healthCheck() {
     throw new RuntimeException("Not yet implemented");
 /*    
     throw new RuntimeException("Not implemented.");
@@ -295,4 +296,9 @@ public class ConnectionImpl implements Connection {
         return LoggerFactory.getLogger(name);
       }
   }
+
+    @Override
+    public List<HecHealth> getHealth() {
+        return lb.getHealth();
+    }
 }

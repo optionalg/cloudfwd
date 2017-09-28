@@ -15,11 +15,11 @@
  */
 package com.splunk.cloudfwd;
 
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import java.io.Closeable;
 import java.util.List;
 
-import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
 
 /**
  *
@@ -83,7 +83,7 @@ public interface Connection extends Closeable{
     /**
      * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made@return     
      */
-    List<HecHealth> healthCheck();
+    List<HecHealthImpl> healthCheck();
 
     /**
      * Returns a live ConnectionsSettings instance that can be used to change
@@ -93,5 +93,11 @@ public interface Connection extends Closeable{
      */
     public ConnectionSettings getSettings();
 
+    /**
+     * Allows for replacement of the internal LoggerFactory with a customize one.
+     * @param f
+     */
     public void setLoggerFactory(HecLoggerFactory f);
+    
+    public  List<HecHealth> getHealth();
 }
