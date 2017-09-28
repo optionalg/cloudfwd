@@ -53,14 +53,20 @@ public interface ConnectionCallbacks {
   public void checkpoint(EventBatch events);
   
     /**
-     * Invoked when a system problem occurs.
+     * Invoked when a system problem occurs such as an HTTP failure.  Note that non-200 http response codes do 
+     * in and of themselves will NOT result in systemError being invoked when their occurrence is  handled. 
+     * Examples of Exceptions that the system catches, which DO cause systemError callbacks are IOException occurring
+     * during HTTP communication with server.
+     * If systemError is called, it does not mean the system has lost it's ability to operate. However, it does represent 
+     * an unexpected condition worth of investigation.
+     * 
      * @param e
      */
     public void systemError(Exception e);
     
     /**
-     * Invoked when a system condition occurs that could be indicative of a problem. For example, server responses such 
-     * as 503/Indexer -busy are not errors, but the application may want to record their occurrence 
+     * Invoked when a system condition occurs that could be indicative of degrated behavior. For example, server responses such 
+     * as 503/Indexer-busy are not errors, but the application may want to record their occurrence 
      * @param e
      */
     public void systemWarning(Exception e);

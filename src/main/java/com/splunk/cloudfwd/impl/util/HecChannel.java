@@ -31,6 +31,7 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
+import com.splunk.cloudfwd.error.HecChannelDeathException;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -197,8 +198,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
               LOG.warn("retrying channel preflight checks on {}", this);
               this.sender.getHecIOManager().preflightCheck(); //retry preflight check
           }else{
-              String msg = this + " preflight retried exceeded " + PropertyKeys.PREFLIGHT_RETRIES+"="
-                      + getSettings().getMaxPreflightRetries();
+              String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
+                      + getSettings().getMaxPreflightRetries() + " exceeded";
               getCallbacks().systemError(new HecMaxRetriesException(msg));
           }
           break;
@@ -265,7 +266,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   protected void interalForceClose() {
-    finishClose();
     try {
       this.sender.close();
     } catch (Exception e) {
@@ -273,7 +273,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     this.loadBalancer.removeChannel(getChannelId(), true);
     this.channelMetrics.removeObserver(this);
-
+    finishClose();
   }
 
   @Override
@@ -394,8 +394,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
-          LOG.warn(
-                  "Dead channel detected. Resending messages and force closing channel");
+          String msg = HecChannel.this  + " dead. Resending messages and force closing channel";
+          LOG.warn(msg);
+          getCallbacks().systemWarning(new HecChannelDeathException(msg));
           //synchronize on the load balancer so we do not allow the load balancer to be
           //closed before  resendInFlightEvents. If that
           //could happen, then the channel we replace this one with

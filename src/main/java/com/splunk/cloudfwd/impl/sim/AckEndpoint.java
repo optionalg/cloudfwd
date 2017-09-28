@@ -46,7 +46,7 @@ public class AckEndpoint implements AcknowledgementEndpoint {
   private static final Logger LOG = LoggerFactory.getLogger(AckEndpoint.class.getName());
 
   ScheduledExecutorService executor;
-  protected AtomicLong ackId = new AtomicLong(0);
+  protected AtomicLong ackId = new AtomicLong(-1); //so post increment, first id returned is 0
   protected NavigableMap<Long, Boolean> acksStates = new ConcurrentSkipListMap<>(); //key is ackId
   Random rand = new Random(System.currentTimeMillis());
   volatile boolean started;

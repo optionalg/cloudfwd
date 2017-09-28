@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public final class UnhealthyEndpointTest extends AbstractConnectionTest {
+  private static final int MAX_TEST_WAIT_MINUTES = 10;
 
   private static final Logger LOG = LoggerFactory.getLogger(UnhealthyEndpointTest.class.getName());
 
@@ -76,7 +77,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
       LOG.error(ex.getMessage(), ex);
       Assert.fail();
     }
-    this.callbacks.await(10, TimeUnit.MINUTES); //wait for both messages to ack
+    this.callbacks.await(MAX_TEST_WAIT_MINUTES, TimeUnit.MINUTES); //wait for both messages to ack
     connection.close(); //will flush 
   }
 

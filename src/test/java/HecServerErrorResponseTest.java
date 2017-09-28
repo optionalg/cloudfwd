@@ -1,6 +1,7 @@
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.*;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
@@ -90,24 +91,33 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 if(errorToTest==Error.ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS){
                     return e instanceof HecConnectionStateException 
                             && ((HecConnectionStateException)e).getType()==CONFIGURATION_EXCEPTION;
-                }
-                if(errorToTest==Error.INDEXER_BUSY_POST){
-                    return e instanceof HecAcknowledgmentTimeoutException;
-                }
-                if(errorToTest==Error.INVALID_TOKEN){
+                }else if (errorToTest == Error.INDEXER_BUSY_POST) {
+                    if (ackTimeoutLongerThanConnectionTimeout) {
+                        return e instanceof HecServerErrorResponseException;
+                    } else {
+                        return e instanceof HecAcknowledgmentTimeoutException;
+                    }
+                }else if(errorToTest==Error.INVALID_TOKEN){
                     return e instanceof HecServerErrorResponseException;
                 }
-                if(ackTimeoutLongerThanConnectionTimeout){
-                    return e instanceof HecServerErrorResponseException;
-                }else{
-                    return e instanceof HecAcknowledgmentTimeoutException;
-                }
+                throw new RuntimeException("unhandled errToTest case");
             }
             
             @Override
               public boolean shouldFail(){
                 return true;
              }
+              
+            @Override
+            protected boolean isWarnExpected(Exception e){
+                return e instanceof HecServerErrorResponseException
+                        && ((HecServerErrorResponseException)e).getType()==INDEXER_BUSY;
+            }
+
+            @Override
+            public boolean shouldWarn(){
+                return errorToTest == Error.INDEXER_BUSY_POST;
+            }              
 
         };
     }
@@ -165,6 +175,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
     @Test
     public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        LOG.info("TESTING ACKS_DISABLED");
         errorToTest = Error.ACKS_DISABLED;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
@@ -183,6 +194,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
     @Test
     public void sendToInvalidToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+         LOG.info("TESTING INVALID_TOKEN");
         errorToTest = Error.INVALID_TOKEN;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
@@ -203,6 +215,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
     @Test
     public void postToBusyIndexerButHealthCheckOK() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+         LOG.info("TESTING INDEXER_BUSY_POST with HecConnectionTimeoutException expected");
         errorToTest = Error.INDEXER_BUSY_POST;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
@@ -219,9 +232,11 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             }
         }
     }
+
     
     @Test
     public void postToBusyIndexerButHealthCheckOKAndExpectAckTimeout() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        LOG.info("TESTING INDEXER_BUSY_POST with HecAcknowledgementTimeoutException expected");
         errorToTest = Error.INDEXER_BUSY_POST;
         ackTimeoutLongerThanConnectionTimeout = false;
         createConnection();
@@ -233,6 +248,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
     @Test
     public void postNoAckIdEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        LOG.info("TESTING ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS");
         errorToTest = Error.ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
@@ -245,4 +261,5 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         }
         // TODO: we are currently not calling any failed callbacks in this case. Do we want to?
     }
+
 }

@@ -48,26 +48,15 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   @Override
   protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumEventsToSend()) {
-      @Override
-      public void failed(EventBatch events, Exception e) {
-        //The point of this test is to insure that we DO get this exception...
-        //because it means we DID *detect* a non-sticky channel and fail
-        //appropriately.
-        Assert.
-                assertTrue(e.getMessage(),
-                        e instanceof HecNonStickySessionException);
-        LOG.trace("Got expected exception: " + e);
-        latch.countDown(); //allow the test to finish
-      }
 
-      @Override
-      public void checkpoint(EventBatch events) {
-        LOG.trace("SUCCESS CHECKPOINT " + events.getId());
-        //do NOT count down the latch - otherwise the test ends before we have
-        //opportunity to detect the non-sticky session
-      }
+          protected boolean isFailureExpected(Exception e) {
+              return e instanceof HecNonStickySessionException;
+          }
 
-    };
+          public boolean shouldFail() {
+              return true;
+          }
+      };
   }
 
   @Test

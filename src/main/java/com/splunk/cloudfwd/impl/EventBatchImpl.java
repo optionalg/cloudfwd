@@ -327,7 +327,8 @@ public class EventBatchImpl implements EventBatch {
     /**
      * @return the sendExceptions
      */
-    public List<Exception> getSendExceptions() {
+  @Override
+    public List<Exception> getExceptions() {
         return Collections.unmodifiableList(sendExceptions);
     }
     

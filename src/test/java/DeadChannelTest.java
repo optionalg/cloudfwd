@@ -5,6 +5,7 @@ import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
+import com.splunk.cloudfwd.error.HecChannelDeathException;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
@@ -30,6 +31,20 @@ import org.junit.Test;
  */
 public class DeadChannelTest extends AbstractConnectionTest {
 
+    protected BasicCallbacks getCallbacks() {
+        return new BasicCallbacks(getNumEventsToSend()) {
+            @Override
+            protected boolean isWarnExpected(Exception e) {
+                return e instanceof HecChannelDeathException;
+            }
+
+            @Override
+            public boolean shouldWarn() {
+                return true;
+            }
+        };
+    }
+
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
@@ -37,7 +52,7 @@ public class DeadChannelTest extends AbstractConnectionTest {
     props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.impl.sim.errorgen.ackslost.LossyEndpoints");
     props.put(UNRESPONSIVE_MS,
-            "5000"); //set dead channel detector to detect at 5 second    
+            "1000"); //set dead channel detector to detect at 1 second    
         props.put(MAX_TOTAL_CHANNELS,
             "2");
     return props;
@@ -49,7 +64,7 @@ public class DeadChannelTest extends AbstractConnectionTest {
   }
   @Override
   protected int getNumEventsToSend() {
-    return 10;
+    return 10000;
   }
   
   @Test

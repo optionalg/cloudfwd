@@ -129,7 +129,6 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     private void markBusyAndResend(String reply, int code, LifecycleEvent.Type t) {
         HttpSender sender = manager.getSender();
-        //tell rest of the system "server busy". Not exactly true but will cause channel to get marked unhealthy
         Response r = new Response(t,code, reply, sender.getBaseUrl());
         sender.getChannelMetrics().update(r);
         resend(new HecServerBusyException(reply));

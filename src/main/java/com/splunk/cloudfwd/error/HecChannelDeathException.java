@@ -16,14 +16,16 @@
 package com.splunk.cloudfwd.error;
 
 /**
- * Each time an EventBatch is resent due to busy server (504,504 response on POST), an HECServerBusyException is 
- * added to the EventBatch's list of Exceptions
+ *
  * @author ghendrey
  */
-public class HecServerBusyException extends Exception{
+public class HecChannelDeathException extends Exception{
 
-    public HecServerBusyException(String message) {
+    public HecChannelDeathException(String message) {
         super(message);
     }
+    
+    
+    
     
 }

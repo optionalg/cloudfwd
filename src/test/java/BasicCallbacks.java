@@ -34,7 +34,9 @@ public class BasicCallbacks implements ConnectionCallbacks {
   private static final Logger LOG = LoggerFactory.getLogger(BasicCallbacks.class.getName());
 
   private Integer expectedAckCount;
-  protected final CountDownLatch latch;
+  protected final CountDownLatch failLatch; //if failures are expected, this latch gates the test until it is released;
+  protected final CountDownLatch latch; //if failures are expected, this latch gates the test until it is released;
+  protected final CountDownLatch warnLatch;//if warnings are expected, this latch gates the test until it is released
   protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
   private Comparable lastId;
@@ -46,19 +48,12 @@ public class BasicCallbacks implements ConnectionCallbacks {
   public BasicCallbacks(int expected) {
     LOG.trace("Constructing BasicCallbacks");
     this.expectedAckCount = expected;
+    this.failLatch= new CountDownLatch(1);
     this.latch = new CountDownLatch(1);
+    this.warnLatch = new CountDownLatch(1);
   }
 
-    public void checkFailures() {
-        if(shouldFail() && !isFailed()){
-            Assert.fail("A failed callback was expected, but none occurred.");
-        }
-        if (isFailed() && !isFailureExpected(exception)) {
-            Assert.fail(
-                    "There was a failure callback with exception class  " + 
-                    getException() + " and message " + getFailMsg());
-        }
-    }
+
   /**
    * Sublcasses can override to return true if expecting an exception (to suppress printing of stacktrace).
      * @param e The Exception that was received by failed() callback
@@ -72,24 +67,44 @@ public class BasicCallbacks implements ConnectionCallbacks {
       return false;
   }
   
+  protected final  boolean isFailed() {
+    return failed;
+  }  
+  
   protected boolean isWarnExpected(Exception e){
     return false;
   }
   
-  public boolean shouldWarnl(){
+  public boolean shouldWarn(){
       return false;
   }
   
+    protected final  boolean isWarned(){
+      return systemWarning != null;
+  }
+
+  
     public void checkWarnings() {
-        if(shouldWarnl()&& !isWarned()){
+        if(shouldWarn()&& !isWarned()){
             Assert.fail("A warn callback was expected, but none occurred.");
         }
-        if (isWarned() && !isWarnExpected(exception)) {
+        if (isWarned() && !isWarnExpected(systemWarning)) {
+            Assert.fail(
+                    "There was a systemWarning callback with exception class  " + 
+                    getWarning());
+        }
+    }  
+    
+    public void checkFailures() {
+        if(shouldFail() && !isFailed()){
+            Assert.fail("A failed callback was expected, but none occurred.");
+        }
+        if (isFailed() && !isFailureExpected(exception)) {
             Assert.fail(
                     "There was a failure callback with exception class  " + 
                     getException() + " and message " + getFailMsg());
         }
-    }  
+    }    
   
   @Override
   public void acknowledged(EventBatch events) {
@@ -117,20 +132,51 @@ public class BasicCallbacks implements ConnectionCallbacks {
       ex.printStackTrace(); //print the stack trace if we were not expecting failure
     }
     //make sure we set the failed, failMsg and Exception *before* we unlatch    
-    latch.countDown();
+    failLatch.countDown(); //will lest test exit
 
   }
+  
+    @Override
+    public void systemError(Exception ex) {
+        LOG.error("SYSTEM ERROR {}",ex.getMessage());
+        failed = true;   
+        failMsg = "EventBatch failed to send. Exception message: " + ex.
+                getMessage();
+        exception = ex;
+        if(!isFailureExpected(ex)){
+          ex.printStackTrace(); //print the stack trace if we were not expecting failure
+        }        
+       failLatch .countDown();
+    }
+
+    @Override
+    public void systemWarning(Exception ex) {
+        LOG.warn("SYSTEM WARNING {}", ex.getMessage());
+        this.systemWarning = ex;
+        if(!isWarnExpected(ex)){
+            ex.printStackTrace();
+        }
+        warnLatch.countDown();
+    }  
 
   @Override
   public void checkpoint(EventBatch events) {
-    LOG.info("SUCCESS CHECKPOINT " + events.getId());
+    LOG.info("SUCCESS CHECKPOINT " + events.getId()); 
     if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
       latch.countDown();
     }
   }
 
   public void await(long timeout, TimeUnit u) throws InterruptedException {
-    this.latch.await(timeout, u);
+    if(shouldFail() && !this.failLatch.await(timeout, u)){
+        throw new RuntimeException("test timed out waiting on failLatch");
+    }
+    if(shouldWarn() && !this.warnLatch.await(timeout, u)){
+        throw new RuntimeException("test timed out waiting on warnLatch");
+    }    
+    if(!shouldFail() && !shouldWarn() &&  !this.latch.await(timeout, u)){
+        throw new RuntimeException("test timed out waiting on latch");
+    }
   }
 
   /**
@@ -140,17 +186,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
     this.expectedAckCount = expectedAckCount;
   }
 
-  /**
-   * @return the failed
-   */
-  public boolean isFailed() {
-    return failed;
-  }
   
-  public boolean isWarned(){
-      return systemWarning != null;
-  }
-
   /**
    * @return the failMsg
    */
@@ -164,27 +200,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
   public Exception getException() {
     return exception;
   }
+  
+  public Exception getWarning(){
+      return systemWarning;
+  }
 
-    @Override
-    public void systemError(Exception ex) {
-        LOG.error("SYSTEM ERROR {}",ex.getMessage());
-        failed = true;   
-        failMsg = "EventBatch failed to send. Exception message: " + ex.
-                getMessage();
-        exception = ex;
-        if(!isFailureExpected(ex)){
-          ex.printStackTrace(); //print the stack trace if we were not expecting failure
-        }        
-        latch.countDown();
-    }
-
-    @Override
-    public void systemWarning(Exception ex) {
-        LOG.warn("SYSTEM WARNING {}", ex.getMessage());
-        this.systemWarning = ex;
-        if(!isWarnExpected(ex)){
-            ex.printStackTrace();
-        }
-    }
 
 }

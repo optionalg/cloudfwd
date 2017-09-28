@@ -18,6 +18,7 @@ package com.splunk.cloudfwd;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
+import java.util.List;
 import org.apache.http.HttpEntity;
 
 /**
@@ -80,5 +81,10 @@ public interface EventBatch extends HttpPostable {
   String toString();
   
   public boolean isFlushable(int charBufferLen);
+
+    /**
+     * @return the sendExceptions
+     */
+    List<Exception> getExceptions();
   
 }

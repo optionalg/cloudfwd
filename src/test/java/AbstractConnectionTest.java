@@ -100,6 +100,14 @@ public abstract class AbstractConnectionTest {
       connection.closeNow();
     }
   }
+  
+    /**
+     * Subclass should override when custom handling of errors, warnings, and failures is required
+     * @return
+     */
+    protected BasicCallbacks getCallbacks() {
+        return new BasicCallbacks(getNumEventsToSend());
+    }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
     LOG.trace(
@@ -113,6 +121,7 @@ public abstract class AbstractConnectionTest {
       connection.send(event);
     }
     connection.close(); //will flush
+    
     this.callbacks.await(10, TimeUnit.MINUTES);
     this.callbacks.checkFailures();
     this.callbacks.checkWarnings();
@@ -267,10 +276,6 @@ public abstract class AbstractConnectionTest {
   }
 
   protected abstract int getNumEventsToSend();
-
-  protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumEventsToSend());
-  }
 
   protected RawEvent getTimestampedRawEvent(int seqno) {
     return RawEvent.
