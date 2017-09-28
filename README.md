@@ -38,8 +38,7 @@ Make sure that you have the necessary prerequisites before setting up Cloudfwd.
 2. In the cloudfwd project folder,, run ```mvn install```  to build target/cloudfwd-1.0-SNAPSHOT.jar (an "uber jar" containing all dependent classes).<br>
     a. To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
 3. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the **Enable indexer acknowledgment** checkbox when creating an Event Collector token.
-4. Set your HEC endpoint URL(s) and your generated HEC token in `cloudfwd.properties`.<br>
-    a. You can also put an ELB destination or multiple host destinations in the url setting in `cloudfwd.properties`.
+4. In `cloudfwd.properties`, set your HEC endpoint URL(s) and your generated HEC token. You can also put an ELB destination or multiple host desitnations as the url. 
 5. You can also input specific host(s), index(es), source(s), or sourcetype(s) in `cloudfwd.properties`. 
 6. Save your changes.
 7. Use the Cloudfwd API to send events into HEC.<br> 
