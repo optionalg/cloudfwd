@@ -15,8 +15,8 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
 
 Make sure that you have the necessary prerequisites before setting up Cloudfwd. 
 1. After downloading Cloudfwd, run ```mvn install``` in your source directory to build all the files.<br>
-	a. To run all unit tests (not including integration tests), run ```mvn test```.
-	b. To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```
+	a. To run all unit tests (not including integration tests), run ```mvn test```.<br>
+	b. To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```<br>
 	c. To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
 2. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token.
 3. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas.
