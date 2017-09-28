@@ -35,7 +35,7 @@ public class ConnectionSettingsTest {
         Connection c = Connections.create(null);
 
         // For cloud instance, if we didn't set CLOUD_SSL_CERT_CONTENT in overrides,
-        // it will pick up from lb.properties
+        // it will pick up from cloudfwd.properties
         // Non-exist ssl content
         ConnectionSettings settings = new ConnectionSettings(c, props);
         String defaultCloudCertContent = "-----BEGIN CERTIFICATE-----" +

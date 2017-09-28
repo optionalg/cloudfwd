@@ -33,7 +33,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
   }
 
   /**
-   * create SenderFactory with default properties read from lb.properties file
+   * create SenderFactory with default properties read from cloudfwd.properties file
    */
   public PropertiesFileHelper(Connection c) {
       super(c);

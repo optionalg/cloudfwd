@@ -428,10 +428,10 @@ public class ConnectionSettings {
   }
 
   
-    // All properties are populated by following order of precedence: 1) overrides, 2) lb.properties, then 3) defaults.
+    // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.
     private void parsePropertiesFile() {
         try {
-            InputStream is = getClass().getResourceAsStream("/lb.properties");
+            InputStream is = getClass().getResourceAsStream("/cloudfwd.properties");
             if (is != null) {
                 defaultProps.load(is);
             }
@@ -440,7 +440,7 @@ public class ConnectionSettings {
                 defaultProps.putAll(overrides);
             }
 
-            // If required properties are missing from lb.properties, overrides, and defaults, then throw exception.
+            // If required properties are missing from cloudfwd.properties, overrides, and defaults, then throw exception.
             for (String key : REQUIRED_KEYS) {
                 if (this.defaultProps.getProperty(key) == null) {
                     throw new HecMissingPropertiesException(
@@ -449,9 +449,9 @@ public class ConnectionSettings {
             }
 
             // For any non-required properties, we allow them to remain null if they are not present in overrides
-            // or lb.properties, because the property getters below will return the default values.
+            // or cloudfwd.properties, because the property getters below will return the default values.
         } catch (IOException ex) {
-            throw new HecIllegalStateException("Problem loading lb.properties",
+            throw new HecIllegalStateException("Problem loading cloudfwd.properties",
                     HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
         }
 

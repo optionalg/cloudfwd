@@ -73,7 +73,7 @@ public class SuperSimpleExample {
         }
     }; //end callbacks
 
-    //overide defaults in lb.properties
+    //overide defaults in cloudfwd.properties
     Properties customization = new Properties();
     customization.put(COLLECTOR_URI, "https://127.0.0.1:8088");
     customization.put(TOKEN, "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");

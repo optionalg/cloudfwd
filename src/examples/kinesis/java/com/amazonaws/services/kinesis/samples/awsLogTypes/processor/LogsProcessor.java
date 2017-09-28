@@ -47,7 +47,7 @@ public class LogsProcessor {
 
     /*
      * Entry point to read data from a Kinesis stream and send it to Splunk.
-     * Reads Splunk HEC configuration from examples/kinesis/resources/kinesis_example_lb.properties
+     * Reads Splunk HEC configuration from examples/kinesis/resources/kinesis_example_cloudfwd.properties
      *
      * Run with four arguments:
      *      1) application name

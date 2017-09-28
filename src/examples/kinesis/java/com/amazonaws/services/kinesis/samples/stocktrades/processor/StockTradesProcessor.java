@@ -67,7 +67,7 @@ public class StockTradesProcessor {
 
     /**
      * Entry point to read dummy stock trade data from a Kinesis stream and send it to Splunk.
-     * Reads Splunk HEC configuration from examples/kinesis/resources/lb.properties
+     * Reads Splunk HEC configuration from examples/kinesis/resources/cloudfwd.properties
      *
      * Run with four arguments:
      *      1) application name

@@ -21,7 +21,7 @@ import org.junit.Test;
  */
 
 /**
- * Assumes lb.properties sets event_batch_size to 4M or something large
+ * Assumes cloudfwd.properties sets event_batch_size to 4M or something large
  * @author ghendrey
  */
 public class LargeBatchTest extends AbstractPerformanceTest {

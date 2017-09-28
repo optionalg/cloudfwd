@@ -37,13 +37,13 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
   }
   @Override
     protected String getTestPropertiesFileName() {
-    return "lb.properties"; //try as hard as we can to ignore test.properties and not use it
+    return "cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
   }
   
   @Override
   protected Properties getProps() {
     Properties props = new Properties(); //default behavior is no "hard coded" test-specific properties
-        //the assumption here is that we are doing performance testing using lb.properties not test.properties
+        //the assumption here is that we are doing performance testing using cloudfwd.properties not test.properties
     props.put(AbstractConnectionTest.KEY_ENABLE_TEST_PROPERTIES, false);    
     //NOT http mock, but real server is the assumption for these tests
     props.put(PropertyKeys.MOCK_HTTP_KEY, "false");

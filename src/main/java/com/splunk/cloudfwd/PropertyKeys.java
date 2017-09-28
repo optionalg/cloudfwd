@@ -224,7 +224,7 @@ public class PropertyKeys {
 
   /* **************************** REQUIRED KEYS ************************* */
 
-  // Connection object cannot be instantiated without these keys being provided, either in overrides or lb.properties
+  // Connection object cannot be instantiated without these keys being provided, either in overrides or cloudfwd.properties
   public static final String[] REQUIRED_KEYS = {TOKEN, COLLECTOR_URI};
 
 

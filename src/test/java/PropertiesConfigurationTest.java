@@ -70,22 +70,22 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
 
         Assert.assertEquals(100, this.connection.getSettings().getEventBatchSize()); // Override took effect
        //note - we can't assune the props file has default values, so I commented out the assertEquals on defaults
-        //Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // No override or lb.properties value - use default
+        //Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // No override or cloudfwd.properties value - use default
         Assert.assertEquals(urls, this.connection.getSettings().getUrls()); //Override took effect
         Assert.assertEquals("foo-token", this.connection.getSettings().getToken()); //Override took effect
-        //Assert.assertEquals(5000, this.connection.getSettings().getAckPollMS()); // No override but use lb.properties value
+        //Assert.assertEquals(5000, this.connection.getSettings().getAckPollMS()); // No override but use cloudfwd.properties value
     }
 
     @Test
     public void testPropertiesHelperWithoutOverrides() throws MalformedURLException {
         // Need connection object to pass into PropertiesFileHelper constructor for failed() callback
         Properties overrides = new Properties();
-        //can't make assumptions about what's in lb.properties
+        //can't make assumptions about what's in cloudfwd.properties
         /*
         this.connection = Connections.create(callbacks, overrides);
 
-        Assert.assertEquals(1000000, this.connection.getSettings().getEventBatchSize()); // Property is in lb.properties
-        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // Property is not in lb.properties so use default
+        Assert.assertEquals(1000000, this.connection.getSettings().getEventBatchSize()); // Property is in cloudfwd.properties
+        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // Property is not in cloudfwd.properties so use default
 */
     }
 }

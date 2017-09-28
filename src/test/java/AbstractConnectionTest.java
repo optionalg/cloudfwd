@@ -56,7 +56,7 @@ public abstract class AbstractConnectionTest {
 
   /**
    * set enabled=false in test.properties to disable test.properties and
-   * fallback on lb.properties
+   * fallback on cloudfwd.properties
    */
   public static final String KEY_ENABLE_TEST_PROPERTIES = "enabled";
   public static final String TEST_METHOD_GUID_KEY = "testMethodGUID";
@@ -161,7 +161,7 @@ public abstract class AbstractConnectionTest {
 
   /**
    * test should override this to add properties on top of
-   * lb.properties+test.properties
+   * cloudfwd.properties+test.properties
    *
    * @return
    */
@@ -171,7 +171,7 @@ public abstract class AbstractConnectionTest {
 
   /**
    * reads default test properties out of test_defaults.properties (these
-   * overlay on top of lb.properties)
+   * overlay on top of cloudfwd.properties)
    *
    * @return
    */
@@ -190,15 +190,15 @@ public abstract class AbstractConnectionTest {
     if (Boolean.parseBoolean(props.getProperty("enabled", "false"))) {
       return props;
     } else {
-      LOG.warn("test.properties disabled, using lb.properties only");
+      LOG.warn("test.properties disabled, using cloudfwd.properties only");
       return new Properties(); //ignore test.properties
     }
   }
 
   /**
    * test can override this if a test requires its own .properties file to slap
-   * on top of lb.properties (instead of slapping test.properties on top of
-   * lb.properties)
+   * on top of cloudfwd.properties (instead of slapping test.properties on top of
+   * cloudfwd.properties)
    *
    * @return
    */
