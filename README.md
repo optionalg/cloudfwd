@@ -1,6 +1,23 @@
 # Cloud forwarder
 
-Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with indexer acknowledgments enabled. 
+Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with indexer acknowledgments enabled. Use this README to quickly get started with Cloudfwd. To see how Cloudfwd fits into your system, see [architecture overview](https://github.com/splunk/cloudfwd/wiki/Architecture).
+
+## Table of Contents
+- [Cloud forwarder](#cloud-forwarder)
+  * [Getting Started](#getting-started)
+    + [Prerequisites](#prerequisites)
+    + [Installation](#installation)
+  * [Connection API Documentation](#connection-api-documentation)
+  * [Configurable Property Keys](#configurable-property-keys)
+  * [Examples](#examples)
+    + [Super Simple Example](#super-simple-example)
+    + [Getting data from Amazon Kinesis Streams into Splunk using Cloudfwd](#getting-data-from-amazon-kinesis-streams-into-splunk-using-cloudfwd)
+    + [Getting AWS logs into Splunk using Cloudfwd](#getting-aws-logs-into-splunk-using-cloudfwd)
+  * [Troubleshoot Cloudfwd](#troubleshoot-cloudfwd)
+    + [Error exceptions tables](#error-exceptions-tables)
+  * [Built With](#built-with)
+  * [Version](#version)
+  * [License](#license)
 
 ## Getting Started
 

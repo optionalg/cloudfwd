@@ -56,10 +56,12 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
         switch (statusCode) {            
             case 503:  
                 warn(reply, statusCode);
-                type= PREFLIGHT_BUSY;                
+                type = PREFLIGHT_BUSY;
+                break;
             case 504:  
-                 warn(reply, statusCode);
-                type=LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT;                
+                warn(reply, statusCode);
+                type = LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT;
+                break;
             case 200:
                 LOG.info("HEC preflight check is good on {}", getChannel());
                 type = PREFLIGHT_OK;
