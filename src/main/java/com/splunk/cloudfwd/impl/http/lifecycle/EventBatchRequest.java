@@ -46,5 +46,10 @@ public class EventBatchRequest extends LifecycleEvent implements EventBatchLifec
   public EventBatchImpl getEvents() {
     return eventBatch;
   }
+
+    @Override
+    public Exception getException() {
+        return null;
+    }
   
 }

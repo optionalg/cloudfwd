@@ -15,11 +15,22 @@
  */
 package com.splunk.cloudfwd;
 
+import static com.splunk.cloudfwd.PropertyKeys.ACK_POLL_MS;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecMissingPropertiesException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
+import static com.splunk.cloudfwd.PropertyKeys.CHANNELS_PER_DESTINATION;
+import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_ACK_POLL_MS;
+import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_CHANNELS_PER_DESTINATION;
+import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_HEALTH_POLL_MS;
+import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_MAX_TOTAL_CHANNELS;
+import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_UNRESPONSIVE_MS;
+import static com.splunk.cloudfwd.PropertyKeys.HEALTH_POLL_MS;
+import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
+import static com.splunk.cloudfwd.PropertyKeys.MIN_HEALTH_POLL_MS;
 import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
+import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.Endpoints;
 import java.io.IOException;
@@ -70,53 +81,70 @@ public class ConnectionSettings {
                 matches("^.+\\.cloud\\.splunk\\.com.*$");
     }
 
-    public int getChannelsPerDestination() {
+    private int handleInt(String key, String defaultVal) {
         int n = Integer.parseInt(defaultProps.getProperty(
-                PropertyKeys.CHANNELS_PER_DESTINATION,
-                PropertyKeys.DEFAULT_CHANNELS_PER_DESTINATION).trim());
+                key,defaultVal).trim());        
         if (n < 1) {
-            // FIXME: EP: Do we actually want to allow creating 2,147,483,647 channels PER destination ?!
-            n = Integer.MAX_VALUE; //effectively no limit by default
+            int deflt = Integer.parseInt(defaultVal);
+            LOG.debug("{}, defaulting {} to {}", n, key, deflt);
+            return deflt;
+        } else {
+            return n;
         }
-        return n;
+    }
+    
+    private long handleLong(String key, String defaultVal) {
+        long n = Long.parseLong(defaultProps.getProperty(
+                key,defaultVal).trim());        
+        if (n < 1) {
+            long deflt = Integer.parseInt(defaultVal);
+            LOG.debug("{}, defaulting {} to {}", n, key, deflt);
+            return deflt;
+        } else {
+            return n;
+        }
+    }    
+    
+    public int getChannelsPerDestination() {
+        return handleInt(CHANNELS_PER_DESTINATION, DEFAULT_CHANNELS_PER_DESTINATION);
     }
 
     public long getUnresponsiveChannelDecomMS() {
-        long t = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.UNRESPONSIVE_MS,
-                PropertyKeys.DEFAULT_UNRESPONSIVE_MS).trim());
-        if (t < 1) {
-            LOG.debug(PropertyKeys.UNRESPONSIVE_MS + ": unlimited");
-        }
-        return t;
+        return handleLong(UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS);
     }
 
     public long getAckPollMS() {
         long interval = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.ACK_POLL_MS,
-                PropertyKeys.DEFAULT_ACK_POLL_MS).trim());
+                ACK_POLL_MS,
+                DEFAULT_ACK_POLL_MS).trim());
         if (interval <= 0) {
+            long was = interval;
             interval = PropertyKeys.MIN_ACK_POLL_MS;
+            LOG.debug("{}, defaulting {} to {}", was, ACK_POLL_MS,interval);  
         }
         return interval;
     }
 
     public long getHealthPollMS() {
         long interval = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.HEALTH_POLL_MS,
-                PropertyKeys.DEFAULT_HEALTH_POLL_MS).trim());
+                HEALTH_POLL_MS,
+                DEFAULT_HEALTH_POLL_MS).trim());
         if (interval <= 0) {
-            interval = PropertyKeys.MIN_HEALTH_POLL_MS;
+            long was = interval;
+            interval = MIN_HEALTH_POLL_MS;
+            LOG.debug("{}, defaulting {} to {}", was, HEALTH_POLL_MS,interval);  
         }
         return interval;
     }
 
     public int getMaxTotalChannels() {
         int max = Integer.parseInt(defaultProps.getProperty(
-                PropertyKeys.MAX_TOTAL_CHANNELS,
-                PropertyKeys.DEFAULT_MAX_TOTAL_CHANNELS).trim()); //default no limit
+                MAX_TOTAL_CHANNELS,
+                DEFAULT_MAX_TOTAL_CHANNELS).trim()); //default no limit
         if (max < 1) {
+            int was = max;
             max = Integer.MAX_VALUE; //effectively no limit by default
+            LOG.debug("{}, defaulting {} to {}", was, MAX_TOTAL_CHANNELS,max);              
         }
         return max;
     }

@@ -26,5 +26,10 @@ public class Request extends LifecycleEvent{
   public Request(Type type) {
     super(type);
   }
+
+    @Override
+    public Exception getException() {
+        return null;
+    }
   
 }

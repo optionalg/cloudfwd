@@ -23,7 +23,6 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.HecLoggerFactory;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;

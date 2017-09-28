@@ -16,6 +16,8 @@
 package com.splunk.cloudfwd.impl.http.lifecycle;
 
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.ServerErrors;
+import java.io.IOException;
 
 /**
  *
@@ -33,11 +35,26 @@ public class Response extends LifecycleEvent {
     this.resp = resp;
     this.url = url;
   }
-
+  
   @Override
-  public String toString() {
-    return super.toString()  + " Response{" + "httpCode=" + httpCode + ", resp=" + resp + '}';
+  public Exception getException(){
+      if(httpCode==200){
+          return null;// OK = no Exception
+      }else{
+          try {
+              return ServerErrors.toErrorException(resp, httpCode, url);
+          } catch (IOException ex) {
+              throw new RuntimeException("ServerErrors.toErrorException failed. Http status="+ httpCode+", resp="+resp, ex);
+          }
+      }
   }
+
+    @Override
+    public String toString() {
+        return "Response{" +super.toString()+ " httpCode=" + httpCode + ", resp=" + resp + ", url=" + url + '}';
+    }
+
+
   
 
   /**

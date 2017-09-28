@@ -128,10 +128,12 @@ public class LoadBalancer implements Closeable {
     }
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
-        for (InetSocketAddress s : addrs) {
-            //add multiple channels for each InetSocketAddress
-            for (int i = 0; i < channelsPerDestination; i++) {
-                addChannel(s, false);
+        //add multiple channels for each InetSocketAddress
+        for (int i = 0; i < channelsPerDestination; i++) {
+            for (InetSocketAddress s : addrs) {
+                if(!addChannel(s, false)){
+                    break; //reached MAX_TOTAL_CHANNELS
+                }
             }
         }
     }
@@ -142,7 +144,7 @@ public class LoadBalancer implements Closeable {
         addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
     }
 
-    private void addChannel(InetSocketAddress s, boolean force) {
+    private boolean addChannel(InetSocketAddress s, boolean force) {
         //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
         //we must add a new one, before we cancelEventTrackers the old one. If we did not have the force
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
@@ -154,7 +156,7 @@ public class LoadBalancer implements Closeable {
             LOG.warn(
                     "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
                     getMaxTotalChannels() + ")");
-            return;
+            return false;
         }
         URL url;
         String host;
@@ -184,6 +186,7 @@ public class LoadBalancer implements Closeable {
 
             // have channel ready to send requests
             channel.start();
+            return true;
 
         } catch (MalformedURLException ex) {
             LOG.error(ex.getMessage(), ex);

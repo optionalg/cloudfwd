@@ -17,6 +17,7 @@ import java.util.concurrent.TimeoutException;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 
 /**
  * Test class to that tests various error rseponse scenarios
@@ -24,8 +25,8 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
  *
  * Created by eprokop on 9/1/17.
  */
-public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
-    private static final Logger LOG = LoggerFactory.getLogger(HecServerErrorResponseHecCheckTest.class.getName());
+public class HealthCheckTest extends AbstractConnectionTest {
+    private static final Logger LOG = LoggerFactory.getLogger(HealthCheckTest.class.getName());
 
     private int numEvents = 10;
     private enum Error {
@@ -89,9 +90,16 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         errorToTest = Error.ACKS_DISABLED;
         createConnection();
         List<HecHealth> status = super.healthCheck();
+        //TODO - this needs to latch until we are sure preflight has completed
         for (HecHealth hh : status) {
           if (hh.getStatus().getType() != ACK_DISABLED) {
             Assert.fail("We expected ACK_DISABLED");
+          }else{
+              Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
+                      hh.getException() instanceof HecServerErrorResponseException);
+              HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
+              Assert.assertTrue("HecServerErrorResponseException not "+ACK_DISABLED+", was  " + e.getType(), 
+                      e.getType()==ACK_DISABLED);
           }
         }
     }
@@ -104,6 +112,12 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         for (HecHealth hh : status) {
           if (hh.getStatus().getType() != INVALID_TOKEN) {
             Assert.fail("We expected INVALID_TOKEN");
+          }else{
+              Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
+                      hh.getException() instanceof HecServerErrorResponseException);
+              HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
+              Assert.assertTrue("HecServerErrorResponseException not "+INVALID_TOKEN+", was  " + e.getType(), 
+                      e.getType()==INVALID_TOKEN);
           }
         }
     }
@@ -116,6 +130,12 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         for (HecHealth hh : status) {
           if (hh.getStatus().getType() != INVALID_AUTH) {
             Assert.fail("We expected INVALID_AUTH");
+          }else{
+              Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
+                      hh.getException() instanceof HecServerErrorResponseException);
+              HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
+              Assert.assertTrue("HecServerErrorResponseException not "+INVALID_AUTH+", was  " + e.getType(), 
+                      e.getType()==INVALID_AUTH);
           }
         }
     }
@@ -128,6 +148,12 @@ public class HecServerErrorResponseHecCheckTest extends AbstractConnectionTest {
         for (HecHealth hh : status) {
           if (hh.getStatus().getType() != SPLUNK_IN_DETENTION) {
             Assert.fail("We expected IN_DETENTION");
+          }else{
+              Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
+                      hh.getException() instanceof HecServerErrorResponseException);
+              HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
+              Assert.assertTrue("HecServerErrorResponseException not "+SPLUNK_IN_DETENTION+", was  " + e.getType(), 
+                      e.getType()==SPLUNK_IN_DETENTION);
           }
         }
     }

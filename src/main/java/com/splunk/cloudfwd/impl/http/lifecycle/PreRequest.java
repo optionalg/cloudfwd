@@ -26,5 +26,10 @@ public class PreRequest extends LifecycleEvent{
   public PreRequest(Type type) {
     super(type);
   }
+
+    @Override
+    public Exception getException() {
+        return null;
+    }
   
 }

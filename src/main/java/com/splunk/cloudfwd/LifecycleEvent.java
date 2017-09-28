@@ -74,6 +74,14 @@ public class LifecycleEvent {
     return "LifecycleEvent{" + "type=" + type + '}';
   }
   
+    /**
+     *return Exception associated with this LifecycleEvent, or null if this LifecycleEvent is not associated with an Exception
+     * @return
+     */
+    public Exception getException(){
+        return null;
+    }
+  
   
 
 

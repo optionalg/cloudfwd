@@ -133,7 +133,7 @@
                     <excludePackageNames>com.splunk.cloudfwd.impl:com.amazonaws.services.kinesis.samples.*:org.*</excludePackageNames>
                 </configuration>
             </plugin>
-            <!--plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
@@ -146,13 +146,14 @@
                 </executions>
                 <configuration>           
                     <executable>java</executable>
+                    <classpathScope>test</classpathScope>
                     <arguments>
                         <argument>-classpath</argument>
                         <classpath/>
-                        <argument>LoadBalancerTest</argument>
+                        <argument>SuperSimpleExample</argument>
                     </arguments>
                 </configuration>
-            </plugin-->
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -196,7 +197,7 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>integration-test</goal>   
+                            <goal>integration-test</goal> 
                             <goal>verify</goal>
                         </goals>
                     </execution>

@@ -72,4 +72,9 @@ public class HecHealthImpl implements HecHealth {
     public String getChannelId() {
         return channelId;
     }
+
+    @Override
+    public Exception getException() {
+       return getStatus().getException();
+    }
 }
