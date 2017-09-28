@@ -1,6 +1,6 @@
 # Cloud forwarder
 
-Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with indexer acknowledgments enabled. 
+Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with indexer acknowledgments enabled. Use this README to quickly get started with Cloudfwd. To see how Cloudfwd fits into your system, see [architecture overview](https://github.com/splunk/cloudfwd/wiki/Architecture).
 
 ## Getting Started
 
