@@ -13,6 +13,7 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
     + [Super Simple Example](#super-simple-example)
     + [Getting data from Amazon Kinesis Streams into Splunk using Cloudfwd](#getting-data-from-amazon-kinesis-streams-into-splunk-using-cloudfwd)
     + [Getting AWS logs into Splunk using Cloudfwd](#getting-aws-logs-into-splunk-using-cloudfwd)
+  * [Testing Cloudfwd](#test-cloudfwd)  
   * [Troubleshoot Cloudfwd](#troubleshoot-cloudfwd)
     + [Error exceptions tables](#error-exceptions-tables)
   * [Built With](#built-with)
@@ -34,23 +35,27 @@ Make sure that you have the necessary prerequisites before setting up Cloudfwd.
 
 1.  Get the cloudfwd project folder via ```git clone https://github.com/splunk/cloudfwd.git``` or by downloading and extracting the project zipfile
 2. In the cloudfwd project folder,, run ```mvn install```  to build target/cloudfwd-1.0-SNAPSHOT.jar (an "uber jar" containing all dependent classes).<br>
-	a. To run all unit tests (not including integration tests), run ```mvn test```. The unit tests use a simulated splunk server.<br>
-	b. To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```. The integration tests require a Splunk instance to be running and small amount of data into splunk using the cloudfwd client, then query Splunk for the data to verify it. You must add your instance's username and password to AbstractReconciliationTest.java.<br>
-	c. To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
-3. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token.
-4. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas.
-5. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
-```
-url=https://127.0.0.1:8088, https://localhost:8088
-token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
-```
-6. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
-7. Save your changes.
-8. Use the Cloudfwd API to send events into HEC.<br> 
+    a. To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
+3. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the **Enable indexer acknowledgment** checkbox when creating an Event Collector token.
+4. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
+5. Save your changes.
+6. Use the Cloudfwd API to send events into HEC.<br> 
 	a. See [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
 
 You can now search on your ingested data in your Splunk instance.
 
+## Quickstart
+``` 
+// connect to Splunk and send an event
+ConnectionCallbacks callbacks = getCallbacks();
+Connection connection = Connections.create(callbacks);
+
+Event event = RawEvent.fromText("hello splunk", 0);
+
+connection.send(event);
+```
+
+For full usage information, see the [Connection API Documentation](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html) 
 ## Connection API Documentation
 [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
 
@@ -61,6 +66,9 @@ https://splunk.github.io/cloudfwd/apidocs/constant-values.html
 
 ### Super Simple Example
 [SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/SuperSimpleExample.java)
+
+### Steps
+1. run mvn ```exec com.splunk.cloudfwd.test.SuperSimpleExample``` 
 
 ### Getting data from Amazon Kinesis Streams into Splunk using Cloudfwd
 This example will use the same configurations set up in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html) from the AWS website. We have provided the Java code in the /examples/ folder, but you will need to go through the Kinesis Stream tutorial to setup Kinesis Streams, DynamoDB, and your IAM role. 
@@ -111,6 +119,14 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 6. Open your Splunk environment, and search for your sourcetype in your Splunk environment.
 
 After searching, your log data will appear in the Splunk UI.
+
+## Test Cloudfwd
+
+Cloudfwd comes with a set of unit and integration tests. You can run these with the following commands.
+* To run all unit tests, run ```mvn test```. The unit tests use a simulated Splunk server.
+* To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```. The integration tests require a Splunk instance to be running, and will send a small amount of data into your Splunk instance using the Cloudfwd client. It will then query the Splunk instance for the data in order to verify it. You must add your instance's username and password to `AbstractReconciliationTest.java`.
+* To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
+
 
 ## Troubleshoot Cloudfwd
 
