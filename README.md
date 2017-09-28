@@ -7,6 +7,7 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
   * [Getting Started](#getting-started)
     + [Prerequisites](#prerequisites)
     + [Installation](#installation)
+  * [Quick start](#quickstart)
   * [Connection API Documentation](#connection-api-documentation)
   * [Configurable Property Keys](#configurable-property-keys)
   * [Examples](#examples)
@@ -37,9 +38,11 @@ Make sure that you have the necessary prerequisites before setting up Cloudfwd.
 2. In the cloudfwd project folder,, run ```mvn install```  to build target/cloudfwd-1.0-SNAPSHOT.jar (an "uber jar" containing all dependent classes).<br>
     a. To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
 3. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the **Enable indexer acknowledgment** checkbox when creating an Event Collector token.
-4. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
-5. Save your changes.
-6. Use the Cloudfwd API to send events into HEC.<br> 
+4. Set your HEC endpoint URL(s) and your generated HEC token in `cloudfwd.properties`.<br>
+    a. You can also put an ELB destination or multiple host destinations in the url setting in `cloudfwd.properties`.
+5. You can also input specific host(s), index(es), source(s), or sourcetype(s) in `cloudfwd.properties`. 
+6. Save your changes.
+7. Use the Cloudfwd API to send events into HEC.<br> 
 	a. See [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
 
 You can now search on your ingested data in your Splunk instance.
@@ -56,6 +59,7 @@ connection.send(event);
 ```
 
 For full usage information, see the [Connection API Documentation](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html) 
+
 ## Connection API Documentation
 [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
 
