@@ -81,11 +81,6 @@ public interface Connection extends Closeable{
     int sendBatch(EventBatch events) throws HecConnectionTimeoutException;
 
     /**
-     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made@return     
-     */
-    List<HecHealthImpl> healthCheck();
-
-    /**
      * Returns a live ConnectionsSettings instance that can be used to change
      * the behavior of the connection while it is in use.
      *
@@ -99,5 +94,8 @@ public interface Connection extends Closeable{
      */
     public void setLoggerFactory(HecLoggerFactory f);
     
+     /**
+     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made    
+     */
     public  List<HecHealth> getHealth();
 }

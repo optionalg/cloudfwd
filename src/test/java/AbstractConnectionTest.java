@@ -17,6 +17,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.Connections;
+import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import org.slf4j.Logger;
@@ -127,11 +128,11 @@ public abstract class AbstractConnectionTest {
     this.callbacks.checkWarnings();
   }
   
-  protected List<HecHealthImpl> healthCheck() throws InterruptedException {
+  protected List<HecHealth> healthCheck() throws InterruptedException {
     LOG.trace(
         "HEC CHECK WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
         + "And test method GUID " + testMethodGUID);
-    List<HecHealthImpl> healthStatus = connection.healthCheck();
+    List<HecHealth> healthStatus = connection.getHealth();
     connection.close(); //will flush    
     return healthStatus;
   }

@@ -208,24 +208,6 @@ public class ConnectionImpl implements Connection {
     }
   }
 
-    /**
-     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made
-     * @param 
-     * @return
-     * @throws 
-     */
-  public synchronized List<HecHealthImpl> healthCheck() {
-    throw new RuntimeException("Not yet implemented");
-/*    
-    throw new RuntimeException("Not implemented.");
-    if (closed) {
-      throw new HecConnectionStateException("Attempt to healthCheck on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
-    }
-    
-    return lb.checkHealth();
-*/
-  }
-
   /**
    * @return the callbacks
    */

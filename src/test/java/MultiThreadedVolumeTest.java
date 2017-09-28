@@ -41,8 +41,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private void startHealthCheck() {
         externalHealthPoller = new PollScheduler("Connection health checker");
         externalHealthPoller.start(() -> {
-            List<HecHealthImpl> healthList = connection.healthCheck();
-            for (HecHealthImpl health : healthList) {
+            List<HecHealth> healthList = connection.getHealth();
+            for (HecHealth health : healthList) {
                 LOG.info("Health: url=" + health.getUrl() + "status=" + health.getStatus());
             }
         }, 30, TimeUnit.SECONDS);
