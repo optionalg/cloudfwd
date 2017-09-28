@@ -7,7 +7,7 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
   * [Getting Started](#getting-started)
     + [Prerequisites](#prerequisites)
     + [Installation](#installation)
-  * [Quick start](#quickstart)
+  * [Usage](#usage)
   * [Connection API Documentation](#connection-api-documentation)
   * [Configurable Property Keys](#configurable-property-keys)
   * [Examples](#examples)
