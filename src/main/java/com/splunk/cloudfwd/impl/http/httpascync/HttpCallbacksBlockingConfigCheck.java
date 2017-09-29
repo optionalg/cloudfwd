@@ -38,7 +38,9 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
     private final Logger LOG;
     private final CountDownLatch latch = new CountDownLatch(1);
     private HecServerErrorResponseException configProblems;
+    private Exception exception;
     private int numTries;
+    private boolean started;
 
 
     public HttpCallbacksBlockingConfigCheck(HecIOManager m, ConnectionImpl c) {
@@ -46,6 +48,10 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
         this.LOG = getConnection().getLogger(
                 HttpCallbacksBlockingConfigCheck.class.
                 getName());
+    }
+
+    public void setStarted(boolean b) {
+        started = b;
     }
 
     public static class TimeoutException extends Exception {
@@ -72,11 +78,16 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
     }
 
     
-    
     public HecServerErrorResponseException getConfigProblems(long timeoutMs)
-            throws InterruptedException, TimeoutException {
+            throws Exception {
+        if(!started){
+            throw new IllegalStateException("Attempt to getConfigProblems before started");
+        }
         if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS)) {
             throw new TimeoutException("Timed out waiting for server response");
+        }
+        if(null != exception){ //an Excption was caught while waiting on latch
+            throw exception;
         }
         return configProblems;
     }
@@ -86,7 +97,6 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
         switch (statusCode) {
             case 503:
             case 504:
-                warn(reply, statusCode);
                 retry();                
                 break;
             case 200:
@@ -107,7 +117,8 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
         }else{
             String msg = "Config Checks failed  " + PREFLIGHT_RETRIES+"="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
-            getCallbacks().systemError(new HecMaxRetriesException(msg));
+            exception = new HecMaxRetriesException(msg);
+            latch.countDown();
         }
     }
 
@@ -119,7 +130,8 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
             LOG.error(
                     "failed to unmarshal server response in pre-flight health check {}",
                     reply);
-            error(ex);
+            exception = ex;
+            latch.countDown();
         }
     }
 
@@ -133,14 +145,16 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
         LOG.error(
                 "HEC confg check via /ack endpoint failed with exception {} on {}",ex.getMessage(), getBaseUrl(),
                 ex);
-        error(ex);
+        exception = ex;
+        latch.countDown();
     }
 
     @Override
     public void cancelled() {
         LOG.warn("HEC config check cancelled");
-        error(new Exception(
-                "HEC config check cancelled"));
+        exception = new Exception(
+                "HEC config check cancelled");
+        latch.countDown();
     }
 
 }

@@ -44,7 +44,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.logging.Level;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,30 +112,26 @@ public class ConnectionImpl implements Connection {
   
   
   @Override
-  public List<ConfigStatus> checkConfigs(){
+  public List<ConfigStatus> checkConfigs() throws Exception{
       IndexDiscoverer d = new IndexDiscoverer((PropertiesFileHelper) getSettings(), this);
       List<ConfigStatus> stats = new ArrayList<>();
-      d.getAddrs().forEach(addr->{
-          ConfigStatus stat = checkConfigStatus(addr);
-          if(stat != null){
-            stats.add(checkConfigStatus(addr));  
-          }
-      });
+      for(InetSocketAddress addr: d.getAddrs()){
+          stats.add(checkConfigStatus(addr));            
+      }
       return stats;
     }
 
-    protected ConfigStatus checkConfigStatus(InetSocketAddress addr) {
-        try (HttpSender sender = getPropertiesFileHelper().createSender(addr);) { //autoclose when done  
-            
+    protected ConfigStatus checkConfigStatus(InetSocketAddress addr) throws Exception{
+        try (HttpSender sender = getPropertiesFileHelper().createSender(addr);) { //autoclose when done              
             HecIOManager m = sender.getHecIOManager();            
             HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m, this);
-            m.configCheck(cb);
+            m.configCheck(cb); //begin async processign
+            //following call blocks until processing complete
             HecServerErrorResponseException problem = cb.getConfigProblems(180000); //3 min
             return new ConfigStatus(sender, problem, this);            
         } catch (Exception ex) { 
-            ex.printStackTrace();
           LOG.error("Failed checkConfigStatus {}", ex.getMessage());
-          return null;
+          throw ex;
       }
     }
 

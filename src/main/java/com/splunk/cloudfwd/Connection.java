@@ -41,7 +41,7 @@ public interface Connection extends Closeable{
      */
     int send(Event event) throws HecConnectionTimeoutException;
 
-    public List<ConfigStatus> checkConfigs();
+    public List<ConfigStatus> checkConfigs() throws Exception;
 
     /**
      * Used to select either structured HEC /event endpoint or /raw HEC endpoint

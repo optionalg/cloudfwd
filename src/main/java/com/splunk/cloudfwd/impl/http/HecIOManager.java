@@ -132,6 +132,7 @@ public class HecIOManager implements Closeable {
         public void configCheck(HttpCallbacksBlockingConfigCheck cb ) {
         LOG.trace("config check on {}", sender.getBaseUrl());
         sender.splunkCheck(cb);
+        cb.setStarted(true);
     }
 
     /**
