@@ -80,10 +80,6 @@ public class LoadBalancer implements Closeable {
         return h;
     }
 
-    synchronized void checkHealthEach(List<HecHealthImpl> healthStatus) {
-
-    }
-
     @SuppressWarnings("unused")
     private void updateChannels(IndexDiscoverer.Change change) {
         LOG.debug(change.toString());
