@@ -81,6 +81,10 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   protected ObjectMapper json = new ObjectMapper();
   // results should contain based on props.conf entries.
 
+  // enable HEC only once per class run. Has to be a class variable, as each
+  // junit test instantiate a new instance of the test class
+  private static Boolean HEC_ENABLED = false;
+
   public AbstractReconciliationTest() {
     super();
     LOG.info("NEXT RECONCILIATION TEST...");
@@ -91,6 +95,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
 
   @Before
   public void init() {
+    if (!HEC_ENABLED) {
+      enableHec();
+    }
     createTestIndex();
   }
 
@@ -256,6 +263,43 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       } catch (Exception ex) {
         Assert.fail("deleteTestIndex: failed to delete index: " + ex.getMessage());
       }
+  }
+
+  protected void enableHec() {
+    try {
+      HttpPost httpRequest = new HttpPost(mgmtSplunkUrl() +
+              "/services/data/inputs/http/http");
+      List<NameValuePair> params = new ArrayList<>();
+      params.add(new BasicNameValuePair("disabled", "0"));
+      params.add(new BasicNameValuePair("output_mode", "json"));
+      httpRequest.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+
+      HttpResponse httpResponse = httpClient.execute(httpRequest);
+      String httpReply = parseHttpResponse(httpResponse);
+
+      // Parse json from http reply
+      JsonNode json_reply = json.readTree(httpReply);
+
+      // Check if we received an error message
+      if (json_reply.findValue("messages").asBoolean()) {
+        JsonNode message = json_reply.findValue("messages");
+        LOG.info("DEBUG: message: " + message);
+        if (message.findValue("type").asText().equals("ERROR")) {
+          Assert.fail("createTestToken: Failed to create token: TOKEN_NAME=" +
+                  TOKEN_NAME + ", server returned error message: " +
+                  message.asText());
+        }
+      }
+
+      // Parse the response to find token id
+      JsonNode entry = json_reply.path("entry").get(0);
+      String port = entry.path("content").path("port").asText();
+      this.HEC_ENABLED = true;
+      LOG.info("enableHec: Successfully enabled HEC on port " + port);
+    } catch (Exception ex) {
+      Assert.fail("enableHec: Failed to enable HEC, ex: " +
+              ex.getMessage());
+    }
   }
 
   // pass sourcetype=null to use the token default sourcetype

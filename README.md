@@ -7,12 +7,15 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
   * [Getting Started](#getting-started)
     + [Prerequisites](#prerequisites)
     + [Installation](#installation)
+  * [Usage](#usage)
+  * [Wiki](https://github.com/splunk/cloudfwd/wiki)
   * [Connection API Documentation](#connection-api-documentation)
   * [Configurable Property Keys](#configurable-property-keys)
   * [Examples](#examples)
     + [Super Simple Example](#super-simple-example)
     + [Getting data from Amazon Kinesis Streams into Splunk using Cloudfwd](#getting-data-from-amazon-kinesis-streams-into-splunk-using-cloudfwd)
     + [Getting AWS logs into Splunk using Cloudfwd](#getting-aws-logs-into-splunk-using-cloudfwd)
+  * [Testing Cloudfwd](#test-cloudfwd)  
   * [Troubleshoot Cloudfwd](#troubleshoot-cloudfwd)
     + [Error exceptions tables](#error-exceptions-tables)
   * [Built With](#built-with)
@@ -32,27 +35,36 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
 
 Make sure that you have the necessary prerequisites before setting up Cloudfwd. 
 
-1.  Get the cloudfwd project folder via ```git clone https://github.com/splunk/cloudfwd.git``` or by downloading and extracting the project zipfile
-2. In the cloudfwd project folder,, run ```mvn install```  to build target/cloudfwd-1.0-SNAPSHOT.jar (an "uber jar" containing all dependent classes).<br>
-	a. To run all unit tests (not including integration tests), run ```mvn test```. The unit tests use a simulated splunk server.<br>
-	b. To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```. The integration tests require a Splunk instance to be running and small amount of data into splunk using the cloudfwd client, then query Splunk for the data to verify it. You must add your instance's username and password to AbstractReconciliationTest.java.<br>
-	c. To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
-3. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token.
-4. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URLs. You can put an ELB destination or multiple host destinations, separated by commas.
-5. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
-```
-url=https://127.0.0.1:8088, https://localhost:8088
-token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
-```
-6. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
-7. Save your changes.
-8. Use the Cloudfwd API to send events into HEC.<br> 
+1.  Get the cloudfwd project folder via ```git clone https://github.com/splunk/cloudfwd.git``` or by downloading and extracting the project zipfile.
+2. In the cloudfwd project folder, run ```mvn install```  to build target/cloudfwd-1.0-SNAPSHOT.jar (an "uber jar" containing all dependent classes).<br>
+    a. To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
+3. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the **Enable indexer acknowledgment** checkbox when creating an Event Collector token.
+4. In `cloudfwd.properties`, set your HEC endpoint URL(s) and your generated HEC token. You can also put an ELB destination or multiple host desitnations as the url. 
+5. Save your changes.
+6. Use the cloudfwd API to send events into HEC.<br> 
 	a. See [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
 
 You can now search on your ingested data in your Splunk instance.
 
+### Usage
+``` 
+// connect to Splunk and send an event
+ConnectionCallbacks callbacks = getCallbacks();
+Connection connection = Connections.create(callbacks);
+
+Event event = RawEvent.fromText("hello splunk", 0);
+
+connection.send(event);
+```
+
+For full usage information, see the [Connection API Documentation](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html) 
+
+## Wiki 
+See [Wiki](https://github.com/splunk/cloudfwd/wiki) for additional documentation, including architecture overview and event formatting best practices.
+
 ## Connection API Documentation
 [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
+
 
 ## Configurable Property Keys
 https://splunk.github.io/cloudfwd/apidocs/constant-values.html
@@ -61,6 +73,9 @@ https://splunk.github.io/cloudfwd/apidocs/constant-values.html
 
 ### Super Simple Example
 [SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/SuperSimpleExample.java)
+
+### Steps
+1. run mvn ```exec com.splunk.cloudfwd.test.SuperSimpleExample``` 
 
 ### Getting data from Amazon Kinesis Streams into Splunk using Cloudfwd
 This example will use the same configurations set up in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html) from the AWS website. We have provided the Java code in the /examples/ folder, but you will need to go through the Kinesis Stream tutorial to setup Kinesis Streams, DynamoDB, and your IAM role. 
@@ -83,7 +98,7 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 8. Run the StockTradeProcessor class with the following arguments: ```<application_name> <stream_name> <AWS_region_name> <profile_name> ```. This might take a few minutes.
 9. Go to your Splunk deployment.
 10. Switch the time range picker to All time(real-time).
-11. Run 'index=*' in Splunk search. 
+11. Run 'index=*' in Splunk search.
 
 After a minute, stock trade events appear in the Splunk UI.
 
@@ -95,7 +110,7 @@ This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk
 2. A Kinesis stream and an IAM role.
 
 ### Steps
-1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the Enable indexer acknowledgment checkbox when creating an Event Collector token. 
+1. Set up HTTP Event Collector and generate a [HEC token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector). Enable indexer acknowledgment for your token by clicking the **Enable indexer acknowledgment** checkbox when creating an Event Collector token. 
 2. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas.
 3. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
@@ -111,6 +126,14 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 6. Open your Splunk environment, and search for your sourcetype in your Splunk environment.
 
 After searching, your log data will appear in the Splunk UI.
+
+## Test Cloudfwd
+
+Cloudfwd comes with a set of unit and integration tests. You can run these with the following commands.
+* To run all unit tests, run ```mvn test```. The unit tests use a simulated Splunk server.
+* To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```. The integration tests require a Splunk instance to be running, and will send a small amount of data into your Splunk instance using the Cloudfwd client. It will then query the Splunk instance for the data in order to verify it. You must add your instance's username and password to `AbstractReconciliationTest.java`.
+* To build cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
+
 
 ## Troubleshoot Cloudfwd
 
@@ -130,7 +153,7 @@ See [event formatting](https://github.com/splunk/cloudfwd/wiki/Event-Formatting)
 #### Exceptions passed to failed() callback (asynchronous):
 | Exception                       | Description                                                                                                                                                                                                                                      | How to fix                                                                                                                                                                                                                                                                                                                                                                   |
 |---------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| HecAckTimeoutException          | This exception gets thrown after waiting for ```PropertyKeys.ACK_TIMEOUT_MS``` milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                       | This is not recoverable. When the library fails to send events, the events will not be re-sent. You can backup your events to S3.                                                                                                                                                                                                                                     |
+| HecAckTimeoutException          | This exception gets thrown after waiting for [PropertyKeys.ACK_TIMEOUT_MS](https://splunk.github.io/cloudfwd/apidocs/com/splunk/cloudfwd/PropertyKeys.html#ACK_TIMEOUT_MS) milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                       | This is not recoverable. When the library fails to send events, the events will not be re-sent. You can backup your events to S3.                                                                                                                                                                                                                                     |
 | HecMaxRetriesException          | This exception gets thrown when a channel is dead and the library must re-send event batch. This is the number of attempts to send events after it has reached its maxRetries limit.                                                                                            | This is not recoverable.                                                                                                                                                                                                                                                                                                                                                     |
 | HecNonStickySessionException    | This exception gets thrown when a duplicate ackID is received on a given HEC channel. This can indicate failure of a sticky load balancer to provide stickiness.                                                                                                               | This is recoverable and is most likely caused by ELB that does not have sticky sessions enabled. Close the connection and reconfigure your elastic load balancer to have sticky sessions enabled.                                                                                                                                                                            |
 | HecServerErrorResponseException | This exception gets thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server side error code (1-14) as well as the message. For a detailed description of each error code, see the HecServerErrorResponseException class in the API documentation. | It depends. Some error codes are recoverable user configuration errors (e.g. missing token), recoverable user data errors (e.g. incorrect data format passed), or recoverable server errors (e.g. server temporarily busy). While some other error codes are non-recoverable internal library errors that require a fix in the library code or abandoning an existing connection. |
@@ -141,9 +164,9 @@ You should handle these exceptions in a try-catch block around Connection.sendBa
 
 | Exception                     | Description                                                                                                                        | How to fix                                                                  |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| HecConnectionStateException   | This exception gets thrown when there is an illegal state with the connection that indicates caller error, with an enum of types. For a summary of enum constant types, see the HecConnectionStateException.Type class in the API documentation.  | This should be resolved by the caller.                                           |
+| HecConnectionStateException   | This exception gets thrown when there is an illegal state with the connection that indicates caller error, with an enum of types. For a summary of enum constant types, see the [HecConnectionStateException.Type](https://splunk.github.io/cloudfwd/apidocs/com/splunk/cloudfwd/error/HecConnectionStateException.Type.html) class in the API documentation.  | This should be resolved by the caller.                                           |
 | HecConnectionTimeoutException | This exception gets thrown when a send() timeout has occurred (exceeded BLOCKING_TIMEOUT_MS).                                      | Restart the connection.                                                     |
-| HecIllegalStateException      | This exception gets thrown when Cloudfwd is in an illegal state, with an enum of types. For a summary of enum constant types, see the HecIllegalStateExcept.Type class in the API documentation.                                             | These errors are not recoverable and are purely meant for logging purposes. |
+| HecIllegalStateException      | This exception gets thrown when Cloudfwd is in an illegal state, with an enum of types. For a summary of enum constant types, see the [HecIllegalStateExcept.Type](https://splunk.github.io/cloudfwd/apidocs/com/splunk/cloudfwd/error/HecIllegalStateException.Type.html) class in the API documentation.                                             | These errors are not recoverable and are purely meant for logging purposes. |
 | Runtime Exceptions (Misc)     | This exception gets thrown by libraries used by Cloudfwd (example: Apache HTTP Client).                                            | These errors are not recoverable.                                           |
 
 
