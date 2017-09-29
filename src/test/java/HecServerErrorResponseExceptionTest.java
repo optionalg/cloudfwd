@@ -12,15 +12,24 @@ public class HecServerErrorResponseExceptionTest {
     @Test
     public void getError() {
         HecErrorResponseValueObject v = new HecErrorResponseValueObject();
+        v.setCode(2);
         HecServerErrorResponseException ex = new HecServerErrorResponseException(v, "", EVENT_POST_OK, "my.url");
         Assert.assertEquals(ex.getErrorType(), HecServerErrorResponseException.Type.RECOVERABLE_CONFIG_ERROR);
 
+        v.setCode(13);
+        ex = new HecServerErrorResponseException(v, "",EVENT_POST_OK, "my.url");
+        Assert.assertEquals(ex.getErrorType(), HecServerErrorResponseException.Type.RECOVERABLE_DATA_ERROR);
+        
+        v.setCode(6);
         ex = new HecServerErrorResponseException(v, "",EVENT_POST_OK, "my.url");
         Assert.assertEquals(ex.getErrorType(), HecServerErrorResponseException.Type.RECOVERABLE_DATA_ERROR);
 
+
+        v.setCode(10);
         ex = new HecServerErrorResponseException(v,  "",EVENT_POST_OK, "my.url");
         Assert.assertEquals(ex.getErrorType(), HecServerErrorResponseException.Type.NON_RECOVERABLE_ERROR);
 
+        v.setCode(8);
         ex = new HecServerErrorResponseException(v, "",EVENT_POST_OK, "my.url");
         Assert.assertEquals(ex.getErrorType(), HecServerErrorResponseException.Type.RECOVERABLE_SERVER_ERROR);
     }
