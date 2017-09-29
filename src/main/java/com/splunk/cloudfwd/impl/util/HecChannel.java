@@ -31,6 +31,7 @@ import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
+import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -209,7 +210,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         LOG.warn("Marking channel unhealthy: " + e);
         this.health.setStatus(e, false);
       }
-    }
+    }else if(e instanceof Failure){
+         LOG.warn("Marking channel unhealthy: " + e);
+         this.health.setStatus(e, false);
+     }
     if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
       loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
     }

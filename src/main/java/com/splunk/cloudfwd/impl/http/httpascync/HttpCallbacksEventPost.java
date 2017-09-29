@@ -133,7 +133,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         sender.getChannelMetrics().update(r);
         resend(new HecServerBusyException(reply));
     }
-
+      
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
         LOG.debug("{} Event post response: {}", getChannel(), resp);
 

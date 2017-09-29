@@ -21,7 +21,7 @@ import com.splunk.cloudfwd.LifecycleEvent;
  *
  * @author ghendrey
  */
-public class RequestFailed extends LifecycleEvent{
+public class RequestFailed extends LifecycleEvent implements Failure{
 
   private final Exception exception;
   

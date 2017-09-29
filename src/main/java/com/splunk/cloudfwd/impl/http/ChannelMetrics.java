@@ -60,6 +60,8 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
     
     @Override
     public void update(LifecycleEvent e) {
+        notifyObservers(e);
+        /*
         switch (e.getType()) {
             case EVENT_POST_OK:
             case ACK_POLL_OK:
@@ -83,6 +85,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
                 notifyObservers(e); //might as well tell everyone there was a problem
             }
         }
+        */
     }
 
     /*

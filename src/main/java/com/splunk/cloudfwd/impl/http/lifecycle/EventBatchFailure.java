@@ -21,7 +21,7 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
  *
  * @author ghendrey
  */
-public class EventBatchFailure extends EventBatchRequest{
+public class EventBatchFailure extends EventBatchRequest implements Failure{
 
   private final Exception exception;
   
