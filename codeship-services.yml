@@ -1,0 +1,6 @@
+docker-java-splunk-cloudfwd:
+  build:
+    image: docker-java-splunk
+    # context: docker-java-splunk-cloudfwd
+    dockerfile_path: ./Dockerfile
+  cached: true
