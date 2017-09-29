@@ -59,14 +59,13 @@ public class ServerErrors {
             try{
                 HecErrorResponseValueObject r = mapper.readValue(reply,
                     HecErrorResponseValueObject.class);
-                return new HecServerErrorResponseException(r.getText(),
-                    r.getCode(), reply, type,  url);
+                return new HecServerErrorResponseException(r, reply, type,  url);
             }catch(Exception e){ //response like 404/"not found" will fail to unmarshal into HecErrorResponseValueObject (not hjson)
-                return new HecServerErrorResponseException("", -1, reply, type, url);
+                return new HecServerErrorResponseException(new HecErrorResponseValueObject(), reply, type, url);
             }
         }else{
             //server response without text such as 504 gateway timeout
-            return new HecServerErrorResponseException("", -1, reply, type, url);
+            return new HecServerErrorResponseException(new HecErrorResponseValueObject(), reply, type, url);
         }
     }
 
@@ -79,6 +78,8 @@ public class ServerErrors {
                 // determine code in reply, must be 14 for disabled
                 if (14 == r.getCode()) {
                     type = ACK_DISABLED;
+                }else if(6== r.getCode()){
+                    type = LifecycleEvent.Type.EVENT_POST_NOT_OK;
                 }
                 break;
             case 404:

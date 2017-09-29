@@ -78,7 +78,6 @@ public class OutOfOrderIdTest extends AbstractConnectionTest {
                         getId());
                 latch.countDown();
             }
-            System.out.println("Got " + acknowledgedBatches.size());
 
             if (acknowledgedBatches.size() == getNumEventsToSend()) {
                 latch.countDown();

@@ -330,7 +330,7 @@ public abstract class AbstractConnectionTest {
     return event;
   }
 
-  private Event getUnvalidatedBytesToRawEndpoint(int seqno) {
+  protected Event getUnvalidatedBytesToRawEndpoint(int seqno) {
     //create a valid JSON to /events, grab its bytes, and wrap it in UnvalidatedBytes to simulate
     //the creation of /event endpoint envelope "by hand"
 //    return new UnvalidatedBytesEvent(getJsonToRawEndpoint(seqno).getBytes(),

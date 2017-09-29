@@ -26,7 +26,7 @@ import org.junit.Test;
 public class ConfigCheckTest extends AbstractConnectionTest{
     
     @Test
-    public void testCheckConfigs(){
+    public void testCheckConfigs() throws Exception{
         for(ConfigStatus s: super.connection.checkConfigs()){
             LOG.info(s.toString());
             Assert.assertNull(s.getProblem());

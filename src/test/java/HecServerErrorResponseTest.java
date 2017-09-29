@@ -31,12 +31,14 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         ACKS_DISABLED,
         INVALID_TOKEN,
         INDEXER_BUSY_POST,
-        ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS
+        ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS,
+        //when POST to /event endpoint not inside /event JSON envelope
+        INVALID_EVENT_NUMBER //400 server reply: {"text":"Invalid data format","code":6,"invalid-event-number":0}
     }
     private Error errorToTest;
 
     protected int getNumEventsToSend() {
-        if(!ackTimeoutLongerThanConnectionTimeout){
+        if(!ackTimeoutLongerThanConnectionTimeout || errorToTest==Error.INVALID_EVENT_NUMBER){
             //In this case we are trying to generate an ack timeout.
             //due to timing we cannot guarantee that any messages except the first one sent would generate an ack timeout.
             //This is due to fact that the server response from the first message will (server busy/503/code:9) will mark
@@ -55,26 +57,6 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
-            /*
-            @Override
-            public void failed(EventBatch events, Exception e) {
-              exception = e;
-              LOG.trace("Got exception: " +  e);
-              
-              if(!ackTimeoutLongerThanConnectionTimeout){
-                    Assert.assertTrue(e.getMessage(),
-                            e instanceof HecAcknowledgmentTimeoutException);
-                    LOG.trace("Got expected exception: " + e);
-                }else{ //for bad tokens, etc that this test tests for
-                    //FIXME TODO make this a little more specific by checking the code
-                    LOG.trace("Got exception: " +  e);
-                    Assert.assertTrue(e.getMessage(),
-                            e instanceof HecServerErrorResponseException);
-                    LOG.trace("Got expected exception: " + e);
-                }
-                super.failed(events, e);
-            }
-*/
 
             @Override
             public void checkpoint(EventBatch events) {
@@ -99,6 +81,15 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                     }
                 }else if(errorToTest==Error.INVALID_TOKEN){
                     return e instanceof HecServerErrorResponseException;
+                }else if(errorToTest == Error.INVALID_EVENT_NUMBER){
+                    if(e instanceof HecServerErrorResponseException){
+                        HecServerErrorResponseException srvrEx = (HecServerErrorResponseException)e;
+                         Assert.assertEquals("Didn't find code 6", 6, srvrEx.getCode());
+                         Assert.assertEquals("Didn't find invalid-event-number 0", 0, srvrEx.getInvalidEventNumber());
+                        return true;
+                    }else{
+                        return false;
+                    }
                 }
                 throw new RuntimeException("unhandled errToTest case");
             }
@@ -111,7 +102,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             @Override
             protected boolean isWarnExpected(Exception e){
                 return e instanceof HecServerErrorResponseException
-                        && ((HecServerErrorResponseException)e).getType()==INDEXER_BUSY;
+                        && ((HecServerErrorResponseException)e).getLifecycleType()==INDEXER_BUSY;
             }
 
             @Override
@@ -149,6 +140,10 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 //in this case, the pre-flight check will pass, and we are simulating were we detect acks disabled on event post
                 props.put(MOCK_HTTP_CLASSNAME,
                         "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
+                break;
+            case INVALID_EVENT_NUMBER:
+                props.put(MOCK_HTTP_CLASSNAME,
+                        "com.splunk.cloudfwd.impl.sim.errorgen.invalidvent.InvalidEventEndpoint");
                 break;
             default:
                 Assert.fail("Unsupported configuration error type");
@@ -261,5 +256,34 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         }
         // TODO: we are currently not calling any failed callbacks in this case. Do we want to?
     }
+    
+    @Test
+    public void postInvalidEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        LOG.info("TESTING INVALID_EVENT_NUMBER");
+        errorToTest = Error. INVALID_EVENT_NUMBER;
+        ackTimeoutLongerThanConnectionTimeout = true;
+        createConnection();
+        connection.getSettings().setHecEndpointType(
+        Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        this.eventType = Event.Type.UNKNOWN;
+        try {
+            super.sendEvents();
+        } catch (HecConnectionTimeoutException e) {
+            LOG.trace("Got expected timeout exception because all channels are unhealthy "
+                    + "due to indexer being busy (per test design): "
+                    + e.getMessage());
+        }
+        // TODO: we are currently not calling any failed callbacks in this case. Do we want to?
+    }  
+    
+      protected Event nextEvent(int seqno) {
+          if(errorToTest == Error. INVALID_EVENT_NUMBER){
+              //we need to intntionally generate data that does not have "/events" 'envelope'
+              return super.getUnvalidatedBytesToRawEndpoint(seqno); //Generate BAD data
+          }else{
+              return super.nextEvent(seqno); //for all the other tests "normal" behvaior
+          }
+          
+      }
 
 }

@@ -144,7 +144,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                 statusCode, getBaseUrl());
         e.setContext(getName());
         error(e);
-        return e.getType();
+        return e.getLifecycleType();
     }
     
     protected LifecycleEvent.Type warn(String reply,
@@ -153,7 +153,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                 statusCode, getBaseUrl());
         e.setContext(getName());
         warn(e);
-        return e.getType();
+        return e.getLifecycleType();
     }    
     
     //Hardened to catch exceptions that could come from the application's failed callback

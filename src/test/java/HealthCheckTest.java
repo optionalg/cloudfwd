@@ -98,8 +98,8 @@ public class HealthCheckTest extends AbstractConnectionTest {
               Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
                       hh.getException() instanceof HecServerErrorResponseException);
               HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
-              Assert.assertTrue("HecServerErrorResponseException not "+ACK_DISABLED+", was  " + e.getType(), 
-                      e.getType()==ACK_DISABLED);
+              Assert.assertTrue("HecServerErrorResponseException not "+ACK_DISABLED+", was  " + e.getLifecycleType(), 
+                      e.getLifecycleType()==ACK_DISABLED);
           }
         }
     }
@@ -116,8 +116,8 @@ public class HealthCheckTest extends AbstractConnectionTest {
               Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
                       hh.getException() instanceof HecServerErrorResponseException);
               HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
-              Assert.assertTrue("HecServerErrorResponseException not "+INVALID_TOKEN+", was  " + e.getType(), 
-                      e.getType()==INVALID_TOKEN);
+              Assert.assertTrue("HecServerErrorResponseException not "+INVALID_TOKEN+", was  " + e.getLifecycleType(), 
+                      e.getLifecycleType()==INVALID_TOKEN);
           }
         }
     }
@@ -134,8 +134,8 @@ public class HealthCheckTest extends AbstractConnectionTest {
               Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
                       hh.getException() instanceof HecServerErrorResponseException);
               HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
-              Assert.assertTrue("HecServerErrorResponseException not "+INVALID_AUTH+", was  " + e.getType(), 
-                      e.getType()==INVALID_AUTH);
+              Assert.assertTrue("HecServerErrorResponseException not "+INVALID_AUTH+", was  " + e.getLifecycleType(), 
+                      e.getLifecycleType()==INVALID_AUTH);
           }
         }
     }
@@ -152,8 +152,8 @@ public class HealthCheckTest extends AbstractConnectionTest {
               Assert.assertTrue("HecHealth.getException() not HecServerErrorResponseException. Was "+ hh.getException(),
                       hh.getException() instanceof HecServerErrorResponseException);
               HecServerErrorResponseException e = (HecServerErrorResponseException) hh.getException();
-              Assert.assertTrue("HecServerErrorResponseException not "+SPLUNK_IN_DETENTION+", was  " + e.getType(), 
-                      e.getType()==SPLUNK_IN_DETENTION);
+              Assert.assertTrue("HecServerErrorResponseException not "+SPLUNK_IN_DETENTION+", was  " + e.getLifecycleType(), 
+                      e.getLifecycleType()==SPLUNK_IN_DETENTION);
           }
         }
     }
