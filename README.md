@@ -8,6 +8,7 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
     + [Prerequisites](#prerequisites)
     + [Installation](#installation)
   * [Usage](#usage)
+  * [Wiki](https://github.com/splunk/cloudfwd/wiki)
   * [Connection API Documentation](#connection-api-documentation)
   * [Configurable Property Keys](#configurable-property-keys)
   * [Examples](#examples)
@@ -58,8 +59,12 @@ connection.send(event);
 
 For full usage information, see the [Connection API Documentation](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html) 
 
+## Wiki 
+See [Wiki](https://github.com/splunk/cloudfwd/wiki) for additional documentation, including architecture overview and event formatting best practices.
+
 ## Connection API Documentation
 [com.splunk.cloudfwd API javadocs](https://splunk.github.io/cloudfwd/apidocs/index.html?overview-summary.html)
+
 
 ## Configurable Property Keys
 https://splunk.github.io/cloudfwd/apidocs/constant-values.html
