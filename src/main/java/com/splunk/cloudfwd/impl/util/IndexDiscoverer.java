@@ -35,7 +35,7 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
  *
  * @author ghendrey
  */
-class IndexDiscoverer extends Observable {
+public class IndexDiscoverer extends Observable {
   private final Logger LOG;
   //note, the key is a string representation of the URL. It is critical that the String, and not the URL
   //Object be used as the key. This is because URL implements equals based on comparing the set of
@@ -45,7 +45,7 @@ class IndexDiscoverer extends Observable {
   private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
   private boolean forceUrlMapToOne = false;
 
-  IndexDiscoverer(PropertiesFileHelper f, ConnectionImpl c) {
+  public IndexDiscoverer(PropertiesFileHelper f, ConnectionImpl c) {
     this.LOG = c.getLogger(IndexDiscoverer.class.getName());
     this.propertiesFileHelper = f;
     this.forceUrlMapToOne = this.propertiesFileHelper.isForcedUrlMapToSingleAddr();
@@ -90,7 +90,7 @@ class IndexDiscoverer extends Observable {
     return urls;
   }
 
-  synchronized List<InetSocketAddress> getAddrs(){
+  public synchronized List<InetSocketAddress> getAddrs(){
     // perform DNS lookup
     this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
             this.forceUrlMapToOne);

@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl;
 
+import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
@@ -26,16 +27,24 @@ import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecLoggerFactory;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.http.HecIOManager;
+import com.splunk.cloudfwd.impl.http.HttpSender;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.HecChannel;
+import com.splunk.cloudfwd.impl.util.IndexDiscoverer;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
+import java.net.InetSocketAddress;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.logging.Level;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +110,35 @@ public class ConnectionImpl implements Connection {
     this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.
             valueOf(ms));
   }
+  
+  
+  @Override
+  public List<ConfigStatus> checkConfigs(){
+      IndexDiscoverer d = new IndexDiscoverer((PropertiesFileHelper) getSettings(), this);
+      List<ConfigStatus> stats = new ArrayList<>();
+      d.getAddrs().forEach(addr->{
+          ConfigStatus stat = checkConfigStatus(addr);
+          if(stat != null){
+            stats.add(checkConfigStatus(addr));  
+          }
+      });
+      return stats;
+    }
+
+    protected ConfigStatus checkConfigStatus(InetSocketAddress addr) {
+        try (HttpSender sender = getPropertiesFileHelper().createSender(addr);) { //autoclose when done  
+            
+            HecIOManager m = sender.getHecIOManager();            
+            HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m, this);
+            m.configCheck(cb);
+            HecServerErrorResponseException problem = cb.getConfigProblems(180000); //3 min
+            return new ConfigStatus(sender, problem, this);            
+        } catch (Exception ex) { 
+            ex.printStackTrace();
+          LOG.error("Failed checkConfigStatus {}", ex.getMessage());
+          return null;
+      }
+    }
 
   @Override
   public void close() {

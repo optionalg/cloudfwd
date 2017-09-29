@@ -54,10 +54,8 @@ import sun.security.provider.X509Factory;
  */
 public final class HttpClientFactory {
     private final Logger LOG;
-    private String url;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
     private Integer maxConnTotal = 0;
-    private int maxConnPerRoute=1;    
     // Require a Valid SSL Cert by default
     private boolean disableCertVerification = false;
     // Optional SSL Certificate Authority public key
@@ -75,11 +73,8 @@ public final class HttpClientFactory {
      * @param host hostname to match with Common Name records in ssl ceritificate. We use each http client
      *             to connect to just one IP address resolved from the hostname.
      */
-    public HttpClientFactory(String url,
-                             boolean disableCertVerification,
-                             String cert, String host, HttpSender sender) {
+    public HttpClientFactory(boolean disableCertVerification, String cert, String host, HttpSender sender) {
         LOG = sender.getConnection().getLogger(HttpClientFactory.class.getName());
-        this.url = url;
         this.disableCertVerification = disableCertVerification;
         this.cert = cert;
         // Host header may include port, making sure we remove it

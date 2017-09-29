@@ -158,41 +158,18 @@ public class LoadBalancer implements Closeable {
                     getMaxTotalChannels() + ")");
             return false;
         }
-        URL url;
-        String host;
-        try {
-            //URLS for channel must be based on IP address not hostname since we
-            //have many-to-one relationship between IP address and hostname via DNS records
-            String hostAddr = s.getAddress().getHostAddress();
-            if (s.getAddress() instanceof Inet6Address) {
-                hostAddr = "[" + hostAddr + "]"; // java.net.URL requires braces for IPv6 host addresses
-            }
+        HttpSender sender = this.connection.getPropertiesFileHelper().
+                createSender(s);
 
-            url = new URL("https://" + hostAddr + ":" + s.getPort());
-            LOG.debug("Trying to add URL: " + url);
-            //We should provide a hostname for http client, so it can properly set Host header
-            //this host is required for many proxy server and virtual servers implementations
-            //https://tools.ietf.org/html/rfc7230#section-5.4
-            host = s.getHostName() + ":" + s.getPort();
+        HecChannel channel = new HecChannel(this, sender, this.connection);
+        channel.getChannelMetrics().addObserver(this.checkpointManager);
+        LOG.debug("Adding channel {}", channel);
+        channels.put(channel.getChannelId(), channel);
+        //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
 
-            HttpSender sender = this.connection.getPropertiesFileHelper().
-                    createSender(url, host);
-
-            HecChannel channel = new HecChannel(this, sender, this.connection);
-            channel.getChannelMetrics().addObserver(this.checkpointManager);
-            LOG.debug("Adding channel {}", channel);
-            channels.put(channel.getChannelId(), channel);
-            //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
-
-            // have channel ready to send requests
-            channel.start();
-            return true;
-
-        } catch (MalformedURLException ex) {
-            LOG.error(ex.getMessage(), ex);
-            throw new HecConnectionStateException(ex.getMessage(),
-                HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
-        }
+        // have channel ready to send requests
+        channel.start();
+        return true;
     }
 
     //also must not be synchronized

@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
 
@@ -123,8 +124,13 @@ public class HecIOManager implements Closeable {
 
 
     public void preflightCheck() {
-        LOG.trace("check health", sender.getChannel());
+        LOG.trace("check health on {}", sender.getChannel());
         FutureCallback<HttpResponse> cb = new HttpCallbacksPreflightHealthCheck(this);
+        sender.splunkCheck(cb);
+    }
+    
+        public void configCheck(HttpCallbacksBlockingConfigCheck cb ) {
+        LOG.trace("config check on {}", sender.getBaseUrl());
         sender.splunkCheck(cb);
     }
 
