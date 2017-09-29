@@ -168,6 +168,15 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                     ex, getName());
         }
     }
+    
+        protected LifecycleEvent.Type invokeFailedEventsCallback(EventBatch events, String reply,
+            int statusCode) throws IOException {
+        HecServerErrorResponseException e = ServerErrors.toErrorException(reply,
+                statusCode, getBaseUrl());
+        e.setContext(getName());
+            invokeFailedEventsCallback(events, e);
+        return e.getLifecycleType();
+    }    
         
 
     //Hardened to catch exceptions that could come from the application's failed callback
