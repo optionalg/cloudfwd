@@ -97,7 +97,7 @@ public class EventEndpoint implements Endpoint {
     //no-op
   }
 
-  private static class EventPostResponse extends CannedOKHttpResponse {
+  public static class EventPostResponse extends CannedOKHttpResponse {
 
     public EventPostResponse(HttpEntity e) {
       super(e);

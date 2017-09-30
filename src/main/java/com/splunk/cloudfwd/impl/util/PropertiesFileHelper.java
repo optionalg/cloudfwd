@@ -22,6 +22,10 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.net.URL;
 import java.util.Properties;
 import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 /**
  *
  * @author ghendrey
@@ -65,6 +69,30 @@ public class PropertiesFileHelper extends ConnectionSettings {
       }
       return sender;
   }
+  
+    public HttpSender createSender(InetSocketAddress s) {
+        try {
+            //URLS for channel must be based on IP address not hostname since we
+            //have many-to-one relationship between IP address and hostname via DNS records
+            String hostAddr = s.getAddress().getHostAddress();
+            if (s.getAddress() instanceof Inet6Address) {
+                hostAddr = "[" + hostAddr + "]"; // java.net.URL requires braces for IPv6 host addresses
+            }
+
+            URL url = new URL("https://" + hostAddr + ":" + s.getPort());
+            LOG.debug("Trying to add URL: " + url);
+            //We should provide a hostname for http client, so it can properly set Host header
+            //this host is required for many proxy server and virtual servers implementations
+            //https://tools.ietf.org/html/rfc7230#section-5.4
+            String host = s.getHostName() + ":" + s.getPort();
+
+            return createSender(url, host);
+        } catch (MalformedURLException ex) {
+            LOG.error(ex.getMessage(), ex);
+            throw new HecConnectionStateException(ex.getMessage(),
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+        }
+    }
 
   //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender() {

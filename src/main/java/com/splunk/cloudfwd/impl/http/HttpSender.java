@@ -186,7 +186,7 @@ public final class HttpSender implements Endpoints {
   public void start() {
     // attempt to create and start an http client
     try {
-      httpClient = new HttpClientFactory(eventUrl, disableCertificateValidation,
+      httpClient = new HttpClientFactory(disableCertificateValidation,
               cert, host, this).build();
       httpClient.start();
     } catch (Exception ex) {

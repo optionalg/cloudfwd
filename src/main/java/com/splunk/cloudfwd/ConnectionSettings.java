@@ -48,7 +48,7 @@ import org.slf4j.Logger;
  * @author ghendrey
  */
 public class ConnectionSettings {
-    private final Logger LOG;
+    protected final Logger LOG;
     protected Properties defaultProps = new Properties();
     protected Properties overrides;
     protected ConnectionImpl connection;
@@ -333,7 +333,7 @@ public class ConnectionSettings {
         return defaultProps.getProperty(PropertyKeys.TOKEN);
     }
 
-    public List<URL> urlsStringToList(String urlsListAsString) {
+    protected List<URL> urlsStringToList(String urlsListAsString) {
         List<URL> urlList = new ArrayList<>();
         String[] splits = urlsListAsString.split(",");
         for (String urlString : splits) {

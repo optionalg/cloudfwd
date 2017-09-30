@@ -15,8 +15,8 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import java.io.Closeable;
 import java.util.List;
 
@@ -40,6 +40,8 @@ public interface Connection extends Closeable{
      * @see com.splunk.cloudfwd.PropertyKeys
      */
     int send(Event event) throws HecConnectionTimeoutException;
+
+    public List<ConfigStatus> checkConfigs() throws Exception;
 
     /**
      * Used to select either structured HEC /event endpoint or /raw HEC endpoint

@@ -1,7 +1,7 @@
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.impl.http.lifecycle.Response;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -24,18 +24,31 @@ import com.splunk.cloudfwd.impl.http.lifecycle.Response;
  * @author eprokop
  */
 public class HecErrorResponseValueObject {
+    private static final ObjectMapper mapper = new ObjectMapper();
     private String text;
     private int code = -1;
+    private int invalidEventNumber=-1;
 
-    HecErrorResponseValueObject() {
+    public HecErrorResponseValueObject() {
     }
+    
+    public HecErrorResponseValueObject(String hecText, int hecCode, int invalidEventNum) {
+        this.text = hecText;
+        this.code = hecCode;
+        this.invalidEventNumber = invalidEventNum;
+    }
+    
+    public String toJson() throws JsonProcessingException{
+        return mapper.writeValueAsString(this);
+    }
+    
+
 
     @Override
     public String toString() {
-        return "HecErrorResponseValueObject{" + "text=" + text + ", code=" + code + '}';
+        return "HecErrorResponseValueObject{" + "text=" + text + ", code=" + code + ", invalidEventNumber=" + invalidEventNumber + '}';
     }
-    
-    
+ 
     /**
      * @return the code
      */
@@ -62,6 +75,20 @@ public class HecErrorResponseValueObject {
      */
     public void setCode(int code) {
         this.code = code;
+    }
+
+    /**
+     * @return the invalidEventNumber
+     */
+    public int getInvalidEventNumber() {
+        return invalidEventNumber;
+    }
+
+    /**
+     * @param invalidEventNumber the invalidEventNumber to set
+     */
+    public void setInvalidEventNumber(int invalidEventNumber) {
+        this.invalidEventNumber = invalidEventNumber;
     }
 
 }

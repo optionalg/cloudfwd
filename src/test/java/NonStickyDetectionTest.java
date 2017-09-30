@@ -16,13 +16,11 @@
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import java.util.Properties;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,15 +58,9 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   }
 
   @Test
-  public void checkNonStickyChannelDetected() throws InterruptedException {
-
-    try {
+  public void checkNonStickyChannelDetected() throws InterruptedException  {
       super.eventType = Event.Type.TEXT;
-      super.sendEvents();
-    } catch (HecConnectionTimeoutException e) {
-      LOG.trace("Got expected timeout exception because all channels are broken (per test design): " + e.
-              getMessage());
-    }
+      super.sendEvents();    
   }
 
   @Override

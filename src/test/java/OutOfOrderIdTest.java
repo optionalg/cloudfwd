@@ -31,6 +31,9 @@ public class OutOfOrderIdTest extends AbstractConnectionTest {
     
     @Test
     public void testOutofOrderIDsWithCheckpointDisabled() throws InterruptedException{
+        
+        Assert.assertEquals("This test not designed to work with batches because it "
+                +"counts events ack'd and compares them to number sent",0, connection.getSettings().getEventBatchSize());
         sendEvents();
     }
 
@@ -76,7 +79,7 @@ public class OutOfOrderIdTest extends AbstractConnectionTest {
                 latch.countDown();
             }
 
-            if (acknowledgedBatches.size() == n) {
+            if (acknowledgedBatches.size() == getNumEventsToSend()) {
                 latch.countDown();
             }
 

@@ -76,8 +76,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                     notifyBusyAndResend(reply, code, EVENT_POST_GATEWAY_TIMEOUT);
                     break;                    
                 default:
-                     error(reply, code);
-                     notify(EVENT_POST_NOT_OK, code, reply, events);
+                    invokeFailedEventsCallback(events, reply, code);
+                    notify(EVENT_POST_NOT_OK, code, reply, events);
             }
         } catch (Exception e) {
             invokeFailedEventsCallback(events, e);

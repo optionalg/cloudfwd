@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
@@ -46,7 +47,16 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
   private final Logger LOG;
   protected final HecIOManager manager;
+  private ConnectionImpl connection;
+ 
 
+    public HttpCallbacksAbstract(HecIOManager m, ConnectionImpl c) {
+        LOG = c.getLogger(HttpCallbacksAbstract.class.getName());
+        this.manager = m;
+        this.connection = c;
+    }
+
+  
   HttpCallbacksAbstract(HecIOManager m) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
     this.manager = m;
@@ -96,10 +106,17 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   }
   
   protected ConnectionImpl getConnection(){
-      return manager.getSender().getConnection();
+      if(null == connection){
+        return manager.getSender().getConnection();
+      }else{
+          return connection;
+      }
   }
   
-  protected HecChannel getChannel(){
+  protected Object getChannel(){
+      if(null != connection){ //when we explicitely construct with a Connection, it is because the sender does not have channel
+          throw new IllegalStateException("Channel is not available from sender.");
+      }
       return manager.getSender().getChannel();
   }
   
@@ -127,7 +144,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                 statusCode, getBaseUrl());
         e.setContext(getName());
         error(e);
-        return e.getType();
+        return e.getLifecycleType();
     }
     
     protected LifecycleEvent.Type warn(String reply,
@@ -136,7 +153,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                 statusCode, getBaseUrl());
         e.setContext(getName());
         warn(e);
-        return e.getType();
+        return e.getLifecycleType();
     }    
     
     //Hardened to catch exceptions that could come from the application's failed callback
@@ -151,6 +168,15 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                     ex, getName());
         }
     }
+    
+        protected LifecycleEvent.Type invokeFailedEventsCallback(EventBatch events, String reply,
+            int statusCode) throws IOException {
+        HecServerErrorResponseException e = ServerErrors.toErrorException(reply,
+                statusCode, getBaseUrl());
+        e.setContext(getName());
+            invokeFailedEventsCallback(events, e);
+        return e.getLifecycleType();
+    }    
         
 
     //Hardened to catch exceptions that could come from the application's failed callback
@@ -178,6 +204,10 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                     ex, getName());
         }           
     }    
+    
+    protected ConnectionSettings getSettings(){
+        return getConnection().getSettings();
+    }
     
 
 }
