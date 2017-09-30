@@ -2,7 +2,6 @@ import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.*;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
@@ -27,7 +26,11 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(HecServerErrorResponseTest.class.getName());
     private boolean ackTimeoutLongerThanConnectionTimeout;
 
-    private int numEvents = 100;
+    // Should be few enough events so that all make it through send() without blocking if preflight passes.
+    // Otherwise, we might wait a long time to receive a blocking timeout since for some tests
+    // channels are repeatedly flipped from healthy to unhealthy so the result is a slow
+    // trickle of events through the system
+    private int numEvents = 3;
     private enum Error {
         ACKS_DISABLED,
         INVALID_TOKEN,
@@ -56,37 +59,14 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
-            /*
-            @Override
-            public void failed(EventBatch events, Exception e) {
-              exception = e;
-              LOG.trace("Got exception: " +  e);
-
-              if(!ackTimeoutLongerThanConnectionTimeout){
-                    Assert.assertTrue(e.getMessage(),
-                            e instanceof HecAcknowledgmentTimeoutException);
-                    LOG.trace("Got expected exception: " + e);
-                }else{ //for bad tokens, etc that this test tests for
-                    //FIXME TODO make this a little more specific by checking the code
-                    LOG.trace("Got exception: " +  e);
-                    Assert.assertTrue(e.getMessage(),
-                            e instanceof HecServerErrorResponseException);
-                    LOG.trace("Got expected exception: " + e);
-                }
-                super.failed(events, e);
-            }
-
-
-*/
-
             @Override
             public boolean shouldFail(){
                 boolean shouldFail;
                 switch(errorToTest) {
-                    case INVALID_TOKEN:
-                        shouldFail = true;
-                        break;
+                    case ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS:
+                    case INDEXER_BUSY_POST:
                     case ACKS_DISABLED:
+                    case INVALID_TOKEN:
                         shouldFail = true;
                         break;
                     default:
@@ -106,44 +86,56 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
             @Override
             protected boolean isExpectedFailureType(Exception e) {
-                if(errorToTest==Error.ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS){
-                    return e instanceof HecConnectionStateException 
-                            && ((HecConnectionStateException)e).getType()==CONFIGURATION_EXCEPTION;
-                }else if (errorToTest == Error.INDEXER_BUSY_POST) {
-                    if (ackTimeoutLongerThanConnectionTimeout) {
-                        return e instanceof HecServerErrorResponseException;
-                    } else {
-                        return e instanceof HecAcknowledgmentTimeoutException;
-                    }
-                }else if(errorToTest==Error.INVALID_TOKEN){
-                    return e instanceof HecServerErrorResponseException;
+                boolean isExpectedType;
+                switch(errorToTest) {
+                    case ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS:
+                        isExpectedType = e instanceof HecConnectionStateException
+                                && ((HecConnectionStateException) e).getType() == CONFIGURATION_EXCEPTION;
+                        break;
+                    case INDEXER_BUSY_POST:
+                        if (ackTimeoutLongerThanConnectionTimeout) {
+                            isExpectedType = e instanceof HecConnectionTimeoutException;
+                        } else {
+                            isExpectedType = e instanceof HecAcknowledgmentTimeoutException;
+                        }
+                        break;
+                    case INVALID_TOKEN:
+                        isExpectedType = e instanceof HecServerErrorResponseException
+                                && ((HecServerErrorResponseException) e).getCode() == 4;
+                        break;
+                    case ACKS_DISABLED:
+                        isExpectedType = e instanceof HecServerErrorResponseException
+                            && ((HecServerErrorResponseException) e).getCode() == 14;
+                        break;
+                    default:
+                        throw new RuntimeException("unhandled errToTest case");
                 }
-                throw new RuntimeException("unhandled errToTest case");
+                    return isExpectedType;
+
             }
               
             @Override
             protected boolean isExpectedWarningType(Exception e){
-                return e instanceof HecServerErrorResponseException
-                        && ((HecServerErrorResponseException)e).getType()==INDEXER_BUSY;
+                boolean isExpected;
+                switch(errorToTest) {
+                    case INDEXER_BUSY_POST:
+                        isExpected = e instanceof HecServerErrorResponseException
+                                && ((HecServerErrorResponseException)e).getType()==INDEXER_BUSY;
+                        break;
+                    default:
+                        isExpected = false;
+                }
+                return isExpected;
             }
-
-//            @Override
-//            protected boolean isExpectedWarningType(Exception e){
-//                boolean correctType = false;
-//
-//                if (e instanceof HecServerErrorResponseException) {
-//                    correctType = true;
-//                }
-//                return correctType;
-//            }
 
             @Override
             public boolean shouldWarn(){
                 boolean shouldWarn;
                 switch(errorToTest) {
-                    case INVALID_TOKEN:
+                    case INDEXER_BUSY_POST:
                         shouldWarn = true;
                         break;
+                    case INVALID_TOKEN:
                     case ACKS_DISABLED:
                         shouldWarn = false;
                         break;
@@ -152,12 +144,6 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 }
                 return shouldWarn;
             }
-
-//            @Override
-//            public boolean shouldWarn(){
-//                return errorToTest == Error.INDEXER_BUSY_POST;
-//            }
-
         };
     }
 
@@ -194,7 +180,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         }
 
         if(ackTimeoutLongerThanConnectionTimeout){
-            props.put(ACK_TIMEOUT_MS, "10000");  //in this case we excpect to see HecConnectionTimeoutException
+            props.put(ACK_TIMEOUT_MS, "500000");  //in this case we excpect to see HecConnectionTimeoutException
         }else{
             props.put(ACK_TIMEOUT_MS, "2000");  //in this case we expect HecAcknowledgementTimeoutException
         }
@@ -212,6 +198,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         configureConnection(connection);
     }
 
+    //pre-flight check NOT ok
     @Test
     public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         LOG.info("TESTING ACKS_DISABLED");
@@ -225,12 +212,9 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 + "due to acks disabled on token (per test design): "
                 + e.getMessage());
         }
-        Assert.assertTrue("Should receive a failed callback for acks disabled.", callbacks.isFailed());
-        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException", callbacks.getException() instanceof HecServerErrorResponseException);
-        HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
-        Assert.assertTrue("Exception code should be 14.", e.getCode() == 14);
     }
 
+    //pre-flight check NOT ok
     @Test
     public void sendToInvalidToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         LOG.info("TESTING INVALID_TOKEN");
@@ -238,12 +222,6 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
         super.sendEvents();
-        Assert.assertTrue("Should receive a failed callback for invalid token.", callbacks.isFailed()); // TODO: some of this logic is unnecessary
-        Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException but got "
-                + callbacks.getException().getClass().getCanonicalName(),
-                callbacks.getException() instanceof HecServerErrorResponseException);
-        HecServerErrorResponseException e = (HecServerErrorResponseException)(callbacks.getException());
-        Assert.assertTrue("Exception code should be 4.", e.getCode() == 4);
     }
 
     @Test
@@ -252,18 +230,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         errorToTest = Error.INDEXER_BUSY_POST;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
-//        try {
-            super.sendEvents();
-//        } catch (HecConnectionTimeoutException e) {
-//            if(ackTimeoutLongerThanConnectionTimeout){
-//                LOG.trace("Got expected timeout exception because all channels are unhealthy "
-//                        + "due to indexer being busy (per test design): "
-//                        + e.getMessage());
-//                Assert.assertTrue("Got Expected HecConnectionTimeoutException", e instanceof HecConnectionTimeoutException);
-//            }else{
-//                Assert.fail("got Unknown exception when expecting failed callback for HecAcknowledgementTimeoutException: " + e);
-//            }
-//        }
+        super.sendEvents();
     }
 
     
@@ -274,9 +241,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         ackTimeoutLongerThanConnectionTimeout = false;
         createConnection();
         super.sendEvents();
-        connection.closeNow(); //have to do this else we are going to get      
-        Exception e = callbacks.getException();
-        Assert.assertTrue("didn't get failed callback with HecAcknowledgementTimeoutException, instead got " + e,  e instanceof HecAcknowledgmentTimeoutException );
+        connection.closeNow(); //have to do this else we are going to get
     }    
 
     @Test
@@ -285,21 +250,13 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         errorToTest = Error.ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
-        try {
-            super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            LOG.trace("Got expected timeout exception because all channels are unhealthy "
-                    + "due to indexer being busy (per test design): "
-                    + e.getMessage());
-        }
-        // TODO: we are currently not calling any failed callbacks in this case. Do we want to?
+        super.sendEvents();
     }
 
     @Override
     protected boolean isExpectedSendException(Exception e) {
         boolean isExpected = false;
         switch (errorToTest) {
-            case INDEXER_BUSY_POST:
             case INVALID_TOKEN:
             case ACKS_DISABLED:
                 if (e instanceof HecConnectionTimeoutException) {
@@ -317,10 +274,13 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
     protected boolean shouldSendThrowException() {
         boolean shouldThrow;
         switch (errorToTest) {
-            case INDEXER_BUSY_POST:
             case ACKS_DISABLED:
             case INVALID_TOKEN:
                 shouldThrow = true;
+                break;
+            case INDEXER_BUSY_POST:
+            case ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS:
+                shouldThrow = false;
                 break;
             default:
                 shouldThrow = false;

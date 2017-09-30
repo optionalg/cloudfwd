@@ -11,9 +11,8 @@ import java.util.Properties;
 public class GatewayTimeoutTest extends AbstractConnectionTest {
 
     @Test
-    public void preFlightOKButEventPostShouldTimeoutWithNoFailures() throws InterruptedException {
+    public void preFlightOKButEventPostShouldTimeout() throws InterruptedException {
         super.sendEvents();
-        // failed() is expected, but only with HecMaxRetriesException
     }
 
     @Override
@@ -48,22 +47,14 @@ public class GatewayTimeoutTest extends AbstractConnectionTest {
 
         @Override
         protected boolean isExpectedFailureType(Exception e) {
-            boolean correctType = false;
             // connection.close() will cause the events to get orphaned in
             // the load balancer and timeout since all channels will be closed
-            if (e instanceof HecConnectionTimeoutException) {
-                correctType = true;
-            }
-            return correctType;
+            return e instanceof HecConnectionTimeoutException;
         }
 
         @Override
         protected boolean isExpectedWarningType(Exception e){
-            boolean correctType = false;
-            if (e instanceof HecServerErrorResponseException) {
-                correctType = true;
-            }
-            return correctType;
+            return e instanceof HecServerErrorResponseException;
         }
     }
 }
