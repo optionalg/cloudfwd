@@ -49,9 +49,13 @@ public class Response extends LifecycleEvent {
       }
   }
 
+    public boolean isOk() {
+        return httpCode == 200;
+    }
+
     @Override
     public String toString() {
-        return "Response{" +super.toString()+ " httpCode=" + httpCode + ", resp=" + resp + ", url=" + url + '}';
+        return "Response{" + super.toString() + " httpCode=" + httpCode + ", resp=" + resp + ", url=" + url + '}';
     }
 
 

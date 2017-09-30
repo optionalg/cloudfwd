@@ -31,6 +31,7 @@ import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
+import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
 import java.util.concurrent.Executors;
@@ -166,58 +167,38 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         checkForStickySessionViolation(e);
         break;
       }
-      case HEALTH_POLL_OK:
-      case PREFLIGHT_OK:
-      {
-        this.health.setStatus(e, true); 
-        break;
-      }
-      case SPLUNK_IN_DETENTION:
-      case INDEXER_BUSY:
-      case ACK_DISABLED: 
-      case INVALID_TOKEN: 
-      case INVALID_AUTH: {
-        this.health.setStatus(e, false);
-        break;
-      }
-      case EVENT_POST_FAILURE:
-      case EVENT_POST_NOT_OK:
-      case GATEWAY_TIMEOUT:{
-        this.health.setStatus(e, false);
-        //when event posts fail we also need to decrement unackedCount because
-        //it is a metric of the number of 'in flight' events batches. When an event POST
-        //fails, that event batch is no longer in flight on this channel. If we don't do this, channel 
-        //can never again become isAvailable()=true,  even if it is healthy because it will 
-        //think it is 'full' of unacked events.
-        this.unackedCount.decrementAndGet();
-        break;         
-      }
       case PREFLIGHT_BUSY:
       case PREFLIGHT_GATEWAY_TIMEOUT:
-          if(++preflightCount <=getSettings().getMaxPreflightRetries()){
-              LOG.warn("retrying channel preflight checks on {}", this);
-              this.sender.getHecIOManager().preflightCheck(); //retry preflight check
-          }else{
-              String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
-                      + getSettings().getMaxPreflightRetries() + " exceeded";
-              getCallbacks().systemError(new HecMaxRetriesException(msg));
-          }
-          break;
+        resendPreflight();
+          break;      
     }
     //any other non-200 that we have not excplicitly handled above will set the health false
     if (e instanceof Response) {
-      if (((Response) e).getHttpCode() != 200) {
-        LOG.warn("Marking channel unhealthy: " + e);
-        this.health.setStatus(e, false);
-      }
-    }else if(e instanceof Failure){
-         LOG.warn("Marking channel unhealthy: " + e);
+       this.health.setStatus(e, ((Response) e).isOk());
+    }
+    if(e instanceof Failure){
          this.health.setStatus(e, false);
      }
+    //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
+    if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
+        this.unackedCount.decrementAndGet();
+    }
+    
     if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
       loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
     }
   }
+
+    private void resendPreflight() {
+        if(++preflightCount <=getSettings().getMaxPreflightRetries()){
+            LOG.warn("retrying channel preflight checks on {}", this);
+            this.sender.getHecIOManager().preflightCheck(); //retry preflight check
+        }else{
+            String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
+                    + getSettings().getMaxPreflightRetries() + " exceeded";
+            getCallbacks().systemError(new HecMaxRetriesException(msg));
+        }
+    }
   
   private ConnectionSettings getSettings(){
       return getConnection().getSettings();

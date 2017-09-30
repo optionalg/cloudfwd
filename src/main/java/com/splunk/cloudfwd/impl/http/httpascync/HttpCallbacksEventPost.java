@@ -123,7 +123,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
             sender.getConnection().getLoadBalancer().
                     sendRoundRobin(events, true); //will callback failed if max retries exceeded
         } catch (Exception e) {
-            invokeFailedEventsCallback(events, e);
+            invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
         }
     }
 
