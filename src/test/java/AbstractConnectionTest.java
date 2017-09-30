@@ -7,6 +7,7 @@ import com.splunk.cloudfwd.RawEvent;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -70,6 +71,8 @@ public abstract class AbstractConnectionTest {
           toString();
   protected String testMethodGUID;
   protected List<Event> events;
+  private Exception sendException;
+  private String sendExceptionMsg;
 
   //override to do stuff like set buffering or anything else affecting connection
   protected void configureConnection(Connection connection) {
@@ -111,23 +114,67 @@ public abstract class AbstractConnectionTest {
     }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-    LOG.trace(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
-            + "And test method GUID " + testMethodGUID);
-    int expected = getNumEventsToSend();
-    for (int i = 0; i < expected; i++) {
-      ///final EventBatch events =nextEventBatch(i+1);
-      Event event = nextEvent(i + 1);
-      LOG.trace("Send event {} i={}", event.getId(), i);
-      connection.send(event);
-    }
-    connection.close(); //will flush
-    
-    this.callbacks.await(10, TimeUnit.MINUTES);
-    this.callbacks.checkFailures();
-    this.callbacks.checkWarnings();
+      try {
+          LOG.trace(
+                "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+                        + "And test method GUID " + testMethodGUID);
+          int expected = getNumEventsToSend();
+          for (int i = 0; i < expected; i++) {
+          ///final EventBatch events =nextEventBatch(i+1);
+              Event event = nextEvent(i + 1);
+              LOG.trace("Send event {} i={}", event.getId(), i);
+
+              connection.send(event);
+          }
+      } catch(Exception e) {
+          this.sendException = e;
+          this.sendExceptionMsg = e.getMessage();
+          LOG.warn("In Test caught exception on Connection.send(): {} with message {}", e, e.getMessage());
+      }
+      checkSendExceptions();
+      connection.close(); //will flush
+
+      this.callbacks.await(10, TimeUnit.MINUTES);
+      this.callbacks.checkFailures();
+      this.callbacks.checkWarnings();
   }
-  
+
+  public void checkSendExceptions() {
+      if (shouldSendThrowException() && !didSendThrowException()) {
+          Assert.fail("Send should have thrown an exception but it didn't");
+      }
+      if (didSendThrowException() && !isExpectedSendException(sendException)) {
+          Assert.fail(
+              "There was an unexpected exception thrown on send  " +
+                  getSendException() + " and message " + getSendExceptionMsg());
+      }
+  }
+
+  private String getSendExceptionMsg() {
+      return this.sendExceptionMsg;
+  }
+
+  private Exception getSendException() {
+      return this.sendException;
+  }
+
+  private boolean didSendThrowException() {
+      return this.sendException != null;
+  }
+
+  /**
+   * Subclasses can override to return true if expecting an exception from send (to suppress printing of stacktrace).
+   * @param e The Exception that was thrown on send
+   * @return
+   */
+  protected boolean isExpectedSendException(Exception e) {
+    return false;
+  }
+
+  protected boolean shouldSendThrowException() {
+      return false;
+  }
+
   protected List<HecHealth> healthCheck() throws InterruptedException {
     LOG.trace(
         "HEC CHECK WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID

@@ -174,14 +174,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       case SPLUNK_IN_DETENTION:
       case INDEXER_BUSY:
       case ACK_DISABLED: 
-      case INVALID_TOKEN: 
+      case INVALID_TOKEN:
+      case GATEWAY_TIMEOUT:
       case INVALID_AUTH: {
         this.health.setStatus(e, false);
         break;
       }
       case EVENT_POST_FAILURE:
       case EVENT_POST_NOT_OK:
-      case GATEWAY_TIMEOUT:{
+      case EVENT_POST_INDEXER_BUSY:
+      case EVENT_POST_GATEWAY_TIMEOUT:{
         this.health.setStatus(e, false);
         //when event posts fail we also need to decrement unackedCount because
         //it is a metric of the number of 'in flight' events batches. When an event POST

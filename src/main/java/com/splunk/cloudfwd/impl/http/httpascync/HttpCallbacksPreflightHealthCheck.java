@@ -82,6 +82,8 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                     "failed to unmarshal server response in pre-flight health check {}",
                     reply);
             error(ex);
+        } finally {
+            manager.startHealthPolling();
         }
     }
     
@@ -98,6 +100,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                 "HEC pre-flight health check via /ack endpoint failed with exception {} on {}",ex.getMessage(), getChannel(),
                 ex);
         error(ex);
+        // TODO: retry if this fails.. otherwise channel just sits around until it is reaped
     }
 
     @Override

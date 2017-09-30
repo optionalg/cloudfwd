@@ -34,7 +34,7 @@ public class DeadChannelTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
             @Override
-            protected boolean isWarnExpected(Exception e) {
+            protected boolean isExpectedWarningType(Exception e) {
                 return e instanceof HecChannelDeathException;
             }
 

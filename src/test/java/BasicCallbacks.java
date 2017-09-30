@@ -59,7 +59,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
      * @param e The Exception that was received by failed() callback
    * @return
    */
-  protected boolean isFailureExpected(Exception e){
+  protected boolean isExpectedFailureType(Exception e){
     return false;
   }
   
@@ -71,7 +71,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
     return failed;
   }  
   
-  protected boolean isWarnExpected(Exception e){
+  protected boolean isExpectedWarningType(Exception e){
     return false;
   }
   
@@ -88,7 +88,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
         if(shouldWarn()&& !isWarned()){
             Assert.fail("A warn callback was expected, but none occurred.");
         }
-        if (isWarned() && !isWarnExpected(systemWarning)) {
+        if (isWarned() && !isExpectedWarningType(systemWarning)) {
             Assert.fail(
                     "There was a systemWarning callback with exception class  " + 
                     getWarning());
@@ -99,9 +99,9 @@ public class BasicCallbacks implements ConnectionCallbacks {
         if(shouldFail() && !isFailed()){
             Assert.fail("A failed callback was expected, but none occurred.");
         }
-        if (isFailed() && !isFailureExpected(exception)) {
+        if (isFailed() && !isExpectedFailureType(exception)) {
             Assert.fail(
-                    "There was a failure callback with exception class  " + 
+                    "There was a failure callback with unexpected exception class  " +
                     getException() + " and message " + getFailMsg());
         }
     }    
@@ -128,7 +128,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
     exception = ex;
-    if(!isFailureExpected(ex)){
+    if(!isExpectedFailureType(ex)){
       ex.printStackTrace(); //print the stack trace if we were not expecting failure
     }
     //make sure we set the failed, failMsg and Exception *before* we unlatch    
@@ -143,7 +143,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
         failMsg = "EventBatch failed to send. Exception message: " + ex.
                 getMessage();
         exception = ex;
-        if(!isFailureExpected(ex)){
+        if(!isExpectedFailureType(ex)){
           ex.printStackTrace(); //print the stack trace if we were not expecting failure
         }        
        failLatch .countDown();
@@ -153,7 +153,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
     public void systemWarning(Exception ex) {
         LOG.warn("SYSTEM WARNING {}", ex.getMessage());
         this.systemWarning = ex;
-        if(!isWarnExpected(ex)){
+        if(!isExpectedWarningType(ex)){
             ex.printStackTrace();
         }
         warnLatch.countDown();

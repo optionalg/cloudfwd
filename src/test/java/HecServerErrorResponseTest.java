@@ -2,6 +2,7 @@ import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.*;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
@@ -60,7 +61,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             public void failed(EventBatch events, Exception e) {
               exception = e;
               LOG.trace("Got exception: " +  e);
-              
+
               if(!ackTimeoutLongerThanConnectionTimeout){
                     Assert.assertTrue(e.getMessage(),
                             e instanceof HecAcknowledgmentTimeoutException);
@@ -74,8 +75,25 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 }
                 super.failed(events, e);
             }
+
+
 */
 
+            @Override
+            public boolean shouldFail(){
+                boolean shouldFail;
+                switch(errorToTest) {
+                    case INVALID_TOKEN:
+                        shouldFail = true;
+                        break;
+                    case ACKS_DISABLED:
+                        shouldFail = true;
+                        break;
+                    default:
+                        shouldFail = false;
+                }
+                return shouldFail;
+            }
             @Override
             public void checkpoint(EventBatch events) {
                 Assert.fail("We should fail before we checkpoint anything.");
@@ -87,7 +105,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
             }
 
             @Override
-            protected boolean isFailureExpected(Exception e) {
+            protected boolean isExpectedFailureType(Exception e) {
                 if(errorToTest==Error.ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS){
                     return e instanceof HecConnectionStateException 
                             && ((HecConnectionStateException)e).getType()==CONFIGURATION_EXCEPTION;
@@ -102,22 +120,43 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                 }
                 throw new RuntimeException("unhandled errToTest case");
             }
-            
-            @Override
-              public boolean shouldFail(){
-                return true;
-             }
               
             @Override
-            protected boolean isWarnExpected(Exception e){
+            protected boolean isExpectedWarningType(Exception e){
                 return e instanceof HecServerErrorResponseException
                         && ((HecServerErrorResponseException)e).getType()==INDEXER_BUSY;
             }
 
+//            @Override
+//            protected boolean isExpectedWarningType(Exception e){
+//                boolean correctType = false;
+//
+//                if (e instanceof HecServerErrorResponseException) {
+//                    correctType = true;
+//                }
+//                return correctType;
+//            }
+
             @Override
             public boolean shouldWarn(){
-                return errorToTest == Error.INDEXER_BUSY_POST;
-            }              
+                boolean shouldWarn;
+                switch(errorToTest) {
+                    case INVALID_TOKEN:
+                        shouldWarn = true;
+                        break;
+                    case ACKS_DISABLED:
+                        shouldWarn = false;
+                        break;
+                    default:
+                        shouldWarn = false;
+                }
+                return shouldWarn;
+            }
+
+//            @Override
+//            public boolean shouldWarn(){
+//                return errorToTest == Error.INDEXER_BUSY_POST;
+//            }
 
         };
     }
@@ -194,18 +233,12 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
 
     @Test
     public void sendToInvalidToken() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-         LOG.info("TESTING INVALID_TOKEN");
+        LOG.info("TESTING INVALID_TOKEN");
         errorToTest = Error.INVALID_TOKEN;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
-        try {
-            super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            LOG.trace("Got expected timeout exception because all channels are unhealthy "
-                + "due to invalid token (per test design): "
-                + e.getMessage());
-        }
-        Assert.assertTrue("Should receive a failed callback for invalid token.", callbacks.isFailed());
+        super.sendEvents();
+        Assert.assertTrue("Should receive a failed callback for invalid token.", callbacks.isFailed()); // TODO: some of this logic is unnecessary
         Assert.assertTrue("Exception should be an instance of HecServerErrorResponseException but got "
                 + callbacks.getException().getClass().getCanonicalName(),
                 callbacks.getException() instanceof HecServerErrorResponseException);
@@ -219,18 +252,18 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         errorToTest = Error.INDEXER_BUSY_POST;
         ackTimeoutLongerThanConnectionTimeout = true;
         createConnection();
-        try {
+//        try {
             super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            if(ackTimeoutLongerThanConnectionTimeout){                
-                LOG.trace("Got expected timeout exception because all channels are unhealthy "
-                        + "due to indexer being busy (per test design): "
-                        + e.getMessage());            
-                Assert.assertTrue("Got Expected HecConnectionTimeoutException", e instanceof HecConnectionTimeoutException);
-            }else{
-                Assert.fail("got Unknown exception when expecting failed callback for HecAcknowledgementTimeoutException: " + e);
-            }
-        }
+//        } catch (HecConnectionTimeoutException e) {
+//            if(ackTimeoutLongerThanConnectionTimeout){
+//                LOG.trace("Got expected timeout exception because all channels are unhealthy "
+//                        + "due to indexer being busy (per test design): "
+//                        + e.getMessage());
+//                Assert.assertTrue("Got Expected HecConnectionTimeoutException", e instanceof HecConnectionTimeoutException);
+//            }else{
+//                Assert.fail("got Unknown exception when expecting failed callback for HecAcknowledgementTimeoutException: " + e);
+//            }
+//        }
     }
 
     
@@ -260,6 +293,40 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
                     + e.getMessage());
         }
         // TODO: we are currently not calling any failed callbacks in this case. Do we want to?
+    }
+
+    @Override
+    protected boolean isExpectedSendException(Exception e) {
+        boolean isExpected = false;
+        switch (errorToTest) {
+            case INDEXER_BUSY_POST:
+            case INVALID_TOKEN:
+            case ACKS_DISABLED:
+                if (e instanceof HecConnectionTimeoutException) {
+                    isExpected = true;
+                }
+                break;
+            default:
+                isExpected = false;
+                break;
+        }
+        return isExpected;
+    }
+
+    @Override
+    protected boolean shouldSendThrowException() {
+        boolean shouldThrow;
+        switch (errorToTest) {
+            case INDEXER_BUSY_POST:
+            case ACKS_DISABLED:
+            case INVALID_TOKEN:
+                shouldThrow = true;
+                break;
+            default:
+                shouldThrow = false;
+                break;
+        }
+        return shouldThrow;
     }
 
 }

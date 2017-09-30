@@ -288,7 +288,8 @@ public class LoadBalancer implements Closeable {
 
             recoverAndThrowException(events, forced,
                     new HecConnectionTimeoutException(
-                            PropertyKeys.BLOCKING_TIMEOUT_MS + " timeout exceeded on send. Timeout was " + timeout));
+                            PropertyKeys.BLOCKING_TIMEOUT_MS + " timeout exceeded on send for EventBatch " +
+                                    "with id=" + events.getId() + " Timeout was " + timeout));
         }
     }
 

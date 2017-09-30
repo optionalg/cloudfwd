@@ -49,7 +49,7 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumEventsToSend()) {
 
-          protected boolean isFailureExpected(Exception e) {
+          protected boolean isExpectedFailureType(Exception e) {
               return e instanceof HecNonStickySessionException;
           }
 

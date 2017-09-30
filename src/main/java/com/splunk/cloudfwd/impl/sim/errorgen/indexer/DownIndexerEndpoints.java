@@ -27,6 +27,8 @@ import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
+import java.net.ConnectException;
+
 /**
  * Simulate communicating with indexer in manual detention
  * @author meemax
@@ -35,7 +37,7 @@ public class DownIndexerEndpoints extends SimulatedHECEndpoints {
   @Override
   public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
     System.out.println("splunk check fails because down");
-    ((HttpCallbacksAbstract)httpCallback).failed(new Exception("Unable to connect"));
+    ((HttpCallbacksAbstract)httpCallback).failed(new ConnectException("Unable to connect"));
   }
 
   @Override

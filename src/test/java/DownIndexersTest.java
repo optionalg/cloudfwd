@@ -1,9 +1,12 @@
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.sim.errorgen.indexer.RollingRestartEndpoints;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Properties;
 
@@ -25,7 +28,6 @@ public class DownIndexersTest extends AbstractConnectionTest {
 
     @Override
     public void setUp() {
-        this.callbacks = getCallbacks();
         this.testMethodGUID = java.util.UUID.randomUUID().toString();
         this.events = new ArrayList<>();
     }
@@ -67,6 +69,17 @@ public class DownIndexersTest extends AbstractConnectionTest {
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     private void createConnection() {
+        switch(stateToTest) {
+            case ALL_DOWN:
+                this.callbacks = new AllDownCallbacks(getNumEventsToSend());
+                break;
+            case ROLLING_RESTART:
+                this.callbacks = getCallbacks();
+                break;
+            default:
+                Assert.fail("Unsupported state to test");
+        }
+
         Properties props = new Properties();
         props.putAll(getTestProps());
         props.putAll(getProps());
@@ -78,25 +91,71 @@ public class DownIndexersTest extends AbstractConnectionTest {
     public void sendToDownIndexers() throws InterruptedException {
         stateToTest = ClusterState.ALL_DOWN;
         createConnection();
-        try {
-          super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            System.out.println(
-                "Got expected timeout exception because all indexers are down "
-                + e.getMessage());
-            // allow test to pass
-            super.callbacks.latch.countDown();
-        }
+        super.sendEvents();
     }
 
     @Test
     public void sendToIndexersInRollingRestart() throws InterruptedException {
         stateToTest = ClusterState.ROLLING_RESTART;
         createConnection();
-        try {
-          super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            Assert.fail("Events should have been sent.");
+        super.sendEvents();
+    }
+
+    @Override
+    protected boolean isExpectedSendException(Exception e) {
+        boolean isExpected = false;
+        switch (stateToTest) {
+            case ALL_DOWN:
+                if (e instanceof HecConnectionTimeoutException) {
+                    isExpected = true;
+                }
+                break;
+            case ROLLING_RESTART:
+                isExpected = false;
+                break;
+            default:
+                isExpected = false;
+                break;
+        }
+        return isExpected;
+    }
+
+    @Override
+    protected boolean shouldSendThrowException() {
+        boolean shouldThrow;
+        switch (stateToTest) {
+            case ALL_DOWN:
+                shouldThrow = true;
+                break;
+            case ROLLING_RESTART:
+                shouldThrow = false;
+                break;
+            default:
+                shouldThrow = false;
+                break;
+        }
+        this.callbacks.latch.countDown(); // allow the test to finish
+        return shouldThrow;
+    }
+
+    private class AllDownCallbacks extends BasicCallbacks {
+
+        public AllDownCallbacks(int expected) {
+            super(expected);
+        }
+
+        @Override
+        public boolean shouldFail(){
+            return true;
+        }
+
+        @Override
+        protected boolean isExpectedFailureType(Exception e) {
+            boolean correctType = false;
+            if (e instanceof ConnectException) { // TODO: make this exception more accurate to expected behavior
+                correctType = true;
+            }
+            return correctType;
         }
     }
 }

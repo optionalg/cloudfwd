@@ -40,7 +40,7 @@ public class InDetentionTest extends AbstractConnectionTest {
             }
 
             @Override
-            protected boolean isFailureExpected(Exception e) {
+            protected boolean isExpectedFailureType(Exception e) {
                 return (e instanceof HecServerErrorResponseException &&
                         ((HecServerErrorResponseException)e).getType()==LifecycleEvent.Type.SPLUNK_IN_DETENTION);
             }
