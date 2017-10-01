@@ -91,7 +91,7 @@ public class MaxRetriesTest extends AbstractConnectionTest {
   public BasicCallbacks getCallbacks(){
     return new BasicCallbacks(0){
        @Override
-       protected boolean isFailureExpected(Exception e){
+       protected boolean isExpectedFailureType(Exception e){
          return e instanceof HecMaxRetriesException;
        }    
        

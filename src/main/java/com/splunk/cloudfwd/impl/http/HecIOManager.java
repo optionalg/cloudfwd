@@ -68,7 +68,7 @@ public class HecIOManager implements Closeable {
         return ackTracker.toString();
     }
 
-    public synchronized void startPolling() {
+    public synchronized void startAckPolling() {
         if (!ackPollController.isStarted()) {
             Runnable poller = () -> {
                 if (this.getAcknowledgementTracker().isEmpty()) {
@@ -85,12 +85,15 @@ public class HecIOManager implements Closeable {
                     getAckPollMS(),
                     TimeUnit.MILLISECONDS);
         }
+    }
+
+    public void startHealthPolling() {
         if (!healthPollController.isStarted()) {
             Runnable poller = () -> {
                 this.pollHealth();
             };
             healthPollController.start(
-                    poller, sender.getConnection().getPropertiesFileHelper().
+                poller, sender.getConnection().getPropertiesFileHelper().
                     getHealthPollMS(), TimeUnit.MILLISECONDS);
         }
     }

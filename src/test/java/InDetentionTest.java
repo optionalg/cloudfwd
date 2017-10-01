@@ -40,7 +40,7 @@ public class InDetentionTest extends AbstractConnectionTest {
             }
 
             @Override
-            protected boolean isFailureExpected(Exception e) {
+            protected boolean isExpectedFailureType(Exception e) {
                 return (e instanceof HecServerErrorResponseException &&
                         ((HecServerErrorResponseException)e).getLifecycleType()==LifecycleEvent.Type.SPLUNK_IN_DETENTION);
             }
@@ -100,30 +100,23 @@ public class InDetentionTest extends AbstractConnectionTest {
     public void sendToIndexersInDetention() throws InterruptedException {
         stateToTest = ClusterState.ALL_IN_DETENTION;
         createConnection();
-        boolean didTimeout = false;
-        try {
-            super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            didTimeout= true;
-            System.out.println(
-                "Got expected timeout exception because all indexers are in detention "
-                + e.getMessage());
-            // allow test to pass
-            super.callbacks.latch.countDown();
-        }
-        if(!didTimeout){
-            Assert.fail("Send was expected to throw HecConnectionTimoutException, but didn't");
-        }
+        super.sendEvents();
     }
 
     @Test
     public void sendToSomeIndexersInDetention() throws InterruptedException {
         stateToTest = ClusterState.SOME_IN_DETENTION;
         createConnection();
-        try {
-            super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            Assert.fail("HecConnectionTimoutException should not have been thrown.");
-        }
+        super.sendEvents();
+    }
+
+    @Override
+    protected boolean isExpectedSendException(Exception e) {
+         return e instanceof HecConnectionTimeoutException;
+    }
+
+    @Override
+    protected boolean shouldSendThrowException() {
+        return stateToTest == ClusterState.ALL_IN_DETENTION;
     }
 }

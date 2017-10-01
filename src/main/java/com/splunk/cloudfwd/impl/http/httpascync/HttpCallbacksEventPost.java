@@ -20,20 +20,13 @@ import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecServerBusyException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchFailure;
-import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.EventPostResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_ACKS_DISABLED;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_NOT_OK;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_OK;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import org.slf4j.Logger;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.GATEWAY_TIMEOUT;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -76,15 +69,15 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                     break;
                 case 503:    
                     warn(reply, code);
-                    markBusyAndResend(reply, code, INDEXER_BUSY);
+                    notifyBusyAndResend(reply, code, EVENT_POST_INDEXER_BUSY);
                     break;
                 case 504:                 
                     warn(reply, code);
-                    markBusyAndResend(reply, code, GATEWAY_TIMEOUT);
+                    notifyBusyAndResend(reply, code, EVENT_POST_GATEWAY_TIMEOUT);
                     break;                    
                 default:
-                     invokeFailedEventsCallback(events, reply, code);
-                     notify(EVENT_POST_NOT_OK,code, reply, events);
+                    invokeFailedEventsCallback(events, reply, code);
+                    notify(EVENT_POST_NOT_OK, code, reply, events);
             }
         } catch (Exception e) {
             invokeFailedEventsCallback(events, e);
@@ -93,7 +86,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     @Override
     public void failed(Exception ex) {
-        resend(ex);
+        notifyFailedAndResend(ex);
     }
 
     @Override
@@ -104,7 +97,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                     sender.getChannel(), events);
             Exception ex = new RuntimeException(
                     "HTTP post cancelled while posting events  " + events);
-            notifyFailed(EVENT_POST_FAILURE,events, ex);
+            notifyFailed(EVENT_POST_FAILURE, events, ex);
             invokeFailedEventsCallback(events, ex);
         } catch (Exception e) {
             invokeFailedEventsCallback(events, e);
@@ -115,22 +108,28 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private void resend(Exception ex) {
         HttpSender sender = manager.getSender();
         try {
-            LOG.error("channel  {} Failed to post event batch {}",
-                    sender.getChannel(), events);
-            notifyFailed(EVENT_POST_FAILURE,events, ex);
             events.addSendException(ex);
-            LOG.warn("resending events through load balancer {}", events);
+            LOG.warn("resending events through load balancer {} on channel {}",
+                events, sender.getChannel());
             sender.getConnection().getLoadBalancer().
-                    sendRoundRobin(events, true); //will callback failed if max retries exceeded
+                sendRoundRobin(events, true); //will callback failed if max retries exceeded
         } catch (Exception e) {
             invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
         }
     }
 
-    private void markBusyAndResend(String reply, int code, LifecycleEvent.Type t) {
+    private void notifyFailedAndResend(Exception ex) {
+        HttpSender sender = manager.getSender();
+        LOG.error("channel {} failed to post event batch {}",
+            sender.getChannel(), events);
+        notifyFailed(EVENT_POST_FAILURE, events, ex);
+        resend(ex);
+    }
+
+    private void notifyBusyAndResend(String reply, int code, LifecycleEvent.Type t) {
         HttpSender sender = manager.getSender();
         Response r = new Response(t,code, reply, sender.getBaseUrl());
-        sender.getChannelMetrics().update(r);
+        notify(r);
         resend(new HecServerBusyException(reply));
     }
       
@@ -149,7 +148,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         sender.getAcknowledgementTracker().handleEventPostResponse(epr, events);
 
         // start polling for acks
-        manager.startPolling();
+        manager.startAckPolling();
 
         notify(EVENT_POST_OK, 200, resp, events);
     }
