@@ -95,7 +95,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
      * @return
      */
-    synchronized protected ConfigStatus getConfigStatus() {      
+    synchronized protected ConfigStatus getConfigStatus() {    
         //health.await();
         HecIOManager m = sender.getHecIOManager();
         HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
