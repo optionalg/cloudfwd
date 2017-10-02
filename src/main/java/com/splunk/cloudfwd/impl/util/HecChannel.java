@@ -200,7 +200,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      }
     //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
     if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
-        LOG.info("FAIL or NOR OK caused  DECREMENT {}", e);
+        LOG.info("FAIL or NOT OK caused  DECREMENT {}", e);
         this.unackedCount.decrementAndGet();
     }
     
