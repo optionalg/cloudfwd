@@ -28,30 +28,20 @@ public class InDetentionTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
 
-
             @Override
-            public void checkpoint(EventBatch events) {
-                Assert.fail("We should fail before we checkpoint anything.");
-            }
-
-            @Override
-            public void acknowledged(EventBatch events) {
-                Assert.fail("We should fail before we get any acks.");
-            }
-
-            @Override
-            protected boolean isExpectedFailureType(Exception e) {
+            protected boolean isExpectedWarningType(Exception e) {
                 return (e instanceof HecServerErrorResponseException &&
-                        ((HecServerErrorResponseException)e).getLifecycleType()==LifecycleEvent.Type.SPLUNK_IN_DETENTION);
+                        ((HecServerErrorResponseException)e).getLifecycleType()==LifecycleEvent.Type.INDEXER_IN_DETENTION);
             }
             
             @Override
-              public boolean shouldFail(){
-                return true; //each failed preflight test will return SPLUNK_IN_DETENTION via a systemError callback
+              public boolean shouldWarn(){
+                return true; //each failed preflight test will return INDEXER_IN_DETENTION via a systemWarning callback
              }
 
         };
     }    
+
 
     protected int getNumEventsToSend() {
         return numEvents;
@@ -95,19 +85,40 @@ public class InDetentionTest extends AbstractConnectionTest {
         this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
         configureConnection(connection);
     }
+    
+    private void createConnection(LifecycleEvent.Type problemType) {
+        Properties props = new Properties();
+        props.putAll(getTestProps());
+        props.putAll(getProps());
+        boolean gotException = false;
+        try{
+            this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        }catch(Exception e){
+            Assert.assertTrue("Expected HecServerErrorResponseException",  e instanceof HecServerErrorResponseException);
+            HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;
+              Assert.assertTrue("HecServerErrorResponseException not "+problemType+", was  " + servRespExc.getLifecycleType(), 
+                      servRespExc.getLifecycleType()==problemType); 
+            gotException = true;
+        }
+        if(!gotException){
+            Assert.fail("Expected HecMaxRetriedException associated with Connection instantiation config checks'");           
+        }
+    }    
 
+    /*
     @Test
     public void sendToIndexersInDetention() throws InterruptedException {
         stateToTest = ClusterState.ALL_IN_DETENTION;
-        createConnection();
-        super.sendEvents();
+        createConnection(LifecycleEvent.Type.INDEXER_IN_DETENTION);
     }
+*/
 
     @Test
     public void sendToSomeIndexersInDetention() throws InterruptedException {
         stateToTest = ClusterState.SOME_IN_DETENTION;
         createConnection();
         super.sendEvents();
+        //Thread.sleep(5000);
     }
 
     @Override
@@ -116,7 +127,7 @@ public class InDetentionTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected boolean shouldSendThrowException() {
+    protected boolean shouldSendThrowException() { //fixme todo - it ain't even gonna get to send. It will fail fast instantiating connection
         return stateToTest == ClusterState.ALL_IN_DETENTION;
     }
 }

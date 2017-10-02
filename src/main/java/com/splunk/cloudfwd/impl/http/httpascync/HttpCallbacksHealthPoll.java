@@ -44,14 +44,15 @@ public class HttpCallbacksHealthPoll extends HttpCallbacksAbstract {
                 type = HEALTH_POLL_OK;
                 break;
             case 503:
-                type = INDEXER_BUSY;
-                warn(reply, statusCode);
-                break;
+//                type = INDEXER_BUSY;
+//                warn(reply, statusCode);
+//                break;
             case 504:
-                warn(reply, statusCode);
-                break;
+                //type = warn(reply, statusCode);
+                //break;
             default:
-                type = error(reply, statusCode);
+                type = warn(reply, statusCode);
+                //type = error(reply, statusCode);
         }
         notify(type, statusCode, reply);
 

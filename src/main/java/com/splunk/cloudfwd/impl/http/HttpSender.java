@@ -63,7 +63,7 @@ public final class HttpSender implements Endpoints {
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
-  private final String baseUrl;
+  private final String baseUrl; 
 
 
   /**
@@ -92,6 +92,18 @@ public final class HttpSender implements Endpoints {
     this.hecIOManager = new HecIOManager(this);
   }
   
+    
+  public void setChannel(HecChannel c) {
+    this.channel = c;
+    this.LOG = c.getConnection().getLogger(HttpSender.class.getName());
+    // Channel is now available so Connection instance loggerFactory can be set
+    this.hecIOManager.setLogger(c.getConnection());
+  }
+  
+  public ConnectionImpl getConnection() {
+     return this.channel.getConnection();
+  }
+  
   public HecChannel getChannel() {
     if (null == channel) {
       throw new HecIllegalStateException(
@@ -99,11 +111,7 @@ public final class HttpSender implements Endpoints {
               HecIllegalStateException.Type.NULL_CHANNEL);
     }
     return channel;
-  }
-  
-  public ConnectionImpl getConnection() {
-    return this.channel.getConnection();
-  }
+  } 
   
   public AcknowledgementTracker getAcknowledgementTracker() {
     return hecIOManager.getAcknowledgementTracker();
@@ -351,13 +359,6 @@ public final class HttpSender implements Endpoints {
   public void setSimulatedEndpoints(
           Endpoints simulatedEndpoints) {
     this.simulatedEndpoints = simulatedEndpoints;
-  }
-  
-  public void setChannel(HecChannel c) {
-    this.channel = c;
-    this.LOG = getConnection().getLogger(HttpSender.class.getName());
-    // Channel is now available so Connection instance loggerFactory can be set
-    this.hecIOManager.setLogger(getConnection());
   }
 
   public String getToken() {

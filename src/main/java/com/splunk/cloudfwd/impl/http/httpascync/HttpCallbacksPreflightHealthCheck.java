@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_BUSY;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_FAILED;
 import java.io.IOException;
 import org.slf4j.Logger;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_OK;
@@ -51,11 +52,13 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                 getName());
     }
 
-    private void handleResponse(int statusCode, String reply) throws IOException {
+    private void handleResponse(int statusCode, String reply) throws IOException, InterruptedException {
         LifecycleEvent.Type type;
         switch (statusCode) {            
             case 503:  
                 warn(reply, statusCode);
+                LOG.warn("Server busy while attempting preflight check on {}, waiting 60 seconds to retry", getChannel());
+                Thread.sleep(60000);
                 type = PREFLIGHT_BUSY;
                 break;
             case 504:  
@@ -67,7 +70,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                 type = PREFLIGHT_OK;
                 break;
             default: //various non-200 errors such as 400/ack-is-disabled
-                type = error(reply, statusCode);
+                type = warn(reply, statusCode);//error(reply, statusCode);
         }
         notify(type, statusCode, reply);
     }
@@ -96,17 +99,17 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                     + " This is expected when a channel is closed while a pre-flight check is in process.");
             return;
         }
-        LOG.error(
-                "HEC pre-flight health check via /ack endpoint failed with exception {} on {}",ex.getMessage(), getChannel(),
-                ex);
-        error(ex);
+        LOG.warn(
+                "HEC pre-flight health check via /ack endpoint failed with exception {} on {}",ex.getMessage(), getChannel());
+        notifyFailed(PREFLIGHT_FAILED, ex);
+        //error(ex);
         // TODO: retry if this fails.. otherwise channel just sits around until it is reaped
     }
 
     @Override
     public void cancelled() {
         LOG.warn("HEC pre-flight health check cancelled");
-        error(new Exception(
+        warn(new Exception(
                 "HEC pre-flight health check via /ack endpoint cancelled."));
     }
 

@@ -83,11 +83,7 @@ public class ConnectionImpl implements Connection {
   public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
-    init(callbacks, propertiesFileHelper);
     this.lb = new LoadBalancer(this);
-  }
-
-  private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
     this.events = new EventBatchImpl();
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
     //the EventBatchImpl that succeeded or failed from the timoutChecker
@@ -99,8 +95,9 @@ public class ConnectionImpl implements Connection {
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
     this.callbacks = new CallbackInterceptor(callbacks, this);
+    throwExceptionIfNoChannelOK(); //this must be done after load balancer created 'cause it uses HttpSender
   }
-
+  
   public long getAckTimeoutMS() {
     return propertiesFileHelper.getAckTimeoutMS();
   }
@@ -112,28 +109,9 @@ public class ConnectionImpl implements Connection {
   
   
   @Override
-  public List<ConfigStatus> checkConfigs() throws Exception{
-      IndexDiscoverer d = new IndexDiscoverer((PropertiesFileHelper) getSettings(), this);
-      List<ConfigStatus> stats = new ArrayList<>();
-      for(InetSocketAddress addr: d.getAddrs()){
-          stats.add(checkConfigStatus(addr));            
-      }
-      return stats;
-    }
-
-    protected ConfigStatus checkConfigStatus(InetSocketAddress addr) throws Exception{
-        try (HttpSender sender = getPropertiesFileHelper().createSender(addr);) { //autoclose when done              
-            HecIOManager m = sender.getHecIOManager();            
-            HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m, this);
-            m.configCheck(cb); //begin async processign
-            //following call blocks until processing complete
-            HecServerErrorResponseException problem = cb.getConfigProblems(180000); //3 min
-            return new ConfigStatus(sender, problem, this);            
-        } catch (Exception ex) { 
-          LOG.error("Failed checkConfigStatus {}", ex.getMessage());
-          throw ex;
-      }
-    }
+  public List<ConfigStatus> checkConfigs() {
+    return lb.checkConfigs();
+  }
 
   @Override
   public void close() {
@@ -315,4 +293,10 @@ public class ConnectionImpl implements Connection {
     public List<HecHealth> getHealth() {
         return lb.getHealth();
     }
+
+    private void throwExceptionIfNoChannelOK()  {
+        if(checkConfigs().stream().noneMatch(ConfigStatus::isOk)){
+            throw checkConfigs().stream().filter(e->!e.isOk()).findFirst().get().getProblem();
+        } 
+   }
 }

@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
@@ -27,10 +28,12 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
-import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.http.HecIOManager;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
@@ -82,12 +85,28 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     
     this.health = new HecHealthImpl(channelId, sender.getBaseUrl()
-        , new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));
+        , new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
+    
+    sender.setChannel(this);
   }
-  
-  public HecHealthImpl getHealth() {
-    return health;
-  }
+
+    /**
+     * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
+     *  to synchronously check that the configuration of this channel is ok, before data is ever sent.
+     * @return
+     */
+    protected ConfigStatus getConfigStatus() {        
+        HecIOManager m = sender.getHecIOManager();
+        HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
+        m.configCheck(cb); //begin async processign
+        //following call blocks until processing complete
+        RuntimeException problem = cb.getException(); 
+        return new ConfigStatus(this, problem);
+    }
+
+    public HecHealthImpl getHealth() {
+        return health;
+    }
 
   private static String newChannelId() {
     return java.util.UUID.randomUUID().toString();
@@ -105,7 +124,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (started) {
       return;
     }
-    this.sender.setChannel(this);
     this.sender.getHecIOManager().preflightCheck();
 
     //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
@@ -169,6 +187,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }
       case PREFLIGHT_BUSY:
       case PREFLIGHT_GATEWAY_TIMEOUT:
+      case PREFLIGHT_FAILED:
         resendPreflight();
           break;      
     }
@@ -181,6 +200,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      }
     //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
     if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
+        LOG.info("FAIL or NOR OK caused  DECREMENT {}", e);
         this.unackedCount.decrementAndGet();
     }
     
@@ -190,13 +210,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
     private void resendPreflight() {
-        if(++preflightCount <=getSettings().getMaxPreflightRetries()){
+        if(++preflightCount <=getSettings().getMaxPreflightRetries() && ! closed && !quiesced){
             LOG.warn("retrying channel preflight checks on {}", this);
             this.sender.getHecIOManager().preflightCheck(); //retry preflight check
         }else{
             String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
-            getCallbacks().systemError(new HecMaxRetriesException(msg));
+            LOG.warn(msg);
+            //getCallbacks().systemError(new HecMaxRetriesException(msg));
         }
     }
   
@@ -249,7 +270,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  protected void interalForceClose() {
+  protected void interalForceClose() {     
     try {
       this.sender.close();
     } catch (Exception e) {
@@ -268,6 +289,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     LOG.info("CLOSE channel  {}", this);
     if (!isEmpty()) {
+        LOG.trace("{} not empty. Quiescing. unacked count={}", this, unackedCount.get());
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
     }
@@ -276,6 +298,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   private synchronized void finishClose() {
+    LOG.trace("finishClosing {}", this);
     this.closed = true;
     if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();

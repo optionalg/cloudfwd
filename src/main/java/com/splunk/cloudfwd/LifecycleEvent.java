@@ -25,7 +25,7 @@ public class LifecycleEvent {
     EVENT_BATCH_BORN,
     PRE_EVENT_POST,
     EVENT_POST_NOT_OK,
-    EVENT_POST_FAILURE,
+    EVENT_POST_FAILED,
     EVENT_POST_INDEXER_BUSY,
     EVENT_POST_GATEWAY_TIMEOUT,
     EVENT_POST_OK,
@@ -45,7 +45,7 @@ public class LifecycleEvent {
     INDEXER_BUSY,
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
-    SPLUNK_IN_DETENTION,
+    INDEXER_IN_DETENTION,
     INVALID_TOKEN,
 
     // Needed to know statuses, do not throw exception
@@ -54,6 +54,7 @@ public class LifecycleEvent {
     PREFLIGHT_BUSY,
     PREFLIGHT_OK,
     PREFLIGHT_NOT_OK,
+    PREFLIGHT_FAILED,
     INVALID_AUTH
 
   };

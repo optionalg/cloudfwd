@@ -1,5 +1,6 @@
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.sim.errorgen.indexer.RollingRestartEndpoints;
 
@@ -90,8 +91,17 @@ public class DownIndexersTest extends AbstractConnectionTest {
     @Test
     public void sendToDownIndexers() throws InterruptedException {
         stateToTest = ClusterState.ALL_DOWN;
-        createConnection();
-        super.sendEvents();
+        boolean gotException = false;
+        try{
+            createConnection();
+        }catch(Exception e){
+            Assert.assertTrue("Expected HecMaxRetriesException",  e instanceof HecMaxRetriesException);
+            gotException = true;
+        }
+        if(!gotException){
+            Assert.fail("Expected HecMaxRetriedException associated with Connection instantiation config checks'");
+        }
+        
     }
 
     @Test
@@ -134,7 +144,7 @@ public class DownIndexersTest extends AbstractConnectionTest {
                 shouldThrow = false;
                 break;
         }
-        this.callbacks.latch.countDown(); // allow the test to finish
+        //this.callbacks.latch.countDown(); // allow the test to finish
         return shouldThrow;
     }
 

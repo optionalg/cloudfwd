@@ -29,7 +29,6 @@ import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchFailure;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
-import com.splunk.cloudfwd.impl.util.HecChannel;
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.http.Header;
@@ -47,15 +46,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
   private final Logger LOG;
   protected final HecIOManager manager;
-  private ConnectionImpl connection;
- 
-
-    public HttpCallbacksAbstract(HecIOManager m, ConnectionImpl c) {
-        LOG = c.getLogger(HttpCallbacksAbstract.class.getName());
-        this.manager = m;
-        this.connection = c;
-    }
-
+  //private ConnectionImpl connection;
   
   HttpCallbacksAbstract(HecIOManager m) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
@@ -70,10 +61,10 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
-            LOG.error("reply with code {} was empty for function '{}'",code,  getName());
+            LOG.warn("reply with code {} was empty for function '{}'",code,  getName());
         }
         if(code != 200){
-            LOG.error("NON-200 response code: {} server reply: {}", code, reply);
+            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
         }
         completed(reply, code);      
       } catch (IOException e) {      
@@ -106,17 +97,17 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   }
   
   protected ConnectionImpl getConnection(){
-      if(null == connection){
+     // if(null == connection){
         return manager.getSender().getConnection();
-      }else{
-          return connection;
-      }
+      //}else{
+      //    return connection;
+     // }
   }
   
   protected Object getChannel(){
-      if(null != connection){ //when we explicitely construct with a Connection, it is because the sender does not have channel
-          throw new IllegalStateException("Channel is not available from sender.");
-      }
+//      if(null != connection){ //when we explicitely construct with a Connection, it is because the sender does not have channel
+//          throw new IllegalStateException("Channel is not available from sender.");
+//      }
       return manager.getSender().getChannel();
   }
   

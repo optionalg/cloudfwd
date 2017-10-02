@@ -13,17 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.error;
+package com.splunk.cloudfwd.impl.http;
 
 /**
  *
  * @author ghendrey
  */
-public class HecMaxRetriesException extends RuntimeException{
+public class HttpBodyAndStatus {
+    private int statusCode;
+    private String body;
 
-  public HecMaxRetriesException(String message) {
-    super(message);
-  }
-  
-  
+    public HttpBodyAndStatus(int statusCode, String body) {
+        this.statusCode = statusCode;
+        this.body = body;
+    }
+
+    @Override
+    public String toString() {
+        return "HttpBodyAndStatus{" + "statusCode=" + statusCode + ", body=" + body + '}';
+    }
+    
+    
+
+    /**
+     * @return the statusCode
+     */
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    /**
+     * @return the body
+     */
+    public String getBody() {
+        return body;
+    }
+    
 }

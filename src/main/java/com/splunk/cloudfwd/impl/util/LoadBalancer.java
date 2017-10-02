@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -39,8 +40,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
 
 /**
  *
@@ -67,9 +69,29 @@ public class LoadBalancer implements Closeable {
         this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
         this.checkpointManager = new CheckpointManager(c);
         this.discoveryScheduler = new IndexDiscoveryScheduler(c);
+        createChannels(discoverer.getAddrs());
         //this.discoverer.addObserver(this);
     }
+    
+    /**
+     * Initiates an http request on each channel to synchronously check the configuration of the indexer
+     * on each channel.
+     * @return
+     */
+    public List<ConfigStatus> checkConfigs() {
+      //return channels.values().stream().map(HecChannel::getConfigStatus).collect(Collectors.toList());
+      List<ConfigStatus> statuses = new ArrayList<>();
+      for(HecChannel c: channels.values()){
+          statuses.add(c.getConfigStatus());
+      }
+      return statuses;
+    }
 
+    /**
+     * Gets the current HecHealth of each channel. This method does not initiate any HTTP traffic.  It just
+     * returns whatever each HecChannel's health is at the current instant.
+     * @return
+     */
     public synchronized List<HecHealth> getHealth() {
         if (channels.isEmpty()) {
             createChannels(discoverer.getAddrs());
@@ -164,7 +186,7 @@ public class LoadBalancer implements Closeable {
         //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
 
         // have channel ready to send requests
-        channel.start();
+        //channel.start();
         return true;
     }
 
@@ -310,7 +332,7 @@ public class LoadBalancer implements Closeable {
         if (!forced) {
             events.cancelEventTrackers();
         }
-        events.setState(EVENT_POST_FAILURE);
+        events.setState(EVENT_POST_FAILED);
         checkpointManager.cancel(events.getId());
         throw e;
     }

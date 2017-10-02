@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.error;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.HecErrorResponseValueObject;
+import com.splunk.cloudfwd.impl.http.HttpBodyAndStatus;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,18 +28,25 @@ import java.util.Set;
  */
 
 
-public class HecServerErrorResponseException extends Exception {
+public class HecServerErrorResponseException extends RuntimeException {
     private static Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(3, 10, 11));
     private static Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 4, 7, 14));
     private static Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
     private static Set<Integer> recoverableServerErrors = new HashSet<>(Arrays.asList(8, 9));
     
     private HecErrorResponseValueObject serverRespObject;
-    private String httpResponseBody;
+    private HttpBodyAndStatus httpBodyAndStatus;
     private LifecycleEvent.Type lifecycleType;
     private String url;
     private Type errorType;
     private String context;
+
+    /**
+     * @return the httpBodyAndStatus
+     */
+    public HttpBodyAndStatus getHttpBodyAndStatus() {
+        return httpBodyAndStatus;
+    }
 
 
 
@@ -46,9 +54,9 @@ public class HecServerErrorResponseException extends Exception {
     public enum Type { NON_RECOVERABLE_ERROR, RECOVERABLE_CONFIG_ERROR, RECOVERABLE_DATA_ERROR, RECOVERABLE_SERVER_ERROR };
 
 
-    public HecServerErrorResponseException(HecErrorResponseValueObject vo, String serverReply, LifecycleEvent.Type type, String url) {
+    public HecServerErrorResponseException(HecErrorResponseValueObject vo, HttpBodyAndStatus b, LifecycleEvent.Type type, String url) {
         this.serverRespObject = vo;
-        this.httpResponseBody = serverReply;
+        this.httpBodyAndStatus = b;
         this.lifecycleType = type;        
         this.url = url;
         setErrorType(serverRespObject.getCode());
@@ -56,18 +64,9 @@ public class HecServerErrorResponseException extends Exception {
 
     @Override
     public String toString() {
-        return "HecServerErrorResponseException{" + "serverRespObject=" + serverRespObject + ", serverReply=" + httpResponseBody + ", lifecycleType=" + lifecycleType + ", url=" + url + ", errorType=" + errorType + ", context=" + context + '}';
+        return "HecServerErrorResponseException{" + "serverRespObject=" + serverRespObject + ", httpBodyAndStatus=" + httpBodyAndStatus + ", lifecycleType=" + lifecycleType + ", url=" + url + ", errorType=" + errorType + ", context=" + context + '}';
     }
-    
 
-    
-    
-    /**
-     * @return the httpResponseBody
-     */
-    public String getHttpResponseBody() {
-        return httpResponseBody;
-    }
 
     /**
      * @return the lifecycleType

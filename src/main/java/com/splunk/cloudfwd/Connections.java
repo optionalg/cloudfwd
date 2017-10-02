@@ -33,6 +33,15 @@ public class Connections {
         return create(c, new Properties());
     }
 
+    /**
+     * When creating a connection, an attempt is made to check the server-side configurations of every channel managed by the 
+     * load balancer. If any of the channels finds misconfigurations, such as HEC acknowldegements disabled, or invalid HEC
+     * token, then an exception is thrown from Connections.create. This is 'fail fast' behavior designed to quickly expose 
+     * serverside configuration issues.
+     * @param c
+     * @param p
+     * @return
+     */
     public static Connection create(ConnectionCallbacks c, Properties p) {
         return new ConnectionImpl(c, p);
     }

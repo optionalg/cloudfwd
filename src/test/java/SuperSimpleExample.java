@@ -79,8 +79,9 @@ public class SuperSimpleExample {
     customization.put(TOKEN, "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
     customization.put(UNRESPONSIVE_MS, "100000");//100 sec - Kill unresponsive channel
     customization.put(MOCK_HTTP_KEY, "true");
-    customization.put(MAX_TOTAL_CHANNELS, "1"); //increase this to increase parallelism
-    customization.put(ENABLE_CHECKPOINTS, "true"); //increase this to increase parallelism
+    customization.put(MAX_TOTAL_CHANNELS, "8"); //increase this to increase parallelism
+    customization.put(CHANNELS_PER_DESTINATION, "8"); //increase this to increase parallelism
+    customization.put(ENABLE_CHECKPOINTS, "true"); 
 
     //date formatter for sending 'raw' event
     SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -107,7 +108,7 @@ public class SuperSimpleExample {
     //SEND STRUCTURED EVENTS TO HEC 'EVENT' ENDPOINT
     try (Connection c = Connections.create(callbacks, customization);) {
       c.getSettings().setEventBatchSize(1024 * 16); //16kB send buffering
-      c.getSettings().setAckTimeoutMS(10000); //10 sec
+      c.getSettings().setAckTimeoutMS(60000); //60 sec
       c.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       for (int seqno = 1; seqno <= numEvents; seqno++) {
         EventWithMetadata event = new EventWithMetadata(getStructuredEvent(),

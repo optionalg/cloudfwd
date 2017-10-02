@@ -24,6 +24,7 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
         return numEvents;
     }
 
+    /*
     @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
@@ -47,6 +48,7 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
 
         };
     }
+    */
 
     @Override
     public void setUp() {
@@ -54,7 +56,8 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
         this.testMethodGUID = java.util.UUID.randomUUID().toString();
         this.events = new ArrayList<>();
     }
-
+/* this whole test has to be rethought. It is opening connections to bogus hostname, as part of instantiating the connection
+    which hangs for very long time before timeout.
     // PropertiesHelper Configuration Tests
     @Test
     public void testPropertiesHelperWithOverrides() throws MalformedURLException {
@@ -81,11 +84,12 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
         // Need connection object to pass into PropertiesFileHelper constructor for failed() callback
         Properties overrides = new Properties();
         //can't make assumptions about what's in cloudfwd.properties
-        /*
-        this.connection = Connections.create(callbacks, overrides);
+//        
+//        this.connection = Connections.create(callbacks, overrides);
+//
+//        Assert.assertEquals(1000000, this.connection.getSettings().getEventBatchSize()); // Property is in cloudfwd.properties
+//        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // Property is not in cloudfwd.properties so use default
 
-        Assert.assertEquals(1000000, this.connection.getSettings().getEventBatchSize()); // Property is in cloudfwd.properties
-        Assert.assertEquals(Long.parseLong(DEFAULT_DECOM_MS), this.connection.getSettings().getChannelDecomMS()); // Property is not in cloudfwd.properties so use default
-*/
     }
+*/
 }

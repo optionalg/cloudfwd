@@ -108,6 +108,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   
   @Override
   public void acknowledged(EventBatch events) {
+    //LOG.info("acked {}", events);
     if (null != lastId && lastId.compareTo(events.getId()) >= 0) {
       Assert.fail(
               "checkpoints received out of order. " + lastId + " before " + events.
@@ -174,7 +175,8 @@ public class BasicCallbacks implements ConnectionCallbacks {
     if(shouldWarn() && !this.warnLatch.await(timeout, u)){
         throw new RuntimeException("test timed out waiting on warnLatch");
     }    
-    if(!shouldFail() && !shouldWarn() &&  !this.latch.await(timeout, u)){
+    //only the presense of a failure (not a warning) should cause us to skip waiting for the latch that countsdown in checkpoint
+   if(!shouldFail() &&  !this.latch.await(timeout, u)){
         throw new RuntimeException("test timed out waiting on latch");
     }
   }

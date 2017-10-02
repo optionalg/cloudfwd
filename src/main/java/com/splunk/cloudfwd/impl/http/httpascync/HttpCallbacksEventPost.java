@@ -97,7 +97,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                     sender.getChannel(), events);
             Exception ex = new RuntimeException(
                     "HTTP post cancelled while posting events  " + events);
-            notifyFailed(EVENT_POST_FAILURE, events, ex);
+            notifyFailed(EVENT_POST_FAILED, events, ex);
             invokeFailedEventsCallback(events, ex);
         } catch (Exception e) {
             invokeFailedEventsCallback(events, e);
@@ -122,7 +122,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         HttpSender sender = manager.getSender();
         LOG.error("channel {} failed to post event batch {}",
             sender.getChannel(), events);
-        notifyFailed(EVENT_POST_FAILURE, events, ex);
+        notifyFailed(EVENT_POST_FAILED, events, ex);
         resend(ex);
     }
 

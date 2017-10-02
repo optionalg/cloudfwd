@@ -244,20 +244,32 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         configureConnection(connection);
     }
 
+    private void createConnection(LifecycleEvent.Type problemType) {
+        Properties props = new Properties();
+        props.putAll(getTestProps());
+        props.putAll(getProps());
+        boolean gotException = false;
+        try{
+            this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        }catch(Exception e){
+            Assert.assertTrue("Expected HecServerErrorResponseException",  e instanceof HecServerErrorResponseException);
+            HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;
+              Assert.assertTrue("HecServerErrorResponseException not "+problemType+", was  " + servRespExc.getLifecycleType(), 
+                      servRespExc.getLifecycleType()==problemType); 
+            gotException = true;
+        }
+        if(!gotException){
+            Assert.fail("Expected HecMaxRetriedException associated with Connection instantiation config checks'");           
+        }
+    }
+
     //pre-flight check NOT ok
     @Test
     public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
         LOG.info("TESTING ACKS_DISABLED");
         errorToTest = Error.ACKS_DISABLED;
         ackTimeoutLongerThanConnectionTimeout = true;
-        createConnection();
-        try {
-            super.sendEvents();
-        } catch (HecConnectionTimeoutException e) {
-            LOG.trace("Got expected timeout exception because all channels are unhealthy "
-                + "due to acks disabled on token (per test design): "
-                + e.getMessage());
-        }
+        createConnection(LifecycleEvent.Type.ACK_DISABLED);
     }
 
     //pre-flight check NOT ok
@@ -266,8 +278,7 @@ public class HecServerErrorResponseTest extends AbstractConnectionTest {
         LOG.info("TESTING INVALID_TOKEN");
         errorToTest = Error.INVALID_TOKEN;
         ackTimeoutLongerThanConnectionTimeout = true;
-        createConnection();
-        super.sendEvents();
+        createConnection(LifecycleEvent.Type.INVALID_TOKEN);
     }
 
     @Test

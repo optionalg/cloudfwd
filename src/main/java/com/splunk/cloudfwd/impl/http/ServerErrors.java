@@ -19,13 +19,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.SPLUNK_IN_DETENTION;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.UNHANDLED_NON_200;
 import java.io.IOException;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_DISABLED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.GATEWAY_TIMEOUT;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_IN_DETENTION;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -53,25 +53,27 @@ public class ServerErrors {
     public static HecServerErrorResponseException toErrorException(String reply,
             int statusCode, String url) throws IOException {
 
-        LifecycleEvent.Type type =  hecType(statusCode, reply);       
-        
+        final LifecycleEvent.Type type =  hecType(statusCode, reply);       
+        final HttpBodyAndStatus b = new HttpBodyAndStatus(statusCode, reply);
         if(reply != null && !reply.isEmpty()){
             try{
                 HecErrorResponseValueObject r = mapper.readValue(reply,
-                    HecErrorResponseValueObject.class);
-                return new HecServerErrorResponseException(r, reply, type,  url);
+                    HecErrorResponseValueObject.class);               
+                return new HecServerErrorResponseException(r, b, type,  url);
             }catch(Exception e){ //response like 404/"not found" will fail to unmarshal into HecErrorResponseValueObject (not hjson)
-                return new HecServerErrorResponseException(new HecErrorResponseValueObject(), reply, type, url);
+                return new HecServerErrorResponseException(new HecErrorResponseValueObject(), b, type, url);
             }
         }else{
             //server response without text such as 504 gateway timeout
-            return new HecServerErrorResponseException(new HecErrorResponseValueObject(), reply, type, url);
+            return new HecServerErrorResponseException(new HecErrorResponseValueObject(), b, type, url);
         }
     }
 
     private static LifecycleEvent.Type hecType(int statusCode, String reply) throws IOException {
         LifecycleEvent.Type type = null;
         switch (statusCode) {
+            case 200:
+                throw new IllegalStateException("200 is not an error code.");
             case 400:
                 HecErrorResponseValueObject r = mapper.readValue(reply,
                 HecErrorResponseValueObject.class);                
@@ -84,7 +86,7 @@ public class ServerErrors {
                 break;
             case 404:
                 //undocumented?
-                type = SPLUNK_IN_DETENTION;
+                type = INDEXER_IN_DETENTION;
                 break;
             case 403:
                 //HTTPSTATUS_FORBIDDEN

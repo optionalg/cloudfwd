@@ -16,8 +16,8 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.HttpSender;
+import com.splunk.cloudfwd.impl.util.HecChannel;
 
 /**
  *
@@ -25,34 +25,41 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
  */
 public class ConfigStatus {
     
-    private final String url;
-    private final HecServerErrorResponseException problem;
-    private final ConnectionImpl outer;
+    private final HecChannel channel;
+    private final RuntimeException exception;   
 
-    public ConfigStatus(HttpSender sender, HecServerErrorResponseException problem,
-            final ConnectionImpl outer) {
-        this.outer = outer;
-        this.url = sender.getBaseUrl();
-        this.problem = problem;
+    public ConfigStatus(HecChannel channel, RuntimeException problem) {
+        this.channel = channel;
+        this.exception = problem;
     }
 
     @Override
     public String toString() {
-        return "ConfigStatus{" + "url=" + url + ", problem=" + problem + '}';
+        return "ConfigStatus{" + "channel=" + channel + ", problem=" + exception + '}';
+    }
+    
+    /**
+     *
+     * @return true if getException returns null
+     */
+    public boolean isOk(){
+        return exception==null;
+    }
+
+
+
+    /**
+     * @return the exception, or null if there was no exception
+     */
+    public RuntimeException getProblem() {
+        return exception;
     }
 
     /**
-     * @return the url
+     * @return the channel
      */
-    public String getUrl() {
-        return url;
-    }
-
-    /**
-     * @return the problem
-     */
-    public HecServerErrorResponseException getProblem() {
-        return problem;
+    public HecChannel getChannel() {
+        return channel;
     }
     
 }

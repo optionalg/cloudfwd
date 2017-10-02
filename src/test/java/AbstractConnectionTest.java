@@ -1,17 +1,14 @@
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventWithMetadata;
 import com.splunk.cloudfwd.RawEvent;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.HecLoggerFactory;
 import org.junit.After;
 import org.junit.Assert;

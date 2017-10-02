@@ -19,7 +19,6 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.LifecycleEvent;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_BATCH_BORN;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILURE;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_NOT_OK;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
@@ -42,6 +41,7 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.impl.http.AcknowledgementTracker;
 import java.util.Collections;
 import java.util.Iterator;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
 
 /**
  * Use EventBatchImpl if you want a high degree of control over which events will be
@@ -310,7 +310,7 @@ public class EventBatchImpl implements EventBatch {
 
   public boolean isRetriable() {
     //for an EventBatchImpl to be retriable it must be in a failed or not_ok state
-    return state == EVENT_POST_NOT_OK || state == EVENT_POST_FAILURE;
+    return state == EVENT_POST_NOT_OK || state == EVENT_POST_FAILED;
   }
 
   /**
