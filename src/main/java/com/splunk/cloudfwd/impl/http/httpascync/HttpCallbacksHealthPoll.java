@@ -22,7 +22,6 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_FAILED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_OK;
 import java.io.IOException;
 import org.slf4j.Logger;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
 
 /**
  *
@@ -44,12 +43,7 @@ public class HttpCallbacksHealthPoll extends HttpCallbacksAbstract {
                 type = HEALTH_POLL_OK;
                 break;
             case 503:
-//                type = INDEXER_BUSY;
-//                warn(reply, statusCode);
-//                break;
             case 504:
-                //type = warn(reply, statusCode);
-                //break;
             default:
                 type = warn(reply, statusCode);
                 //type = error(reply, statusCode);

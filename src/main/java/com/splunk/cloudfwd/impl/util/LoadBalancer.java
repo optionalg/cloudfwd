@@ -81,7 +81,7 @@ public class LoadBalancer implements Closeable {
     public List<ConfigStatus> checkConfigs() {
       //return channels.values().stream().map(HecChannel::getConfigStatus).collect(Collectors.toList());
       List<ConfigStatus> statuses = new ArrayList<>();
-      for(HecChannel c: channels.values()){
+      for(HecChannel c: channels.values()){          
           statuses.add(c.getConfigStatus());
       }
       return statuses;

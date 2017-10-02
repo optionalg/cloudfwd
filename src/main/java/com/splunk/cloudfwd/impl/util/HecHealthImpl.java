@@ -17,6 +17,9 @@ package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.LifecycleEvent;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
 
 /**
  * Describes the health
@@ -24,23 +27,23 @@ import com.splunk.cloudfwd.LifecycleEvent;
  * @author ghendrey
  */
 public class HecHealthImpl implements HecHealth {
+    private CountDownLatch latch = new CountDownLatch(1); //wait for first setStatus to be called
+    private Logger LOG;
 
-    private String url;
-    private final String channelId;
     private boolean healthy;
     private LifecycleEvent status;
+    private final HecChannel channel;
 
-    public HecHealthImpl(String channelId, String url, LifecycleEvent status) {
-        this.channelId = channelId;
-        this.url = url;
+    public HecHealthImpl(HecChannel c, LifecycleEvent status) {
+        this.channel = c;
         this.status = status;
+        this.LOG = c.getConnection().getLogger(HecHealth.class.getName());
     }
 
     @Override
     public String toString() {
-        return "HecHealthImpl{" + "url=" + url + ", channelId=" + channelId + ", healthy=" + healthy + ", status=" + status + '}';
+        return "HecHealthImpl{healthy=" + healthy + ", status=" + status + ", channel=" + channel + '}';
     }
-
 
 
     @Override
@@ -51,11 +54,12 @@ public class HecHealthImpl implements HecHealth {
     public void setStatus(LifecycleEvent status, boolean healthy) {
         this.status = status;
         this.healthy = healthy;
+        this.latch.countDown();
     }
 
     @Override
     public String getUrl() {
-        return this.url;
+        return channel.getSender().getBaseUrl();
     }
 
     /**
@@ -70,11 +74,20 @@ public class HecHealthImpl implements HecHealth {
      * @return the channelId
      */
     public String getChannelId() {
-        return channelId;
+        return channel.getChannelId();
     }
 
     @Override
     public Exception getException() {
        return getStatus().getException();
+    }
+    
+    public boolean await(){
+        try {
+            return latch.await(5, TimeUnit.MINUTES); //five minute timeout
+        } catch (InterruptedException ex) {
+           LOG.warn("Timed out waiting for HecHealth to become available.");
+           return false;
+        }        
     }
 }

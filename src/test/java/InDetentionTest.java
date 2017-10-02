@@ -35,8 +35,8 @@ public class InDetentionTest extends AbstractConnectionTest {
             }
             
             @Override
-              public boolean shouldWarn(){
-                return true; //each failed preflight test will return INDEXER_IN_DETENTION via a systemWarning callback
+              public boolean shouldWarn(){                  
+                return stateToTest==ClusterState.ALL_IN_DETENTION; //each failed preflight test will return INDEXER_IN_DETENTION via a systemWarning callback
              }
 
         };
@@ -69,9 +69,9 @@ public class InDetentionTest extends AbstractConnectionTest {
             default:
                 Assert.fail("Unsupported configuration error type");
         }
-        props.put(BLOCKING_TIMEOUT_MS, "3000");
+        props.put(BLOCKING_TIMEOUT_MS, "30000");
         props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
+        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
        
         return props;
     }
@@ -105,13 +105,12 @@ public class InDetentionTest extends AbstractConnectionTest {
         }
     }    
 
-    /*
+    
     @Test
     public void sendToIndexersInDetention() throws InterruptedException {
         stateToTest = ClusterState.ALL_IN_DETENTION;
         createConnection(LifecycleEvent.Type.INDEXER_IN_DETENTION);
     }
-*/
 
     @Test
     public void sendToSomeIndexersInDetention() throws InterruptedException {
@@ -125,6 +124,7 @@ public class InDetentionTest extends AbstractConnectionTest {
     protected boolean isExpectedSendException(Exception e) {
          return e instanceof HecConnectionTimeoutException;
     }
+
 
     @Override
     protected boolean shouldSendThrowException() { //fixme todo - it ain't even gonna get to send. It will fail fast instantiating connection

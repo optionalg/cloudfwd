@@ -186,13 +186,13 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     
     protected void warn(Exception ex) {
         try {
-            LOG.warn("System Warning in Function '{}' Exception '{}'", getName(), ex.getMessage());
+            LOG.warn("{} System Warning in Function '{}' Exception '{}'", getChannel(), getName(), ex.getMessage());
             getCallbacks().systemWarning(ex);
         } catch (Exception e) {
             //if the applicatoin's callback is throwing an exception we have no way to handle this, other
             //than log an error
-            LOG.error("Exception '{}'in ConnectionCallbacks.systemWarning() for  '{}'",
-                    ex, getName());
+            LOG.error("{} Exception '{}'in ConnectionCallbacks.systemWarning() for  '{}'",
+                    getChannel(), ex.getMessage(), getName());
         }           
     }    
     

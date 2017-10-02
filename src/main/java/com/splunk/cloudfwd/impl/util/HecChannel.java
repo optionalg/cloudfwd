@@ -84,18 +84,19 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             getMaxUnackedEventBatchPerChannel();
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     
-    this.health = new HecHealthImpl(channelId, sender.getBaseUrl()
-        , new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
+    this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
     
     sender.setChannel(this);
+    start();
   }
 
     /**
      * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
-     *  to synchronously check that the configuration of this channel is ok, before data is ever sent.
+     *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
      * @return
      */
-    protected ConfigStatus getConfigStatus() {        
+    synchronized protected ConfigStatus getConfigStatus() {      
+        //health.await();
         HecIOManager m = sender.getHecIOManager();
         HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
         m.configCheck(cb); //begin async processign
@@ -105,6 +106,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
 
     public HecHealthImpl getHealth() {
+        health.await();
         return health;
     }
 
@@ -150,9 +152,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   public synchronized boolean send(EventBatchImpl events) {
-    if (!started) {
-      start();
-    }
+//    if (!started) {
+//          start();
+//    }
     if (!isAvailable()) {
       return false;
     }
@@ -357,6 +359,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
   }
 
+    /**
+     * @return the sender
+     */
+    public HttpSender getSender() {
+        return sender;
+    }
+
   private class StickySessionEnforcer {
 
     boolean seenAckIdZero;
@@ -388,7 +397,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     public DeadChannelDetector(long intervalMS) {
       this.intervalMS = intervalMS;
-      deadChannelChecker.setLogger(sender.getConnection());
+      deadChannelChecker.setLogger(getSender().getConnection());
     }
 
     public synchronized void start() {
@@ -416,7 +425,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             //and the events will never send.
             interalForceClose();
           }
-          if (sender.getConnection().isClosed()) {
+          if (      getSender().getConnection().isClosed()) {
             loadBalancer.close();
           }
         } else { //channel was not 'frozen'

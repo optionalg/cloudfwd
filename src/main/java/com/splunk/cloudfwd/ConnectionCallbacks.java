@@ -15,8 +15,6 @@
  */
 package com.splunk.cloudfwd;
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
-
 /**
  * Callers of Connection's send methods must provide an implementation of
  * ConnectionCallbacks to receive asynchronous notifications about their
