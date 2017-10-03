@@ -230,6 +230,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
         }
     }
+    
+    public boolean isFull(){
+        if( this.unackedCount.get()> full){
+            LOG.error("{} illegal channel state full={}, unackedCount={}", this, full, unackedCount.get());
+        }
+        return  this.unackedCount.get() == full;
+    }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
         if(++preflightCount <=getSettings().getMaxPreflightRetries() && ! closed && !quiesced){
@@ -355,7 +362,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   boolean isAvailable() {
-    return !quiesced && !closed && health.isHealthy() && this.unackedCount.get() < full;
+    return !quiesced && !closed && health.isHealthy() && !isFull();
   }
 
   @Override

@@ -291,10 +291,11 @@ public class LoadBalancer implements Closeable {
         tryMe = channelsSnapshot.get(channelIdx);
         try {
             if (tryMe.send(events)) {
-                LOG.debug("sent EventBatch:{}  on channel: {} available={} ", events, tryMe, tryMe.isAvailable());
+                LOG.debug("sent EventBatch:{}  on channel: {} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
                 LOG.trace("channel not healthy {}", tryMe);
+                LOG.debug("Skipped channel: {} available={} full={}", tryMe, tryMe.isAvailable(), tryMe.isFull());
             }
         } catch (RuntimeException e) {
             recoverAndThrowException(events, forced, e);
@@ -311,9 +312,13 @@ public class LoadBalancer implements Closeable {
                     LOG.warn(
                             "Round-robin load balancer waited 1 second at spin count {}, channel idx {}, eventBatch {}",
                             spinCount, this.robin % channelsSnapshot.size(), events.getId());
+                            //if we had no healthy channels, which is why we are here, it's possible tht we have no
+                            //**valid** channels, which means every channel is returning an HecServerErrorResponse
+                            //indicating misconfiguration of HEC
+                            checkForNoValidChannels(channelsSnapshot, events);
                 }
                 latch = null;
-                checkForNoValidChannels(channelsSnapshot, events);
+                //checkForNoValidChannels(channelsSnapshot, events);
             } catch (InterruptedException e) {
                 LOG.error(
                         "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
