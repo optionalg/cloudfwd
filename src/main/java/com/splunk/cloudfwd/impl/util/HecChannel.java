@@ -199,9 +199,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
     private void updateHealth(LifecycleEvent e, boolean wasAvailable) {
+        //only health poll  or preflight ok will set health to true
+        if(e.getType()==LifecycleEvent.Type.PREFLIGHT_OK || e.getType()==LifecycleEvent.Type.HEALTH_POLL_OK){
+            this.health.setStatus(e, true);
+        }
         //any other non-200 that we have not excplicitly handled above will set the health false
         if (e instanceof Response) {
-            this.health.setStatus(e, ((Response) e).isOk());
+            Response r = (Response) e;
+            if(!r.isOk()){
+                this.health.setStatus(e, false);
+            }
         }
         if(e instanceof Failure){
             this.health.setStatus(e, false);
