@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import com.splunk.cloudfwd.error.HecConnectionStateException;
 import org.slf4j.Logger;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 
@@ -91,14 +93,19 @@ public class IndexDiscoverer extends Observable {
   }
 
   public synchronized List<InetSocketAddress> getAddrs(){
-    // perform DNS lookup
-    this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
-            this.forceUrlMapToOne);
-    List<InetSocketAddress> addrs = new ArrayList<>();
-    for (String url : this.mappings.keySet()) {
-      addrs.addAll(mappings.get(url));
+    try {
+      // perform DNS lookup
+      this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
+              this.forceUrlMapToOne);
+      List<InetSocketAddress> addrs = new ArrayList<>();
+      for (String url : this.mappings.keySet()) {
+        addrs.addAll(mappings.get(url));
+      }
+      return addrs;
+    } catch (RuntimeException e) {
+      throw new HecConnectionStateException(
+        e.getMessage(), HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
     }
-    return addrs;
   }
 
   public InetSocketAddress randomlyChooseAddr(){
