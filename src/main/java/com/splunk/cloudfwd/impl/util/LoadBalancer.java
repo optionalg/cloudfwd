@@ -73,19 +73,19 @@ public class LoadBalancer implements Closeable {
         //this.discoverer.addObserver(this);
     }
     
-    /**
-     * Initiates an http request on each channel to synchronously check the configuration of the indexer
-     * on each channel.
-     * @return
-     */
-    public List<ConfigStatus> checkConfigs() {
-      //return channels.values().stream().map(HecChannel::getConfigStatus).collect(Collectors.toList());
-      List<ConfigStatus> statuses = new ArrayList<>();
-      for(HecChannel c: channels.values()){          
-          statuses.add(c.getConfigStatus());
-      }
-      return statuses;
-    }
+//    /**
+//     * Initiates an http request on each channel to synchronously check the configuration of the indexer
+//     * on each channel.
+//     * @return
+//     */
+//    public List<ConfigStatus> checkConfigs() {
+//      //return channels.values().stream().map(HecChannel::getConfigStatus).collect(Collectors.toList());
+//      List<ConfigStatus> statuses = new ArrayList<>();
+//      for(HecChannel c: channels.values()){          
+//          statuses.add(c.getConfigStatus());
+//      }
+//      return statuses;
+//    }
 
     /**
      * Gets the current HecHealth of each channel. This method does not initiate any HTTP traffic.  It just

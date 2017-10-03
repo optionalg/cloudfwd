@@ -86,9 +86,9 @@ public class HecHealthImpl implements HecHealth {
        return(RuntimeException)e;
     }
     
-    public boolean await(){
+    public boolean await(long wait, TimeUnit unit){
         try {
-            return latch.await(5, TimeUnit.MINUTES); //five minute timeout
+            return latch.await(wait, unit); //five minute timeout
         } catch (InterruptedException ex) {
            LOG.warn("Timed out waiting for HecHealth to become available.");
            return false;

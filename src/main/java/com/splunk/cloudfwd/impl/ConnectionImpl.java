@@ -100,11 +100,11 @@ public class ConnectionImpl implements Connection {
             valueOf(ms));
   }
   
-  
-  @Override
-  public List<ConfigStatus> checkConfigs() {
-    return lb.checkConfigs();
-  }
+//  
+//  @Override
+//  public List<ConfigStatus> checkConfigs() {
+//    return lb.checkConfigs();
+//  }
    
   @Override
   public void close() {

@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
-import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
@@ -31,8 +30,7 @@ import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
-import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
@@ -43,6 +41,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import java.util.concurrent.ExecutorService;
+import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
 
 /**
  *
@@ -89,25 +89,31 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     start();
   }
 
-    /**
-     * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
-     *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
-     * @return
-     */
-    protected ConfigStatus getConfigStatus() {    
-        //need to do this so that we preserve the behavior of getting session from load balancer. 
-        //That is: we must get a response on a single first http request to establish the Session-Cookie before we send any other requests.
-        health.await(); 
-        HecIOManager m = sender.getHecIOManager();
-        HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
-        m.configCheck(cb); //begin async processign
-        //following call blocks until processing complete
-        RuntimeException problem = cb.getException(); 
-        return new ConfigStatus(this, problem);
-    }
+  
+  
+//    /**
+//     * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
+//     *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
+//     * @return
+//     */
+//    protected ConfigStatus getConfigStatus() {    
+//        //need to do this so that we preserve the behavior of getting session from load balancer. 
+//        //That is: we must get a response on a single first http request to establish the Session-Cookie before we send any other requests.
+//        health.await(); 
+//        HecIOManager m = sender.getHecIOManager();
+//        HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
+//        m.configCheck(cb); //begin async processign
+//        //following call blocks until processing complete
+//        RuntimeException problem = cb.getException(); 
+//        return new ConfigStatus(this, problem);
+//    }
 
     public HecHealthImpl getHealth() {
-        health.await();
+        if(!health.await(5, TimeUnit.MINUTES)){
+         Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
+                HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT);
+            this.health.setStatus(new PreflightFailed(ex), false);
+        }
         return health;
     }
 
@@ -232,7 +238,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
             LOG.warn(msg);
-            updateHealth(e, wasAvailable);
+            Exception ex= new HecMaxRetriesException(msg);
+            updateHealth(new PreflightFailed(ex), wasAvailable);
         }
     }
   
