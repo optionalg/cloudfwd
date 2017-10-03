@@ -35,10 +35,10 @@ public interface HecHealth {
     boolean isHealthy();
 
     /**
-     * Return Exception responsible for LifecycleEvent returned by getStatus. This method has the same affect as
+     * Return RuntimeException responsible for LifecycleEvent returned by getStatus. This method has the same affect as
      * getStatus().getException(). 
      * @return Exception that caused this state, or null if no Exception associated with this state.
      */
-    public Exception getException();
+    public RuntimeException getException();   
 
 }

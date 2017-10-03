@@ -31,7 +31,6 @@ import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
-import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
@@ -189,31 +188,36 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         checkForStickySessionViolation(e);
         break;
       }
+      //we don't want to update the health when we get 503/504/fail for preflight; We want to resend preflight
       case PREFLIGHT_BUSY:
       case PREFLIGHT_GATEWAY_TIMEOUT:
       case PREFLIGHT_FAILED:
-        resendPreflight();
-          break;      
+        resendPreflight(e, wasAvailable);
+        return; //don't update health since we did not actually get an 'answer' to our pre-flight check     
     }
-    //any other non-200 that we have not excplicitly handled above will set the health false
-    if (e instanceof Response) {
-       this.health.setStatus(e, ((Response) e).isOk());
-    }
-    if(e instanceof Failure){
-         this.health.setStatus(e, false);
-     }
-    //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
-    if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
-        LOG.info("FAIL or NOT OK caused  DECREMENT {}", e);
-        this.unackedCount.decrementAndGet();
-    }
-    
-    if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
-      loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
-    }
+    updateHealth(e, wasAvailable);
   }
 
-    private void resendPreflight() {
+    private void updateHealth(LifecycleEvent e, boolean wasAvailable) {
+        //any other non-200 that we have not excplicitly handled above will set the health false
+        if (e instanceof Response) {
+            this.health.setStatus(e, ((Response) e).isOk());
+        }
+        if(e instanceof Failure){
+            this.health.setStatus(e, false);
+        }
+        //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
+        if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
+            LOG.info("FAIL or NOT OK caused  DECREMENT {}", e);
+            this.unackedCount.decrementAndGet();
+        }
+        
+        if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
+            loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
+        }
+    }
+
+    private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
         if(++preflightCount <=getSettings().getMaxPreflightRetries() && ! closed && !quiesced){
             LOG.warn("retrying channel preflight checks on {}", this);
             this.sender.getHecIOManager().preflightCheck(); //retry preflight check
@@ -221,7 +225,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
             LOG.warn(msg);
-            //getCallbacks().systemError(new HecMaxRetriesException(msg));
+            updateHealth(e, wasAvailable);
         }
     }
   

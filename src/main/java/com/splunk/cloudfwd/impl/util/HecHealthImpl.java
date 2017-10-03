@@ -78,8 +78,12 @@ public class HecHealthImpl implements HecHealth {
     }
 
     @Override
-    public Exception getException() {
-       return getStatus().getException();
+    public RuntimeException getException() {
+       Exception e = getStatus().getException();
+       if( ! (e instanceof RuntimeException)){
+           return new RuntimeException(e.getMessage(), e);
+       }
+       return(RuntimeException)e;
     }
     
     public boolean await(){

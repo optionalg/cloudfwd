@@ -105,7 +105,7 @@ public class ConnectionImpl implements Connection {
   public List<ConfigStatus> checkConfigs() {
     return lb.checkConfigs();
   }
-
+   
   @Override
   public void close() {
       flush();
@@ -287,11 +287,19 @@ public class ConnectionImpl implements Connection {
         return lb.getHealth();
     }
 
-   
+   /*
     private void throwExceptionIfNoChannelOK()  {
         if(checkConfigs().stream().noneMatch(ConfigStatus::isOk)){
             throw checkConfigs().stream().filter(e->!e.isOk()).findFirst().get().getProblem();
         } 
    }
+    */
+    
+    private void throwExceptionIfNoChannelOK()  {
+        List<HecHealth> healths = lb.getHealth();
+        if(healths.stream().noneMatch(HecHealth::isHealthy)){
+            throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getException();
+        } 
+   }    
 
 }
