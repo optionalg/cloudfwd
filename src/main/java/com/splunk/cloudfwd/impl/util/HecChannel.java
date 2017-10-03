@@ -96,7 +96,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      * @return
      */
     protected ConfigStatus getConfigStatus() {    
-        //health.await();
+        //need to do this so that we preserve the behavior of getting session from load balancer. 
+        //That is: we must get a response on a single first http request to establish the Session-Cookie before we send any other requests.
+        health.await(); 
         HecIOManager m = sender.getHecIOManager();
         HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
         m.configCheck(cb); //begin async processign

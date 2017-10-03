@@ -88,7 +88,7 @@ public class ConnectionImpl implements Connection {
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
     this.callbacks = new CallbackInterceptor(callbacks, this);
-    throwExceptionIfNoChannelOK(); //this must be done after load balancer created 'cause it uses HttpSender
+    throwExceptionIfNoChannelOK();
   }
   
   public long getAckTimeoutMS() {
@@ -287,9 +287,11 @@ public class ConnectionImpl implements Connection {
         return lb.getHealth();
     }
 
+   
     private void throwExceptionIfNoChannelOK()  {
         if(checkConfigs().stream().noneMatch(ConfigStatus::isOk)){
             throw checkConfigs().stream().filter(e->!e.isOk()).findFirst().get().getProblem();
         } 
    }
+
 }
