@@ -40,7 +40,7 @@ public class ConfigStatus {
     
     /**
      *
-     * @return true if getException returns null
+     * @return true if getStatusException returns null
      */
     public boolean isOk(){
         return exception==null;

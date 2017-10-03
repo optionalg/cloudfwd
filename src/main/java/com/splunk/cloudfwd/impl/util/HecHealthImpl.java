@@ -19,6 +19,8 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.LifecycleEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.slf4j.Logger;
 
 /**
@@ -78,10 +80,32 @@ public class HecHealthImpl implements HecHealth {
     }
 
     @Override
-    public Exception getException() {
+    public Exception getStatusException() {
        return getStatus().getException();
     }
-    
+
+    @Override
+    public boolean isMisconfigured() {
+        Exception ex = getStatusException();
+        if (ex instanceof HecServerErrorResponseException) {
+            HecServerErrorResponseException error = (HecServerErrorResponseException)ex;
+            // TODO: handle disabled tokens
+            if (error.getLifecycleType() == LifecycleEvent.Type.ACK_DISABLED ||
+                error.getLifecycleType() == LifecycleEvent.Type.INVALID_TOKEN ||
+                error.getLifecycleType() == LifecycleEvent.Type.EVENT_POST_ACKS_DISABLED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public Exception getConfigurationException() {
+        Exception e = null;
+        if (isMisconfigured()) e = getStatusException();
+        return e;
+    }
+
     public boolean await(){
         try {
             return latch.await(5, TimeUnit.MINUTES); //five minute timeout

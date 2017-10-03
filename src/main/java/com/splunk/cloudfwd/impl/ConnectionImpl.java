@@ -27,6 +27,8 @@ import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecLoggerFactory;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
+
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
@@ -108,7 +110,12 @@ public class ConnectionImpl implements Connection {
 
   @Override
   public void close() {
+    try {
       flush();
+    } catch (HecNoValidChannelsException ex) {
+      LOG.error("Events could not be flushed on connection close: " +
+        ex.getMessage(), ex);
+    }
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
@@ -157,7 +164,7 @@ public class ConnectionImpl implements Connection {
    * @throws HecConnectionTimeoutException
    * @see com.splunk.cloudfwd.PropertyKeys
    */
-  public synchronized int send(Event event) throws HecConnectionTimeoutException {
+  public synchronized int send(Event event) throws HecConnectionTimeoutException, HecNoValidChannelsException {
     if (null == this.events) {
       this.events = new EventBatchImpl();
     }
@@ -179,7 +186,7 @@ public class ConnectionImpl implements Connection {
    * @throws HecConnectionTimeoutException
    */
     @Override
-  public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
+  public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException, HecNoValidChannelsException {
     if (closed) {
       throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
@@ -205,7 +212,7 @@ public class ConnectionImpl implements Connection {
   }
 
     @Override
-  public synchronized void flush() throws HecConnectionTimeoutException {
+  public synchronized void flush() throws HecConnectionTimeoutException, HecNoValidChannelsException {
     if (null != events && events.getNumEvents() != 0) {
       sendBatch(events);
     }

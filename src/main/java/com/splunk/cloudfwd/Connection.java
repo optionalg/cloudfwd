@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import java.io.Closeable;
 import java.util.List;
@@ -39,7 +40,7 @@ public interface Connection extends Closeable{
      * @throws HecConnectionTimeoutException
      * @see com.splunk.cloudfwd.PropertyKeys
      */
-    int send(Event event) throws HecConnectionTimeoutException;
+    int send(Event event) throws HecConnectionTimeoutException, HecNoValidChannelsException;
 
     /**
      * Synchronously generates an HTTP request to the ack endpoint on each channel, and assembles a list of 
@@ -60,7 +61,7 @@ public interface Connection extends Closeable{
 
     void closeNow();
 
-    void flush() throws HecConnectionTimeoutException;
+    void flush() throws HecConnectionTimeoutException, HecNoValidChannelsException;
 
     /**
      * @return the callbacks
@@ -86,7 +87,7 @@ public interface Connection extends Closeable{
      * @return
      * @throws HecConnectionTimeoutException
      */
-    int sendBatch(EventBatch events) throws HecConnectionTimeoutException;
+    int sendBatch(EventBatch events) throws HecConnectionTimeoutException, HecNoValidChannelsException;
 
     /**
      * Returns a live ConnectionsSettings instance that can be used to change

@@ -7,6 +7,7 @@ import com.splunk.cloudfwd.impl.sim.ValidatePropsEndpoint;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.UnknownHostException;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -21,7 +22,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
 
     @Test
     // Makes sure we are computing diffs as expected
-    public void testPropertiesDiffs() {
+    public void testPropertiesDiffs() throws UnknownHostException {
         Properties props1 = new Properties();
         props1.setProperty(PropertyKeys.TOKEN, "a token");
         props1.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "30000");
@@ -185,7 +186,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         return numEvents;
     }
 
-    private void setUrls(String urls) {
+    private void setUrls(String urls) throws UnknownHostException {
         connection.getSettings().setUrls(urls);
         ValidatePropsEndpoint.URLS = connection.getSettings().getUrls();
     }
