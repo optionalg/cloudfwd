@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -352,9 +353,11 @@ public class ConnectionSettings {
                 }
                 urlList.add(url);
             } catch (MalformedURLException ex) {
-                LOG.error(ex.getMessage(), ex);
-                throw new HecConnectionStateException(ex.getMessage(),
+                HecConnectionStateException e = new HecConnectionStateException(ex.getMessage(),
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+                connection.getCallbacks().systemError(e);
+                LOG.error(e.getMessage(), e);
+                throw e;
             }
         }
         urlList.sort(Comparator.comparing(URL::toString));
@@ -381,7 +384,7 @@ public class ConnectionSettings {
      *
      * @param props
      */
-    public void setProperties(Properties props) {
+    public void setProperties(Properties props) throws UnknownHostException {
         Properties diffs = getDiff(props);
         boolean refreshChannels = false;
         boolean dnsLookup = false;
@@ -411,7 +414,7 @@ public class ConnectionSettings {
             }
         }
         if (refreshChannels) {
-            connection.getLoadBalancer().refreshChannels(dnsLookup);
+            connection.getLoadBalancer().refreshChannels(dnsLookup, true);
         }
     }
 
@@ -446,12 +449,12 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  public void setUrls(String urls) {
+  public void setUrls(String urls) throws UnknownHostException {
     if (!urlsStringToList(urls).equals(
             getUrls())) {
       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      connection.getLoadBalancer().refreshChannels(true);
+      connection.getLoadBalancer().refreshChannels(true, true);
     }
   }
 

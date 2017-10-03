@@ -89,7 +89,7 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
     }
 
     /*
-    private Exception getException(int httpCode, String reply, String url) {
+    private Exception getStatusException(int httpCode, String reply, String url) {
         ObjectMapper mapper = new ObjectMapper();
         HecErrorResponseValueObject hecErrorResp;
         try {

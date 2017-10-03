@@ -18,15 +18,12 @@ package com.splunk.cloudfwd.impl.util;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
-import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
@@ -43,6 +40,10 @@ import org.slf4j.Logger;
 import java.util.concurrent.ExecutorService;
 import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 
 /**
  *
@@ -473,7 +474,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                   try {
                       loadBalancer.sendRoundRobin(e, true);
                       break;
-                  } catch (HecConnectionTimeoutException ex) {
+                  } catch (HecConnectionTimeoutException|HecNoValidChannelsException ex) {
                      LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
                   }
                 }
