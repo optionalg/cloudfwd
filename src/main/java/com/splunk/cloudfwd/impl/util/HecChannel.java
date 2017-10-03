@@ -15,24 +15,19 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
-import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
-import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
-import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
@@ -43,6 +38,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import java.util.concurrent.ExecutorService;
+import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 
 /**
  *
@@ -89,25 +90,31 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     start();
   }
 
-    /**
-     * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
-     *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
-     * @return
-     */
-    protected ConfigStatus getConfigStatus() {    
-        //need to do this so that we preserve the behavior of getting session from load balancer. 
-        //That is: we must get a response on a single first http request to establish the Session-Cookie before we send any other requests.
-        health.await(); 
-        HecIOManager m = sender.getHecIOManager();
-        HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
-        m.configCheck(cb); //begin async processign
-        //following call blocks until processing complete
-        RuntimeException problem = cb.getException(); 
-        return new ConfigStatus(this, problem);
-    }
+  
+  
+//    /**
+//     * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
+//     *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
+//     * @return
+//     */
+//    protected ConfigStatus getConfigStatus() {    
+//        //need to do this so that we preserve the behavior of getting session from load balancer. 
+//        //That is: we must get a response on a single first http request to establish the Session-Cookie before we send any other requests.
+//        health.await(); 
+//        HecIOManager m = sender.getHecIOManager();
+//        HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
+//        m.configCheck(cb); //begin async processign
+//        //following call blocks until processing complete
+//        RuntimeException problem = cb.getException(); 
+//        return new ConfigStatus(this, problem);
+//    }
 
     public HecHealthImpl getHealth() {
-        health.await();
+        if(!health.await(5, TimeUnit.MINUTES)){
+         Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
+                HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT);
+            this.health.setStatus(new PreflightFailed(ex), false);
+        }
         return health;
     }
 
@@ -199,9 +206,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
     private void updateHealth(LifecycleEvent e, boolean wasAvailable) {
+        //only health poll  or preflight ok will set health to true
+        if(e.getType()==LifecycleEvent.Type.PREFLIGHT_OK || e.getType()==LifecycleEvent.Type.HEALTH_POLL_OK){
+            this.health.setStatus(e, true);
+        }
         //any other non-200 that we have not excplicitly handled above will set the health false
         if (e instanceof Response) {
-            this.health.setStatus(e, ((Response) e).isOk());
+            Response r = (Response) e;
+            if(!r.isOk()){
+                this.health.setStatus(e, false);
+            }
         }
         if(e instanceof Failure){
             this.health.setStatus(e, false);
@@ -216,6 +230,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
         }
     }
+    
+    public boolean isFull(){
+        if( this.unackedCount.get()> full){
+            LOG.error("{} illegal channel state full={}, unackedCount={}", this, full, unackedCount.get());
+        }
+        return  this.unackedCount.get() == full;
+    }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
         if(++preflightCount <=getSettings().getMaxPreflightRetries() && ! closed && !quiesced){
@@ -225,7 +246,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
             LOG.warn(msg);
-            updateHealth(e, wasAvailable);
+            Exception ex= new HecMaxRetriesException(msg);
+            updateHealth(new PreflightFailed(ex), wasAvailable);
         }
     }
   
@@ -340,7 +362,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   boolean isAvailable() {
-    return !quiesced && !closed && health.isHealthy() && this.unackedCount.get() < full;
+    return !quiesced && !closed && health.isHealthy() && !isFull();
   }
 
   @Override
@@ -459,7 +481,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                   try {
                       loadBalancer.sendRoundRobin(e, true);
                       break;
-                  } catch (HecConnectionTimeoutException ex) {
+                  } catch (HecConnectionTimeoutException|HecNoValidChannelsException ex) {
                      LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
                   }
                 }

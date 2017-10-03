@@ -17,19 +17,13 @@ package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.error.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
-import java.net.Inet6Address;
-import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -73,19 +67,19 @@ public class LoadBalancer implements Closeable {
         //this.discoverer.addObserver(this);
     }
     
-    /**
-     * Initiates an http request on each channel to synchronously check the configuration of the indexer
-     * on each channel.
-     * @return
-     */
-    public List<ConfigStatus> checkConfigs() {
-      //return channels.values().stream().map(HecChannel::getConfigStatus).collect(Collectors.toList());
-      List<ConfigStatus> statuses = new ArrayList<>();
-      for(HecChannel c: channels.values()){          
-          statuses.add(c.getConfigStatus());
-      }
-      return statuses;
-    }
+//    /**
+//     * Initiates an http request on each channel to synchronously check the configuration of the indexer
+//     * on each channel.
+//     * @return
+//     */
+//    public List<ConfigStatus> checkConfigs() {
+//      //return channels.values().stream().map(HecChannel::getConfigStatus).collect(Collectors.toList());
+//      List<ConfigStatus> statuses = new ArrayList<>();
+//      for(HecChannel c: channels.values()){          
+//          statuses.add(c.getConfigStatus());
+//      }
+//      return statuses;
+//    }
 
     /**
      * Gets the current HecHealth of each channel. This method does not initiate any HTTP traffic.  It just
@@ -93,7 +87,7 @@ public class LoadBalancer implements Closeable {
      * @return
      */
     public synchronized List<HecHealth> getHealth() {
-        if (channels.isEmpty()) {
+        if (channels.isEmpty()) { // DON'T NEED THIS
             createChannels(discoverer.getAddrs());
             // if channels are newly created, the status will be PREFLIGHT_HEALTH_CHECK_PENDING
         }
@@ -107,13 +101,14 @@ public class LoadBalancer implements Closeable {
         LOG.debug(change.toString());
     }
 
-    public synchronized void sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException {
+    public synchronized void sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException,
+            HecNoValidChannelsException {
         if (null == this.connection.getCallbacks()) {
             throw new HecConnectionStateException(
                     "Connection FutureCallback has not been set.",
                     HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
         }
-        if (channels.isEmpty()) {
+        if (channels.isEmpty()) { // don't need this
             createChannels(discoverer.getAddrs());
         }
         sendRoundRobin(events);
@@ -214,12 +209,13 @@ public class LoadBalancer implements Closeable {
 
     }
 
-    private synchronized void sendRoundRobin(EventBatchImpl events) throws HecConnectionTimeoutException {
+    private synchronized void sendRoundRobin(EventBatchImpl events) throws HecConnectionTimeoutException,
+            HecNoValidChannelsException {
         sendRoundRobin(events, false);
     }
 
     public synchronized boolean sendRoundRobin(EventBatchImpl events, boolean resend)
-            throws HecConnectionTimeoutException {
+            throws HecConnectionTimeoutException, HecNoValidChannelsException {
         events.incrementNumTries();
         if (resend && !isResendable(events)) {
             LOG.trace("Not resendable {}", events);
@@ -295,10 +291,11 @@ public class LoadBalancer implements Closeable {
         tryMe = channelsSnapshot.get(channelIdx);
         try {
             if (tryMe.send(events)) {
-                LOG.debug("sent EventBatch:{}  on channel: {} available={} ", events, tryMe, tryMe.isAvailable());
+                LOG.debug("sent EventBatch:{}  on channel: {} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
                 LOG.trace("channel not healthy {}", tryMe);
+                LOG.debug("Skipped channel: {} available={} full={}", tryMe, tryMe.isAvailable(), tryMe.isFull());
             }
         } catch (RuntimeException e) {
             recoverAndThrowException(events, forced, e);
@@ -307,7 +304,7 @@ public class LoadBalancer implements Closeable {
     }
 
     private void waitIfSpinCountTooHigh(int spinCount,
-            List<HecChannel> channelsSnapshot, EventBatchImpl events) {
+            List<HecChannel> channelsSnapshot, EventBatchImpl events) throws HecNoValidChannelsException {
         if (spinCount % channelsSnapshot.size() == 0) {
             try {
                 latch = new CountDownLatch(1);
@@ -315,13 +312,30 @@ public class LoadBalancer implements Closeable {
                     LOG.warn(
                             "Round-robin load balancer waited 1 second at spin count {}, channel idx {}, eventBatch {}",
                             spinCount, this.robin % channelsSnapshot.size(), events.getId());
+                            //if we had no healthy channels, which is why we are here, it's possible tht we have no
+                            //**valid** channels, which means every channel is returning an HecServerErrorResponse
+                            //indicating misconfiguration of HEC
+                            checkForNoValidChannels(channelsSnapshot, events);
                 }
                 latch = null;
+                //checkForNoValidChannels(channelsSnapshot, events);
             } catch (InterruptedException e) {
                 LOG.error(
                         "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
                         getMessage());
             }
+        }
+    }
+
+    private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
+            EventBatchImpl events) throws HecNoValidChannelsException {
+
+        List<HecHealth> hecHealths = channelsSnapshot.stream().map(HecChannel::getHealth).collect(Collectors.toList());
+        if (hecHealths.stream().allMatch(HecHealth::isMisconfigured)) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
+            HecNoValidChannelsException ex = new HecNoValidChannelsException(
+                "No valid channels available due to possible misconfiguration.", hecHealths);
+            getConnection().getCallbacks().failed(events, ex);
+            throw ex;
         }
     }
 
@@ -346,15 +360,24 @@ public class LoadBalancer implements Closeable {
         }
     }
 
-    public synchronized void refreshChannels(boolean dnsLookup) {
+    public synchronized void refreshChannels(boolean dnsLookup, boolean throwIfBadUrl) throws UnknownHostException {
+        // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
+        List<InetSocketAddress> addrs = dnsLookup ? discoverer.getAddrs(throwIfBadUrl) :
+                discoverer.getCachedAddrs();
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
         staleChannels.putAll(channels);
         channels.clear();
-        List<InetSocketAddress> addrs = dnsLookup ? discoverer.getAddrs() : discoverer.
-                getCachedAddrs();
         createChannels(addrs);
+    }
+
+    public synchronized void refreshChannels(boolean dnsLookup) {
+        try {
+            refreshChannels(dnsLookup, false);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e); // should be unreachable
+        }
     }
 
     /**

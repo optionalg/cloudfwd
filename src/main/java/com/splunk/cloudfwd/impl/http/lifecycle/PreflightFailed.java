@@ -1,8 +1,3 @@
-
-import com.splunk.cloudfwd.ConfigStatus;
-import org.junit.Assert;
-import org.junit.Test;
-
 /*
  * Copyright 2017 Splunk, Inc..
  *
@@ -18,24 +13,26 @@ import org.junit.Test;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.splunk.cloudfwd.impl.http.lifecycle;
+
+import com.splunk.cloudfwd.LifecycleEvent;
 
 /**
  *
  * @author ghendrey
  */
-public class ConfigCheckTest extends AbstractConnectionTest{
-    
-    @Test
-    public void testCheckConfigs() throws Exception{
-        for(ConfigStatus s: super.connection.checkConfigs()){
-            LOG.info(s.toString());
-            Assert.assertNull(s.getProblem());
-        }
-    }
+public class PreflightFailed extends LifecycleEvent implements Failure{
 
+    private final Exception exception;
+    
+    public PreflightFailed(Exception e) {
+        super(Type.PREFLIGHT_FAILED);
+        this.exception = e;
+    }
+    
     @Override
-    protected int getNumEventsToSend() {
-        return 0;
+    public Exception getException(){
+        return exception;
     }
     
 }

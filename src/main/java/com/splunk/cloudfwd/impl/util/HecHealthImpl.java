@@ -19,6 +19,8 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.LifecycleEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.slf4j.Logger;
 
 /**
@@ -78,17 +80,43 @@ public class HecHealthImpl implements HecHealth {
     }
 
     @Override
-    public RuntimeException getException() {
+    public RuntimeException getStatusException() {
        Exception e = getStatus().getException();
+       if (null == e){
+           return null;
+       }
        if( ! (e instanceof RuntimeException)){
            return new RuntimeException(e.getMessage(), e);
        }
        return(RuntimeException)e;
     }
-    
-    public boolean await(){
+
+
+    @Override
+    public boolean isMisconfigured() {
+        Exception ex = getStatusException();
+        if (ex instanceof HecServerErrorResponseException) {
+            HecServerErrorResponseException error = (HecServerErrorResponseException)ex;
+            // TODO: handle disabled tokens
+            if (error.getLifecycleType() == LifecycleEvent.Type.ACK_DISABLED ||
+                error.getLifecycleType() == LifecycleEvent.Type.INVALID_TOKEN ||
+                error.getLifecycleType() == LifecycleEvent.Type.EVENT_POST_ACKS_DISABLED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public Exception getConfigurationException() {
+        Exception e = null;
+        if (isMisconfigured()) e = getStatusException();
+        return e;
+    }
+
+    public boolean await(long wait, TimeUnit unit){
         try {
-            return latch.await(5, TimeUnit.MINUTES); //five minute timeout
+            return latch.await(wait, unit); //five minute timeout
         } catch (InterruptedException ex) {
            LOG.warn("Timed out waiting for HecHealth to become available.");
            return false;
