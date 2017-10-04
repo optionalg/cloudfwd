@@ -332,9 +332,10 @@ public class LoadBalancer implements Closeable {
 
         List<HecHealth> hecHealths = channelsSnapshot.stream().map(HecChannel::getHealth).collect(Collectors.toList());
         if (hecHealths.stream().allMatch(HecHealth::isMisconfigured)) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
+            String msg = "No valid channels available due to possible misconfiguration.";
             HecNoValidChannelsException ex = new HecNoValidChannelsException(
-                "No valid channels available due to possible misconfiguration.", hecHealths);
-            getConnection().getCallbacks().failed(events, ex);
+                msg, hecHealths);
+            LOG.error(msg, ex);
             throw ex;
         }
     }
