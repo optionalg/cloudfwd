@@ -1,9 +1,9 @@
 # Base image to get a container ready to run cloudfwd tests
-# 
+#
 # to build run:
 # docker build . -f Dockerfile.docker-splunk-6.6.3-sun-java8
 FROM ubuntu:latest
-ENV \ 
+ENV \
   SPLUNK_PRODUCT=splunk \
   SPLUNK_VERSION=6.6.3 \
   SPLUNK_BUILD=e21ee54bc796 \
@@ -28,14 +28,14 @@ RUN apt-get install -y --no-install-recommends \
     unzip \
     xz-utils \
     procps \
-    pstack \ 
-    wget \ 
+    pstack \
+    wget \
     sudo \
     libgssapi-krb5-2 \
     git \
     ca-certificates \
     software-properties-common \
-    python-software-properties \ 
+    python-software-properties \
     && apt-get --purge remove openjdk*
 
 # Download official Splunk release, verify checksum and unzip in /opt/splunk
@@ -56,7 +56,7 @@ EXPOSE 8000/tcp 8089/tcp 8191/tcp 9997/tcp 1514 8088/tcp
 
 WORKDIR /opt/splunk
 
-#DO NOT INSTALL JAVA BEFORE SPLUNK. For some reason "apt-get purge -y --auto-remove wget" in the 
+#DO NOT INSTALL JAVA BEFORE SPLUNK. For some reason "apt-get purge -y --auto-remove wget" in the
 #splunk installation is messing with the previously installed java installation So install java
 #after splunk
 RUN \
@@ -73,9 +73,9 @@ ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
 RUN apt-get update && apt-get install -y --no-install-recommends maven
 
 
-# Cleanup 
-RUN \ 
-    apt-get purge -y --auto-remove \ 
+# Cleanup
+RUN \
+    apt-get purge -y --auto-remove \
     && rm -rf /var/lib/apt/lists/*
 RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
 
@@ -88,11 +88,11 @@ RUN test -d ${CLOUDFWD} && rm -rf ${CLOUDFWD} || echo "directory doesn't exist"
 RUN mkdir -p ${CLOUDFWD}
 COPY . ${CLOUDFWD}/
 WORKDIR ${CLOUDFWD}
-RUN cd ${CLOUDFWD} && mvn -Dmaven.test.skip=true install
+RUN cd ${CLOUDFWD} && ( mvn -B -Dmaven.test.skip=true install > install.log 2>&1 || ( FAILURE=$! && echo "Failed with exit code: $?" && tail -10000 install.log && exit $FAILURE))
 RUN rm -rf ${CLOUDFWD}
 
 RUN test -d ${CLOUDFWD} && rm -rf ${CLOUDFWD} || echo "directory doesn't exist"
 RUN mkdir -p ${CLOUDFWD}
 COPY . ${CLOUDFWD}/
 
-RUN /opt/splunk/bin/splunk start && cd /build/cloudfwd && mvn clean verify
+RUN ( /opt/splunk/bin/splunk start > splunk_start.log 2>&1 && echo 'last 100 records from splunk_start.log' && tail -100 splunk_start.log || (FAILURE=$? && tail -10000 splunk_start.log && exit $FAILURE)) && cd /build/cloudfwd && ( mvn -B clean verify > verify.log 2>&1 && echo "last 300 records from maven verify log:" && tail -300 verify.log || (FAILURE=$? && echo "Failed with exit code: $?" && tail -10000 verify.log ; exit $FAILURE))
