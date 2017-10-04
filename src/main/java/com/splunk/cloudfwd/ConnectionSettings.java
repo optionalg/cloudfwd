@@ -342,18 +342,7 @@ public class ConnectionSettings {
         for (int i=0;i<splits.length;i++) {
             urlString = splits[i];
             try {
-                url = new URL(urlString.trim());
-                if (url.getPort() == -1) {
-                    int port;
-                    if (url.getProtocol().equals("https")) {
-                        port = 443;
-                    } else {
-                        port = 80;
-                    }
-                    LOG.warn("No port provided for url: " + urlString.trim()
-                        + ". Defaulting to port " + port);
-                    url = new URL(url.getProtocol(), url.getHost(), port, url.getFile());
-                }
+                url =getUrlWithAutoAssignedPorts(urlString);
                 urlList.add(url);
             } catch (MalformedURLException ex) {
                 String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage() ;
@@ -490,6 +479,26 @@ public class ConnectionSettings {
                     HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
         }
 
+    }
+
+    private URL getUrlWithAutoAssignedPorts(String urlString) throws MalformedURLException {
+        URL url = new URL(urlString.trim());
+        if(!url.getProtocol().equals("https")){
+            throw new HecConnectionStateException("protocol '"+url.getProtocol()+ "' is not supported. Use 'https'.",
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+        }
+        if (url.getPort() == -1) {
+            int port;
+            if (url.getProtocol().equals("https")) {
+                port = 443;
+            } else {
+                port = 80;
+            }
+            LOG.warn("No port provided for url: " + urlString.trim()
+                    + ". Defaulting to port " + port);
+            return new URL(url.getProtocol(), url.getHost(), port, url.getFile());
+        }
+        return url;
     }
 
 }

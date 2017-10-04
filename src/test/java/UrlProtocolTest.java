@@ -1,9 +1,9 @@
 
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
+import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import java.net.MalformedURLException;
 import java.util.Properties;
-import org.junit.Test;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -21,49 +21,22 @@ import org.junit.Test;
  * limitations under the License.
  */
 
-/**
- *
- * @author ghendrey
- */
-public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
 
-    @Override
-    protected int getNumEventsToSend() {
-        return 0;
-    }
-
-    @Override
+public class UrlProtocolTest extends ExceptionConnInstantiationTest {
+     @Override
     protected Properties getProps() {
        Properties props = new Properties();
-       props.put(PropertyKeys.COLLECTOR_URI, "floort");
+       props.put(PropertyKeys.COLLECTOR_URI, "http://foo.com"); //http is not supported protocol. Must be https
        return props;
     }
     
-    @Test
-    public void doIt() throws InterruptedException{
-        super.sendEvents();
-    }
-    
-
-    @Override
     protected boolean isExpectedConnInsstantiationExcpeption(Exception e) {
        if(e instanceof HecConnectionStateException){
-           return (e.getCause() != null ) && (e.getCause() instanceof MalformedURLException);                          
+           return ((HecConnectionStateException)e).getType() == CONFIGURATION_EXCEPTION
+                   && ((HecConnectionStateException)e).getMessage().equals("protocol 'http' is not supported. Use 'https'.");
        }
        return false;
-    }
-  
-    /**
-     * Override in test if your test wants Connection instantiation to fail
-     * @return
-     */
-    @Override
-    protected boolean connectionInstantiationShouldFail() {
-        return true;
     }    
-    
-    
-    
     
     
 }
