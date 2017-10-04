@@ -51,13 +51,6 @@ public class HecServerErrorResponseAcksDisabledTest extends AbstractHecServerErr
         return props;
     }
 
-    //pre-flight check NOT ok
-    @Test
-    public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        LOG.info("TESTING ACKS_DISABLED");
-        createConnection(LifecycleEvent.Type.ACK_DISABLED);
-    }
-
     @Override
     protected boolean isExpectedSendException(Exception e) {
         boolean isExpected = false;
@@ -72,4 +65,10 @@ public class HecServerErrorResponseAcksDisabledTest extends AbstractHecServerErr
         return true;
     }
 
+    //pre-flight check NOT ok
+    @Test
+    public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        LOG.info("TESTING ACKS_DISABLED");
+        createConnection(LifecycleEvent.Type.ACK_DISABLED);
+    }
 }
