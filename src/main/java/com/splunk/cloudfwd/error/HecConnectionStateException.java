@@ -24,6 +24,11 @@ package com.splunk.cloudfwd.error;
  */
 
 public class HecConnectionStateException extends IllegalStateException {
+    
+    public HecConnectionStateException(String s, Type t, Exception causedBy){
+        super(s, causedBy);
+        this.type = t;
+    }
 
     public HecConnectionStateException(String s, Type t) {
         super(s);

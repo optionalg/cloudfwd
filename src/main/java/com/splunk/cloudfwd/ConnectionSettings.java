@@ -337,9 +337,12 @@ public class ConnectionSettings {
     protected List<URL> urlsStringToList(String urlsListAsString) {
         List<URL> urlList = new ArrayList<>();
         String[] splits = urlsListAsString.split(",");
-        for (String urlString : splits) {
+        URL url = null;
+        String urlString = null;
+        for (int i=0;i<splits.length;i++) {
+            urlString = splits[i];
             try {
-                URL url = new URL(urlString.trim());
+                url = new URL(urlString.trim());
                 if (url.getPort() == -1) {
                     int port;
                     if (url.getProtocol().equals("https")) {
@@ -353,8 +356,9 @@ public class ConnectionSettings {
                 }
                 urlList.add(url);
             } catch (MalformedURLException ex) {
-                HecConnectionStateException e = new HecConnectionStateException(ex.getMessage(),
-                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+                String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage() ;
+                HecConnectionStateException e = new HecConnectionStateException(msg,
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
                 connection.getCallbacks().systemError(e);
                 LOG.error(e.getMessage(), e);
                 throw e;
