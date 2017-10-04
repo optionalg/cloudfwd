@@ -26,7 +26,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private ExecutorService executor;
     private ByteBuffer buffer;
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
-    private PollScheduler externalHealthPoller;
     private long start = 0;
     private long finish = 0;
     final float warmup = 0.005f; 
@@ -38,26 +37,15 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         return numBatches; // how many batches callbacks should expect
     }
 
-    private void startHealthCheck() {
-        externalHealthPoller = new PollScheduler("Connection health checker");
-        externalHealthPoller.start(() -> {
-            List<HecHealth> healthList = connection.getHealth();
-            for (HecHealth health : healthList) {
-                LOG.info("Health: url=" + health.getUrl() + "status=" + health.getStatus());
-            }
-        }, 30, TimeUnit.SECONDS);
-    }
-
     @Test
-    public void sendTextToRaw() throws InterruptedException {
+    public void sendTextToRaw() throws InterruptedException {   
+        //create executor before connection. Else if connection isntantiation failes, NPE on cleanup via null executor
+        executor = Executors.newFixedThreadPool(numThreads,
+                (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
-
         List<Callable<Object>> callables = new ArrayList<>();
-        executor = Executors.newFixedThreadPool(numThreads,
-                (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
-
         for (int i = 0; i < numThreads; i++) {
             callables.add(Executors.callable(new SenderWorker()::sendAndWaitForAcks));
         }
@@ -94,7 +82,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
     @After
     public void cleanup() {
-        executor.shutdownNow();
+        if (null != executor){
+            executor.shutdownNow();
+        }
 //        externalHealthPoller.stop();
         if (waitingSenders.size() != 0) {
             Assert.fail("All acks were not received.");

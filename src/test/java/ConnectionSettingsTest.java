@@ -26,18 +26,26 @@ import org.junit.Assert;
 /**
  * Created by kchen on 9/27/17.
  */
-public class ConnectionSettingsTest {
+public class ConnectionSettingsTest extends AbstractConnectionTest{
+   
+    
+    
+    @Override
+    protected Properties getProps() {
+        Properties props = new Properties();
+        props.put(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088"); 
+        return props;
+    }
 
     @Test
     public void getSSLCertContentForCloudInstance() {
-        Properties props = new Properties();
-        props.put(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088");
+        ConnectionSettings settings = connection.getSettings();
+        settings.putProperty(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088");
         Connection c = Connections.create(null);
 
         // For cloud instance, if we didn't set CLOUD_SSL_CERT_CONTENT in overrides,
         // it will pick up from cloudfwd.properties
         // Non-exist ssl content
-        ConnectionSettings settings = new ConnectionSettings(c, props);
         String defaultCloudCertContent = "-----BEGIN CERTIFICATE-----" +
                 "MIIB/DCCAaGgAwIBAgIBADAKBggqhkjOPQQDAjB+MSswKQYDVQQDEyJTcGx1bmsg" +
                 "Q2xvdWQgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNp" +
@@ -56,35 +64,24 @@ public class ConnectionSettingsTest {
             Assert.fail("Expect: " + defaultCloudCertContent + "\nbut got: " + sslCert);
         }
 
-        String expectedSSLCert = "testing ssl cert";
-        props.put(PropertyKeys.CLOUD_SSL_CERT_CONTENT, expectedSSLCert);
-        settings = new ConnectionSettings(c, props);
-        sslCert = settings.getSSLCertContent();
-        if (sslCert != expectedSSLCert) {
-            Assert.fail("Expect: " + expectedSSLCert + "\nbut got:" + sslCert);
-        }
     }
 
     @Test
     public void getSSLCertContentForNonCloudInstance() {
-        Properties props = new Properties();
-        props.put(PropertyKeys.COLLECTOR_URI, "https://localhost:8088");
-        Connection c = Connections.create(null);
-
-        // Non-exist ssl content
-        ConnectionSettings settings = new ConnectionSettings(c, props);
-        String sslCert = settings.getSSLCertContent();
-        if (!sslCert.equals("")) {
-            Assert.fail("Expect empty ssl cert content, but got: " + sslCert);
-        }
+        ConnectionSettings settings = connection.getSettings();
+        settings.putProperty(PropertyKeys.COLLECTOR_URI, "https://localhost:8088");
 
         // Non-empty ssl content
         String expectedSSLCert = "testing ssl cert";
-        props.put(PropertyKeys.SSL_CERT_CONTENT, expectedSSLCert);
-        settings = new ConnectionSettings(c, props);
-        sslCert = settings.getSSLCertContent();
+        settings.putProperty(PropertyKeys.SSL_CERT_CONTENT, expectedSSLCert);
+        String sslCert = settings.getSSLCertContent();
         if (!sslCert.equals(expectedSSLCert)) {
             Assert.fail("Expect: " + expectedSSLCert + "\nbut got: " + sslCert);
         }
+    }
+
+    @Override
+    protected int getNumEventsToSend() {
+        return 1;
     }
 }
