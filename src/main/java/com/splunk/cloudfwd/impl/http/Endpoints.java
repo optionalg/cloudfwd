@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import java.io.Closeable;
 
 import org.apache.http.HttpResponse;
