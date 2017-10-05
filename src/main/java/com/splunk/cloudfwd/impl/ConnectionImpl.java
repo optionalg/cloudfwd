@@ -316,7 +316,7 @@ public class ConnectionImpl implements Connection {
             //FIXME TODO -- figure out how to close channels without getting ConnectionClosedException when 
             //no data has been sent through the channel yet
             //close all channels since none is healthy
-            //healths.stream().forEach(health->{health.getChannel().close();});
+            healths.stream().forEach(health->{health.getChannel().close();});
             
             
             //throw whatever exception caused the first unhealthy channel to be unhealthy

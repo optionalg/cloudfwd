@@ -70,7 +70,11 @@ public class TimeoutChecker implements EventTracker {
     private synchronized void checkTimeouts() {
         if (quiesced && eventBatches.isEmpty()) {
             LOG.debug("Stopping TimeoutChecker (no more unacked event batches)");
-            timeoutCheckScheduler.stop();
+            //this is a one-off decoupling thread so that a thread owned by the timeoutCheckScheduler 
+            //itself does not stop the timeoutCheckScheduler (which causes interrupted exception...
+            //a thread running in a scheduler cannot awaitTermination of the scheduler itself WITHOUT
+            //being interrupted. It's kinda like being asked to record your own time of death. Won't work.
+            new Thread(()->{timeoutCheckScheduler.stop();},"TimeoutChecker closer").start();           
             return;
         }
         LOG.debug("checking timeouts for {} EventBatches", eventBatches.size());

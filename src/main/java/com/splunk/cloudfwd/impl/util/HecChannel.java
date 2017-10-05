@@ -51,10 +51,10 @@ import com.splunk.cloudfwd.error.HecNoValidChannelsException;
  */
 public class HecChannel implements Closeable, LifecycleEventObserver {
   private final Logger LOG;
-  private ExecutorService ackPollExecutor;
   private final HttpSender sender;
   private final int full;
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
+  private ScheduledExecutorService ackPollExecutor;
   private volatile boolean closed;
   private volatile boolean quiesced;
 
@@ -154,7 +154,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       deadChannelDetector.start();
     }
     f = (Runnable r) -> new Thread(r, "On-demand Ack Poller");
-    this.ackPollExecutor = Executors.newSingleThreadExecutor(f);
+    this.ackPollExecutor = Executors.newSingleThreadScheduledExecutor(f);
 
     started = true;
   }
@@ -300,15 +300,25 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  protected void interalForceClose() {     
-    try {
-      this.sender.close();
-    } catch (Exception e) {
-      LOG.error(e.getMessage(), e);
-    }   
-    this.loadBalancer.removeChannel(getChannelId(), true);
-    this.channelMetrics.removeObserver(this);
-    finishClose();
+  protected void interalForceClose() {    
+      Runnable r = ()->{
+        loadBalancer.removeChannel(getChannelId(), true);
+        this.channelMetrics.removeObserver(this);
+        closeExecutors(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
+        try {
+            this.sender.close();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+      };
+      //use thread to shutdown sender. Else we have problem with simulted endpoints where the 
+      //http completed callback with the final ackid  (running in a scheduled executor in the ack endpoint)
+      //causes HecChannel.close to be called, which leads
+      //here. Hence the thread of execution tries to sender.close(), which in tern tries to shutdown the 
+     //simulated endpoints. Which means the thread that is shutting down the simulated endpoints IS
+     //a thread being executed in the simulated endpoints! hence an interrupted exception in Executor.awaitTermination
+     //when the thread awaiting its own demise is terminated.. This decouples it.
+     new Thread(r, "Hec Channel " + getChannelId() + " internal resource closer").start();
   }
 
   @Override
@@ -327,17 +337,32 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  private synchronized void finishClose() {
+  private synchronized void closeExecutors() {
     LOG.trace("finishClosing {}", this);
     this.closed = true;
     if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();
+      try{
+        if(!reaperScheduler.isTerminated() && !reaperScheduler.awaitTermination(10, TimeUnit.SECONDS)){
+            LOG.error("failed to terminate reaper scheduler.");
+        }
+      }catch(InterruptedException e){
+          LOG.error("AwaitTermination of reaper scheduler interrupted.");
+      }
     }
+ 
     if (null != deadChannelDetector) {
-      deadChannelDetector.close();
+      deadChannelDetector.close(); 
     }
-    if(null != ackPollExecutor){
+    if(null != ackPollExecutor && !ackPollExecutor.isTerminated()){
       ackPollExecutor.shutdownNow();
+      try{
+        if(!ackPollExecutor.isTerminated() && !ackPollExecutor.awaitTermination(10, TimeUnit.SECONDS)){
+            LOG.error("failed to terminate on-demand ack poller.");
+        }
+      }catch(InterruptedException e){
+          LOG.error("AwaitTermination of on-demnd ack poller interrupted.");
+      }
     }
   }
 

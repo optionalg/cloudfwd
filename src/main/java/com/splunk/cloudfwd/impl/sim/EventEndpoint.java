@@ -16,11 +16,6 @@
 package com.splunk.cloudfwd.impl.sim;
 
 import com.splunk.cloudfwd.impl.http.HttpPostable;
-import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
@@ -31,26 +26,16 @@ import org.slf4j.LoggerFactory;
  *
  * @author ghendrey
  */
-public class EventEndpoint implements Endpoint {
+public class EventEndpoint extends ClosableDelayableResponder implements Endpoint {
 
   private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.getName());
-
-  Random rand = new Random(System.currentTimeMillis());
-  final ScheduledExecutorService executor;
   private AcknowledgementEndpoint ackEndpoint;
 
-  protected EventEndpoint() {
-    ThreadFactory f = new ThreadFactory() {
-      @Override
-      public Thread newThread(Runnable r) {
-        return new Thread(r, "EventEndpoint");
-      }
-    };
-    executor = Executors.newScheduledThreadPool(1, f);
-  }
+    public EventEndpoint() {
+    }
+
 
   public EventEndpoint(AcknowledgementEndpoint ackEndpoint) {
-    this();
     this.ackEndpoint = ackEndpoint;
     //ackEndpoint.start();
   }
@@ -65,10 +50,6 @@ public class EventEndpoint implements Endpoint {
     delayResponse(respond);
   }
   
-  protected void delayResponse(Runnable r) {
-    //return a single response with a delay uniformly distributed between  [0,5] ms
-    executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
-  }
 
   protected long nextAckId() {
     return ackEndpoint.nextAckId();
