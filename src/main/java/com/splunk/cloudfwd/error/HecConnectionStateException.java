@@ -24,6 +24,11 @@ package com.splunk.cloudfwd.error;
  */
 
 public class HecConnectionStateException extends IllegalStateException {
+    
+    public HecConnectionStateException(String s, Type t, Exception causedBy){
+        super(s, causedBy);
+        this.type = t;
+    }
 
     public HecConnectionStateException(String s, Type t) {
         super(s);
@@ -66,7 +71,15 @@ public class HecConnectionStateException extends IllegalStateException {
         /**
          * When instantiating a connection, a channel was not able to get back a response to its preflight checks in a timely fashion.
          */
-        CHANNEL_PREFLIGHT_TIMEOUT
+        CHANNEL_PREFLIGHT_TIMEOUT,
+        /**
+         * No channels existed in this connection
+         */
+        NO_HEC_CHANNELS,      
+        /**
+         * No ConnectionCallbacks provided
+         */
+        NO_CALLBACKS_PROVIDED        
     }
     private final Type type;
 

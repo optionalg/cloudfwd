@@ -337,24 +337,17 @@ public class ConnectionSettings {
     protected List<URL> urlsStringToList(String urlsListAsString) {
         List<URL> urlList = new ArrayList<>();
         String[] splits = urlsListAsString.split(",");
-        for (String urlString : splits) {
+        URL url = null;
+        String urlString = null;
+        for (int i=0;i<splits.length;i++) {
+            urlString = splits[i];
             try {
-                URL url = new URL(urlString.trim());
-                if (url.getPort() == -1) {
-                    int port;
-                    if (url.getProtocol().equals("https")) {
-                        port = 443;
-                    } else {
-                        port = 80;
-                    }
-                    LOG.warn("No port provided for url: " + urlString.trim()
-                        + ". Defaulting to port " + port);
-                    url = new URL(url.getProtocol(), url.getHost(), port, url.getFile());
-                }
+                url =getUrlWithAutoAssignedPorts(urlString);
                 urlList.add(url);
             } catch (MalformedURLException ex) {
-                HecConnectionStateException e = new HecConnectionStateException(ex.getMessage(),
-                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+                String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage() ;
+                HecConnectionStateException e = new HecConnectionStateException(msg,
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
                 connection.getCallbacks().systemError(e);
                 LOG.error(e.getMessage(), e);
                 throw e;
@@ -486,6 +479,26 @@ public class ConnectionSettings {
                     HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
         }
 
+    }
+
+    private URL getUrlWithAutoAssignedPorts(String urlString) throws MalformedURLException {
+        URL url = new URL(urlString.trim());
+        if(!url.getProtocol().equals("https")){
+            throw new HecConnectionStateException("protocol '"+url.getProtocol()+ "' is not supported. Use 'https'.",
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+        }
+        if (url.getPort() == -1) {
+            int port;
+            if (url.getProtocol().equals("https")) {
+                port = 443;
+            } else {
+                port = 80;
+            }
+            LOG.warn("No port provided for url: " + urlString.trim()
+                    + ". Defaulting to port " + port);
+            return new URL(url.getProtocol(), url.getHost(), port, url.getFile());
+        }
+        return url;
     }
 
 }

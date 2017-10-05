@@ -36,6 +36,11 @@ public class LifecycleEvent {
     ACK_POLL_FAILURE,
     ACK_DISABLED,
     UNHANDLED_NON_200,
+    INVALID_TOKEN,
+    DATA_CHANNEL_MISSING_OR_INVALID,
+    //a variety of HEC http 400 error codes we don't have specific handlers for. "code" and "text" field in
+    //HecServerErrorResponseException will provide the detail.
+    HEC_HTTP_400_ERROR, 
     
      //ELB state
      GATEWAY_TIMEOUT, //504 from ELB when it cuts off response due to timeout
@@ -46,9 +51,8 @@ public class LifecycleEvent {
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
     INDEXER_IN_DETENTION,
-    INVALID_TOKEN,
 
-    // Needed to know statuses, do not throw exception
+
     PREFLIGHT_HEALTH_CHECK_PENDING,
     PREFLIGHT_GATEWAY_TIMEOUT,
     PREFLIGHT_BUSY,

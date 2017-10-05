@@ -76,8 +76,13 @@ public class ConnectionImpl implements Connection {
   }
 
   public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
+    if(null == callbacks){
+        throw new HecConnectionStateException("ConnectionCallbacks are null",
+                HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
+    }   
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
+    this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
     this.events = new EventBatchImpl();
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
@@ -89,7 +94,6 @@ public class ConnectionImpl implements Connection {
     //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
-    this.callbacks = new CallbackInterceptor(callbacks, this);
     throwExceptionIfNoChannelOK();
   }
   
@@ -303,8 +307,19 @@ public class ConnectionImpl implements Connection {
     */
     
     private void throwExceptionIfNoChannelOK()  {
-        List<HecHealth> healths = lb.getHealth();
-        if(healths.stream().noneMatch(HecHealth::isHealthy)){
+        List<HecHealth> healths = lb.getHealth(); //returns after every channel either has gotten its health or given up trying
+        if(healths.isEmpty()){            
+            throw new HecConnectionStateException("No HEC channels could be instatiated on Connection.",
+                    HecConnectionStateException.Type.NO_HEC_CHANNELS);
+        }         
+        if(healths.stream().noneMatch(HecHealth::isHealthy)){   
+            //FIXME TODO -- figure out how to close channels without getting ConnectionClosedException when 
+            //no data has been sent through the channel yet
+            //close all channels since none is healthy
+            //healths.stream().forEach(health->{health.getChannel().close();});
+            
+            
+            //throw whatever exception caused the first unhealthy channel to be unhealthy
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
    }    

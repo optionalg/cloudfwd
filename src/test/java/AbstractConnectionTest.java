@@ -80,16 +80,61 @@ public abstract class AbstractConnectionTest {
 
   @Before
   public void setUp() {
+    if(connectionInstantiationShouldFail() && getNumEventsToSend() != 0){
+        throw new RuntimeException("connectionInstantiationShouldFail returns true, but getNumEventsToSend not returning 0. "
+                + "You should override getNumEventsToSend and return zero.");
+    }
     this.callbacks = getCallbacks();
     Properties props = new Properties();
     props.putAll(getTestProps());
     props.putAll(getProps());
-    this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+    this.connection = createConnection(callbacks, props);
+    if(null == this.connection){
+        return;
+    }
     this.connection.setLoggerFactory(new HecLoggerFactoryImpl());
     configureConnection(connection);
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();
   }
+  
+  protected Connection createConnection(ConnectionCallbacks c, Properties p){
+      boolean didThrow = false;
+      Connection conn = null;
+      try{
+        conn = Connections.create(callbacks, p);
+      }catch(Exception e){
+          didThrow = true;
+          if(!connectionInstantiationShouldFail()){
+              Assert.fail("Connection instantiation should not have failed, but it did: " +e);
+          }else{
+              if(! isExpectedConnInsstantiationExcpeption(e)){
+                   Assert.fail("Connection instantiation failure was expected, but we didn't get the *expected* Exception.  Got: " + e);
+              }
+          }
+      }
+      if(!didThrow && connectionInstantiationShouldFail()){
+          Assert.fail("expected a Connection instantiation Exception to be caught. None was caught.");
+      }
+      return conn;
+  }
+  
+    /**
+     * Test should override this to test specific exceptions thrown on connection creation
+     * @param e
+     * @return
+     */
+    protected boolean isExpectedConnInsstantiationExcpeption(Exception e) {
+       return true;
+    }
+  
+    /**
+     * Override in test if your test wants Connection instantiation to fail
+     * @return
+     */
+    protected boolean connectionInstantiationShouldFail() {
+        return false;
+    }
 
   @After
   public void tearDown() {
@@ -98,7 +143,9 @@ public abstract class AbstractConnectionTest {
     //a failure we must use the closeNow method which closes the channel regardless of whether it has
     //messages in flight.
     if (callbacks.isFailed()) {
-      connection.closeNow();
+      if(null != connection){
+          connection.closeNow();
+      }
     }
   }
   
@@ -111,11 +158,14 @@ public abstract class AbstractConnectionTest {
     }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
+        int expected = getNumEventsToSend();
+        if(expected <= 0){
+            return;
+        }
       try {
           LOG.trace(
                 "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
                         + "And test method GUID " + testMethodGUID);
-          int expected = getNumEventsToSend();
           for (int i = 0; i < expected; i++) {
           ///final EventBatch events =nextEventBatch(i+1);
               Event event = nextEvent(i + 1);

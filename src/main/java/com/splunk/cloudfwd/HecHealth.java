@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.util.HecChannel;
 
 /**
  *
@@ -28,6 +29,8 @@ public interface HecHealth {
     String getUrl();
 
     public String getChannelId();
+    
+    public HecChannel getChannel();
 
     /**
      * @return the healthy

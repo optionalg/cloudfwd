@@ -17,7 +17,6 @@ package com.splunk.cloudfwd.impl.util;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -30,9 +29,6 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.error.HecIllegalStateException;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
-import com.sun.org.apache.bcel.internal.classfile.Unknown;
 import org.slf4j.Logger;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 

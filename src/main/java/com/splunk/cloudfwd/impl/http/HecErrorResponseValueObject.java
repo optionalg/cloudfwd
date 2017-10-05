@@ -1,5 +1,7 @@
 package com.splunk.cloudfwd.impl.http;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -23,10 +25,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * @author eprokop
  */
+@JsonIgnoreProperties(ignoreUnknown=true) //if pojo doesn't have field present in JSON, ignore that json field
 public class HecErrorResponseValueObject {
     private static final ObjectMapper mapper = new ObjectMapper();
     private String text;
-    private int code = -1;
+    private int code = -1;    
     private int invalidEventNumber=-1;
 
     public HecErrorResponseValueObject() {
@@ -63,6 +66,15 @@ public class HecErrorResponseValueObject {
         return text;
     }
 
+
+    /**
+     * @return the invalidEventNumber
+     */
+    @JsonProperty("invalid-event-number")
+    public int getInvalidEventNumber() {
+        return invalidEventNumber;
+    }
+
     /**
      * @param text the text to set
      */
@@ -78,17 +90,12 @@ public class HecErrorResponseValueObject {
     }
 
     /**
-     * @return the invalidEventNumber
-     */
-    public int getInvalidEventNumber() {
-        return invalidEventNumber;
-    }
-
-    /**
      * @param invalidEventNumber the invalidEventNumber to set
      */
+    @JsonProperty("invalid-event-number")
     public void setInvalidEventNumber(int invalidEventNumber) {
         this.invalidEventNumber = invalidEventNumber;
     }
+
 
 }

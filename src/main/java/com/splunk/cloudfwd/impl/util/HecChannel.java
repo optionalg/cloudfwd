@@ -305,7 +305,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       this.sender.close();
     } catch (Exception e) {
       LOG.error(e.getMessage(), e);
-    }
+    }   
     this.loadBalancer.removeChannel(getChannelId(), true);
     this.channelMetrics.removeObserver(this);
     finishClose();

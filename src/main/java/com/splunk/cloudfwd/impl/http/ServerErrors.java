@@ -22,10 +22,12 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.UNHANDLED_NON_200;
 import java.io.IOException;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_DISABLED;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.DATA_CHANNEL_MISSING_OR_INVALID;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.GATEWAY_TIMEOUT;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_IN_DETENTION;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.HEC_HTTP_400_ERROR;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -71,18 +73,33 @@ public class ServerErrors {
 
     private static LifecycleEvent.Type hecType(int statusCode, String reply) throws IOException {
         LifecycleEvent.Type type = null;
+        HecErrorResponseValueObject r = null;
         switch (statusCode) {
             case 200:
                 throw new IllegalStateException("200 is not an error code.");
             case 400:
-                HecErrorResponseValueObject r = mapper.readValue(reply,
-                HecErrorResponseValueObject.class);                
-                // determine code in reply, must be 14 for disabled
-                if (14 == r.getCode()) {
-                    type = ACK_DISABLED;
-                }else if(6== r.getCode()){
-                    type = LifecycleEvent.Type.EVENT_POST_NOT_OK;
-                }
+                r = mapper.readValue(reply,
+                            HecErrorResponseValueObject.class);  
+                switch(r.getCode()){
+                    case 5://no data
+                    case 6://invalid data format 
+                    case 7://incorrect index
+                    case 12://event field is required
+                    case 13://event field cannot be blank
+                        type = LifecycleEvent.Type.EVENT_POST_NOT_OK; //the codes above all apply to event post
+                         break;
+                    case 14://ack is disabled...can apply to ack poll or event post
+                        type = ACK_DISABLED;
+                        break;
+                    case 400://this appears to be a splunk bug! We expect http 403 with code=4 text="invalid token"
+                        type = INVALID_TOKEN;
+                        break;
+                    case 10://data channel is missing
+                    case 11://invalid data channel    
+                        type = DATA_CHANNEL_MISSING_OR_INVALID;
+                    default: 
+                        type= HEC_HTTP_400_ERROR;                                            
+                }//end code switch
                 break;
             case 404:
                 //undocumented?
@@ -93,7 +110,6 @@ public class ServerErrors {
                 type = INVALID_TOKEN;
                 break;
             case 401:
-                //HTTPSTATUS_UNAUTHORIZED
                 type = INVALID_AUTH;
                 break;
             case 503:
