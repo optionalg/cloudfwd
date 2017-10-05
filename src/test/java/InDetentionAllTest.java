@@ -1,5 +1,9 @@
+import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Properties;
@@ -12,9 +16,14 @@ import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
  */
 public class InDetentionAllTest extends AbstractInDetentionTest{
 
-    @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
+
+            @Override
+            protected boolean isExpectedWarningType(Exception e) {
+                return (e instanceof HecServerErrorResponseException &&
+                        ((HecServerErrorResponseException)e).getLifecycleType()==LifecycleEvent.Type.INDEXER_IN_DETENTION);
+            }
 
             @Override
             public boolean shouldWarn(){
@@ -34,6 +43,25 @@ public class InDetentionAllTest extends AbstractInDetentionTest{
         props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
 
         return props;
+    }
+
+    protected void createConnection(LifecycleEvent.Type problemType) {
+        Properties props = new Properties();
+        props.putAll(getTestProps());
+        props.putAll(getProps());
+        boolean gotException = false;
+        try{
+            this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        }catch(Exception e){
+            Assert.assertTrue("Expected HecServerErrorResponseException",  e instanceof HecServerErrorResponseException);
+            HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;
+            Assert.assertTrue("HecServerErrorResponseException not "+problemType+", was  " + servRespExc.getLifecycleType(),
+                    servRespExc.getLifecycleType()==problemType);
+            gotException = true;
+        }
+        if(!gotException){
+            Assert.fail("Expected HecMaxRetriedException associated with Connection instantiation config checks'");
+        }
     }
 
     @Override

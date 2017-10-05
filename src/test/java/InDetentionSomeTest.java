@@ -1,4 +1,5 @@
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.junit.Test;
 import java.util.Properties;
 
@@ -13,6 +14,12 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
+
+            @Override
+            protected boolean isExpectedWarningType(Exception e) {
+                return (e instanceof HecServerErrorResponseException &&
+                        ((HecServerErrorResponseException)e).getLifecycleType()==LifecycleEvent.Type.INDEXER_IN_DETENTION);
+            }
 
             @Override
             public boolean shouldWarn(){
@@ -37,6 +44,16 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     @Override
     protected boolean shouldSendThrowException() { //fixme todo - it ain't even gonna get to send. It will fail fast instantiating connection
         return false;
+    }
+
+    // Need to separate this logic out of setUp() so that each Test
+    // can use different simulated endpoints
+    protected void createConnection() {
+        Properties props = new Properties();
+        props.putAll(getTestProps());
+        props.putAll(getProps());
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        configureConnection(connection);
     }
 
     @Test
