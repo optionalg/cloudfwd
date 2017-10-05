@@ -75,5 +75,27 @@ public class HecErrorResponseValueObject {
         return invalidEventNumber;
     }
 
+    /**
+     * @param text the text to set
+     */
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    /**
+     * @param code the code to set
+     */
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    /**
+     * @param invalidEventNumber the invalidEventNumber to set
+     */
+    @JsonProperty("invalid-event-number")
+    public void setInvalidEventNumber(int invalidEventNumber) {
+        this.invalidEventNumber = invalidEventNumber;
+    }
+
 
 }

@@ -44,7 +44,7 @@ public class InvalidEventNumberParseTest {
         ObjectMapper mapper = new ObjectMapper();
         HecErrorResponseValueObject r = mapper.readValue(jsonWithInvalidEventNumber,
                     HecErrorResponseValueObject.class);             
-        Assert.assertEquals("Expected 42", -1, r.getInvalidEventNumber());
+        Assert.assertEquals("Expected -1", -1, r.getInvalidEventNumber());
         Assert.assertEquals("Expected 6", 6, r.getCode());
         Assert.assertEquals("Expected 'Invalid data format'", "Invalid data format", r.getText());
     }    
