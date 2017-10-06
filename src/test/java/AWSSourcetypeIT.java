@@ -34,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -187,6 +188,13 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
         String status = node.findValue("status").asText();
         String label = node.findValue("label").asText();
         LOG.info(label + " " + status + " at " + location);
+    }
+
+    @Override
+    protected Properties getProps() {
+        Properties p = super.getProps();
+        p.put(PropertyKeys.TOKEN, createTestToken(null));
+        return p;
     }
 
     @Override

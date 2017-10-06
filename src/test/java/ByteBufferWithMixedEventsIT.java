@@ -1,8 +1,10 @@
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import java.nio.ByteBuffer;
+import java.util.Properties;
 import java.util.Set;
 import org.junit.Test;
 
@@ -68,6 +70,13 @@ public class ByteBufferWithMixedEventsIT extends AbstractReconciliationTest {
     //now we wrap the ByteBuffer, which contains 100 pairs of json and text into a single UnvalidatedByteBufferEvent.
     Event event = new UnvalidatedByteBufferEvent(buf, seqno); 
     return event;
+  }
+
+  @Override
+  protected Properties getProps() {
+    Properties p = super.getProps();
+    p.put(PropertyKeys.TOKEN, createTestToken(null));
+    return p;
   }
 
   @Override
