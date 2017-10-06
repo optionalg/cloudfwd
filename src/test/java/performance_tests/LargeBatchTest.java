@@ -1,7 +1,8 @@
-package mock_tests;
+package performance_tests;
 
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import java.util.concurrent.TimeoutException;
+
 import org.junit.Test;
 
 /*

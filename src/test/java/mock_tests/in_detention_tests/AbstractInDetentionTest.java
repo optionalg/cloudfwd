@@ -1,4 +1,4 @@
-package mock_tests;
+package mock_tests.in_detention_tests;
 
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import test_utils.AbstractConnectionTest;

@@ -1,4 +1,4 @@
-package mock_tests;/*
+package mock_tests.ssl_cert_tests;/*
  * Copyright 2017 Splunk, Inc..
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,11 +26,11 @@ import java.util.Properties;
  *
  * @author ghendrey
  */
-public class SslCertTestManualCloudClusterELB extends AbstractConnectionTest {
+public class SslCertTestManualCloudTrial extends AbstractConnectionTest {
 
   protected static int MAX = 10;
 
-  public SslCertTestManualCloudClusterELB() {
+  public SslCertTestManualCloudTrial() {
   }
 
   @Test
@@ -52,10 +52,9 @@ public class SslCertTestManualCloudClusterELB extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://http-inputs-kinesis1.splunkcloud.com:443");
-    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
+    props.put(COLLECTOR_URI, "https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
+    props.put(TOKEN, "6F339C3C-9658-4347-9DCA-A171E32072AF");
     props.put(DISABLE_CERT_VALIDATION, "false");
-    props.put(ENABLE_HTTP_DEBUG, "true");
     return props;
   }
 

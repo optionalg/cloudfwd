@@ -1,7 +1,7 @@
-package mock_tests;
+package performance_tests;
 
 import com.splunk.cloudfwd.*;
-import test_utils.AbstractConnectionTest;
+import mock_tests.ThroughputCalculatorCallback;
 import test_utils.BasicCallbacks;
 import org.junit.After;
 import org.junit.Assert;
@@ -30,7 +30,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
     private long finish = 0;
-    final float warmup = 0.0005f; 
+    final float warmup = 0.005f; 
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
 
@@ -102,7 +102,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     protected Properties getProps() {
         Properties p = new Properties();
         p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-        p.put(AbstractConnectionTest.KEY_ENABLE_TEST_PROPERTIES, false);
+        p.put(KEY_ENABLE_TEST_PROPERTIES, false);
         p.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
         return p;
     }
@@ -153,11 +153,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             if (finish == 0L && windingDown) {
                 finish = System.currentTimeMillis();
             }
-            //if (!warmingUp && !windingDown) {
+            if (!warmingUp && !windingDown) {
                 ((ThroughputCalculatorCallback)callbacks).
                     deferCountUntilAck(batch.getId(), sent);
                 showThroughput(System.currentTimeMillis(), start);
-            //}
+            }
         }
 
         private EventBatch nextBatch(int seqno) {

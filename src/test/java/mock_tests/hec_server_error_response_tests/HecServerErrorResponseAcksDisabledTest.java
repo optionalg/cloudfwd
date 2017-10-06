@@ -1,7 +1,8 @@
-package mock_tests;
+package mock_tests.hec_server_error_response_tests;
 
-import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import test_utils.BasicCallbacks;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -13,13 +14,13 @@ import java.util.concurrent.TimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
 import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
-import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 
 /**
  * Created by mhora on 10/3/17.
  */
-public class HecServerErrorResponseNoAckIdEvent extends AbstractHecServerErrorResponseTest {
-    private static final Logger LOG = LoggerFactory.getLogger(HecServerErrorResponseNoAckIdEvent.class.getName());
+
+public class HecServerErrorResponseAcksDisabledTest extends AbstractHecServerErrorResponseTest {
+    private static final Logger LOG = LoggerFactory.getLogger(HecServerErrorResponseAcksDisabledTest.class.getName());
 
     protected int getNumEventsToSend() {
         return 3;
@@ -35,29 +36,19 @@ public class HecServerErrorResponseNoAckIdEvent extends AbstractHecServerErrorRe
 
             @Override
             protected boolean isExpectedFailureType(Exception e) {
-                boolean isExpectedType = e instanceof HecConnectionStateException
-                        && ((HecConnectionStateException) e).getType() == CONFIGURATION_EXCEPTION;
+                boolean isExpectedType = e instanceof HecServerErrorResponseException
+                        && ((HecServerErrorResponseException) e).getCode() == 14;
                 return isExpectedType;
-            }
 
-            @Override
-            protected boolean isExpectedWarningType(Exception e) {
-                return false;
-            }
-
-            @Override
-            public boolean shouldWarn(){
-                return false;
             }
         };
     }
 
     @Override
     protected Properties getProps() {
-        Properties props = new Properties();
-        //in this case, the pre-flight check will pass, and we are simulating were we detect acks disabled on event post
+        Properties props =  new Properties();
         props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
+                "com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.AckDisabledEndpoints");
         props.put(ACK_TIMEOUT_MS, "500000");  //in this case we excpect to see HecConnectionTimeoutException
         props.put(BLOCKING_TIMEOUT_MS, "5000");
         return props;
@@ -65,19 +56,22 @@ public class HecServerErrorResponseNoAckIdEvent extends AbstractHecServerErrorRe
 
     @Override
     protected boolean isExpectedSendException(Exception e) {
-        return false;
+        boolean isExpected = false;
+        if (e instanceof HecConnectionTimeoutException) {
+            isExpected = true;
+        }
+        return isExpected;
     }
 
     @Override
     protected boolean shouldSendThrowException() {
-        return false;
+        return true;
     }
 
+    //pre-flight check NOT ok
     @Test
-    public void postNoAckIdEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
-        LOG.info("TESTING ACK_ID_DISABLED_AFTER_PREFLIGHT_SUCCEEDS");
-        createConnection();
-        super.sendEvents();
+    public void sendWithAcksDisabled() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+        LOG.info("TESTING ACKS_DISABLED");
+        createConnection(LifecycleEvent.Type.ACK_DISABLED);
     }
 }
-

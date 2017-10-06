@@ -298,7 +298,7 @@ public abstract class AbstractConnectionTest {
    * @return
    */
   protected String getTestPropertiesFileName() {
-    return "../test.properties";
+    return "/test.properties";
   }
 
   /**

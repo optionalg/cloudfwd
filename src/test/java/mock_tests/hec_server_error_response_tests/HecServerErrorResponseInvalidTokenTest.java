@@ -1,4 +1,4 @@
-package mock_tests;
+package mock_tests.hec_server_error_response_tests;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;

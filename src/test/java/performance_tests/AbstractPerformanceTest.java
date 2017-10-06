@@ -1,8 +1,9 @@
-package mock_tests;
+package performance_tests;
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
+import mock_tests.ThroughputCalculatorCallback;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
 import java.util.Properties;
@@ -82,11 +83,11 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
         if (finish == 0L && windingDown) {
           finish = System.currentTimeMillis();
         }
-        //if (!warmingUp && !windingDown) {
+        if (!warmingUp && !windingDown) {
           ((ThroughputCalculatorCallback) super.callbacks).deferCountUntilAck(
                   event.getId(), sent);
           showThroughput(System.currentTimeMillis(), start);
-        //}
+        }
         LOG.trace("Sent event batch with id: " + event.getId() + " i=" + i + " and size " + sent);
       }
 
@@ -119,7 +120,6 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     LOG.info("Chars-per-second: " + nChars / sec);
     float mbps = ((float) nChars * 8) / (sec * 1000000f);
     LOG.info("mbps: " + mbps);
-    LOG.info("avg latency: {} sec", ((ThroughputCalculatorCallback) super.callbacks).getAvgLatency()/1000);
     if (mbps < 0) {
       throw new IllegalStateException("Negative throughput is not allowed");
     }

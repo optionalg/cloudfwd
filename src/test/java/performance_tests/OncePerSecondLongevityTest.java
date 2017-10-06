@@ -1,4 +1,4 @@
-package mock_tests;
+package performance_tests;
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;

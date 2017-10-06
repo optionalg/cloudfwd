@@ -1,9 +1,10 @@
-package mock_tests;
+package mock_tests.in_detention_tests;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.PropertyKeys;
+import mock_tests.in_detention_tests.AbstractInDetentionTest;
 import test_utils.BasicCallbacks;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.junit.Assert;
@@ -17,7 +18,7 @@ import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 /**
  * Created by mhora on 10/4/17.
  */
-public class InDetentionAllTest extends AbstractInDetentionTest{
+public class InDetentionAllTest extends AbstractInDetentionTest {
 
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {

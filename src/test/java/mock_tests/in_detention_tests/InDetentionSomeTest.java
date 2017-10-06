@@ -1,6 +1,7 @@
-package mock_tests;
+package mock_tests.in_detention_tests;
 
 import com.splunk.cloudfwd.PropertyKeys;
+import mock_tests.in_detention_tests.AbstractInDetentionTest;
 import test_utils.BasicCallbacks;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;

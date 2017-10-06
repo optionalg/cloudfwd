@@ -1,4 +1,4 @@
-package mock_tests;
+package mock_tests.health_check_tests;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.Connections;
