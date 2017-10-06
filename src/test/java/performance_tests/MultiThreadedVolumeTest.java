@@ -103,7 +103,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         Properties p = new Properties();
         p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
         p.put(KEY_ENABLE_TEST_PROPERTIES, false);
-        p.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
+//        p.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
         return p;
     }
 
