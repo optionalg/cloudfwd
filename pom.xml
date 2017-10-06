@@ -179,7 +179,7 @@
                 <version>2.12.4</version>
                 <configuration>
                     <!--forkedProcessTimeoutInSeconds>0</forkedProcessTimeoutInSeconds-->
-                    <argLine>-Xmx4G</argLine><!-- set heap memory for mvn junit tests -->
+                    <argLine>-Xmx6G</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
                         <exclude>**/LargeBatchTest.java</exclude>
                         <exclude>**/MultiThreadedVolumeTest.java</exclude>
@@ -193,7 +193,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.20.1</version>
                 <configuration>
-                    <argLine>-Xmx4G</argLine><!-- set heap memory for mvn junit tests -->
+                    <argLine>-Xmx6G</argLine><!-- set heap memory for mvn junit tests -->
                     <skipITs>${skipITs}</skipITs>
                 </configuration>
                 <executions>
