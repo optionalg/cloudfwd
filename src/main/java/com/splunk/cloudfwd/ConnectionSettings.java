@@ -488,12 +488,7 @@ public class ConnectionSettings {
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
         if (url.getPort() == -1) {
-            int port;
-            if (url.getProtocol().equals("https")) {
-                port = 443;
-            } else {
-                port = 80;
-            }
+            int port = 443;
             LOG.warn("No port provided for url: " + urlString.trim()
                     + ". Defaulting to port " + port);
             return new URL(url.getProtocol(), url.getHost(), port, url.getFile());

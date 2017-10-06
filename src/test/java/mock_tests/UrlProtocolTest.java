@@ -32,7 +32,7 @@ public class UrlProtocolTest extends ExceptionConnInstantiationTest {
        return props;
     }
     
-    protected boolean isExpectedConnInsstantiationExcpeption(Exception e) {
+    protected boolean isExpectedConnInstantiationException(Exception e) {
        if(e instanceof HecConnectionStateException){
            return ((HecConnectionStateException)e).getType() == CONFIGURATION_EXCEPTION
                    && ((HecConnectionStateException)e).getMessage().equals("protocol 'http' is not supported. Use 'https'.");

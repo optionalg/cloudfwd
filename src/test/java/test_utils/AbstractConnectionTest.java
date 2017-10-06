@@ -109,7 +109,7 @@ public abstract class AbstractConnectionTest {
           if(!connectionInstantiationShouldFail()){
               Assert.fail("Connection instantiation should not have failed, but it did: " +e);
           }else{
-              if(! isExpectedConnInsstantiationExcpeption(e)){
+              if(! isExpectedConnInstantiationException(e)){
                    Assert.fail("Connection instantiation failure was expected, but we didn't get the *expected* Exception.  Got: " + e);
               }
           }
@@ -125,7 +125,7 @@ public abstract class AbstractConnectionTest {
      * @param e
      * @return
      */
-    protected boolean isExpectedConnInsstantiationExcpeption(Exception e) {
+    protected boolean isExpectedConnInstantiationException(Exception e) {
        return true;
     }
   

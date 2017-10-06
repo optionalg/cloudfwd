@@ -30,7 +30,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
     private long finish = 0;
-    final float warmup = 0.005f; 
+    final float warmup = 0.0005f; 
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
 
@@ -153,11 +153,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             if (finish == 0L && windingDown) {
                 finish = System.currentTimeMillis();
             }
-            if (!warmingUp && !windingDown) {
+            //if (!warmingUp && !windingDown) {
                 ((ThroughputCalculatorCallback)callbacks).
                     deferCountUntilAck(batch.getId(), sent);
                 showThroughput(System.currentTimeMillis(), start);
-            }
+            //}
         }
 
         private EventBatch nextBatch(int seqno) {

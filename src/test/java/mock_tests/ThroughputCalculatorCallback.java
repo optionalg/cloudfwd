@@ -1,6 +1,7 @@
 package mock_tests;
 
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import test_utils.BasicCallbacks;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,8 +32,14 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
           getName());
 
   Map<Comparable, Long> batchSizes = new ConcurrentHashMap<>();
+  long count = 0;
   long ackedSize = 0;
   long failedCount = 0;
+  long batchCount = 0;
+  long totLatency = 0;
+  private double avgLatency = 0;
+  double meanSquaredLatency = 0;
+
 
   public long getAcknowledgedSize() {
     return ackedSize;
@@ -52,6 +59,11 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
   @Override
   public void acknowledged(EventBatch events) {
     super.acknowledged(events);
+    long eventLatency = System.currentTimeMillis() - ((EventBatchImpl)events).getSendTimestamp();
+    totLatency += eventLatency;
+    avgLatency = ((double)totLatency)/++count;
+    //meanSquaredLatency = meanSquaredLatency(eventLatency, avgLatency, totLatency);
+
     Long size = batchSizes.remove(events.getId());
     if (size != null) {
       if (size < 0) {
@@ -75,5 +87,17 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
     }
     this.batchSizes.put(id, nChars);
   }
+
+    private double meanSquaredLatency(long eventLatency, double avgLatency,
+            long totLatency) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    /**
+     * @return the avgLatency
+     */
+    public double getAvgLatency() {
+        return avgLatency;
+    }
 
 }
