@@ -23,8 +23,12 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.httpascync.GenericPing;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import java.io.Closeable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -89,11 +93,8 @@ public class HecIOManager implements Closeable {
 
     public void startHealthPolling() {
         if (!healthPollController.isStarted()) {
-            Runnable poller = () -> {
-                this.pollHealth();
-            };
             healthPollController.start(
-                poller, sender.getConnection().getPropertiesFileHelper().
+                    this::pollHealth, sender.getConnection().getPropertiesFileHelper().
                     getHealthPollMS(), TimeUnit.MILLISECONDS);
         }
     }
@@ -121,20 +122,29 @@ public class HecIOManager implements Closeable {
 
     public void pollHealth() {
         LOG.trace("polling health on {}", sender.getChannel());
-        FutureCallback<HttpResponse> cb = new HttpCallbacksHealthPoll(this);
-        sender.pollHealth(cb);
+        CountDownLatch latch = new CountDownLatch(2);
+        HttpCallbacksAbstract cb1 = new HttpCallbacksHealthPoll(this);
+        HttpCallbacksAbstract cb2 = new GenericPing(this,
+                LifecycleEvent.Type.ACK_POLL_OK,
+                LifecycleEvent.Type.ACK_POLL_FAILURE,
+                "Ack Check");
+        //both must wait to notify of a healthy result until BOTH healthy results returned.
+        cb1.onOkWait(latch);
+        cb2.onOkWait(latch);
+        sender.pollHealth(cb1);
+        sender.pollAcks(this, cb2);
     }
 
 
     public void preflightCheck() {
         LOG.trace("check health on {}", sender.getChannel());
         FutureCallback<HttpResponse> cb = new HttpCallbacksPreflightHealthCheck(this);
-        sender.splunkCheck(cb);
+        sender.ackEndpointCheck(cb);
     }
     
         public void configCheck(HttpCallbacksBlockingConfigCheck cb ) {
         LOG.trace("config check on {}", sender.getBaseUrl());
-        sender.splunkCheck(cb);
+        sender.ackEndpointCheck(cb);
         cb.setStarted(true);
     }
 

@@ -88,6 +88,15 @@ public class LifecycleEvent {
     public Exception getException(){
         return null;
     }
+    
+    /**
+     * returns true of the LifecycleEvent is not a failure or non-200 response. getException will always return null
+     * if isOK returns true.
+     * @return
+     */
+    public boolean isOK(){
+        return true;
+    }
   
   
 

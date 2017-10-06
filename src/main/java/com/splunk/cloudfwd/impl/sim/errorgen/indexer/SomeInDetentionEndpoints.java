@@ -56,7 +56,7 @@ public class SomeInDetentionEndpoints extends InDetentionEndpoints {
   }
 
   @Override
-  public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
     if (this.inDetention) {
       ((HttpCallbacksAbstract)httpCallback).completed(
           "Not Found",

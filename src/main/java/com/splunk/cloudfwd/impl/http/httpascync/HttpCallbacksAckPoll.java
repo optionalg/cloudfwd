@@ -58,7 +58,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         } catch (Exception e) {
             error(e);
         }finally{
-            manager.setAckPollInProgress(false);
+            getManager().setAckPollInProgress(false);
         }
     }
 
@@ -71,7 +71,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         } catch (Exception e) {
             error(e);
         }finally{
-            manager.setAckPollInProgress(false);
+            getManager().setAckPollInProgress(false);
         }
     }
 
@@ -85,14 +85,14 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         } catch (Exception e) {
             error(e);
         }finally{
-            manager.setAckPollInProgress(false);
+            getManager().setAckPollInProgress(false);
         }
     }
 
     private void consumeAckPollResponse(String resp) throws IOException {
         AckPollResponseValueObject ackPollResp = mapper.
                 readValue(resp, AckPollResponseValueObject.class);
-        manager.getAcknowledgementTracker().handleAckPollResponse(
+        getManager().getAcknowledgementTracker().handleAckPollResponse(
                 ackPollResp);
     }
         

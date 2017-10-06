@@ -34,7 +34,7 @@ public class AckDisabledEndpoints extends SimulatedHECEndpoints {
     }
 
     @Override
-    public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
+    public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
         httpCallback.completed(new HecErrorResponse(
                 new AckDisabledEntity(), new BadRequestStatusLine()
         ));
