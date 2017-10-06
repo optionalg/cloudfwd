@@ -46,7 +46,7 @@ public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
     
 
     @Override
-    protected boolean isExpectedConnInsstantiationExcpeption(Exception e) {
+    protected boolean isExpectedConnInstantiationException(Exception e) {
        if(e instanceof HecConnectionStateException){
            return (e.getCause() != null ) && (e.getCause() instanceof MalformedURLException);                          
        }

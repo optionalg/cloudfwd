@@ -15,6 +15,7 @@
  */
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import java.util.*;
 
@@ -113,6 +114,13 @@ public class ReconciliationIT extends AbstractReconciliationTest {
         super.sendCombinationEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
+    }
+
+    @Override
+    protected Properties getProps() {
+        Properties p = super.getProps();
+        p.put(PropertyKeys.TOKEN, createTestToken(null));
+        return p;
     }
 
     @Override

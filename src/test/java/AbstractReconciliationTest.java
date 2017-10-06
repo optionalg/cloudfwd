@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.http.HttpClientFactory;
 import java.io.IOException;
 import java.util.*;
@@ -98,7 +99,6 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     if (!HEC_ENABLED) {
       enableHec();
     }
-    createTestIndex();
   }
 
   @After
@@ -160,6 +160,10 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    * created for the test.
    */
   protected Set<String> getEventsFromSplunk() {
+    // Give events a few seconds to be indexed so they show up in search.
+    // Even after acks are received, there is a lag before events are searchable
+    // Unfortunately there is no programmatically deterministic way of waiting for this, so we sleep.
+    sleep(3000);
     Set<String> results = new HashSet<>();
     try {
       // credentials
@@ -220,20 +224,26 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   protected void deleteTestToken() {
-    try {
-      HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
-              "/services/data/inputs/http/" + TOKEN_NAME);
-      HttpResponse httpResponse = httpClient.execute(httpRequest);
-      parseHttpResponse(httpResponse);
-      LOG.debug("deleteTestToken: httpResponse: " + httpResponse);
-      LOG.info("deleteTestToken: Successfully deleted token: TOKEN_NAME=" +
-              TOKEN_NAME + " TOKEN_VALUE=" + TOKEN_VALUE);
-    } catch (Exception ex) {
-      Assert.fail("deleteTestToken: failed with ex: " + ex.getMessage());
+    if (TOKEN_VALUE != null) {
+      try {
+        HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
+                "/services/data/inputs/http/" + TOKEN_NAME);
+        HttpResponse httpResponse = httpClient.execute(httpRequest);
+        parseHttpResponse(httpResponse);
+        LOG.debug("deleteTestToken: httpResponse: " + httpResponse);
+        LOG.info("deleteTestToken: Successfully deleted token: TOKEN_NAME=" +
+                TOKEN_NAME + " TOKEN_VALUE=" + TOKEN_VALUE);
+        TOKEN_VALUE = null;
+      } catch (Exception ex) {
+        Assert.fail("deleteTestToken: failed with ex: " + ex.getMessage());
+      }
+    } else {
+      LOG.warn("Skipped deleting test token since test didn't create a token.");
     }
   }
 
-  protected void createTestIndex() {
+  private void createTestIndex() {
+    if (INDEX_NAME != null) deleteTestIndex();
     INDEX_NAME = java.util.UUID.randomUUID().toString();
     try {
       HttpPost httpPost = new HttpPost(mgmtSplunkUrl() +
@@ -252,7 +262,8 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     }
   }
 
-  protected void deleteTestIndex() {
+  private void deleteTestIndex() {
+    if (INDEX_NAME != null) {
       try {
         HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
                 "/services/data/indexes/" + INDEX_NAME);
@@ -263,6 +274,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       } catch (Exception ex) {
         Assert.fail("deleteTestIndex: failed to delete index: " + ex.getMessage());
       }
+    } else {
+      LOG.warn("Skipped deleting test index since test didn't create an index.");
+    }
   }
 
   protected void enableHec() {
@@ -285,8 +299,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
         JsonNode message = json_reply.findValue("messages");
         LOG.info("DEBUG: message: " + message);
         if (message.findValue("type").asText().equals("ERROR")) {
-          Assert.fail("createTestToken: Failed to create token: TOKEN_NAME=" +
-                  TOKEN_NAME + ", server returned error message: " +
+          Assert.fail("enableHec: Failed to enable HEC. Server returned message: " +
                   message.asText());
         }
       }
@@ -302,8 +315,14 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     }
   }
 
-  // pass sourcetype=null to use the token default sourcetype
   protected String createTestToken(String sourcetype) {
+    return createTestToken(sourcetype, true);
+  }
+
+  // pass sourcetype=null to use the token default sourcetype
+  protected String createTestToken(String sourcetype, boolean useACK) {
+    if (TOKEN_VALUE != null) deleteTestToken();
+    createTestIndex();
     TOKEN_NAME = java.util.UUID.randomUUID().toString();
     try {
       HttpPost httpPost = new HttpPost(mgmtSplunkUrl() +
@@ -314,7 +333,8 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
         params.add(new BasicNameValuePair("sourcetype", sourcetype));
       }
       params.add(new BasicNameValuePair("index", INDEX_NAME));
-      params.add(new BasicNameValuePair("useACK", "1"));
+      String useACKValue = useACK ? "1" : "0";
+      params.add(new BasicNameValuePair("useACK", useACKValue));
       params.add(new BasicNameValuePair("output_mode", "json"));
       httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
       HttpResponse httpResponse = httpClient.execute(httpPost);
@@ -442,6 +462,18 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     System.setProperty("org.apache.commons.logging.simplelog.log.httpclient.wire.header", "debug");
     System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
     LOG.info("Enabled Test HTTP Debug");
+  }
+
+  protected String getTokenValue() {
+    return TOKEN_VALUE;
+  }
+
+  protected void sleep(long ms) {
+    try {
+      Thread.sleep(ms);
+    } catch (InterruptedException ex) {
+      throw new RuntimeException(ex.getMessage(), ex);
+    }
   }
 
 }
