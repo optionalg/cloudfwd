@@ -86,7 +86,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                     reply);
             error(ex);
         } finally {
-            manager.startHealthPolling();
+            getManager().startHealthPolling();
         }
     }
     

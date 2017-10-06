@@ -17,7 +17,6 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_FAILED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_OK;
 import java.io.IOException;
@@ -36,7 +35,6 @@ public class HttpCallbacksHealthPoll extends HttpCallbacksAbstract {
     }
 
     private void handleHealthPollResponse(int statusCode, String reply) throws IOException {
-        HttpSender sender = manager.getSender();
         LifecycleEvent.Type type = null;
         switch (statusCode) {
             case 200:

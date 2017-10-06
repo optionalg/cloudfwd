@@ -44,4 +44,8 @@ public class RequestFailed extends LifecycleEvent implements Failure{
     return exception;
   }
   
+  public boolean isOK(){
+      return false;
+  }
+  
 }

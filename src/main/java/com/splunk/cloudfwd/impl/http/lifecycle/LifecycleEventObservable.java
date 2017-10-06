@@ -19,7 +19,6 @@ import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;

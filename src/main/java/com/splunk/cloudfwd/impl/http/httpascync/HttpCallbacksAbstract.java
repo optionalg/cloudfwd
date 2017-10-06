@@ -31,6 +31,7 @@ import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -45,12 +46,23 @@ import org.slf4j.Logger;
 public abstract class HttpCallbacksAbstract implements FutureCallback<HttpResponse> {
 
   private final Logger LOG;
-  protected final HecIOManager manager;
-  //private ConnectionImpl connection;
+  private final HecIOManager manager;
+  //if latched, then we are gating on more than one response ... health check is combo of health endpoint and ack endpoint
+  //and we need both responses. See notify() and onOKWait
+ private CountDownLatch latch;
   
   HttpCallbacksAbstract(HecIOManager m) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
     this.manager = m;
+  }
+  
+    /**
+     * Causes notify() on OK to await the latch. Used to syn
+     * @param respCount
+     * @see 
+     */
+    public void onOkWait(CountDownLatch latch){
+        this.latch =latch;    
   }
 
   @Override
@@ -93,15 +105,22 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   }
   
   protected void notify(LifecycleEvent e){
+      if(null != latch && e.isOK()){ //if there is a latch, then OK events will wait for it
+          try {
+              latch.countDown();
+              latch.await();
+          } catch (InterruptedException ex) {
+              //this will happen normally when a channel is shutdown
+              LOG.debug("Interrupted awaiting health responses on channel {}", getChannel());
+              Thread.currentThread().interrupt(); //so we don't silently supporess interruption
+          }
+      }
+      //if we latched above, then the following update will be called only after both OK's have been received
       manager.getSender().getChannelMetrics().update(e);
   }
   
   protected ConnectionImpl getConnection(){
-     // if(null == connection){
-        return manager.getSender().getConnection();
-      //}else{
-      //    return connection;
-     // }
+    return manager.getSender().getConnection();
   }
   
   protected Object getChannel(){
@@ -198,6 +217,13 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     
     protected ConnectionSettings getSettings(){
         return getConnection().getSettings();
+    }
+
+    /**
+     * @return the manager
+     */
+    public HecIOManager getManager() {
+        return manager;
     }
     
 

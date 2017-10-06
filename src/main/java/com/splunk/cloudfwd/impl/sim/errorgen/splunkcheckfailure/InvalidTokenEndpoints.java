@@ -35,7 +35,7 @@ public class InvalidTokenEndpoints extends SimulatedHECEndpoints {
     }
 
     @Override
-    public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
+    public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
         httpCallback.completed(new HecErrorResponse(
                 new InvalidTokenEntity(), new Forbidden403StatusLine()
         ));
