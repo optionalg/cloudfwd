@@ -1,4 +1,3 @@
-
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
