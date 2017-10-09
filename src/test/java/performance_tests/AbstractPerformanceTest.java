@@ -83,11 +83,11 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
         if (finish == 0L && windingDown) {
           finish = System.currentTimeMillis();
         }
-//        if (!warmingUp && !windingDown) {
+        //if (!warmingUp && !windingDown) {
           ((ThroughputCalculatorCallback) super.callbacks).deferCountUntilAck(
                   event.getId(), sent);
           showThroughput(System.currentTimeMillis(), start);
-//        }
+        //}
         LOG.trace("Sent event batch with id: " + event.getId() + " i=" + i + " and size " + sent);
       }
 

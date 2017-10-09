@@ -153,11 +153,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             if (finish == 0L && windingDown) {
                 finish = System.currentTimeMillis();
             }
-//            if (!warmingUp && !windingDown) {
+            //if (!warmingUp && !windingDown) {
                 ((ThroughputCalculatorCallback)callbacks).
                     deferCountUntilAck(batch.getId(), sent);
                 showThroughput(System.currentTimeMillis(), start);
-//            }
+            //}
         }
 
         private EventBatch nextBatch(int seqno) {
