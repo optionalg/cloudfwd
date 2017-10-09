@@ -22,7 +22,8 @@ public class CreateConnectionAcksDisabledIT extends AbstractReconciliationTest {
     @Override
     protected Properties getProps() {
         Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken(null, false));
+        p.setProperty(PropertyKeys.TOKEN, createTestToken(null, false));
+        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
         return p;
     }
 

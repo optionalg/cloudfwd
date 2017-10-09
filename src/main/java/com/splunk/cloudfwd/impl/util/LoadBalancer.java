@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
-import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
@@ -144,20 +143,24 @@ public class LoadBalancer implements Closeable {
         //add multiple channels for each InetSocketAddress
         for (int i = 0; i < channelsPerDestination; i++) {
             for (InetSocketAddress s : addrs) {
-                if(!addChannel(s, false)){
-                    break; //reached MAX_TOTAL_CHANNELS
+                try {
+                    if(!addChannel(s, false)){
+                        break; //reached MAX_TOTAL_CHANNELS
+                    }
+                } catch (InterruptedException ex) {
+                    LOG.warn("ChannelInstantiation interrupted: {}", ex.getMessage());
                 }
             }
         }
     }
 
-    void addChannelFromRandomlyChosenHost() {
+    void addChannelFromRandomlyChosenHost() throws InterruptedException {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
         LOG.debug("Adding channel for socket address  {}", addr);
         addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
     }
 
-    private boolean addChannel(InetSocketAddress s, boolean force) {
+    private boolean addChannel(InetSocketAddress s, boolean force) throws InterruptedException {
         //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
         //we must add a new one, before we cancelEventTrackers the old one. If we did not have the force
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,

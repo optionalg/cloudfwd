@@ -342,7 +342,7 @@ public final class HttpSender implements Endpoints {
       return;
     }
     Set<Long> dummyAckId = new HashSet<>();
-    dummyAckId.add(10000L);
+    dummyAckId.add(10000000L);//default max ack Id. TODO we should not let channels send this many event batches
     AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);
 
     try {

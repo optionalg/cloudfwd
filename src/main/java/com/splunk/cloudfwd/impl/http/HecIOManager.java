@@ -26,10 +26,12 @@ import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksGeneric;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
+import com.splunk.cloudfwd.impl.http.httpascync.LifecycleEventLatch;
 import java.io.Closeable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,37 +123,67 @@ public class HecIOManager implements Closeable {
     }
 
     public void pollHealth() {
-        LOG.trace("polling health on {}", sender.getChannel());
-        CountDownLatch latch = new CountDownLatch(2);
-        //HttpCallbacksAbstract cb1 = new HttpCallbacksHealthPoll(this);
+        LOG.trace("health checks on {}", sender.getChannel());
         
          HttpCallbacksAbstract cb1 = new HttpCallbacksGeneric(this,
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
-                "'Health Endpoint Check'");
+                "health_poll_health_endpoint_check");
         
         HttpCallbacksAbstract cb2 = new HttpCallbacksGeneric(this,
-                LifecycleEvent.Type.ACK_CHECK_OK,
-                LifecycleEvent.Type.ACK_CHECK_FAIL,
-                "'Ack Endpoint Check'");
+                LifecycleEvent.Type.HEALTH_POLL_OK,
+                LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                "health_poll_ack_endpoint_check");
         
-        //A state tracker insures that if one of the two responses is NOT OK then 
-        //the HecChannel will get updated NOT OK, and not hidden by following OK response
-        AtomicBoolean responseStateTracker = new AtomicBoolean(false);
-        cb1.setTwoResponseStateTracker(responseStateTracker);
-        cb2.setTwoResponseStateTracker(responseStateTracker);
+        trackTwoResponses(cb1, cb2);
         sender.pollHealth(cb1);
         sender.ackEndpointCheck(cb2);
     }
 
+    //the two callback handlers must be made aware of each other's responses so that an OK response by one does not "hide"
+    //a NOT OK response by the other.
+    private void trackTwoResponses(HttpCallbacksAbstract cb1,
+            HttpCallbacksAbstract cb2) {
+        //A state tracker insures that if one of the two responses is NOT OK then
+        //the HecChannel will get updated NOT OK, and not hidden by following OK response
+        AtomicBoolean responseStateTracker = new AtomicBoolean(false);
+        AtomicInteger respCount = new AtomicInteger(0);
+        cb1.setTwoResponseStateTracker(responseStateTracker, respCount);
+        cb2.setTwoResponseStateTracker(responseStateTracker, respCount);
+    }
 
-    public void preflightCheck() {
-        LOG.trace("check health on {}", sender.getChannel());
-        FutureCallback<HttpResponse> cb = new HttpCallbacksPreflightHealthCheck(this);
-        sender.ackEndpointCheck(cb);
+
+    public void preflightCheck() throws InterruptedException {
+        LOG.trace("preflight checks on {}", sender.getChannel());
+        HttpCallbacksAbstract cb1 = new HttpCallbacksPreflightHealthCheck(this, "preflight_ack_endpoint_check");
+        HttpCallbacksAbstract cb2 = new HttpCallbacksPreflightHealthCheck(this, "preflight_health_endpoint_check");
+        LifecycleEventLatch latch = new LifecycleEventLatch((1));
+        trackTwoResponses(cb1, cb2);
+        serializeRequests(latch, cb1, cb2);
+        sender.ackEndpointCheck(cb1);
+        try {
+            if(latch.await(5, TimeUnit.MINUTES)){ //wait for ackcheck response before hitting ack endpoint  
+                if(latch.getLifecycleEvent().isOK()){
+                    sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check             
+                }
+            }else{
+                LOG.warn("Preflight timed out (5 minutes)  waiting for health endpoint to ", sender.getChannel());
+               return; //FIXME -- can't we fail faster here? the latch will only be released on server response so we wait long time for failure
+            }
+        } catch (InterruptedException ex) {
+            LOG.warn("Interrupted on channel {} waiting for response from health endpoint.", sender.getChannel());
+            throw ex;
+        }
+
     }
     
-        public void configCheck(HttpCallbacksBlockingConfigCheck cb ) {
+    private void serializeRequests(LifecycleEventLatch latch, HttpCallbacksAbstract cb1,
+            HttpCallbacksAbstract cb2) {
+        cb1.setLatch(latch);
+        cb2.setLatch(latch);
+    }    
+    
+     public void configCheck(HttpCallbacksBlockingConfigCheck cb ) {
         LOG.trace("config check on {}", sender.getBaseUrl());
         sender.ackEndpointCheck(cb);
         cb.setStarted(true);

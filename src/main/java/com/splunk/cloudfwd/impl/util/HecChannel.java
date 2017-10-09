@@ -73,7 +73,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private int preflightCount; //number of times to retry preflight checks due to 
 
   public HecChannel(LoadBalancer b, HttpSender sender,
-          ConnectionImpl c) {
+          ConnectionImpl c) throws InterruptedException{
     this.LOG = c.getLogger(HecChannel.class.getName());
     this.loadBalancer = b;
     this.sender = sender;
@@ -130,7 +130,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     ackPollExecutor.execute(sender.getHecIOManager()::pollAcks);
   }
 
-  public synchronized void start() {
+  public synchronized void start() throws InterruptedException{
     if (started) {
       return;
     }
@@ -144,7 +144,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
       reaperScheduler.schedule(() -> {
           LOG.info("decommissioning channel (channel_decom_ms={}): {}", decomMs, HecChannel.this);
-        closeAndReplace();
+          try{
+            closeAndReplace();
+          }catch(InterruptedException ex){
+              LOG.warn("Interrupted trying to close and replace '{}'", HecChannel.this);
+          }
       }, decomMs, TimeUnit.MILLISECONDS);
     }
     long unresponsiveDecomMS = loadBalancer.getPropertiesFileHelper().
@@ -201,6 +205,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       case PREFLIGHT_FAILED:
         resendPreflight(e, wasAvailable);
         return; //don't update health since we did not actually get an 'answer' to our pre-flight check     
+      case PREFLIGHT_OK:
+          //Note: we also start polling health if/when we give up on prflight checks due to max retries of preflight failing
+          sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
     }
     updateHealth(e, wasAvailable);
   }
@@ -213,7 +220,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //any other non-200 that we have not excplicitly handled above will set the health false
         if (e instanceof Response) {
             Response r = (Response) e;
-            if(!r.isOk()){
+            if(!r.isOK()){
                 this.health.setStatus(e, false);
             }
         }
@@ -241,7 +248,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
         if(++preflightCount <=getSettings().getMaxPreflightRetries() && ! closed && !quiesced){
             LOG.warn("retrying channel preflight checks on {}", this);
-            this.sender.getHecIOManager().preflightCheck(); //retry preflight check
+            try{
+                this.sender.getHecIOManager().preflightCheck(); //retry preflight check
+            }catch(InterruptedException ex){
+                LOG.debug("Preflight resend interrupted: {}", ex);
+            }
         }else{
             String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
@@ -271,7 +282,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //this cannot be synchronized - it will deadlock when addChannelFromRandomlyChosenHost()
   //tries get the LoadBalancer's monitor but the monitor is held by a thread in LoadBalancer's sendRoundRobin
   //waiting for monitor on this's send.
-  void closeAndReplace() {
+  void closeAndReplace() throws InterruptedException{
     if (closed || quiesced) {
       return;
     }
@@ -471,14 +482,18 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           //could happen, then the channel we replace this one with
           //can be removed before we resendInFlightEvents
           synchronized (loadBalancer) {
-            loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-            resendInFlightEvents();
+            try{
+                loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement               
+            }catch(InterruptedException ex){
+                LOG.warn("Unable to replace dead channel: {}", ex);
+            }
+            resendInFlightEvents(); 
             //don't force close until after events resent. 
             //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
             //and the events will never send.
             interalForceClose();
           }
-          if (      getSender().getConnection().isClosed()) {
+          if(getConnection().isClosed()) {
             loadBalancer.close();
           }
         } else { //channel was not 'frozen'
@@ -496,9 +511,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
-      long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
+        long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
               getAckTimeoutMS();
-      loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
+        loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
               HecChannel.this).forEach((e) -> {
                 //we must force messages to be sent because the connection could have been gracefully closed
                 //already, in which case sendRoundRobbin will just ignore the sent messages
@@ -511,7 +526,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                   }
                 }
               });
-      LOG.info("Resent Events from dead channel {}", HecChannel.this);
+        LOG.info("Resent Events from dead channel {}", HecChannel.this);
     }
 
   }

@@ -95,7 +95,7 @@ public class DownIndexersTest extends AbstractConnectionTest {
         try{
             createConnection();
         }catch(Exception e){
-            Assert.assertTrue("Expected HecMaxRetriesException, got " + e.getClass().getName(), e instanceof HecMaxRetriesException);
+            Assert.assertTrue("Expected HecMaxRetriesException, got " + e, e instanceof HecMaxRetriesException);
             gotException = true;
         }
         if(!gotException){

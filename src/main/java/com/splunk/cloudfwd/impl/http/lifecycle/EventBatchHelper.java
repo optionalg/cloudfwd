@@ -27,7 +27,7 @@ public class EventBatchHelper {
             return false;
         }
         if(e instanceof EventBatchResponse){
-            return !((EventBatchResponse)e).isOk();       
+            return !((EventBatchResponse)e).isOK();       
         }
         return e instanceof EventBatchFailure;
     }    
