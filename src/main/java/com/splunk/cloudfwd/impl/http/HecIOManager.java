@@ -162,6 +162,8 @@ public class HecIOManager implements Closeable {
         serializeRequests(latch, cb1, cb2);
         sender.ackEndpointCheck(cb1);
         try {
+            //TODO FIXME - for sure we need to also have timeouts at the HTTP layer. If network is down this is going
+            //to block the full five minutes. Furthermore, preflight retries will occur N times and the blocking will stack!
             if(latch.await(5, TimeUnit.MINUTES)){ //wait for ackcheck response before hitting ack endpoint  
                 if(latch.getLifecycleEvent().isOK()){
                     sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check             
