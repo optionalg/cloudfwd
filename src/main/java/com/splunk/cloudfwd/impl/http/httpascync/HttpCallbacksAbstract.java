@@ -31,7 +31,7 @@ import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -47,9 +47,10 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
   private final Logger LOG;
   private final HecIOManager manager;
-  //if latched, then we are gating on more than one response ... health check is combo of health endpoint and ack endpoint
-  //and we need both responses. See notify() and onOKWait
- private CountDownLatch latch;
+  
+  //in the case of health polling, we hit both the ack and the health endpoint
+ private AtomicBoolean alreadyNotOk; //tells us if one of the two responses has already come back NOT OK
+ private boolean expectingTwoResponses; //true only when we are doing health polling which hits ack and health endpoint
   
   HttpCallbacksAbstract(HecIOManager m) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
@@ -61,8 +62,9 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
      * @param respCount
      * @see 
      */
-    public void onOkWait(CountDownLatch latch){
-        this.latch =latch;    
+    public void setTwoResponseStateTracker(AtomicBoolean alreadyNotOk){
+        this.alreadyNotOk = alreadyNotOk;
+        this.expectingTwoResponses = true;
   }
 
   @Override
@@ -105,18 +107,22 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   }
   
   protected void notify(LifecycleEvent e){
-      if(null != latch && e.isOK()){ //if there is a latch, then OK events will wait for it
-          try {
-              latch.countDown();
-              latch.await();
-          } catch (InterruptedException ex) {
-              //this will happen normally when a channel is shutdown
-              LOG.debug("Interrupted awaiting health responses on channel {}", getChannel());
-              Thread.currentThread().interrupt(); //so we don't silently supporess interruption
-          }
+      if(expectingTwoResponses ){ //health polling hits ack and health endpoints
+              synchronized(alreadyNotOk){
+                if(alreadyNotOk.get()){
+                    if(e.isOK()){
+                        LOG.debug("Ignoring OK response from '{}' because already got not ok from other endpoint on '{}'.", 
+                                getName(), getChannel());
+                        return; //must not update status to OK, when the other of two expected response said NOT OK.
+                    }
+                }
+                //the update must occur in the synchronized block when we are latched on two requests                
+                manager.getSender().getChannelMetrics().update(e);
+                return;
+              }             
+      }else{ //normal condition where we don't depend on any other response
+        manager.getSender().getChannelMetrics().update(e);
       }
-      //if we latched above, then the following update will be called only after both OK's have been received
-      manager.getSender().getChannelMetrics().update(e);
   }
   
   protected ConnectionImpl getConnection(){

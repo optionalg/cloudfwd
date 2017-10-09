@@ -24,19 +24,19 @@ import org.slf4j.Logger;
  *
  * @author ghendrey
  */
-public class GenericPing extends HttpCallbacksAbstract {
+public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
 
     private Logger LOG;
     private final LifecycleEvent.Type okType;
     private final String name;
     private final LifecycleEvent.Type failType;
 
-    public GenericPing(HecIOManager m, LifecycleEvent.Type okType,
+    public HttpCallbacksGeneric(HecIOManager m, LifecycleEvent.Type okType,
             LifecycleEvent.Type failType, String name) {
         super(m);
         this.okType = okType;
         this.failType = failType;
-        this.LOG = m.getSender().getConnection().getLogger(GenericPing.class.
+        this.LOG = m.getSender().getConnection().getLogger(HttpCallbacksGeneric.class.
                 getName());
         this.name = name;
     }
@@ -53,9 +53,8 @@ public class GenericPing extends HttpCallbacksAbstract {
             default: {
                 try {
                     type = warn(reply, httpCode);
-                    //type = error(reply, statusCode);
                 } catch (IOException ex) {
-                    LOG.error(ex.getMessage(), ex);
+                    error(ex);
                 }
             }
         }

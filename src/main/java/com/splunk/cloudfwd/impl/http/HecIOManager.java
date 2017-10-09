@@ -17,19 +17,19 @@ package com.splunk.cloudfwd.impl.http;
 
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksPreflightHealthCheck;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksHealthPoll;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.impl.http.httpascync.GenericPing;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksGeneric;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import java.io.Closeable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,18 +125,21 @@ public class HecIOManager implements Closeable {
         CountDownLatch latch = new CountDownLatch(2);
         //HttpCallbacksAbstract cb1 = new HttpCallbacksHealthPoll(this);
         
-         HttpCallbacksAbstract cb1 = new GenericPing(this,
+         HttpCallbacksAbstract cb1 = new HttpCallbacksGeneric(this,
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
                 "'Health Endpoint Check'");
         
-        HttpCallbacksAbstract cb2 = new GenericPing(this,
+        HttpCallbacksAbstract cb2 = new HttpCallbacksGeneric(this,
                 LifecycleEvent.Type.ACK_CHECK_OK,
                 LifecycleEvent.Type.ACK_CHECK_FAIL,
                 "'Ack Endpoint Check'");
-        //both must wait to notify of a healthy result until BOTH healthy results returned.
-        cb1.onOkWait(latch);
-        cb2.onOkWait(latch);
+        
+        //A state tracker insures that if one of the two responses is NOT OK then 
+        //the HecChannel will get updated NOT OK, and not hidden by following OK response
+        AtomicBoolean responseStateTracker = new AtomicBoolean(false);
+        cb1.setTwoResponseStateTracker(responseStateTracker);
+        cb2.setTwoResponseStateTracker(responseStateTracker);
         sender.pollHealth(cb1);
         sender.ackEndpointCheck(cb2);
     }
