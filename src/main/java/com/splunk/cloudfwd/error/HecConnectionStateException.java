@@ -24,9 +24,22 @@ package com.splunk.cloudfwd.error;
  */
 
 public class HecConnectionStateException extends IllegalStateException {
+    
+    public HecConnectionStateException(String s, Type t, Exception causedBy){
+        super(s, causedBy);
+        this.type = t;
+    }
+
+    public HecConnectionStateException(String s, Type t) {
+        super(s);
+        this.type = t;
+    }
+    
 
     public enum Type {
         /**
+         * This type is only thrown if PropertyKeys.ENABLE_CHECKPOINT=true. Attempts to send EventBatch that is still pending acknowledgement.
+        *//**
          * This type is only thrown if PropertyKeys.ENABLE_CHECKPOINT=true. Attempts to send EventBatch that is still pending acknowledgement.
         */
         ALREADY_SENT,
@@ -53,7 +66,20 @@ public class HecConnectionStateException extends IllegalStateException {
         /**
          * This type is thrown when there is a missing required property or invalid property value in cloudfwd.properties or when Connection constructor overrides object.
          */
-        CONFIGURATION_EXCEPTION
+        CONFIGURATION_EXCEPTION,
+        
+        /**
+         * When instantiating a connection, a channel was not able to get back a response to its preflight checks in a timely fashion.
+         */
+        CHANNEL_PREFLIGHT_TIMEOUT,
+        /**
+         * No channels existed in this connection
+         */
+        NO_HEC_CHANNELS,      
+        /**
+         * No ConnectionCallbacks provided
+         */
+        NO_CALLBACKS_PROVIDED        
     }
     private final Type type;
 
@@ -64,10 +90,6 @@ public class HecConnectionStateException extends IllegalStateException {
         return type;
     }
 
-    public HecConnectionStateException(String s, Type t) {
-        super(s);
-        this.type = t;
-    }
 
     public String toString() {
         return super.toString() + type;

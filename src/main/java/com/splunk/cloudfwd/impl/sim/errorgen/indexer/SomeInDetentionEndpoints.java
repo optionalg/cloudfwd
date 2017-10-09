@@ -42,18 +42,21 @@ public class SomeInDetentionEndpoints extends InDetentionEndpoints {
 
   @Override
   public synchronized void start() {
-    if(0 == count.getAndIncrement() % 2){ //every other created endpoint will be detention
+    if(started){
+        return;
+    }
+   if(0 == count.getAndIncrement() % 2){ //every other created endpoint will be detention
       LOG.trace("put endpoint in detention");
       this.inDetention = true;
     }else{
       LOG.trace("endpoint is live");
       this.inDetention = false;
-    }
-    super.start();
+    }    
+    super.start();    
   }
 
   @Override
-  public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
     if (this.inDetention) {
       ((HttpCallbacksAbstract)httpCallback).completed(
           "Not Found",

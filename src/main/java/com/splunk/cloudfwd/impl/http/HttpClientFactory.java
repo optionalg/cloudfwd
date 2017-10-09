@@ -25,6 +25,7 @@ import org.apache.http.impl.cookie.RFC6265CookieSpecProvider;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
+import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import sun.security.provider.X509Factory;
 
 
@@ -53,9 +54,15 @@ import sun.security.provider.X509Factory;
  *
  */
 public final class HttpClientFactory {
+    public static int MAX_CONN_PER_ROUTE = 0; //unlimited
+    public static int MAX_CONN_TOTAL = 0; //unlimited
+    public  static int CONNECT_TIMEOUT = 30000; //30 sec
+    public static int SOCKET_TIMEOUT = 30000; //30 sec
+    public static int REACTOR_SELECT_INTERVAL = 1000;   
+    
     private final Logger LOG;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
-    private Integer maxConnTotal = 0;
+    //private Integer maxConnTotal = 0;
     // Require a Valid SSL Cert by default
     private boolean disableCertVerification = false;
     // Optional SSL Certificate Authority public key
@@ -80,6 +87,18 @@ public final class HttpClientFactory {
         // Host header may include port, making sure we remove it
         this.host = host.replaceAll(":.*", "");
     }
+    
+    private HttpAsyncClientBuilder builderWithCustomOptions(){
+        IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
+            .setSelectInterval(REACTOR_SELECT_INTERVAL)
+            .setSoTimeout(SOCKET_TIMEOUT)
+            .setConnectTimeout(CONNECT_TIMEOUT)
+            .build();
+        return HttpAsyncClients.custom()                
+                .setMaxConnTotal(MAX_CONN_TOTAL)
+                .setDefaultIOReactorConfig(ioReactorConfig)
+               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE);
+    }    
 
     /**
      * Build and return an appropriate HttpAsyncClient
@@ -223,9 +242,4 @@ public final class HttpClientFactory {
                 .build();
     }
     
-    private HttpAsyncClientBuilder builderWithCustomOptions(){
-        return HttpAsyncClients.custom()
-                .setMaxConnTotal(maxConnTotal);
-               //.setMaxConnPerRoute(maxConnPerRoute);
-    }
 }

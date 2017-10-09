@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_BUSY;
+import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_FAILED;
 import java.io.IOException;
 import org.slf4j.Logger;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_OK;
@@ -44,18 +45,22 @@ import org.apache.http.ConnectionClosedException;
  */
 public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
     private final Logger LOG;
+    private final String name;
 
-    public HttpCallbacksPreflightHealthCheck(HecIOManager m) {
+    public HttpCallbacksPreflightHealthCheck(HecIOManager m, String name) {
         super(m);
+        this.name = name;
         this.LOG =getConnection().getLogger(HttpCallbacksPreflightHealthCheck.class.
                 getName());
     }
 
-    private void handleResponse(int statusCode, String reply) throws IOException {
+    private void handleResponse(int statusCode, String reply) throws IOException, InterruptedException {
         LifecycleEvent.Type type;
         switch (statusCode) {            
             case 503:  
                 warn(reply, statusCode);
+                LOG.warn("Server busy while attempting {} on {}, waiting 60 seconds to retry", getName(), getChannel());
+                Thread.sleep(60000);
                 type = PREFLIGHT_BUSY;
                 break;
             case 504:  
@@ -63,11 +68,11 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
                 type = LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT;
                 break;
             case 200:
-                LOG.info("HEC preflight check is good on {}", getChannel());
+                LOG.info("{} is good on {}", getName(), getChannel());
                 type = PREFLIGHT_OK;
                 break;
             default: //various non-200 errors such as 400/ack-is-disabled
-                type = error(reply, statusCode);
+                type = warn(reply, statusCode);//error(reply, statusCode);
         }
         notify(type, statusCode, reply);
     }
@@ -79,11 +84,9 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
             handleResponse(code, reply);
         } catch (Exception ex) {
             LOG.error(
-                    "failed to unmarshal server response in pre-flight health check {}",
+                    "failed to handle server response for {}:  {}", getName(),
                     reply);
             error(ex);
-        } finally {
-            manager.startHealthPolling();
         }
     }
     
@@ -91,29 +94,26 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
 
     @Override
     public void failed(Exception ex) {
-        if(ex instanceof ConnectionClosedException){
-            LOG.debug("Caught ConnectionClosedException."
-                    + " This is expected when a channel is closed while a pre-flight check is in process.");
-            return;
-        }
-        LOG.error(
-                "HEC pre-flight health check via /ack endpoint failed with exception {} on {}",ex.getMessage(), getChannel(),
-                ex);
-        error(ex);
+//        if(ex instanceof ConnectionClosedException){
+//            LOG.debug("Caught ConnectionClosedException."
+//                    + " This is expected when a channel is closed while a pre-flight check is in process.");
+//            return;
+//        }
+        LOG.warn(
+                "{} failed with exception {} on {}",getName(), ex.getMessage(), getChannel());
+        notifyFailed(PREFLIGHT_FAILED, ex);
         // TODO: retry if this fails.. otherwise channel just sits around until it is reaped
     }
 
     @Override
     public void cancelled() {
-        LOG.warn("HEC pre-flight health check cancelled");
-        error(new Exception(
-                "HEC pre-flight health check via /ack endpoint cancelled."));
+        LOG.debug("{} cancelled", getName());
     }
 
 
     @Override
     protected String getName() {
-        return "Preflight checks";
+        return name;
     }
 
 }

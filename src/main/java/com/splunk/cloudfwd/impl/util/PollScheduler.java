@@ -21,8 +21,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import com.splunk.cloudfwd.error.HecIllegalStateException;
-import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public class PollScheduler {
 
   private Logger LOG = LoggerFactory.getLogger(PollScheduler.class.getName());
-  private ScheduledExecutorService scheduler;
+  private ScheduledThreadPoolExecutor scheduler;
   private boolean started;
   private final String name;
   private int corePoolSize = 1;
@@ -59,7 +60,10 @@ public class PollScheduler {
       return;
     }
     ThreadFactory f = (Runnable r) -> new Thread(r, name);
-    this.scheduler = Executors.newScheduledThreadPool(corePoolSize, f);
+    this.scheduler = new ScheduledThreadPoolExecutor(corePoolSize, f);
+    scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+    scheduler.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
+    scheduler.setRemoveOnCancelPolicy(true);
     //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
     //if the execution time of a task exceeds the period. We don't want that.
     scheduler.scheduleWithFixedDelay(poller, 0, delay, units);
@@ -76,6 +80,13 @@ public class PollScheduler {
     LOG.debug("SHUTTING DOWN POLLER:  " + name);
     if (null != scheduler) {
       scheduler.shutdownNow();
+        try {
+            if(!scheduler.isTerminated() && !scheduler.awaitTermination(10, TimeUnit.SECONDS)){
+                LOG.error("timed out waiting for {} to terminate.", name);     
+            } 
+        } catch (InterruptedException ex) {
+            LOG.error("InterruptedException awating termination of  {}.", name);   
+        }
     }
     scheduler = null;
     started = false;

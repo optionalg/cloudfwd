@@ -41,7 +41,7 @@ public class SlowEndpoints extends SimulatedHECEndpoints {
     try {
       Thread.sleep(sleep);
     } catch (InterruptedException ex) {
-      throw new RuntimeException(ex.getMessage(), ex);
+        Thread.currentThread().interrupt(); //so we don't silently supporess interruption
     }
   }
 }

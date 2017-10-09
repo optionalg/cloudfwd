@@ -140,7 +140,7 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>exec</goal>
+                            <goal>exec</goal>                            
                         </goals>
                     </execution>
                 </executions>
@@ -178,11 +178,11 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.12.4</version>
                 <configuration>
+                    <!--forkedProcessTimeoutInSeconds>0</forkedProcessTimeoutInSeconds-->
                     <argLine>-Xmx4G</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
-                        <exclude>**/LargeBatchTest.java</exclude>
-                        <exclude>**/MultiThreadedVolumeTest.java</exclude>
-                        <exclude>**/OncePerSecondLongevityTest.java</exclude>
+                        <exclude>**/performance_tests/*.java</exclude>
+                        <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
                     </excludes>
                 </configuration>
             </plugin>

@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import java.io.Closeable;
 
 import org.apache.http.HttpResponse;
@@ -29,7 +28,7 @@ public interface Endpoints extends Closeable{
   public void postEvents(final HttpPostable events,FutureCallback<HttpResponse> httpCallback);
   public void pollAcks(HecIOManager ackMgr,FutureCallback<HttpResponse> httpCallback);
   public void pollHealth(FutureCallback<HttpResponse> httpCallback);
-  public void splunkCheck(FutureCallback<HttpResponse> httpCallback);
+  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback);
   @Override
   public void close();
   public void start();

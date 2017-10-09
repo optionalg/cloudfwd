@@ -27,19 +27,14 @@ import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecLoggerFactory;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.http.HttpSender;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
+
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.HecChannel;
-import com.splunk.cloudfwd.impl.util.IndexDiscoverer;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
-import java.net.InetSocketAddress;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
@@ -81,13 +76,14 @@ public class ConnectionImpl implements Connection {
   }
 
   public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
+    if(null == callbacks){
+        throw new HecConnectionStateException("ConnectionCallbacks are null",
+                HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
+    }   
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
-    init(callbacks, propertiesFileHelper);
+    this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
-  }
-
-  private void init(ConnectionCallbacks callbacks, PropertiesFileHelper p) {
     this.events = new EventBatchImpl();
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
     //the EventBatchImpl that succeeded or failed from the timoutChecker
@@ -98,9 +94,9 @@ public class ConnectionImpl implements Connection {
     //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
-    this.callbacks = new CallbackInterceptor(callbacks, this);
+    throwExceptionIfNoChannelOK();
   }
-
+  
   public long getAckTimeoutMS() {
     return propertiesFileHelper.getAckTimeoutMS();
   }
@@ -110,34 +106,20 @@ public class ConnectionImpl implements Connection {
             valueOf(ms));
   }
   
-  
-  @Override
-  public List<ConfigStatus> checkConfigs() throws Exception{
-      IndexDiscoverer d = new IndexDiscoverer((PropertiesFileHelper) getSettings(), this);
-      List<ConfigStatus> stats = new ArrayList<>();
-      for(InetSocketAddress addr: d.getAddrs()){
-          stats.add(checkConfigStatus(addr));            
-      }
-      return stats;
-    }
-
-    protected ConfigStatus checkConfigStatus(InetSocketAddress addr) throws Exception{
-        try (HttpSender sender = getPropertiesFileHelper().createSender(addr);) { //autoclose when done              
-            HecIOManager m = sender.getHecIOManager();            
-            HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m, this);
-            m.configCheck(cb); //begin async processign
-            //following call blocks until processing complete
-            HecServerErrorResponseException problem = cb.getConfigProblems(180000); //3 min
-            return new ConfigStatus(sender, problem, this);            
-        } catch (Exception ex) { 
-          LOG.error("Failed checkConfigStatus {}", ex.getMessage());
-          throw ex;
-      }
-    }
-
+//  
+//  @Override
+//  public List<ConfigStatus> checkConfigs() {
+//    return lb.checkConfigs();
+//  }
+   
   @Override
   public void close() {
+    try {
       flush();
+    } catch (HecNoValidChannelsException ex) {
+      LOG.error("Events could not be flushed on connection close: " +
+        ex.getMessage(), ex);
+    }
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
@@ -186,7 +168,7 @@ public class ConnectionImpl implements Connection {
    * @throws HecConnectionTimeoutException
    * @see com.splunk.cloudfwd.PropertyKeys
    */
-  public synchronized int send(Event event) throws HecConnectionTimeoutException {
+  public synchronized int send(Event event) throws HecConnectionTimeoutException, HecNoValidChannelsException {
     if (null == this.events) {
       this.events = new EventBatchImpl();
     }
@@ -208,7 +190,7 @@ public class ConnectionImpl implements Connection {
    * @throws HecConnectionTimeoutException
    */
     @Override
-  public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException {
+  public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException, HecNoValidChannelsException {
     if (closed) {
       throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
@@ -234,7 +216,7 @@ public class ConnectionImpl implements Connection {
   }
 
     @Override
-  public synchronized void flush() throws HecConnectionTimeoutException {
+  public synchronized void flush() throws HecConnectionTimeoutException, HecNoValidChannelsException {
     if (null != events && events.getNumEvents() != 0) {
       sendBatch(events);
     }
@@ -315,4 +297,31 @@ public class ConnectionImpl implements Connection {
     public List<HecHealth> getHealth() {
         return lb.getHealth();
     }
+
+   /*
+    private void throwExceptionIfNoChannelOK()  {
+        if(checkConfigs().stream().noneMatch(ConfigStatus::isOk)){
+            throw checkConfigs().stream().filter(e->!e.isOk()).findFirst().get().getProblem();
+        } 
+   }
+    */
+    
+    private void throwExceptionIfNoChannelOK()  {
+        List<HecHealth> healths = lb.getHealth(); //returns after every channel either has gotten its health or given up trying
+        if(healths.isEmpty()){            
+            throw new HecConnectionStateException("No HEC channels could be instatiated on Connection.",
+                    HecConnectionStateException.Type.NO_HEC_CHANNELS);
+        }         
+        if(healths.stream().noneMatch(HecHealth::isHealthy)){   
+            //FIXME TODO -- figure out how to close channels without getting ConnectionClosedException when 
+            //no data has been sent through the channel yet
+            //close all channels since none is healthy
+            healths.stream().forEach(health->{health.getChannel().close();});
+            
+            
+            //throw whatever exception caused the first unhealthy channel to be unhealthy
+            throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
+        } 
+   }    
+
 }

@@ -25,7 +25,7 @@ public class LifecycleEvent {
     EVENT_BATCH_BORN,
     PRE_EVENT_POST,
     EVENT_POST_NOT_OK,
-    EVENT_POST_FAILURE,
+    EVENT_POST_FAILED,
     EVENT_POST_INDEXER_BUSY,
     EVENT_POST_GATEWAY_TIMEOUT,
     EVENT_POST_OK,
@@ -36,24 +36,32 @@ public class LifecycleEvent {
     ACK_POLL_FAILURE,
     ACK_DISABLED,
     UNHANDLED_NON_200,
+    INVALID_TOKEN,
+    DATA_CHANNEL_MISSING_OR_INVALID,
+    //a variety of HEC http 400 error codes we don't have specific handlers for. "code" and "text" field in
+    //HecServerErrorResponseException will provide the detail.
+    HEC_HTTP_400_ERROR, 
     
      //ELB state
      GATEWAY_TIMEOUT, //504 from ELB when it cuts off response due to timeout
-
-    // States without an EventBatch object
+    
+    //ACK_CHECK is distinguished from ACK_POLL. ACK_CHECK is simply hitting ack endpoint to see if acks o
+     //enabled. Because Health endpoint doesn't work for that purpose
+    ACK_CHECK_OK,  
+    ACK_CHECK_FAIL,   
     HEALTH_POLL_OK,
     INDEXER_BUSY,
     HEALTH_POLL_FAILED,
     HEALTH_POLL_ERROR,
-    SPLUNK_IN_DETENTION,
-    INVALID_TOKEN,
+    INDEXER_IN_DETENTION,
 
-    // Needed to know statuses, do not throw exception
+
     PREFLIGHT_HEALTH_CHECK_PENDING,
     PREFLIGHT_GATEWAY_TIMEOUT,
     PREFLIGHT_BUSY,
     PREFLIGHT_OK,
     PREFLIGHT_NOT_OK,
+    PREFLIGHT_FAILED,
     INVALID_AUTH
 
   };
@@ -82,6 +90,15 @@ public class LifecycleEvent {
      */
     public Exception getException(){
         return null;
+    }
+    
+    /**
+     * returns true of the LifecycleEvent is not a failure or non-200 response. getException will always return null
+     * if isOK returns true.
+     * @return
+     */
+    public boolean isOK(){
+        return true;
     }
   
   

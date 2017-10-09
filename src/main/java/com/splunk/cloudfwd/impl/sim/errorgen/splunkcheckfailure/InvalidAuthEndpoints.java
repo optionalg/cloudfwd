@@ -33,7 +33,7 @@ public class InvalidAuthEndpoints extends SimulatedHECEndpoints {
     }
 
     @Override
-    public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
+    public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
         httpCallback.completed(new HecErrorResponse(
                 new InvalidAuthEntity(), new UnauthorizedStatusLine()
         ));

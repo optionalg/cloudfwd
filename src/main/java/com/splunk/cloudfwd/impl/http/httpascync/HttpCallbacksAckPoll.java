@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_NOT_OK;
@@ -50,13 +51,14 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
                     warn(reply, code);
                     break;
                 default:
-                    error(reply, code);
+                    //error(reply, code);
+                    warn(reply, code);
                     notify(ACK_POLL_NOT_OK, code, reply);
             }         
         } catch (Exception e) {
             error(e);
         }finally{
-            manager.setAckPollInProgress(false);
+            getManager().setAckPollInProgress(false);
         }
     }
 
@@ -64,29 +66,33 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     public void failed(Exception ex) {
         try {
             LOG.error("Channel {} failed to poll acks because {}",
-                    getChannel(), ex);                    
+                    getChannel(), ex);    
+            notifyFailed(LifecycleEvent.Type.ACK_POLL_FAILURE, ex);
         } catch (Exception e) {
             error(e);
         }finally{
-            manager.setAckPollInProgress(false);
+            getManager().setAckPollInProgress(false);
         }
     }
 
     @Override
     public void cancelled() {
         try {
-            LOG.error("Ack poll  cancelled on channel  {}",getChannel());           
+            LOG.error("Ack poll  cancelled on channel  {}",getChannel());   
+             Exception ex = new RuntimeException(
+                    "HTTP post cancelled while polling for acks on channel " + getChannel());
+            notifyFailed(LifecycleEvent.Type.ACK_POLL_FAILURE, ex);
         } catch (Exception e) {
             error(e);
         }finally{
-            manager.setAckPollInProgress(false);
+            getManager().setAckPollInProgress(false);
         }
     }
 
     private void consumeAckPollResponse(String resp) throws IOException {
         AckPollResponseValueObject ackPollResp = mapper.
                 readValue(resp, AckPollResponseValueObject.class);
-        manager.getAcknowledgementTracker().handleAckPollResponse(
+        getManager().getAcknowledgementTracker().handleAckPollResponse(
                 ackPollResp);
     }
         

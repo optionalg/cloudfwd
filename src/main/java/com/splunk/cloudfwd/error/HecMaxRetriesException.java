@@ -19,7 +19,7 @@ package com.splunk.cloudfwd.error;
  *
  * @author ghendrey
  */
-public class HecMaxRetriesException extends Exception{
+public class HecMaxRetriesException extends RuntimeException{
 
   public HecMaxRetriesException(String message) {
     super(message);

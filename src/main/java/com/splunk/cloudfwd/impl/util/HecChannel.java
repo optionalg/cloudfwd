@@ -18,19 +18,16 @@ package com.splunk.cloudfwd.impl.util;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
-import com.splunk.cloudfwd.error.HecIllegalStateException;
-import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
@@ -41,6 +38,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import java.util.concurrent.ExecutorService;
+import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 
 /**
  *
@@ -48,10 +51,10 @@ import java.util.concurrent.ExecutorService;
  */
 public class HecChannel implements Closeable, LifecycleEventObserver {
   private final Logger LOG;
-  private ExecutorService ackPollExecutor;
   private final HttpSender sender;
   private final int full;
   private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
+  private ScheduledExecutorService ackPollExecutor;
   private volatile boolean closed;
   private volatile boolean quiesced;
 
@@ -70,7 +73,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private int preflightCount; //number of times to retry preflight checks due to 
 
   public HecChannel(LoadBalancer b, HttpSender sender,
-          ConnectionImpl c) {
+          ConnectionImpl c) throws InterruptedException{
     this.LOG = c.getLogger(HecChannel.class.getName());
     this.loadBalancer = b;
     this.sender = sender;
@@ -81,13 +84,39 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             getMaxUnackedEventBatchPerChannel();
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     
-    this.health = new HecHealthImpl(channelId, sender.getBaseUrl()
-        , new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));
+    this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
+    
+    sender.setChannel(this);
+    start();
   }
+
   
-  public HecHealthImpl getHealth() {
-    return health;
-  }
+  
+//    /**
+//     * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
+//     *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
+//     * @return
+//     */
+//    protected ConfigStatus getConfigStatus() {    
+//        //need to do this so that we preserve the behavior of getting session from load balancer. 
+//        //That is: we must get a response on a single first http request to establish the Session-Cookie before we send any other requests.
+//        health.await(); 
+//        HecIOManager m = sender.getHecIOManager();
+//        HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
+//        m.configCheck(cb); //begin async processign
+//        //following call blocks until processing complete
+//        RuntimeException problem = cb.getException(); 
+//        return new ConfigStatus(this, problem);
+//    }
+
+    public HecHealthImpl getHealth() {
+        if(!health.await(5, TimeUnit.MINUTES)){
+         Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
+                HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT);
+            this.health.setStatus(new PreflightFailed(ex), false);
+        }
+        return health;
+    }
 
   private static String newChannelId() {
     return java.util.UUID.randomUUID().toString();
@@ -101,11 +130,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     ackPollExecutor.execute(sender.getHecIOManager()::pollAcks);
   }
 
-  public synchronized void start() {
+  public synchronized void start() throws InterruptedException{
     if (started) {
       return;
     }
-    this.sender.setChannel(this);
     this.sender.getHecIOManager().preflightCheck();
 
     //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
@@ -116,7 +144,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
       reaperScheduler.schedule(() -> {
           LOG.info("decommissioning channel (channel_decom_ms={}): {}", decomMs, HecChannel.this);
-        closeAndReplace();
+          try{
+            closeAndReplace();
+          }catch(InterruptedException ex){
+              LOG.warn("Interrupted trying to close and replace '{}'", HecChannel.this);
+          }
       }, decomMs, TimeUnit.MILLISECONDS);
     }
     long unresponsiveDecomMS = loadBalancer.getPropertiesFileHelper().
@@ -126,15 +158,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       deadChannelDetector.start();
     }
     f = (Runnable r) -> new Thread(r, "On-demand Ack Poller");
-    this.ackPollExecutor = Executors.newSingleThreadExecutor(f);
+    this.ackPollExecutor = Executors.newSingleThreadScheduledExecutor(f);
 
     started = true;
   }
 
   public synchronized boolean send(EventBatchImpl events) {
-    if (!started) {
-      start();
-    }
+//    if (!started) {
+//          start();
+//    }
     if (!isAvailable()) {
       return false;
     }
@@ -167,36 +199,71 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         checkForStickySessionViolation(e);
         break;
       }
+      //we don't want to update the health when we get 503/504/fail for preflight; We want to resend preflight
       case PREFLIGHT_BUSY:
       case PREFLIGHT_GATEWAY_TIMEOUT:
-        resendPreflight();
-          break;      
+      case PREFLIGHT_FAILED:
+        resendPreflight(e, wasAvailable);
+        return; //don't update health since we did not actually get an 'answer' to our pre-flight check     
+      case PREFLIGHT_OK:
+          //Note: we also start polling health if/when we give up on prflight checks due to max retries of preflight failing
+          sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
     }
-    //any other non-200 that we have not excplicitly handled above will set the health false
-    if (e instanceof Response) {
-       this.health.setStatus(e, ((Response) e).isOk());
-    }
-    if(e instanceof Failure){
-         this.health.setStatus(e, false);
-     }
-    //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
-    if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
-        this.unackedCount.decrementAndGet();
-    }
-    
-    if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
-      loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
-    }
+    updateHealth(e, wasAvailable);
   }
 
-    private void resendPreflight() {
-        if(++preflightCount <=getSettings().getMaxPreflightRetries()){
-            LOG.warn("retrying channel preflight checks on {}", this);
-            this.sender.getHecIOManager().preflightCheck(); //retry preflight check
-        }else{
-            String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
+    private void updateHealth(LifecycleEvent e, boolean wasAvailable) {
+        //only health poll  or preflight ok will set health to true
+        if(e.getType()==LifecycleEvent.Type.PREFLIGHT_OK || e.getType()==LifecycleEvent.Type.HEALTH_POLL_OK){
+            this.health.setStatus(e, true);
+        }
+        //any other non-200 that we have not excplicitly handled above will set the health false
+        if (e instanceof Response) {
+            Response r = (Response) e;
+            if(!r.isOK()){
+                this.health.setStatus(e, false);
+            }
+        }
+        if(e instanceof Failure){
+            this.health.setStatus(e, false);
+        }
+        //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
+        if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
+            LOG.info("FAIL or NOT OK caused  DECREMENT {}", e);
+            this.unackedCount.decrementAndGet();
+        }
+        
+        if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
+            loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
+        }
+    }
+    
+    public boolean isFull(){
+        if( this.unackedCount.get()> full){
+            LOG.error("{} illegal channel state full={}, unackedCount={}", this, full, unackedCount.get());
+        }
+        return  this.unackedCount.get() == full;
+    }
+
+    private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
+        if (++preflightCount <= getSettings().getMaxPreflightRetries() && !closed && !quiesced) {
+            //preflight resends must be decoupled
+            Runnable r = () -> {
+                LOG.warn("retrying channel preflight checks on {}",
+                        HecChannel.this);
+                try {
+                    this.sender.getHecIOManager().preflightCheck(); //retry preflight check};
+                } catch (InterruptedException ex) {
+                    LOG.debug("Preflight resend interrupted: {}", ex);
+                }
+            };
+            new Thread(r, "preflight retry " + preflightCount).start();
+        } else {
+            String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES + "="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
-            getCallbacks().systemError(new HecMaxRetriesException(msg));
+            LOG.warn(msg);
+            Exception ex = new HecMaxRetriesException(msg);
+            updateHealth(new PreflightFailed(ex), wasAvailable);
         }
     }
   
@@ -220,7 +287,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //this cannot be synchronized - it will deadlock when addChannelFromRandomlyChosenHost()
   //tries get the LoadBalancer's monitor but the monitor is held by a thread in LoadBalancer's sendRoundRobin
   //waiting for monitor on this's send.
-  void closeAndReplace() {
+  void closeAndReplace() throws InterruptedException{
     if (closed || quiesced) {
       return;
     }
@@ -249,15 +316,25 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  protected void interalForceClose() {
-    try {
-      this.sender.close();
-    } catch (Exception e) {
-      LOG.error(e.getMessage(), e);
-    }
-    this.loadBalancer.removeChannel(getChannelId(), true);
-    this.channelMetrics.removeObserver(this);
-    finishClose();
+  protected void interalForceClose() {    
+      Runnable r = ()->{
+        loadBalancer.removeChannel(getChannelId(), true);
+        this.channelMetrics.removeObserver(this);
+        closeExecutors(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
+        try {
+            this.sender.close();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+      };
+      //use thread to shutdown sender. Else we have problem with simulted endpoints where the 
+      //http completed callback with the final ackid  (running in a scheduled executor in the ack endpoint)
+      //causes HecChannel.close to be called, which leads
+      //here. Hence the thread of execution tries to sender.close(), which in tern tries to shutdown the 
+     //simulated endpoints. Which means the thread that is shutting down the simulated endpoints IS
+     //a thread being executed in the simulated endpoints! hence an interrupted exception in Executor.awaitTermination
+     //when the thread awaiting its own demise is terminated.. This decouples it.
+     new Thread(r, "Hec Channel " + getChannelId() + " internal resource closer").start();
   }
 
   @Override
@@ -268,6 +345,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     LOG.info("CLOSE channel  {}", this);
     if (!isEmpty()) {
+        LOG.trace("{} not empty. Quiescing. unacked count={}", this, unackedCount.get());
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
     }
@@ -275,16 +353,32 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  private synchronized void finishClose() {
+  private synchronized void closeExecutors() {
+    LOG.trace("finishClosing {}", this);
     this.closed = true;
     if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();
+      try{
+        if(!reaperScheduler.isTerminated() && !reaperScheduler.awaitTermination(10, TimeUnit.SECONDS)){
+            LOG.error("failed to terminate reaper scheduler.");
+        }
+      }catch(InterruptedException e){
+          LOG.error("AwaitTermination of reaper scheduler interrupted.");
+      }
     }
+ 
     if (null != deadChannelDetector) {
-      deadChannelDetector.close();
+      deadChannelDetector.close(); 
     }
-    if(null != ackPollExecutor){
+    if(null != ackPollExecutor && !ackPollExecutor.isTerminated()){
       ackPollExecutor.shutdownNow();
+      try{
+        if(!ackPollExecutor.isTerminated() && !ackPollExecutor.awaitTermination(10, TimeUnit.SECONDS)){
+            LOG.error("failed to terminate on-demand ack poller.");
+        }
+      }catch(InterruptedException e){
+          LOG.error("AwaitTermination of on-demnd ack poller interrupted.");
+      }
     }
   }
 
@@ -309,7 +403,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   boolean isAvailable() {
-    return !quiesced && !closed && health.isHealthy() && this.unackedCount.get() < full;
+    return !quiesced && !closed && health.isHealthy() && !isFull();
   }
 
   @Override
@@ -333,6 +427,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
     this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
   }
+
+    /**
+     * @return the sender
+     */
+    public HttpSender getSender() {
+        return sender;
+    }
 
   private class StickySessionEnforcer {
 
@@ -365,7 +466,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     public DeadChannelDetector(long intervalMS) {
       this.intervalMS = intervalMS;
-      deadChannelChecker.setLogger(sender.getConnection());
+      deadChannelChecker.setLogger(getSender().getConnection());
     }
 
     public synchronized void start() {
@@ -386,14 +487,18 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           //could happen, then the channel we replace this one with
           //can be removed before we resendInFlightEvents
           synchronized (loadBalancer) {
-            loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-            resendInFlightEvents();
+            try{
+                loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement               
+            }catch(InterruptedException ex){
+                LOG.warn("Unable to replace dead channel: {}", ex);
+            }
+            resendInFlightEvents(); 
             //don't force close until after events resent. 
             //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
             //and the events will never send.
             interalForceClose();
           }
-          if (sender.getConnection().isClosed()) {
+          if(getConnection().isClosed()) {
             loadBalancer.close();
           }
         } else { //channel was not 'frozen'
@@ -411,9 +516,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
-      long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
+        long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
               getAckTimeoutMS();
-      loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
+        loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
               HecChannel.this).forEach((e) -> {
                 //we must force messages to be sent because the connection could have been gracefully closed
                 //already, in which case sendRoundRobbin will just ignore the sent messages
@@ -421,12 +526,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                   try {
                       loadBalancer.sendRoundRobin(e, true);
                       break;
-                  } catch (HecConnectionTimeoutException ex) {
+                  } catch (HecConnectionTimeoutException|HecNoValidChannelsException ex) {
                      LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
                   }
                 }
               });
-      LOG.info("Resent Events from dead channel {}", HecChannel.this);
+        LOG.info("Resent Events from dead channel {}", HecChannel.this);
     }
 
   }

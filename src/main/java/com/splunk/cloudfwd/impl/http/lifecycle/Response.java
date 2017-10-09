@@ -49,7 +49,8 @@ public class Response extends LifecycleEvent {
       }
   }
 
-    public boolean isOk() {
+  @Override
+    public boolean isOK() {
         return httpCode == 200;
     }
 

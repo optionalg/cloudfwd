@@ -15,18 +15,12 @@
  */
 package com.splunk.cloudfwd.impl.http.httpascync;
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.LifecycleEvent;
 import static com.splunk.cloudfwd.PropertyKeys.PREFLIGHT_RETRIES;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
-import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.ServerErrors;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import org.apache.http.ConnectionClosedException;
 import org.slf4j.Logger;
 
 /**
@@ -37,14 +31,14 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
 
     private final Logger LOG;
     private final CountDownLatch latch = new CountDownLatch(1);
-    private HecServerErrorResponseException configProblems;
-    private Exception exception;
+    //private HecServerErrorResponseException errorResponse;
+    private RuntimeException exception;
     private int numTries;
     private boolean started;
 
 
-    public HttpCallbacksBlockingConfigCheck(HecIOManager m, ConnectionImpl c) {
-        super(m, c);
+    public HttpCallbacksBlockingConfigCheck(HecIOManager m) {
+        super(m);
         this.LOG = getConnection().getLogger(
                 HttpCallbacksBlockingConfigCheck.class.
                 getName());
@@ -53,24 +47,7 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
     public void setStarted(boolean b) {
         started = b;
     }
-
-    public static class TimeoutException extends Exception {
-
-        public TimeoutException(String message) {
-            super(message);
-        }
-
-    }
     
-    /**
-     *The config check is not associated with a channel, so we just return the name of this config checker. This is OK
-     * because getChannel is only used for logging the context of the activity.
-     * @return
-     */
-    @Override
-    protected Object getChannel(){
-      return getName(); 
-    }
     
     @Override
     protected String getName() {
@@ -78,45 +55,45 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
     }
 
     
-    public HecServerErrorResponseException getConfigProblems(long timeoutMs)
-            throws Exception {
+    public RuntimeException getException() {
         if(!started){
             throw new IllegalStateException("Attempt to getConfigProblems before started");
         }
-        if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS)) {
-            throw new TimeoutException("Timed out waiting for server response");
+        try {
+            latch.await() ;
+        } catch (InterruptedException ex) {
+            LOG.error("Interrupted waiting for config status on channel {}", getChannel());
         }
-        if(null != exception){ //an Excption was caught while waiting on latch
-            throw exception;
-        }
-        return configProblems;
+        return exception;
     }
 
-    private void handleResponse(int statusCode, String reply) throws IOException {
-        LifecycleEvent.Type type;
+    private void handleResponse(int statusCode, String reply) throws IOException, InterruptedException {
         switch (statusCode) {
             case 503:
+                LOG.warn("Server busy while attempting config check on {}, waiting 60 seconds to retry", getChannel());
+                Thread.sleep(60000);
             case 504:
                 retry();                
                 break;
             case 200:
-                LOG.info("HEC config check is good on {}", getBaseUrl());
+                LOG.info("HEC config check is good on {}", getChannel());
                 latch.countDown(); //getConfigProblems() can return now
                 break;
-            default: //various non-200 errors such as 400/ack-is-disabled
-                this.configProblems = ServerErrors.toErrorException(reply, statusCode, super.getBaseUrl());
+            default: //various non-200 errors such as 400/ack-is-disabled                
+                this.exception = ServerErrors.toErrorException(reply, statusCode, super.getBaseUrl());
+                LOG.warn("HEC config check not OK '{}' '{}'", getChannel(), exception.getMessage());
                 latch.countDown();
         }
-
     }
 
     private void retry() {
         if(++numTries <=getSettings().getMaxPreflightRetries()){
-            LOG.warn("retrying config checks checks on {}", getBaseUrl());
-            manager.configCheck(this); //retry
+            LOG.warn("retrying config checks checks on {}", getChannel());
+            getManager().configCheck(this); //retry
         }else{
             String msg = "Config Checks failed  " + PREFLIGHT_RETRIES+"="
-                    + getSettings().getMaxPreflightRetries() + " exceeded";
+                    + getSettings().getMaxPreflightRetries() + " exceeded on " + getChannel();
+            LOG.warn(msg);
             exception = new HecMaxRetriesException(msg);
             latch.countDown();
         }
@@ -126,33 +103,34 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
     public void completed(String reply, int code) {
         try {
             handleResponse(code, reply);
-        } catch (Exception ex) {
+        }catch (Exception ex) {
             LOG.error(
-                    "failed to unmarshal server response in pre-flight health check {}",
+                    "Caught exception  '{}' trying to handle response  '{}'",ex.getMessage(),
                     reply);
-            exception = ex;
+            exception = new RuntimeException(ex.getMessage(), ex);
             latch.countDown();
         }
     }
 
     @Override
     public void failed(Exception ex) {
+        /*
         if(ex instanceof ConnectionClosedException){
             LOG.debug("Caught ConnectionClosedException."
                     + " This is expected when a channel is closed while a config check is in process.");
             return;
-        }
-        LOG.error(
-                "HEC confg check via /ack endpoint failed with exception {} on {}",ex.getMessage(), getBaseUrl(),
-                ex);
-        exception = ex;
-        latch.countDown();
+        }*/
+        LOG.warn(
+                "HEC config check  failed with exception  '{}' on '{}'",ex.getMessage(), getChannel());
+        retry(); //failures such as
+        //exception = ex;
+        //latch.countDown();
     }
 
     @Override
     public void cancelled() {
         LOG.warn("HEC config check cancelled");
-        exception = new Exception(
+        exception = new RuntimeException(
                 "HEC config check cancelled");
         latch.countDown();
     }

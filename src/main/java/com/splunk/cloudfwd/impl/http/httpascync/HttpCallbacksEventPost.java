@@ -91,13 +91,12 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     @Override
     public void cancelled() {
-        HttpSender sender = manager.getSender();
         try {
             LOG.error("Event post cancelled on channel  {}, event batch {}",
-                    sender.getChannel(), events);
+                    getSender().getChannel(), events);
             Exception ex = new RuntimeException(
                     "HTTP post cancelled while posting events  " + events);
-            notifyFailed(EVENT_POST_FAILURE, events, ex);
+            notifyFailed(EVENT_POST_FAILED, events, ex);
             invokeFailedEventsCallback(events, ex);
         } catch (Exception e) {
             invokeFailedEventsCallback(events, e);
@@ -106,12 +105,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
 
     private void resend(Exception ex) {
-        HttpSender sender = manager.getSender();
         try {
             events.addSendException(ex);
             LOG.warn("resending events through load balancer {} on channel {}",
-                events, sender.getChannel());
-            sender.getConnection().getLoadBalancer().
+                events, getSender().getChannel());
+            getSender().getConnection().getLoadBalancer().
                 sendRoundRobin(events, true); //will callback failed if max retries exceeded
         } catch (Exception e) {
             invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
@@ -119,36 +117,32 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
 
     private void notifyFailedAndResend(Exception ex) {
-        HttpSender sender = manager.getSender();
         LOG.error("channel {} failed to post event batch {}",
-            sender.getChannel(), events);
-        notifyFailed(EVENT_POST_FAILURE, events, ex);
+            getChannel(), events);
+        notifyFailed(EVENT_POST_FAILED, events, ex);
         resend(ex);
     }
 
     private void notifyBusyAndResend(String reply, int code, LifecycleEvent.Type t) {
-        HttpSender sender = manager.getSender();
-        Response r = new Response(t,code, reply, sender.getBaseUrl());
+        Response r = new Response(t,code, reply, getSender().getBaseUrl());
         notify(r);
         resend(new HecServerBusyException(reply));
     }
       
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
         LOG.debug("{} Event post response: {}", getChannel(), resp);
-
-        HttpSender sender = manager.getSender();
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {
             events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
         } else if (epr.isAckDisabled()) {
-            throwConfigurationException(sender, httpCode, resp);
+            throwConfigurationException(getSender(), httpCode, resp);
         }
 
-        sender.getAcknowledgementTracker().handleEventPostResponse(epr, events);
+        getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
 
         // start polling for acks
-        manager.startAckPolling();
+        getManager().startAckPolling();
 
         notify(EVENT_POST_OK, 200, resp, events);
     }

@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -336,25 +337,20 @@ public class ConnectionSettings {
     protected List<URL> urlsStringToList(String urlsListAsString) {
         List<URL> urlList = new ArrayList<>();
         String[] splits = urlsListAsString.split(",");
-        for (String urlString : splits) {
+        URL url = null;
+        String urlString = null;
+        for (int i=0;i<splits.length;i++) {
+            urlString = splits[i];
             try {
-                URL url = new URL(urlString.trim());
-                if (url.getPort() == -1) {
-                    int port;
-                    if (url.getProtocol().equals("https")) {
-                        port = 443;
-                    } else {
-                        port = 80;
-                    }
-                    LOG.warn("No port provided for url: " + urlString.trim()
-                        + ". Defaulting to port " + port);
-                    url = new URL(url.getProtocol(), url.getHost(), port, url.getFile());
-                }
+                url =getUrlWithAutoAssignedPorts(urlString);
                 urlList.add(url);
             } catch (MalformedURLException ex) {
-                LOG.error(ex.getMessage(), ex);
-                throw new HecConnectionStateException(ex.getMessage(),
-                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+                String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage() ;
+                HecConnectionStateException e = new HecConnectionStateException(msg,
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
+                connection.getCallbacks().systemError(e);
+                LOG.error(e.getMessage(), e);
+                throw e;
             }
         }
         urlList.sort(Comparator.comparing(URL::toString));
@@ -381,7 +377,7 @@ public class ConnectionSettings {
      *
      * @param props
      */
-    public void setProperties(Properties props) {
+    public void setProperties(Properties props) throws UnknownHostException {
         Properties diffs = getDiff(props);
         boolean refreshChannels = false;
         boolean dnsLookup = false;
@@ -411,7 +407,7 @@ public class ConnectionSettings {
             }
         }
         if (refreshChannels) {
-            connection.getLoadBalancer().refreshChannels(dnsLookup);
+            connection.getLoadBalancer().refreshChannels(dnsLookup, true);
         }
     }
 
@@ -446,12 +442,12 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  public void setUrls(String urls) {
+  public void setUrls(String urls) throws UnknownHostException {
     if (!urlsStringToList(urls).equals(
             getUrls())) {
       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      connection.getLoadBalancer().refreshChannels(true);
+      connection.getLoadBalancer().refreshChannels(true, true);
     }
   }
 
@@ -483,6 +479,21 @@ public class ConnectionSettings {
                     HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
         }
 
+    }
+
+    private URL getUrlWithAutoAssignedPorts(String urlString) throws MalformedURLException {
+        URL url = new URL(urlString.trim());
+        if(!url.getProtocol().equals("https")){
+            throw new HecConnectionStateException("protocol '"+url.getProtocol()+ "' is not supported. Use 'https'.",
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+        }
+        if (url.getPort() == -1) {
+            int port = 443;
+            LOG.warn("No port provided for url: " + urlString.trim()
+                    + ". Defaulting to port " + port);
+            return new URL(url.getProtocol(), url.getHost(), port, url.getFile());
+        }
+        return url;
     }
 
 }

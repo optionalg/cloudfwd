@@ -17,7 +17,6 @@ package com.splunk.cloudfwd.impl.util;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -28,8 +27,12 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import com.splunk.cloudfwd.error.HecConnectionStateException;
 import org.slf4j.Logger;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+
+import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 
 /**
  *
@@ -44,9 +47,11 @@ public class IndexDiscoverer extends Observable {
   private Map<String, List<InetSocketAddress>> mappings;
   private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
   private boolean forceUrlMapToOne = false;
+  private ConnectionImpl connection;
 
   public IndexDiscoverer(PropertiesFileHelper f, ConnectionImpl c) {
     this.LOG = c.getLogger(IndexDiscoverer.class.getName());
+    this.connection = c;
     this.propertiesFileHelper = f;
     this.forceUrlMapToOne = this.propertiesFileHelper.isForcedUrlMapToSingleAddr();
   }
@@ -56,9 +61,9 @@ public class IndexDiscoverer extends Observable {
   }
 
   // avoids doing a DNS lookup if possible
-  public List<InetSocketAddress> getCachedAddrs() {
+  public List<InetSocketAddress> getCachedAddrs() throws UnknownHostException {
     if (mappings == null || mappings.isEmpty()) {
-      return getAddrs();
+      return getAddrs(true);
     }
     List<InetSocketAddress> addrs = new ArrayList<>();
     for (List<InetSocketAddress> list : mappings.values()) {
@@ -67,33 +72,18 @@ public class IndexDiscoverer extends Observable {
     return addrs;
   }
 
-  synchronized List<URL> getUrls() throws MalformedURLException {
-
-    List<URL> urls = new ArrayList<>();
-    if (propertiesFileHelper.isCloudInstance()) {
-      urls.add(propertiesFileHelper.getUrls().get(0));
-      return urls;
+  public synchronized List<InetSocketAddress> getAddrs(){
+    try {
+      return getAddrs(false);
+    } catch (UnknownHostException e) {
+      throw new RuntimeException(e); // should be unreachable
     }
-    for (InetSocketAddress addr : getAddrs()) {
-      try {
-          InetAddress a = addr.getAddress();
-          urls.add(
-                  new URL("https://" +
-                          addr.getAddress().getHostAddress() +
-                          ":" + addr.getPort()));
-      } catch (MalformedURLException ex) {
-        // log exception an re-throw
-        LOG.error(IndexDiscoverer.class.getName(), "getUrls", ex);
-        throw ex;
-      }
-    }
-    return urls;
   }
 
-  public synchronized List<InetSocketAddress> getAddrs(){
+  public synchronized List<InetSocketAddress> getAddrs(boolean throwIfBadUrl) throws UnknownHostException {
     // perform DNS lookup
     this.mappings = getInetAddressMap(propertiesFileHelper.getUrls(),
-            this.forceUrlMapToOne);
+            this.forceUrlMapToOne, throwIfBadUrl);
     List<InetSocketAddress> addrs = new ArrayList<>();
     for (String url : this.mappings.keySet()) {
       addrs.addAll(mappings.get(url));
@@ -143,6 +133,17 @@ public class IndexDiscoverer extends Observable {
     return asChanges(added, removed);
   }
 
+  final Map<String, List<InetSocketAddress>> getInetAddressMap(
+          List<URL> urls, boolean forceSingle) {
+    Map<String, List<InetSocketAddress>> mappings;
+    try {
+      mappings = getInetAddressMap(urls, forceSingle, false);
+    } catch (UnknownHostException e) {
+      throw new RuntimeException(e);// this should be unreachable
+    }
+    return mappings;
+  }
+
   /**
    * Given a set of URLs of for "protocol://host:port", map each URL string to a
    * set of InetAddresses. FOr instance, urls could be "https://localhost:8088"
@@ -152,9 +153,9 @@ public class IndexDiscoverer extends Observable {
    * @param urls
    * @return
    */
-  final static Map<String, List<InetSocketAddress>> getInetAddressMap(
-          List<URL> urls, boolean forceSingle) {
-    ConcurrentSkipListMap<String, List<InetSocketAddress>> mapping = new ConcurrentSkipListMap<>();
+  final Map<String, List<InetSocketAddress>> getInetAddressMap(
+          List<URL> urls, boolean forceSingle, boolean throwIfBadUrl) throws UnknownHostException {
+    ConcurrentSkipListMap<String, List<InetSocketAddress>> mappings = new ConcurrentSkipListMap<>();
     for (URL url : urls) {
       try {
         String host = url.getHost();
@@ -168,15 +169,30 @@ public class IndexDiscoverer extends Observable {
         for (InetAddress iaddr : addrs) {
           InetSocketAddress sockAddr = new InetSocketAddress(iaddr, url.
                   getPort());
-          mapping.computeIfAbsent(url.toString(), k -> {
+          mappings.computeIfAbsent(url.toString(), k -> {
             return new ArrayList<>();
           }).add(sockAddr);
         }
-      } catch (UnknownHostException ex) {
-        throw new RuntimeException("Unknown Host: " + url.getHost(), ex);
+      } catch (UnknownHostException e) {
+        String msg = "Unknown host. " + url;
+        HecConnectionStateException ex = new HecConnectionStateException(
+                msg, CONFIGURATION_EXCEPTION);
+        LOG.error(msg, ex);
+        connection.getCallbacks().systemError(ex);
+        if (throwIfBadUrl) {
+          throw ex;
+        }
       }
     }
-    return mapping;
+    if (mappings.isEmpty()) {
+      String msg = "Could not resolve any host names.";
+      HecConnectionStateException ex = new HecConnectionStateException(
+        msg, CONFIGURATION_EXCEPTION);
+      LOG.error(msg, ex);
+      connection.getCallbacks().systemError(ex);
+      throw ex;
+    }
+    return mappings;
   }
 
   List<Change> asChanges(List<InetSocketAddress> added,

@@ -17,12 +17,10 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_FAILED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.HEALTH_POLL_OK;
 import java.io.IOException;
 import org.slf4j.Logger;
-import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
 
 /**
  *
@@ -37,21 +35,16 @@ public class HttpCallbacksHealthPoll extends HttpCallbacksAbstract {
     }
 
     private void handleHealthPollResponse(int statusCode, String reply) throws IOException {
-        HttpSender sender = manager.getSender();
         LifecycleEvent.Type type = null;
         switch (statusCode) {
             case 200:
                 type = HEALTH_POLL_OK;
                 break;
             case 503:
-                type = INDEXER_BUSY;
-                warn(reply, statusCode);
-                break;
             case 504:
-                warn(reply, statusCode);
-                break;
             default:
-                type = error(reply, statusCode);
+                type = warn(reply, statusCode);
+                //type = error(reply, statusCode);
         }
         notify(type, statusCode, reply);
 
