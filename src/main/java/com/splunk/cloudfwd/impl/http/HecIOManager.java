@@ -28,7 +28,6 @@ import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import com.splunk.cloudfwd.impl.http.httpascync.LifecycleEventLatch;
 import java.io.Closeable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
