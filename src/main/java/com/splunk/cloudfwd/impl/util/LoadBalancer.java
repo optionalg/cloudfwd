@@ -48,7 +48,7 @@ public class LoadBalancer implements Closeable {
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
     private final CheckpointManager checkpointManager; //consolidate metrics across all channels
     private final IndexDiscoverer discoverer;
-    private final IndexDiscoveryScheduler discoveryScheduler;
+    //private final IndexDiscoveryScheduler discoveryScheduler;
     private int robin; //incremented (mod channels) to perform round robin
     private final ConnectionImpl connection;
     private boolean closed;
@@ -61,7 +61,7 @@ public class LoadBalancer implements Closeable {
                 getChannelsPerDestination();
         this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
         this.checkpointManager = new CheckpointManager(c);
-        this.discoveryScheduler = new IndexDiscoveryScheduler(c);
+        //this.discoveryScheduler = new IndexDiscoveryScheduler(c);
         createChannels(discoverer.getAddrs());
         //this.discoverer.addObserver(this);
     }
@@ -115,7 +115,9 @@ public class LoadBalancer implements Closeable {
 
     @Override
     public synchronized void close() {
-        this.discoveryScheduler.stop();
+//        if(null != discoveryScheduler){
+//            this.discoveryScheduler.stop();
+//        }
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
@@ -123,15 +125,13 @@ public class LoadBalancer implements Closeable {
     }
 
     public synchronized void closeNow() {
-        this.discoveryScheduler.stop();
-        //synchronized (channels) {
+        //this.discoveryScheduler.stop();
         for (HecChannel c : this.channels.values()) {
             c.forceClose();
         }
         for (HecChannel c : this.staleChannels.values()) {
             c.forceClose();
         }
-        //}
         this.closed = true;
     }
 

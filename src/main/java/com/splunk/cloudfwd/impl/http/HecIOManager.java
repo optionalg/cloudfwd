@@ -169,11 +169,11 @@ public class HecIOManager implements Closeable {
                     sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check             
                 }
             }else{
-                LOG.warn("Preflight timed out (5 minutes)  waiting for health endpoint to ", sender.getChannel());
+                LOG.warn("Preflight timed out (5 minutes)  waiting for ack endpoint check on {}", sender.getChannel());
                return; //FIXME -- can't we fail faster here? the latch will only be released on server response so we wait long time for failure
             }
         } catch (InterruptedException ex) {
-            LOG.warn("Interrupted on channel {} waiting for response from health endpoint.", sender.getChannel());
+            LOG.warn("Preflight interrupted on channel {} waiting for response from ack endpoint.", sender.getChannel());
             throw ex;
         }
 

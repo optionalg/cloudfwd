@@ -138,7 +138,6 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
                 }
                 alreadyNotOk.set(!e.isOK()); //record fact that we saw a not OK
                 //the update must occur in the synchronized block when we are latched on two requests   
-                LOG.debug("Updating health {}", e.isOK());
                 manager.getSender().getChannelMetrics().update(e);
                 return;
               }             

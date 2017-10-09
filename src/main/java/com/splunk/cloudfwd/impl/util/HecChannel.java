@@ -246,18 +246,23 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
-        if(++preflightCount <=getSettings().getMaxPreflightRetries() && ! closed && !quiesced){
-            LOG.warn("retrying channel preflight checks on {}", this);
-            try{
-                this.sender.getHecIOManager().preflightCheck(); //retry preflight check
-            }catch(InterruptedException ex){
-                LOG.debug("Preflight resend interrupted: {}", ex);
-            }
-        }else{
-            String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES+"="
+        if (++preflightCount <= getSettings().getMaxPreflightRetries() && !closed && !quiesced) {
+            //preflight resends must be decoupled
+            Runnable r = () -> {
+                LOG.warn("retrying channel preflight checks on {}",
+                        HecChannel.this);
+                try {
+                    this.sender.getHecIOManager().preflightCheck(); //retry preflight check};
+                } catch (InterruptedException ex) {
+                    LOG.debug("Preflight resend interrupted: {}", ex);
+                }
+            };
+            new Thread(r, "preflight retry " + preflightCount).start();
+        } else {
+            String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES + "="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
             LOG.warn(msg);
-            Exception ex= new HecMaxRetriesException(msg);
+            Exception ex = new HecMaxRetriesException(msg);
             updateHealth(new PreflightFailed(ex), wasAvailable);
         }
     }
