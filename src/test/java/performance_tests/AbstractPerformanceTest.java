@@ -56,7 +56,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
 
   @Override
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
+    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     long start = 0;
@@ -83,11 +83,11 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
         if (finish == 0L && windingDown) {
           finish = System.currentTimeMillis();
         }
-        if (!warmingUp && !windingDown) {
+//        if (!warmingUp && !windingDown) {
           ((ThroughputCalculatorCallback) super.callbacks).deferCountUntilAck(
                   event.getId(), sent);
           showThroughput(System.currentTimeMillis(), start);
-        }
+//        }
         LOG.trace("Sent event batch with id: " + event.getId() + " i=" + i + " and size " + sent);
       }
 
@@ -120,6 +120,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     LOG.info("Chars-per-second: " + nChars / sec);
     float mbps = ((float) nChars * 8) / (sec * 1000000f);
     LOG.info("mbps: " + mbps);
+    LOG.info("avg latency: {} sec", ((ThroughputCalculatorCallback) super.callbacks).getAvgLatency()/1000);
     if (mbps < 0) {
       throw new IllegalStateException("Negative throughput is not allowed");
     }
