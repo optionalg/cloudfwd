@@ -181,9 +181,7 @@
                     <!--forkedProcessTimeoutInSeconds>0</forkedProcessTimeoutInSeconds-->
                     <argLine>-Xmx4G</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
-                        <exclude>**/LargeBatchTest.java</exclude>
-                        <exclude>**/MultiThreadedVolumeTest.java</exclude>
-                        <exclude>**/OncePerSecondLongevityTest.java</exclude>
+                        <exclude>**/performance_tests/*.java</exclude>
                         <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
                     </excludes>
                 </configuration>
