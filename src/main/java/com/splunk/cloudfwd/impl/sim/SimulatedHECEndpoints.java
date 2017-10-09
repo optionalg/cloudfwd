@@ -50,7 +50,7 @@ public class SimulatedHECEndpoints implements Endpoints{
   }
 
   @Override
-  public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
     httpCallback.completed(
       new CannedOKHttpResponse(
         new CannedEntity("{\"acks\":[0:false]}")));

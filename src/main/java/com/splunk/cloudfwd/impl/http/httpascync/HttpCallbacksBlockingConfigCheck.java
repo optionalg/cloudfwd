@@ -89,7 +89,7 @@ public class HttpCallbacksBlockingConfigCheck extends HttpCallbacksAbstract {
     private void retry() {
         if(++numTries <=getSettings().getMaxPreflightRetries()){
             LOG.warn("retrying config checks checks on {}", getChannel());
-            manager.configCheck(this); //retry
+            getManager().configCheck(this); //retry
         }else{
             String msg = "Config Checks failed  " + PREFLIGHT_RETRIES+"="
                     + getSettings().getMaxPreflightRetries() + " exceeded on " + getChannel();

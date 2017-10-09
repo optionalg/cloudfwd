@@ -44,8 +44,11 @@ public class LifecycleEvent {
     
      //ELB state
      GATEWAY_TIMEOUT, //504 from ELB when it cuts off response due to timeout
-
-    // States without an EventBatch object
+    
+    //ACK_CHECK is distinguished from ACK_POLL. ACK_CHECK is simply hitting ack endpoint to see if acks o
+     //enabled. Because Health endpoint doesn't work for that purpose
+    ACK_CHECK_OK,  
+    ACK_CHECK_FAIL,   
     HEALTH_POLL_OK,
     INDEXER_BUSY,
     HEALTH_POLL_FAILED,
@@ -87,6 +90,15 @@ public class LifecycleEvent {
      */
     public Exception getException(){
         return null;
+    }
+    
+    /**
+     * returns true of the LifecycleEvent is not a failure or non-200 response. getException will always return null
+     * if isOK returns true.
+     * @return
+     */
+    public boolean isOK(){
+        return true;
     }
   
   

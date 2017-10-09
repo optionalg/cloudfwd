@@ -44,4 +44,9 @@ public class EventBatchFailure extends EventBatchRequest implements Failure{
     return exception;
   }
   
+  @Override
+  public boolean isOK(){
+      return false;
+  }
+  
 }

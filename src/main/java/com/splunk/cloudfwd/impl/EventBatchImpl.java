@@ -92,7 +92,7 @@ public class EventBatchImpl implements EventBatch {
   }
 
   @Override
-  public synchronized void add(Event event) {
+  public synchronized EventBatch add(Event event) {
     if (flushed) {
       throw new HecConnectionStateException("Can't add Event to flushed EventBatch",
               HecConnectionStateException.Type.ALREADY_SENT);
@@ -111,7 +111,7 @@ public class EventBatchImpl implements EventBatch {
     this.id = event.getId();
     this.length += event.length();
     this.events.add(event);
-
+    return this;
   }
 
   @Override

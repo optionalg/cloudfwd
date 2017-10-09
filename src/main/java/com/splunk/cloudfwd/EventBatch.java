@@ -27,7 +27,7 @@ import org.apache.http.HttpEntity;
  */
 public interface EventBatch extends HttpPostable {
 
-  void add(Event event);
+  EventBatch add(Event event);
 
   /**
    * @return the ackId

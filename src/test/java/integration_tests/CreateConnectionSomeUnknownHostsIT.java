@@ -34,8 +34,9 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
     @Override
     protected Properties getProps() {
         Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken("__singleline"));
-        p.put(PropertyKeys.COLLECTOR_URI, unknownHost + ",https://localhost:8088");
+        p.setProperty(PropertyKeys.TOKEN, createTestToken("__singleline"));
+        p.setProperty(PropertyKeys.COLLECTOR_URI, unknownHost + ",https://localhost:8088");
+        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
         return p;
     }
 

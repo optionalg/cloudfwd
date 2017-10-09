@@ -35,4 +35,9 @@ public class PreflightFailed extends LifecycleEvent implements Failure{
         return exception;
     }
     
+    @Override
+    public boolean isOK(){
+        return false;
+    }
+    
 }

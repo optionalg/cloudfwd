@@ -37,7 +37,7 @@ public class AbstractHealthCheckTest extends AbstractConnectionTest {
         try{
             this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
         }catch(Exception e){
-            Assert.assertTrue("Expected HecServerErrorResponseException",  e instanceof HecServerErrorResponseException);
+            Assert.assertTrue("Expected HecServerErrorResponseException but got "+ e,  e instanceof HecServerErrorResponseException);
             HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;
             Assert.assertTrue("HecServerErrorResponseException not "+problemType+", was  " + servRespExc.getLifecycleType(),
                     servRespExc.getLifecycleType()==problemType);

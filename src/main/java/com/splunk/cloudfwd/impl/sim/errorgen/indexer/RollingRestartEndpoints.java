@@ -120,7 +120,7 @@ public class RollingRestartEndpoints extends SimulatedHECEndpoints {
   }
 
   @Override
-  public void splunkCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
     if (indexId == downIndexer) {
       LOG.trace("splunkCheck, indexer down");
       ((HttpCallbacksAbstract)httpCallback).failed(new Exception("Unable to connect"));
