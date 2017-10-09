@@ -114,7 +114,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
         connection.sendBatch(events);
         connection.close();
         this.callbacks.await(10, TimeUnit.MINUTES); // wait for acks
-        if (this.callbacks.isFailed()) {
+        if (callbacks.isFailed()) {
             Assert.fail(
                 "There was a failure callback with exception class  " + callbacks.
                     getException() + " and message " + callbacks.getFailMsg());
