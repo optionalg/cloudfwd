@@ -1,7 +1,8 @@
+package integration_tests;
+
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import integration_tests.AbstractReconciliationTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
