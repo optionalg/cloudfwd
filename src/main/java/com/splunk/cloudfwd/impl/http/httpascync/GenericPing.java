@@ -81,9 +81,7 @@ public class GenericPing extends HttpCallbacksAbstract {
     @Override
     public void cancelled() {
         try {
-            Exception ex = new RuntimeException(
-                    "HTTP post cancelled while polling for '"+getName()+"' on channel " + getChannel());
-            notifyFailed(failType, ex);
+            LOG.warn("HTTP post cancelled while polling for '{}' on channel {}", getName(), getChannel());
         } catch (Exception ex) {
             error(ex);
         }

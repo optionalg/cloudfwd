@@ -108,9 +108,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
 
     @Override
     public void cancelled() {
-        LOG.warn("HEC pre-flight health check cancelled");
-        warn(new Exception(
-                "HEC pre-flight health check via /ack endpoint cancelled."));
+        LOG.debug("HEC pre-flight health check cancelled");
     }
 
 

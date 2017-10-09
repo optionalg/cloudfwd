@@ -64,7 +64,8 @@ public final class HttpSender implements Endpoints {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl; 
-
+  private HttpPost ackCheck;
+  private HttpGet healthEndpointCheck;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -157,6 +158,12 @@ public final class HttpSender implements Endpoints {
     if (null != simulatedEndpoints) {
       simulatedEndpoints.close();
     }
+    if(null != this.ackCheck){
+        ackCheck.abort();
+    }
+    if(null != this.healthEndpointCheck){
+        healthEndpointCheck.abort();
+    }    
     stopHttpClient();
   }
 
@@ -216,16 +223,24 @@ public final class HttpSender implements Endpoints {
       httpClient = null;
     }
   }
-
-  // set splunk specific http request headers
-  private void setHttpHeaders(HttpRequestBase r) {
-    r.setHeader(
-            AuthorizationHeaderTag,
-            String.format(AuthorizationHeaderScheme, token));
-    
+  
+  private void setHeaders(HttpRequestBase r){
+      setHttpHeadersNoChannel(r);
+      setHttpChannelHeaders(r);
+  }
+  
+    // set splunk specific http request headers
+  private void setHttpChannelHeaders(HttpRequestBase r) {
     r.setHeader(
             ChannelHeader,
             getChannel().getChannelId());
+  }
+
+  // set splunk specific http request headers
+  private void setHttpHeadersNoChannel(HttpRequestBase r) {
+    r.setHeader(
+            AuthorizationHeaderTag,
+            String.format(AuthorizationHeaderScheme, token));
     
     if (host != null) {
       r.setHeader(Host, host);
@@ -253,7 +268,7 @@ public final class HttpSender implements Endpoints {
       throw new NullPointerException();
     }
     final HttpPost httpPost = new HttpPost(endpointUrl);
-    setHttpHeaders(httpPost);
+    setHeaders(httpPost);
     
     httpPost.setEntity(events.getEntity());
     httpClient.execute(httpPost, httpCallback);
@@ -279,7 +294,7 @@ public final class HttpSender implements Endpoints {
         return;
       }
       final HttpPost httpPost = new HttpPost(ackUrl);
-      setHttpHeaders(httpPost);
+      setHeaders(httpPost);
       
       StringEntity entity;
       
@@ -297,6 +312,7 @@ public final class HttpSender implements Endpoints {
     }
   }
   
+  
   @Override
   public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
     // make sure http client or simulator is started
@@ -310,10 +326,10 @@ public final class HttpSender implements Endpoints {
     }
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
-    final HttpGet httpGet = new HttpGet(getUrl);
-    LOG.trace("Polling health {}", httpGet);
-    setHttpHeaders(httpGet);
-    httpClient.execute(httpGet, httpCallback);
+    healthEndpointCheck= new HttpGet(getUrl);
+    LOG.trace("Polling health {}", healthEndpointCheck);
+    setHeaders(healthEndpointCheck);
+    httpClient.execute(healthEndpointCheck, httpCallback);
   }
 
   @Override
@@ -326,20 +342,21 @@ public final class HttpSender implements Endpoints {
       return;
     }
     Set<Long> dummyAckId = new HashSet<>();
-    dummyAckId.add(0L);
+    dummyAckId.add(10000L);
     AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);
 
     try {
-      final HttpPost httpPost = new HttpPost(ackUrl);
-      setHttpHeaders(httpPost);
+      this.ackCheck = new HttpPost(ackUrl);
+      setHeaders(ackCheck); //do NOT specify a channel else we could actually poll for a real ack
 
       StringEntity entity;
 
       String req = dummyAckReq.toString();
+      LOG.debug(req);
       entity = new StringEntity(req);
       entity.setContentType(HttpContentType);
-      httpPost.setEntity(entity);
-      httpClient.execute(httpPost, httpCallback);
+      ackCheck.setEntity(entity);
+      httpClient.execute(ackCheck, httpCallback);
     } catch (Exception ex) {
       LOG.error(ex.getMessage());
       throw new RuntimeException(ex.getMessage(), ex);

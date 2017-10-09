@@ -123,16 +123,22 @@ public class HecIOManager implements Closeable {
     public void pollHealth() {
         LOG.trace("polling health on {}", sender.getChannel());
         CountDownLatch latch = new CountDownLatch(2);
-        HttpCallbacksAbstract cb1 = new HttpCallbacksHealthPoll(this);
+        //HttpCallbacksAbstract cb1 = new HttpCallbacksHealthPoll(this);
+        
+         HttpCallbacksAbstract cb1 = new GenericPing(this,
+                LifecycleEvent.Type.HEALTH_POLL_OK,
+                LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                "'Health Endpoint Check'");
+        
         HttpCallbacksAbstract cb2 = new GenericPing(this,
-                LifecycleEvent.Type.ACK_POLL_OK,
-                LifecycleEvent.Type.ACK_POLL_FAILURE,
-                "Ack Check");
+                LifecycleEvent.Type.ACK_CHECK_OK,
+                LifecycleEvent.Type.ACK_CHECK_FAIL,
+                "'Ack Endpoint Check'");
         //both must wait to notify of a healthy result until BOTH healthy results returned.
         cb1.onOkWait(latch);
         cb2.onOkWait(latch);
         sender.pollHealth(cb1);
-        sender.pollAcks(this, cb2);
+        sender.ackEndpointCheck(cb2);
     }
 
 
