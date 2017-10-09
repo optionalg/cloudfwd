@@ -23,12 +23,11 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.httpascync.CoordinatedResponseHandler;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksGeneric;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
 import com.splunk.cloudfwd.impl.http.httpascync.LifecycleEventLatch;
 import java.io.Closeable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -155,7 +154,9 @@ public class HecIOManager implements Closeable {
 
     public void preflightCheck() throws InterruptedException {
         LOG.trace("preflight checks on {}", sender.getChannel());
-        HttpCallbacksAbstract cb1 = new HttpCallbacksPreflightHealthCheck(this, "preflight_ack_endpoint_check");
+        AtomicBoolean responseStateTracker = new AtomicBoolean(false);
+        AtomicInteger respCount = new AtomicInteger(0);
+        CoordinatedResponseHandler cb1 = new CoordinatedResponseHandler(this, "preflight_ack_endpoint_check", respCount, responseStateTracker);
         HttpCallbacksAbstract cb2 = new HttpCallbacksPreflightHealthCheck(this, "preflight_health_endpoint_check");
         LifecycleEventLatch latch = new LifecycleEventLatch((1));
         trackTwoResponses(cb1, cb2);
@@ -184,12 +185,6 @@ public class HecIOManager implements Closeable {
         cb1.setLatch(latch);
         cb2.setLatch(latch);
     }    
-    
-     public void configCheck(HttpCallbacksBlockingConfigCheck cb ) {
-        LOG.trace("config check on {}", sender.getBaseUrl());
-        sender.ackEndpointCheck(cb);
-        cb.setStarted(true);
-    }
 
     /**
      * @return the sender
