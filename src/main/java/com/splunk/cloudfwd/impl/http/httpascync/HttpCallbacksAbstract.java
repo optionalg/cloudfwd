@@ -31,8 +31,6 @@ import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -48,10 +46,12 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
   private final Logger LOG;
   private final HecIOManager manager;
+  private final String name;
   
-  HttpCallbacksAbstract(HecIOManager m) {
+  HttpCallbacksAbstract(HecIOManager m, String name) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
     this.manager = m;
+    this.name = name;
   }
 
 
@@ -73,6 +73,18 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
   }
+  
+    /**
+     * Cancelled is invoked when we abort HttpRequest in process of closing a channel. It is not indicative a problem.
+     */
+    @Override
+    public void cancelled() {
+        try {
+            LOG.trace("HTTP post cancelled while polling for '{}' on channel {}", getName(), getChannel());
+        } catch (Exception ex) {
+            error(ex);
+        }
+    }  
 
   public abstract void completed(String reply, int code);
   
@@ -99,7 +111,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     manager.getSender().getChannelMetrics().update(e);
   }
   
-  protected ConnectionImpl getConnection(){
+  public ConnectionImpl getConnection(){
     return manager.getSender().getConnection();
   }
   
@@ -126,7 +138,9 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
      * Subclass should return the name indicative of it's purpose, such as "Health Poll" or "Event Post"
      * @return
      */
-    protected abstract String getName();
+    protected String getName(){
+        return name;
+    }
 
     protected LifecycleEvent.Type error(String reply,
             int statusCode) throws IOException {

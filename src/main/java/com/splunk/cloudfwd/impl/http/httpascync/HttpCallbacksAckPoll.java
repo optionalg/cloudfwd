@@ -33,7 +33,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     private final Logger LOG;
 
     public HttpCallbacksAckPoll(final HecIOManager m) {
-        super(m);
+        super(m, "ack_poll");
         this.LOG = getConnection().getLogger(HttpCallbacksAckPoll.class.getName());
     }
 
@@ -75,31 +75,12 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         }
     }
 
-    @Override
-    public void cancelled() {
-        try {
-            LOG.error("Ack poll  cancelled on channel  {}",getChannel());   
-             Exception ex = new RuntimeException(
-                    "HTTP post cancelled while polling for acks on channel " + getChannel());
-            notifyFailed(LifecycleEvent.Type.ACK_POLL_FAILURE, ex);
-        } catch (Exception e) {
-            error(e);
-        }finally{
-            getManager().setAckPollInProgress(false);
-        }
-    }
 
     private void consumeAckPollResponse(String resp) throws IOException {
         AckPollResponseValueObject ackPollResp = mapper.
                 readValue(resp, AckPollResponseValueObject.class);
         getManager().getAcknowledgementTracker().handleAckPollResponse(
                 ackPollResp);
-    }
-        
-
-    @Override
-    protected String getName() {
-        return "Ack Poll";
-    }
+    }       
 
 }
