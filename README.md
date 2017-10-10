@@ -72,7 +72,7 @@ https://splunk.github.io/cloudfwd/apidocs/constant-values.html
 ## Examples
 
 ### Super Simple Example
-[SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/SuperSimpleExample.java)
+[SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/mock_tests/SuperSimpleExample.java)
 
 ### Steps
 1. run ```mvn exec:exec```
