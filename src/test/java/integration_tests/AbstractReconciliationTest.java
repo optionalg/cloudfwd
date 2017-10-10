@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractReconciliationTest extends AbstractConnectionTest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractReconciliationTest.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(AbstractReconciliationTest.class.getName());
 
   /* ************ CONFIGURABLE ************ */
   // change these settings based on the Splunk search head you want the test to search on:
@@ -351,6 +351,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   protected void verifyResults(List<Event> sentEvents, Set<String> searchResults) {
+    LOG.info("Verifying results...");
     Set<String> searchResultsCopy = new HashSet<>(searchResults); // don't modify the original set of results
     if (sentEvents.size() > 100) {
       throw new RuntimeException(
@@ -393,6 +394,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       Assert.fail(
               "Search returned " + searchResultsCopy.size() + " more events than were sent.");
     }
+    LOG.info("Results OK. Splunk search returned all expected events.");
   }
 
   /*
