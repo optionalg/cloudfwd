@@ -28,17 +28,15 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
 
     private Logger LOG;
     private final LifecycleEvent.Type okType;
-    private final String name;
     private final LifecycleEvent.Type failType;
 
     public HttpCallbacksGeneric(HecIOManager m, LifecycleEvent.Type okType,
             LifecycleEvent.Type failType, String name) {
-        super(m);
+        super(m, name);
         this.okType = okType;
         this.failType = failType;
         this.LOG = m.getSender().getConnection().getLogger(HttpCallbacksGeneric.class.
                 getName());
-        this.name = name;
     }
 
     @Override
@@ -62,26 +60,12 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
     }
 
     @Override
-    protected String getName() {
-        return name;
-    }
-
-    @Override
     public void failed(Exception ex) {
         try {
-            LOG.error("Channel {} failed to' {}' because {}",
+            LOG.warn("Channel {} failed to'{}' because {}",
                     getChannel(), getName(), ex.getMessage());
             notifyFailed(failType, ex);
         } catch (Exception e) {
-            error(ex);
-        }
-    }
-
-    @Override
-    public void cancelled() {
-        try {
-            LOG.warn("HTTP post cancelled while polling for '{}' on channel {}", getName(), getChannel());
-        } catch (Exception ex) {
             error(ex);
         }
     }

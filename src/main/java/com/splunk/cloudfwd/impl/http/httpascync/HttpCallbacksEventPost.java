@@ -55,7 +55,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {
-        super(m);
+        super(m, "event_post");
         this.events = events;
         LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }
@@ -153,11 +153,6 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         throw new HecConnectionStateException(
                 "Event POST responded without ackId (acknowledgements are disabled on HEC endpoint).",
                 CONFIGURATION_EXCEPTION);
-    }
-
-    @Override
-    protected String getName() {
-        return "Event Post";
     }
 
 } //end HecHttpCallbacks

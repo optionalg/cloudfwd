@@ -31,9 +31,6 @@ import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -49,33 +46,14 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
   private final Logger LOG;
   private final HecIOManager manager;
+  private final String name;
   
-  //in the case of health polling, we hit both the ack and the health endpoint
- private AtomicBoolean alreadyNotOk; //tells us if one of the two responses has already come back NOT OK
- private boolean expectingTwoResponses; //true only when we are doing health polling which hits ack and health endpoint
- private AtomicInteger responseCount;
- //Due to ELB session cookies, preflight checks, which are the first requests sent on a channel, must be serialized.
- //This latch enables the serialization of requests.
- private LifecycleEventLatch latch; //provided by external source who wants to serialize two *requests*
-  
-  HttpCallbacksAbstract(HecIOManager m) {
+  HttpCallbacksAbstract(HecIOManager m, String name) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
     this.manager = m;
+    this.name = name;
   }
-  
-    /**
-     * Causes notify() on OK to await the latch. Used to syn
-     * @param respCount
-     * @see 
-     */
-    public void setTwoResponseStateTracker(AtomicBoolean alreadyNotOk, AtomicInteger respCount){
-        this.alreadyNotOk = alreadyNotOk;
-        this.expectingTwoResponses = true;
-        this.responseCount = respCount;
-    }
-    public void setLatch(LifecycleEventLatch latch) {
-        this.latch = latch;
-    }
+
 
   @Override
   final public void completed(HttpResponse response) {
@@ -95,6 +73,18 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
   }
+  
+    /**
+     * Cancelled is invoked when we abort HttpRequest in process of closing a channel. It is not indicative a problem.
+     */
+    @Override
+    public void cancelled() {
+        try {
+            LOG.trace("HTTP post cancelled while polling for '{}' on channel {}", getName(), getChannel());
+        } catch (Exception ex) {
+            error(ex);
+        }
+    }  
 
   public abstract void completed(String reply, int code);
   
@@ -118,35 +108,10 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   
   //all flavors of notifyXXX will eventually call down to this method
   protected void notify(LifecycleEvent e){
-      if(expectingTwoResponses ){ //health polling hits ack and health endpoints
-              synchronized(alreadyNotOk){
-                if(null != latch){
-                    latch.countDown(e);//got a response or failed. Preflight can now look at e and decide how to proceed
-                }
-                responseCount.incrementAndGet();
-                if(alreadyNotOk.get()){
-                    if(e.isOK()){
-                        LOG.debug("Ignoring OK response from '{}' because already got not ok from other endpoint on '{}'.", 
-                                getName(), getChannel());
-                        return; //must not update status to OK, when the other of two expected response isn't NOT OK.
-                    }
-                }
-                if(responseCount.get()==1 && e.isOK()){
-                        LOG.debug("Ignoring FIRST OK response from '{}' because waiting for other resp on '{}'.", 
-                                getName(), getChannel());                    
-                    return; //discard the first response if it is OK. We have to wait for the 2nd, which will be authoratitive
-                }
-                alreadyNotOk.set(!e.isOK()); //record fact that we saw a not OK
-                //the update must occur in the synchronized block when we are latched on two requests   
-                manager.getSender().getChannelMetrics().update(e);
-                return;
-              }             
-      }else{ //normal condition where we don't depend on any other response
-        manager.getSender().getChannelMetrics().update(e);
-      }
+    manager.getSender().getChannelMetrics().update(e);
   }
   
-  protected ConnectionImpl getConnection(){
+  public ConnectionImpl getConnection(){
     return manager.getSender().getConnection();
   }
   
@@ -173,7 +138,9 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
      * Subclass should return the name indicative of it's purpose, such as "Health Poll" or "Event Post"
      * @return
      */
-    protected abstract String getName();
+    protected String getName(){
+        return name;
+    }
 
     protected LifecycleEvent.Type error(String reply,
             int statusCode) throws IOException {

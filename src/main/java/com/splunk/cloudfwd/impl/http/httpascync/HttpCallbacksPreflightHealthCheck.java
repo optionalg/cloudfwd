@@ -22,48 +22,49 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_FAILED;
 import java.io.IOException;
 import org.slf4j.Logger;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_OK;
-import org.apache.http.ConnectionClosedException;
 
 /**
-  Code    HTTP status	HTTP status code	Status message
-    0	200	OK                                     Success                
-    1	403	Forbidden                          Token disabled
-    2	401	Unauthorized                     Token is required
-    3	401	Unauthorized                     Invalid authorization
-    4	403	Forbidden                          Invalid token
-    5	400	Bad Request                       No data
-    6	400	Bad Request                       Invalid data format
-    7	400	Bad Request                       Incorrect index
-    8	500	Internal Error	  Internal server error
-    9	503	Service Unavailable	  Server is busy
-    10	400	Bad Request                       Data channel is missing
-    11	400	Bad Request                       Invalid data channel
-    12	400	Bad Request                       Event field is required
-    13	400	Bad Request	                     Event field cannot be blank
-    14	400	Bad Request	                     ACK is disabled 
+ * Code HTTP status	HTTP status code	Status message 0	200	OK Success 1	403
+ * Forbidden Token disabled 2	401	Unauthorized Token is required 3	401
+ * Unauthorized Invalid authorization 4	403	Forbidden Invalid token 5	400	Bad
+ * Request No data 6	400	Bad Request Invalid data format 7	400	Bad Request
+ * Incorrect index 8	500	Internal Error	Internal server error 9	503	Service
+ * Unavailable	Server is busy 10	400	Bad Request Data channel is missing 11	400
+ * Bad Request Invalid data channel 12	400	Bad Request Event field is required
+ * 13	400	Bad Request	Event field cannot be blank 14	400	Bad Request	ACK is
+ * disabled
+ *
  * @author ghendrey
  */
-public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
+public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract implements CoordinatedResponseHandler {
+
     private final Logger LOG;
-    private final String name;
+    private TwoResponseCoordinator coordinator;
 
     public HttpCallbacksPreflightHealthCheck(HecIOManager m, String name) {
-        super(m);
-        this.name = name;
-        this.LOG =getConnection().getLogger(HttpCallbacksPreflightHealthCheck.class.
+        super(m, name);
+        this.LOG = getConnection().getLogger(
+                HttpCallbacksPreflightHealthCheck.class.
                 getName());
+    }
+
+    @Override
+    protected void notify(LifecycleEvent e) {
+        coordinator.conditionallyUpate(e, getSender().getChannelMetrics());
     }
 
     private void handleResponse(int statusCode, String reply) throws IOException, InterruptedException {
         LifecycleEvent.Type type;
-        switch (statusCode) {            
-            case 503:  
+        switch (statusCode) {
+            case 503:
                 warn(reply, statusCode);
-                LOG.warn("Server busy while attempting {} on {}, waiting 60 seconds to retry", getName(), getChannel());
+                LOG.warn(
+                        "Server busy while attempting {} on {}, waiting 60 seconds to retry",
+                        getName(), getChannel());
                 Thread.sleep(60000);
                 type = PREFLIGHT_BUSY;
                 break;
-            case 504:  
+            case 504:
                 warn(reply, statusCode);
                 type = LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT;
                 break;
@@ -76,8 +77,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
         }
         notify(type, statusCode, reply);
     }
-    
-    
+
     @Override
     public void completed(String reply, int code) {
         try {
@@ -89,8 +89,6 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
             error(ex);
         }
     }
-    
-
 
     @Override
     public void failed(Exception ex) {
@@ -100,20 +98,15 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract {
 //            return;
 //        }
         LOG.warn(
-                "{} failed with exception {} on {}",getName(), ex.getMessage(), getChannel());
+                "{} failed with exception {} on {}", getName(), ex.getMessage(),
+                getChannel());
         notifyFailed(PREFLIGHT_FAILED, ex);
         // TODO: retry if this fails.. otherwise channel just sits around until it is reaped
     }
 
     @Override
-    public void cancelled() {
-        LOG.debug("{} cancelled", getName());
-    }
-
-
-    @Override
-    protected String getName() {
-        return name;
+    public void setCoordinator(TwoResponseCoordinator coordinator) {
+        this.coordinator = coordinator;
     }
 
 }

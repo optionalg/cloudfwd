@@ -23,14 +23,10 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksGeneric;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksBlockingConfigCheck;
-import com.splunk.cloudfwd.impl.http.httpascync.LifecycleEventLatch;
+import com.splunk.cloudfwd.impl.http.httpascync.GenericCoordinatedResponseHandler;
+import com.splunk.cloudfwd.impl.http.httpascync.TwoResponseCoordinator;
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,14 +91,16 @@ public class HecIOManager implements Closeable {
     public void startHealthPolling() {
         if (!healthPollController.isStarted()) {
             healthPollController.start(
-                    this::pollHealth, sender.getConnection().getPropertiesFileHelper().
+                    this::pollHealth, sender.getConnection().
+                    getPropertiesFileHelper().
                     getHealthPollMS(), TimeUnit.MILLISECONDS);
         }
     }
 
     public void postEvents(EventBatchImpl events) {
         this.ackTracker.preEventPost(events);
-        FutureCallback<HttpResponse> cb = new HttpCallbacksEventPost(this, events);
+        FutureCallback<HttpResponse> cb = new HttpCallbacksEventPost(this,
+                events);
         sender.postEvents(events, cb);
     }
 
@@ -123,71 +121,50 @@ public class HecIOManager implements Closeable {
 
     public void pollHealth() {
         LOG.trace("health checks on {}", sender.getChannel());
-        
-         HttpCallbacksAbstract cb1 = new HttpCallbacksGeneric(this,
+
+        GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                this,
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
                 "health_poll_health_endpoint_check");
-        
-        HttpCallbacksAbstract cb2 = new HttpCallbacksGeneric(this,
+
+        GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
+                this,
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
                 "health_poll_ack_endpoint_check");
-        
-        trackTwoResponses(cb1, cb2);
+
+        TwoResponseCoordinator.createNonSerializing(cb1, cb2);
         sender.pollHealth(cb1);
         sender.ackEndpointCheck(cb2);
     }
 
-    //the two callback handlers must be made aware of each other's responses so that an OK response by one does not "hide"
-    //a NOT OK response by the other.
-    private void trackTwoResponses(HttpCallbacksAbstract cb1,
-            HttpCallbacksAbstract cb2) {
-        //A state tracker insures that if one of the two responses is NOT OK then
-        //the HecChannel will get updated NOT OK, and not hidden by following OK response
-        AtomicBoolean responseStateTracker = new AtomicBoolean(false);
-        AtomicInteger respCount = new AtomicInteger(0);
-        cb1.setTwoResponseStateTracker(responseStateTracker, respCount);
-        cb2.setTwoResponseStateTracker(responseStateTracker, respCount);
-    }
-
-
     public void preflightCheck() throws InterruptedException {
         LOG.trace("preflight checks on {}", sender.getChannel());
-        HttpCallbacksAbstract cb1 = new HttpCallbacksPreflightHealthCheck(this, "preflight_ack_endpoint_check");
-        HttpCallbacksAbstract cb2 = new HttpCallbacksPreflightHealthCheck(this, "preflight_health_endpoint_check");
-        LifecycleEventLatch latch = new LifecycleEventLatch((1));
-        trackTwoResponses(cb1, cb2);
-        serializeRequests(latch, cb1, cb2);
+        HttpCallbacksPreflightHealthCheck cb1 = new HttpCallbacksPreflightHealthCheck(
+                this, "preflight_ack_endpoint_check");
+        HttpCallbacksPreflightHealthCheck cb2 = new HttpCallbacksPreflightHealthCheck(
+                this, "preflight_health_endpoint_check");
+        TwoResponseCoordinator coordinator = TwoResponseCoordinator.
+                createSerializing(cb1, cb2);
         sender.ackEndpointCheck(cb1);
         try {
-            //TODO FIXME - for sure we need to also have timeouts at the HTTP layer. If network is down this is going
-            //to block the full five minutes. Furthermore, preflight retries will occur N times and the blocking will stack!
-            if(latch.await(5, TimeUnit.MINUTES)){ //wait for ackcheck response before hitting ack endpoint  
-                if(latch.getLifecycleEvent().isOK()){
-                    sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check             
-                }
-            }else{
-                LOG.warn("Preflight timed out (5 minutes)  waiting for ack endpoint check on {}", sender.getChannel());
-               return; //FIXME -- can't we fail faster here? the latch will only be released on server response so we wait long time for failure
+            LifecycleEvent first;
+            if (null != (first = coordinator.awaitFirstResponse()) && first.isOK()) {
+                sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check             
+            } else {
+                LOG.warn(
+                        "Preflight timed out (5 minutes)  waiting for ack endpoint check on {}",
+                        sender.getChannel());
+                return; //FIXME -- can't we fail faster here? the latch will only be released on server response so we wait long time for failure
             }
         } catch (InterruptedException ex) {
-            LOG.warn("Preflight interrupted on channel {} waiting for response from ack endpoint.", sender.getChannel());
+            LOG.warn(
+                    "Preflight interrupted on channel {} waiting for response from ack endpoint.",
+                    sender.getChannel());
             throw ex;
         }
 
-    }
-    
-    private void serializeRequests(LifecycleEventLatch latch, HttpCallbacksAbstract cb1,
-            HttpCallbacksAbstract cb2) {
-        cb1.setLatch(latch);
-        cb2.setLatch(latch);
-    }    
-    
-     public void configCheck(HttpCallbacksBlockingConfigCheck cb ) {
-        LOG.trace("config check on {}", sender.getBaseUrl());
-        sender.ackEndpointCheck(cb);
-        cb.setStarted(true);
     }
 
     /**
