@@ -70,7 +70,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         props.put(UNRESPONSIVE_MS,
                 "-1");//disable dead channel detection
         props.put(PropertyKeys.EVENT_BATCH_SIZE, 0);
-
+        //props.put(PropertyKeys.MAX_TOTAL_CHANNELS, 1);
         return props;
     }
 

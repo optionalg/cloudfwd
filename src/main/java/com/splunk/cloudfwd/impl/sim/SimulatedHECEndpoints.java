@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.sim;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.Endpoints;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
+import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
@@ -25,80 +26,94 @@ import org.apache.http.concurrent.FutureCallback;
  *
  * @author ghendrey
  */
-public class SimulatedHECEndpoints implements Endpoints{
-  protected AcknowledgementEndpoint ackEndpoint;
-  protected EventEndpoint eventEndpoint;
-  protected HealthEndpoint healthEndpoint;
-  protected boolean started;
-  
+public class SimulatedHECEndpoints implements Endpoints {
 
-  @Override
-  public void postEvents(HttpPostable events,
-          FutureCallback<HttpResponse> httpCallback) {
-    eventEndpoint.post(events, httpCallback);
-  }
+    protected AcknowledgementEndpoint ackEndpoint;
+    protected EventEndpoint eventEndpoint;
+    protected HealthEndpoint healthEndpoint;
+    protected boolean started;
 
-  @Override
-  public void pollAcks(HecIOManager ackMgr,
-          FutureCallback<HttpResponse> httpCallback) {
-    ackEndpoint.pollAcks(ackMgr, httpCallback);
-  }
-
-  @Override
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
-    this.healthEndpoint.pollHealth(httpCallback);
-  }
-
-  @Override
-  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
-    httpCallback.completed(
-      new CannedOKHttpResponse(
-        new CannedEntity("{\"acks\":[0:false]}")));
-  }
-
-  @Override
-  public final void close()  {
-    if(null != ackEndpoint){
-      ackEndpoint.close();
+    @Override
+    public void postEvents(HttpPostable events,
+            FutureCallback<HttpResponse> httpCallback) {
+        eventEndpoint.post(events, httpCallback);
     }
-    if(null != eventEndpoint){
-    eventEndpoint.close();
-    }
-    if(null != healthEndpoint){
-       healthEndpoint.close();
-    }
-  }
 
-  @Override
-  public synchronized void start() {
-    if (started){
-      return;
+    @Override
+    public void pollAcks(HecIOManager ackMgr,
+            FutureCallback<HttpResponse> httpCallback) {
+        ackEndpoint.pollAcks(ackMgr, httpCallback);
     }
-    this.ackEndpoint = createAckEndpoint();
-    if(null != ackEndpoint){
-      ackEndpoint.start();
-    }
-    this.eventEndpoint = createEventEndpoint();
-    if(null != eventEndpoint){
-    eventEndpoint.start();
-    }
-    this.healthEndpoint = createHealthEndpoint();
-    if(null != healthEndpoint){
-       healthEndpoint.start();
-    }
-    started = true;
-  }
 
-  protected AcknowledgementEndpoint createAckEndpoint() {
-    return new AckEndpoint();
-  }
+    @Override
+    public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
+        this.healthEndpoint.pollHealth(httpCallback);
+    }
 
-  protected EventEndpoint createEventEndpoint() {
-    return new EventEndpoint(ackEndpoint);
-  }
+    @Override
+    public void checkRawEndpoint(
+            FutureCallback<HttpResponse> httpCallback) {
+        httpCallback.completed(new HecErrorResponse(
+                new TokenEnabledEntity(), new BadRequestStatusLine()
+        ));
+    }
 
-  protected HealthEndpoint createHealthEndpoint() {
-    return new HealthEndpoint();
-  }
-  
+    private static class TokenEnabledEntity extends CannedEntity {
+        public TokenEnabledEntity() {
+            super("{\"text\":\"No data\",\"code\":5}");
+        }
+    }
+
+    @Override
+    public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
+        httpCallback.completed(
+                new CannedOKHttpResponse(
+                        new CannedEntity("{\"acks\":[0:false]}")));
+    }
+
+    @Override
+    public final void close() {
+        if (null != ackEndpoint) {
+            ackEndpoint.close();
+        }
+        if (null != eventEndpoint) {
+            eventEndpoint.close();
+        }
+        if (null != healthEndpoint) {
+            healthEndpoint.close();
+        }
+    }
+
+    @Override
+    public synchronized void start() {
+        if (started) {
+            return;
+        }
+        this.ackEndpoint = createAckEndpoint();
+        if (null != ackEndpoint) {
+            ackEndpoint.start();
+        }
+        this.eventEndpoint = createEventEndpoint();
+        if (null != eventEndpoint) {
+            eventEndpoint.start();
+        }
+        this.healthEndpoint = createHealthEndpoint();
+        if (null != healthEndpoint) {
+            healthEndpoint.start();
+        }
+        started = true;
+    }
+
+    protected AcknowledgementEndpoint createAckEndpoint() {
+        return new AckEndpoint();
+    }
+
+    protected EventEndpoint createEventEndpoint() {
+        return new EventEndpoint(ackEndpoint);
+    }
+
+    protected HealthEndpoint createHealthEndpoint() {
+        return new HealthEndpoint();
+    }
+
 }

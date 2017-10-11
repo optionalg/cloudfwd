@@ -29,12 +29,12 @@ public class AckDisabledEndpoints extends SimulatedHECEndpoints {
     }
 
     @Override
-    public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+    public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
         throw new IllegalStateException("We should fail before trying to poll for health.");
     }
 
     @Override
-    public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
+    public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
         httpCallback.completed(new HecErrorResponse(
                 new AckDisabledEntity(), new BadRequestStatusLine()
         ));

@@ -17,7 +17,6 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,10 +30,10 @@ public class ResponseCoordinator {
 
     private Logger LOG;
     //in the case of health polling, we hit both the ack and the health endpoint
-    private AtomicBoolean alreadyNotOk = new AtomicBoolean(false); //tells us if one of the two responses has already come back NOT OK
-    private AtomicInteger responseCount = new AtomicInteger(0); //count how many responses/fails we hsve processed
-    private int numExpectedResponses;
-    private LifecycleEventLatch[] latches ; //provide the ability to wait on any response in the serialized sequence
+    private final AtomicBoolean alreadyNotOk = new AtomicBoolean(false); //tells us if one of the two responses has already come back NOT OK
+    private final AtomicInteger responseCount = new AtomicInteger(0); //count how many responses/fails we hsve processed
+    private final int numExpectedResponses;
+    private final LifecycleEventLatch[] latches ; //provide the ability to wait on any response in the serialized sequence
 
     private ResponseCoordinator(int numExpectedResponses) {
         this.numExpectedResponses = numExpectedResponses;
@@ -108,7 +107,7 @@ h1's response
         boolean ignore = !isLast() && e.isOK();
         if (ignore) {
             LOG.debug(
-                    "Ignoring '{}' (must await second of 2 responses).", e);
+                    "Ignoring OK response '{}' (This is not the last of {}).", e, latches.length);
         }
         return ignore;
     }
@@ -129,7 +128,7 @@ h1's response
         if (latches[n].await(5, TimeUnit.MINUTES)) {//wait for ackcheck response before hitting ack endpoint  
             return this.latches[n].getLifecycleEvent();
         } else {
-            LOG.warn("TwoResponseCoordinator timed out (5 minutes)  waiting for first response.");
+            LOG.warn("ResponseCoordinator timed out (5 minutes)  waiting for first response.");
             return null;
         }
     }

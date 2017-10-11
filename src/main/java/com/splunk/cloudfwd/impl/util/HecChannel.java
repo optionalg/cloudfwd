@@ -90,25 +90,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     start();
   }
 
-  
-  
-//    /**
-//     * This is a synchronous method. It does not update this channel at all. It is just designed to be called 
-//     *  to synchronously check that the configuration of this channel is ok, before data is ever sent. 
-//     * @return
-//     */
-//    protected ConfigStatus getConfigStatus() {    
-//        //need to do this so that we preserve the behavior of getting session from load balancer. 
-//        //That is: we must get a response on a single first http request to establish the Session-Cookie before we send any other requests.
-//        health.await(); 
-//        HecIOManager m = sender.getHecIOManager();
-//        HttpCallbacksBlockingConfigCheck cb = new HttpCallbacksBlockingConfigCheck(m);
-//        m.configCheck(cb); //begin async processign
-//        //following call blocks until processing complete
-//        RuntimeException problem = cb.getException(); 
-//        return new ConfigStatus(this, problem);
-//    }
-
     public HecHealthImpl getHealth() {
         if(!health.await(5, TimeUnit.MINUTES)){
          Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",

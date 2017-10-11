@@ -291,7 +291,8 @@ public final class HttpSender implements Endpoints {
      * This method exists because the /raw or /events endpoints are the only way to detect a disabled token
      * @param httpCallback
      */
-    public void postEmptyEvent(FutureCallback<HttpResponse> httpCallback){
+    @Override
+    public void checkRawEndpoint(FutureCallback<HttpResponse> httpCallback){
     // make sure http client or simulator is started
     if (!started()) {
       start();
@@ -300,7 +301,7 @@ public final class HttpSender implements Endpoints {
     dummyEvents.setAckId(MAX_ACK_ID); //make sure we don't poll for acks with ackId=0 which could actually be in flight
 
     if (isSimulated()) {     
-      this.simulatedEndpoints.ackEndpointCheck(httpCallback);
+      this.simulatedEndpoints.checkRawEndpoint(httpCallback);
       return;
     }
     final String encoding = "utf-8";
@@ -311,7 +312,7 @@ public final class HttpSender implements Endpoints {
     setHeaders(dummyEventPost);
     StringEntity empty;
       try {
-          empty = new StringEntity("");
+          empty = new StringEntity(Strings.EMPTY);
           dummyEventPost.setEntity(empty);
           httpClient.execute(dummyEventPost, httpCallback);
       } catch (UnsupportedEncodingException ex) {
@@ -359,14 +360,14 @@ public final class HttpSender implements Endpoints {
   
   
   @Override
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+  public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
     // make sure http client or simulator is started
     if (!started()) {
       start();
     }
     if (isSimulated()) {
       LOG.debug("SIMULATED POLL HEALTH");
-      this.simulatedEndpoints.pollHealth(httpCallback);
+      this.simulatedEndpoints.checkHealthEndpoint(httpCallback);
       return;
     }
     // create http request
@@ -378,12 +379,12 @@ public final class HttpSender implements Endpoints {
   }
 
   @Override
-  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
     if (!started()) {
       start();
     }
     if (isSimulated()) {
-      this.simulatedEndpoints.ackEndpointCheck(httpCallback);
+      this.simulatedEndpoints.checkAckEndpoint(httpCallback);
       return;
     }
     Set<Long> dummyAckId = new HashSet<>();

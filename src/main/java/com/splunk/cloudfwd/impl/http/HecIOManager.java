@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.httpascync.GenericCoordinatedResponseHandler;
+import com.splunk.cloudfwd.impl.http.httpascync.NoDataEventPostResponseHandler;
 import com.splunk.cloudfwd.impl.http.httpascync.ResponseCoordinator;
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
@@ -143,13 +144,13 @@ public class HecIOManager implements Closeable {
                 "health_poll_raw_endpoint_check");        
 
         ResponseCoordinator.create(cb1, cb2, cb3);
-        sender.pollHealth(cb1);
-        sender.ackEndpointCheck(cb2);
-        sender.ackEndpointCheck(cb3);
+        sender.checkHealthEndpoint(cb1);
+        sender.checkAckEndpoint(cb2);
+        sender.checkAckEndpoint(cb3);
     }
 
     public void preflightCheck() throws InterruptedException {
-        LOG.trace("preflight checks on {}", sender.getChannel());
+        LOG.trace("preflight checks on {}", sender.getChannel());       
         GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(this,
                 LifecycleEvent.Type.PREFLIGHT_OK,
                 LifecycleEvent.Type.PREFLIGHT_FAILED,
@@ -161,29 +162,48 @@ public class HecIOManager implements Closeable {
                 LifecycleEvent.Type.PREFLIGHT_FAILED,
                 LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
                 LifecycleEvent.Type.PREFLIGHT_BUSY,
-                "preflight_health_endpoint_check");
-        GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(this,
+               "preflight_health_endpoint_check" );     
+        GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(this,
                 LifecycleEvent.Type.PREFLIGHT_OK,
                 LifecycleEvent.Type.PREFLIGHT_FAILED,
                 LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
                 LifecycleEvent.Type.PREFLIGHT_BUSY,
-                "preflight_raw_endpoint_check");     
+                "preflight_raw_endpoint_check");         
         ResponseCoordinator coordinator = ResponseCoordinator.create(cb1, cb2, cb3);
-        sender.ackEndpointCheck(cb1);
+        sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
         try {
-            LifecycleEvent firstResp;
-            LifecycleEvent secondResp;
-            if (null != (firstResp = coordinator.awaitNthResponse(0)) && firstResp.isOK()) {
-                sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check   
-                if (null != (secondResp = coordinator.awaitNthResponse(1)) && secondResp.isOK()) {
-                    sender.postEmptyEvent(cb3); //we only proceed to check raw endpoint after we get ok from health endpoint 
+            LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
+            if(null != firstResp){
+                if(firstResp.isOK()){
+                    sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
+                    LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
+                    if(null != secondResp){
+                        if(secondResp.isOK()){
+                            sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
+                        }
+                    }else {
+                        LOG.warn(
+                                "Preflight timed out (5 minutes)  waiting for /raw empty-event check on {}",
+                                sender.getChannel());
+                    }
+                }else {
+                    LOG.warn(
+                            "Preflight timed out (5 minutes)  waiting for /health check on {}",
+                            sender.getChannel());
                 }
-            } else {
+            }else {
                 LOG.warn(
-                        "Preflight timed out (5 minutes)  waiting for ack endpoint check on {}",
+                        "Preflight timed out (5 minutes)  waiting for /ack endpoint check on {}",
                         sender.getChannel());
-                return; //FIXME -- can't we fail faster here? the latch will only be released on server response so we wait long time for failure
             }
+           
+//            
+//            if (null != () && firstResp.isOK()) { 
+//                sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
+//                if (null != (secondResp = coordinator.awaitNthResponse(1)) && secondResp.isOK()) {//WAIT SECOND RESPONSE
+//                    sender.postEmptyEvent(cb3); //SEND THIRD REQUEST
+//                }
+//            } 
         } catch (InterruptedException ex) {
             LOG.warn(
                     "Preflight interrupted on channel {} waiting for response from ack endpoint.",

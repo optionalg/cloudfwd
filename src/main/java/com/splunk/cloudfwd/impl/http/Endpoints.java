@@ -27,8 +27,9 @@ import org.apache.http.concurrent.FutureCallback;
 public interface Endpoints extends Closeable{
   public void postEvents(final HttpPostable events,FutureCallback<HttpResponse> httpCallback);
   public void pollAcks(HecIOManager ackMgr,FutureCallback<HttpResponse> httpCallback);
-  public void pollHealth(FutureCallback<HttpResponse> httpCallback);
-  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback);
+  public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback);
+  public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback);
+  public void checkRawEndpoint(FutureCallback<HttpResponse> httpCallback);
   @Override
   public void close();
   public void start();

@@ -103,4 +103,32 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
         //noop by default
     }
 
+    /**
+     * @return the okType
+     */
+    public LifecycleEvent.Type getOkType() {
+        return okType;
+    }
+
+    /**
+     * @return the failType
+     */
+    public LifecycleEvent.Type getFailType() {
+        return failType;
+    }
+
+    /**
+     * @return the gatewayTimeoutType
+     */
+    public LifecycleEvent.Type getGatewayTimeoutType() {
+        return gatewayTimeoutType;
+    }
+
+    /**
+     * @return the indexerBusyType
+     */
+    public LifecycleEvent.Type getIndexerBusyType() {
+        return indexerBusyType;
+    }
+
 }
