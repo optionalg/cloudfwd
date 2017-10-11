@@ -52,10 +52,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private final Logger LOG;
     private final EventBatchImpl events;
     private final ObjectMapper mapper = new ObjectMapper();
+    public static final String Name = "event_post";
 
     public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {
-        super(m, "event_post");
+        super(m, Name);
         this.events = events;
         LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }

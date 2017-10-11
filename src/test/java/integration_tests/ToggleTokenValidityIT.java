@@ -3,6 +3,7 @@ package integration_tests;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -155,7 +156,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
             public void systemWarning(Exception ex) {
                 if (tokenRestoredLatch.getCount() == 0) {
                     if (ex instanceof HecServerErrorResponseException
-                        && ((HecServerErrorResponseException)ex).getContext().equals("ack_poll")) {
+                        && ((HecServerErrorResponseException)ex).getContext().equals(HttpCallbacksAckPoll.Name)) {
                         // even after token is restored on server, cloudfwd will continue to poll for acks on the old channels with the invalid tokens, so we will ignore those warnings
                         LOG.warn("SYSTEM WARNING {}", ex.getMessage());
                         return;
