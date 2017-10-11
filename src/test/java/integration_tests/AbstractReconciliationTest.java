@@ -45,21 +45,17 @@ import org.slf4j.LoggerFactory;
  *  - Install or update Splunk apps or add-ons
  *
  * To run, enter configuration for a Splunk instance under "CONFIGURABLE" below.
+ *
+ * To run tests from CLI (with different configurations)
+ * EG: mvn test -Dtest=AWSSourcetypeIT "-DargLine=-Duser=admin -Dpassword=changeme -DsplunkHost=localhost -DmgmtPort=8089"
  */
 public abstract class AbstractReconciliationTest extends AbstractConnectionTest {
 
   protected static final Logger LOG = LoggerFactory.getLogger(AbstractReconciliationTest.class.getName());
 
-  /* ************ CONFIGURABLE ************ */
-  // change these settings based on the Splunk search head you want the test to search on:
-  private final String splunkHost = "localhost"; // should be same single instance host that cloudfwd is pointed at
-  private final String mgmtPort = "8089"; // management port on the single instance
-  private final String user = "admin"; // a Splunk user that has permissions for the actions listed in the test description
-  private final String password = "changeme";
-  private final Boolean ENABLE_TEST_HTTP_DEBUG = false; // Enable HTTP debug in test client
   /* ************ /CONFIGURABLE ************ */
-
   protected int numToSend = 10;
+  private final Boolean ENABLE_TEST_HTTP_DEBUG = false; // Enable HTTP debug in test client
   private String TOKEN_NAME; // per-test generated HEC Token Name
   private String TOKEN_VALUE = null; // per-test generated HEC Token
   protected CloseableHttpClient httpClient; // per test class httpClient shared across tests
@@ -71,10 +67,22 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   // enable HEC only once per class run. Has to be a class variable, as each
   // junit test instantiate a new instance of the test class
   private static Boolean HEC_ENABLED = false;
+  /* ************ CLI CONFIGURABLE ************ */
+  private static Map<String, String> cliProperties;
+  // Default values
+  static {
+    cliProperties = new HashMap<>();
+    cliProperties.put("splunkHost", "localhost");
+    cliProperties.put("mgmtPort", "8089");
+    cliProperties.put("user", "admin");
+    cliProperties.put("password", "changeme");
+  }
 
   public AbstractReconciliationTest() {
     super();
     LOG.info("NEXT RECONCILIATION TEST...");
+    // Get any command line arguments
+    cliProperties = getCliTestProperties();
     // Build a client to share among tests
     httpClient = buildSplunkClient();
     if (ENABLE_TEST_HTTP_DEBUG) enableTestHttpDebug();
@@ -113,7 +121,24 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   protected String mgmtSplunkUrl() {
-    return "https://" + splunkHost + ":" + mgmtPort;
+    return "https://" + cliProperties.get("splunkHost") + ":" + cliProperties.get("mgmtPort");
+  }
+
+  /*
+  Get command line arguments for Test
+   */
+  protected Map<String, String> getCliTestProperties() {
+    if (System.getProperty("argLine") != null) {
+      LOG.warn("Replacing test properties with command line arguments");
+      Set<String> keys = cliProperties.keySet();
+      for (String e : keys) {
+        if (System.getProperty(e) != null) {
+          cliProperties.replace(e, System.getProperty(e));
+        }
+      }
+    }
+    LOG.warn("Test Arguments:" + cliProperties);
+    return cliProperties;
   }
 
   /*
@@ -124,9 +149,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     try {
       // credentials
       CredentialsProvider credsProvider = new BasicCredentialsProvider();
-      credsProvider.setCredentials(new AuthScope(splunkHost,
-                      new Integer(mgmtPort)),
-              new UsernamePasswordCredentials(user, password));
+      credsProvider.setCredentials(new AuthScope(cliProperties.get("splunkHost"),
+                      new Integer(cliProperties.get("mgmtPort"))),
+              new UsernamePasswordCredentials(cliProperties.get("user"), cliProperties.get("password")));
       // create synchronous http client that ignores SSL
       httpClient = HttpClientBuilder.create().
               setDefaultCredentialsProvider(credsProvider).
@@ -405,7 +430,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
           throws IOException {
     Set<String> results = new HashSet<>();
     HttpGet httpget = new HttpGet(
-            "https://" + splunkHost + ":" + mgmtPort
+            "https://" + cliProperties.get("splunkHost") + ":" + cliProperties.get("mgmtPort")
             + "/services/search/jobs/" + sid + "/results?output_mode=json");
 
     HttpResponse getResponse = httpClient.execute(httpget);

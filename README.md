@@ -26,7 +26,7 @@ Use Cloudfwd to reliably send data to Splunk HTTP Event Collector (HEC) with ind
 
 ### Prerequisites
 
-1. An external Splunk Enterprise or Splunk Cloud 6.4+ deployment configured with a HTTP Event Collector token to receive data.
+1. Splunk Enterprise or Splunk Cloud 6.4 or later configured with a HTTP Event Collector token to receive data.
 2. [Maven](https://maven.apache.org/index.html)
 3. [Java 8](http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html)
 4. [HEC Token](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector)
@@ -72,12 +72,12 @@ https://splunk.github.io/cloudfwd/apidocs/constant-values.html
 ## Examples
 
 ### Super Simple Example
-[SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/SuperSimpleExample.java)
+[SuperSimpleExample.java](https://github.com/splunk/cloudfwd/blob/master/src/test/java/mock_tests/SuperSimpleExample.java)
 
 ### Steps
 1. run ```mvn exec:exec```
 
-### Getting data from Amazon Kinesis Streams a Splunk deployment using Cloudfwd
+### Getting data from Amazon Kinesis Streams into your Splunk platform instance using Cloudfwd
 This example will use the same configurations set up in the [Amazon Kinesis Stream tutorial](http://docs.aws.amazon.com/streams/latest/dev/learning-kinesis-module-one.html) from the AWS website. We have provided the Java code in the /examples/ folder, but you will need to go through the Kinesis Stream tutorial to setup Kinesis Streams, DynamoDB, and your IAM role. 
 
 ### Prerequisites
@@ -96,14 +96,14 @@ token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 6. In your preferred IDE, open the Java project in the /examples/ folder. 
 7. Run the StockTradeWriter class with the following arguments: ```<stream_name> <AWS_region_name> <your_profile_name> ```.
 8. Run the StockTradeProcessor class with the following arguments: ```<application_name> <stream_name> <AWS_region_name> <profile_name> ```. This might take a few minutes.
-9. Go to your Splunk deployment.
+9. Open your Splunk platform instance.
 10. Switch the time range picker to All time(real-time).
 11. Run 'index=*' in Splunk search.
 
 After a minute, stock trade events appear in the Splunk UI.
 
-### Getting AWS logs into a Splunk deployment using Cloudfwd
-This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk deployment. This example ships with three types of logfiles: CloudWatch Event logs, sys logs, and VPC Flow logs. 
+### Getting AWS logs into your Splunk platform using Cloudfwd
+This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk environment. This example ships with three types of logfiles: CloudWatch Event logs, sys logs, and VPC Flow logs. 
 
 ### Prerequisites 
 1.  Splunk Add-on for Amazon Kinesis Firehose
@@ -153,7 +153,7 @@ See [event formatting](https://github.com/splunk/cloudfwd/wiki/Event-Formatting)
 #### Exceptions passed to failed() callback (asynchronous):
 | Exception                       | Description                                                                                                                                                                                                                                      | How to fix                                                                                                                                                                                                                                                                                                                                                                   |
 |---------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| HecAckTimeoutException          | This exception gets thrown after waiting for [PropertyKeys.ACK_TIMEOUT_MS](https://splunk.github.io/cloudfwd/apidocs/com/splunk/cloudfwd/PropertyKeys.html#ACK_TIMEOUT_MS) milliseconds for the acknowledgment from your Splunk deployment after sending an event batch.                                                                       | This is not recoverable. When the library fails to send events, the events will not be re-sent. You can backup your events to S3.                                                                                                                                                                                                                                     |
+| HecAckTimeoutException          | This exception gets thrown after waiting for [PropertyKeys.ACK_TIMEOUT_MS](https://splunk.github.io/cloudfwd/apidocs/com/splunk/cloudfwd/PropertyKeys.html#ACK_TIMEOUT_MS) milliseconds for the acknowledgment from your Splunk instance after sending an event batch.                                                                       | This is not recoverable. When the library fails to send events, the events will not be re-sent. You can backup your events to S3.                                                                                                                                                                                                                                     |
 | HecMaxRetriesException          | This exception gets thrown when a channel is dead and the library must re-send event batch. This is the number of attempts to send events after it has reached its maxRetries limit.                                                                                            | This is not recoverable.                                                                                                                                                                                                                                                                                                                                                     |
 | HecNonStickySessionException    | This exception gets thrown when a duplicate ackID is received on a given HEC channel. This can indicate failure of a sticky load balancer to provide stickiness.                                                                                                               | This is recoverable and is most likely caused by ELB that does not have sticky sessions enabled. Close the connection and reconfigure your elastic load balancer to have sticky sessions enabled.                                                                                                                                                                            |
 | HecServerErrorResponseException | This exception gets thrown when a non-200 response is returned by any Splunk HEC endpoint. It will contain a Splunk server side error code (1-14) as well as the message. See the [HecServerErrorResponseException](https://splunk.github.io/cloudfwd/apidocs/com/splunk/cloudfwd/HecServerErrorResponseException.Type.html) class in the API documentation. | It depends. Some error codes are recoverable user configuration errors (e.g. missing token), recoverable user data errors (e.g. incorrect data format passed), or recoverable server errors (e.g. server temporarily busy). While some other error codes are non-recoverable internal library errors that require a fix in the library code or abandoning an existing connection. |
