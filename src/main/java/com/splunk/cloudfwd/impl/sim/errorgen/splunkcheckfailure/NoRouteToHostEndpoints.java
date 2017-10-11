@@ -29,13 +29,13 @@ public class NoRouteToHostEndpoints extends SimulatedHECEndpoints {
     }
 
     @Override
-    public void pollHealth(FutureCallback<HttpResponse> httpCallback) {
+    public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
         throw new IllegalStateException("We should fail before trying to poll for health.");
     }
 
     private class NoRouteToHostPreFlightEndpoint extends PreFlightAckEndpoint {
         @Override
-        public void ackEndpointCheck(FutureCallback<HttpResponse> cb) {
+        public void checkAckEndpoint(FutureCallback<HttpResponse> cb) {
             Runnable respond = () -> {
                 // simulates behavior of apache async http client if a route to host cannot be found.
                 cb.failed(new NoRouteToHostException("No route to host"));

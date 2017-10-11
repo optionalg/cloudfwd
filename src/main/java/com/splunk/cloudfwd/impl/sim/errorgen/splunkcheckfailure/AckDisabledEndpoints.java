@@ -54,7 +54,7 @@ public class AckDisabledEndpoints extends SimulatedHECEndpoints {
 
     private class AcksDisabledPreFlightEndpoint extends PreFlightAckEndpoint {
         @Override
-        public void ackEndpointCheck(FutureCallback<HttpResponse> cb) {
+        public void checkAckEndpoint(FutureCallback<HttpResponse> cb) {
             Runnable respond = () -> {
                 cb.completed(new HecErrorResponse(
                         new AckDisabledEntity(), new BadRequestStatusLine()

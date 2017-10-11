@@ -39,7 +39,7 @@ public class PreFlightAckEndpoint implements Endpoint {
         executor.shutdownNow();
     }
 
-    public void ackEndpointCheck(FutureCallback<HttpResponse> cb) {
+    public void checkAckEndpoint(FutureCallback<HttpResponse> cb) {
         Runnable respond = () -> {
             cb.completed(new CannedOKHttpResponse(
                 // response that means "preflight check is OK"
