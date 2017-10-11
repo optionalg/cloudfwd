@@ -27,47 +27,80 @@ import org.slf4j.Logger;
 public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
 
     private Logger LOG;
+    //these are the lifecycels event types that will be raised when their condition occurs
     private final LifecycleEvent.Type okType;
     private final LifecycleEvent.Type failType;
+    private final LifecycleEvent.Type gatewayTimeoutType = null;
+    private final LifecycleEvent.Type indexerBusyType = null;
 
     public HttpCallbacksGeneric(HecIOManager m, LifecycleEvent.Type okType,
             LifecycleEvent.Type failType, String name) {
         super(m, name);
         this.okType = okType;
         this.failType = failType;
-        this.LOG = m.getSender().getConnection().getLogger(HttpCallbacksGeneric.class.
+        this.LOG = m.getSender().getConnection().getLogger(
+                HttpCallbacksGeneric.class.
                 getName());
+    }
+
+    public HttpCallbacksGeneric(HecIOManager m, LifecycleEvent.Type okType,
+            LifecycleEvent.Type failType, LifecycleEvent.Type gatewayTimeoutType,
+            LifecycleEvent.Type indexerBusyType, String name) {
+        this(m, okType, failType, name);
     }
 
     @Override
     public void completed(String reply, int httpCode) {
-        LifecycleEvent.Type type = null;
-        switch (httpCode) {
-            case 200:
-                type = okType;
-                break;
-            case 503:
-            case 504:
-            default: {
-                try {
+        try {
+            LifecycleEvent.Type type = null;
+            switch (httpCode) {
+                case 200:
+                    type = okType;
+                    onOk(reply, httpCode);
+                    break;
+                case 503:
+                    if (null != indexerBusyType) {
+                        type = indexerBusyType;
+                    } else {
+                        type = warn(reply, httpCode);
+                    }
+                    break;
+                case 504:
+                    if (null != gatewayTimeoutType) {
+                        type = gatewayTimeoutType;
+                    } else {
+                        type = warn(reply, httpCode);
+                    }
+                    break;
+                default:
                     type = warn(reply, httpCode);
-                } catch (IOException ex) {
-                    error(ex);
-                }
             }
+            notify(type, httpCode, reply);
+        } catch (IOException ex) {            
+            error(ex);
         }
-        notify(type, httpCode, reply);
+
     }
 
     @Override
     public void failed(Exception ex) {
         try {
             LOG.warn("Channel {} failed to'{}' because {}",
-                    getChannel(), getName(), ex.getMessage());
+                    getChannel(), getOperation(), ex.getMessage());
             notifyFailed(failType, ex);
         } catch (Exception e) {
             error(ex);
         }
+    }
+
+    /**
+     * Override this to provide hndling of Http200/OK. Default behavior does nothing (NoOp)
+     * @param reply
+     * @param httpCode
+     * @throws java.lang.Exception
+     */
+    protected void onOk(String reply, int httpCode) throws IOException {
+        //noop by default
     }
 
 }

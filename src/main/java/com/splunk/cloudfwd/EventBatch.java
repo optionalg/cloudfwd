@@ -34,6 +34,7 @@ public interface EventBatch extends HttpPostable {
    */
   Long getAckId();
 
+  @Override
   HttpEntity getEntity();
 
   /**

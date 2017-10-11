@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -31,8 +32,11 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,8 +68,10 @@ public final class HttpSender implements Endpoints {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl; 
+  //the following  posts/gets are used by health checks an preflight checks 
   private HttpPost ackCheck;
   private HttpGet healthEndpointCheck;
+  private HttpPost dummyEventPost;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -158,14 +164,21 @@ public final class HttpSender implements Endpoints {
     if (null != simulatedEndpoints) {
       simulatedEndpoints.close();
     }
-    if(null != this.ackCheck){
-        ackCheck.abort();
-    }
-    if(null != this.healthEndpointCheck){
-        healthEndpointCheck.abort();
-    }    
+    abortPreflightAndHealthcheckRequests();    
     stopHttpClient();
   }
+
+    public void abortPreflightAndHealthcheckRequests() {
+        if(null != this.ackCheck){
+            ackCheck.abort();
+        }
+        if(null != this.healthEndpointCheck){
+            healthEndpointCheck.abort();
+        }
+        if(null != dummyEventPost){
+            dummyEventPost.abort();
+        }
+    }
 
   /**
    * Disable https certificate validation of the splunk server. This
@@ -265,7 +278,7 @@ public final class HttpSender implements Endpoints {
     String endpointUrl = ((EventBatch)events).getTarget()
             == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT ? eventUrl : rawUrl;
     if (endpointUrl == null) {
-      throw new NullPointerException();
+      throw new NullPointerException("endpointUrl was null.");
     }
     final HttpPost httpPost = new HttpPost(endpointUrl);
     setHeaders(httpPost);
@@ -273,6 +286,38 @@ public final class HttpSender implements Endpoints {
     httpPost.setEntity(events.getEntity());
     httpClient.execute(httpPost, httpCallback);
   }
+
+    /**
+     * This method exists because the /raw or /events endpoints are the only way to detect a disabled token
+     * @param httpCallback
+     */
+    public void postEmptyEvent(FutureCallback<HttpResponse> httpCallback){
+    // make sure http client or simulator is started
+    if (!started()) {
+      start();
+    }
+    EventBatchImpl dummyEvents = new EventBatchImpl();
+    dummyEvents.setAckId(MAX_ACK_ID); //make sure we don't poll for acks with ackId=0 which could actually be in flight
+
+    if (isSimulated()) {     
+      this.simulatedEndpoints.ackEndpointCheck(httpCallback);
+      return;
+    }
+    final String encoding = "utf-8";
+
+    // create http request
+
+    this.dummyEventPost = new HttpPost(rawUrl);
+    setHeaders(dummyEventPost);
+    StringEntity empty;
+      try {
+          empty = new StringEntity("");
+          dummyEventPost.setEntity(empty);
+          httpClient.execute(dummyEventPost, httpCallback);
+      } catch (UnsupportedEncodingException ex) {
+          LOG.error(ex.getMessage(),ex);
+      }
+  }  
   
   @Override
   public void pollAcks(HecIOManager hecIoMgr,
@@ -342,7 +387,7 @@ public final class HttpSender implements Endpoints {
       return;
     }
     Set<Long> dummyAckId = new HashSet<>();
-    dummyAckId.add(10000000L);//default max ack Id. TODO we should not let channels send this many event batches
+    dummyAckId.add(MAX_ACK_ID);//default max ack Id. TODO we should not let channels send this many event batches
     AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);
 
     try {
@@ -354,6 +399,7 @@ public final class HttpSender implements Endpoints {
       String req = dummyAckReq.toString();
       LOG.debug(req);
       entity = new StringEntity(req);
+      LOG.trace("checking health via ack endpoint: {}", req);
       entity.setContentType(HttpContentType);
       ackCheck.setEntity(entity);
       httpClient.execute(ackCheck, httpCallback);
@@ -362,6 +408,7 @@ public final class HttpSender implements Endpoints {
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
+    private static final long MAX_ACK_ID = 100000L;
 
   /**
    * @return the simulatedEndpoints

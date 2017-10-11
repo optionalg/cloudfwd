@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksPreflightHealthCheck;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -24,7 +23,7 @@ import com.splunk.cloudfwd.impl.util.PollScheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.httpascync.GenericCoordinatedResponseHandler;
-import com.splunk.cloudfwd.impl.http.httpascync.TwoResponseCoordinator;
+import com.splunk.cloudfwd.impl.http.httpascync.ResponseCoordinator;
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
 
@@ -119,6 +118,9 @@ public class HecIOManager implements Closeable {
         sender.pollAcks(this, cb);
     }
 
+    /**
+     * This will get invoked after the HecChannel completes preflight checks successfully
+     */
     public void pollHealth() {
         LOG.trace("health checks on {}", sender.getChannel());
 
@@ -133,25 +135,49 @@ public class HecIOManager implements Closeable {
                 LifecycleEvent.Type.HEALTH_POLL_OK,
                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
                 "health_poll_ack_endpoint_check");
+        
+        GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(
+                this,
+                LifecycleEvent.Type.HEALTH_POLL_OK,
+                LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                "health_poll_raw_endpoint_check");        
 
-        TwoResponseCoordinator.createNonSerializing(cb1, cb2);
+        ResponseCoordinator.create(cb1, cb2, cb3);
         sender.pollHealth(cb1);
         sender.ackEndpointCheck(cb2);
+        sender.ackEndpointCheck(cb3);
     }
 
     public void preflightCheck() throws InterruptedException {
         LOG.trace("preflight checks on {}", sender.getChannel());
-        HttpCallbacksPreflightHealthCheck cb1 = new HttpCallbacksPreflightHealthCheck(
-                this, "preflight_ack_endpoint_check");
-        HttpCallbacksPreflightHealthCheck cb2 = new HttpCallbacksPreflightHealthCheck(
-                this, "preflight_health_endpoint_check");
-        TwoResponseCoordinator coordinator = TwoResponseCoordinator.
-                createSerializing(cb1, cb2);
+        GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(this,
+                LifecycleEvent.Type.PREFLIGHT_OK,
+                LifecycleEvent.Type.PREFLIGHT_FAILED,
+                LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                LifecycleEvent.Type.PREFLIGHT_BUSY,
+                "preflight_ack_endpoint_check");
+        GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(this,
+                LifecycleEvent.Type.PREFLIGHT_OK,
+                LifecycleEvent.Type.PREFLIGHT_FAILED,
+                LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                LifecycleEvent.Type.PREFLIGHT_BUSY,
+                "preflight_health_endpoint_check");
+        GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(this,
+                LifecycleEvent.Type.PREFLIGHT_OK,
+                LifecycleEvent.Type.PREFLIGHT_FAILED,
+                LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                LifecycleEvent.Type.PREFLIGHT_BUSY,
+                "preflight_raw_endpoint_check");     
+        ResponseCoordinator coordinator = ResponseCoordinator.create(cb1, cb2, cb3);
         sender.ackEndpointCheck(cb1);
         try {
-            LifecycleEvent first;
-            if (null != (first = coordinator.awaitFirstResponse()) && first.isOK()) {
-                sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check             
+            LifecycleEvent firstResp;
+            LifecycleEvent secondResp;
+            if (null != (firstResp = coordinator.awaitNthResponse(0)) && firstResp.isOK()) {
+                sender.pollHealth(cb2); //we only proceed to check health endpoint if we got OK from ack check   
+                if (null != (secondResp = coordinator.awaitNthResponse(1)) && secondResp.isOK()) {
+                    sender.postEmptyEvent(cb3); //we only proceed to check raw endpoint after we get ok from health endpoint 
+                }
             } else {
                 LOG.warn(
                         "Preflight timed out (5 minutes)  waiting for ack endpoint check on {}",

@@ -16,7 +16,6 @@
 package com.splunk.cloudfwd.impl.sim.errorgen.nonsticky;
 
 import com.splunk.cloudfwd.impl.http.HecIOManager;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
 import com.splunk.cloudfwd.impl.sim.EventEndpoint;
 import com.splunk.cloudfwd.impl.sim.HealthEndpoint;

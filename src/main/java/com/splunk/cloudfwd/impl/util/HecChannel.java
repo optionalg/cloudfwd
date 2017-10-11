@@ -206,6 +206,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         resendPreflight(e, wasAvailable);
         return; //don't update health since we did not actually get an 'answer' to our pre-flight check     
       case PREFLIGHT_OK:
+          LOG.info("Preflight checks OK on {}", this);
           //Note: we also start polling health if/when we give up on prflight checks due to max retries of preflight failing
           sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
     }
@@ -252,7 +253,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                 LOG.warn("retrying channel preflight checks on {}",
                         HecChannel.this);
                 try {
-                    this.sender.getHecIOManager().preflightCheck(); //retry preflight check};
+                    //we send several requests for preflight checks. This resend can be triggered by failure of any one of them. 
+                    //Kill all the others
+                    this.sender.abortPreflightAndHealthcheckRequests(); 
+                    this.sender.getHecIOManager().preflightCheck(); //retry preflight check
                 } catch (InterruptedException ex) {
                     LOG.debug("Preflight resend interrupted: {}", ex);
                 }
@@ -316,7 +320,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  protected void interalForceClose() {    
+  protected void interalForceClose() {  
+      this.closed = true;
       Runnable r = ()->{
         loadBalancer.removeChannel(getChannelId(), true);
         this.channelMetrics.removeObserver(this);
@@ -353,9 +358,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  private synchronized void closeExecutors() {
-    LOG.trace("finishClosing {}", this);
-    this.closed = true;
+  //do NOT synchronize this method. Since it blocks by awaitTermination it will hold a very long lock on this
+  //Object's monitor. This method will get called from a thread kicked off during close. However, the ChannelDeathChecker
+  //may also kick in and try to close the channel. But it can't. Because its blocked if this method is synchronized. But this 
+  //method would be blocked on awaitTermination waiting for that *very* ChannelDeathChecker thread to terminate. Deadlock.
+  private void closeExecutors() {
+    LOG.trace("closing executors on  {}", this);
+
     if (null != reaperScheduler) {
       reaperScheduler.shutdownNow();
       try{

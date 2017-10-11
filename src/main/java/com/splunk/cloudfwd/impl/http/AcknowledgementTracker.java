@@ -46,7 +46,8 @@ public class AcknowledgementTracker implements EventTracker {
   private Logger LOG = LoggerFactory.getLogger(AcknowledgementTracker.class.getName());
 
   private final static ObjectMapper jsonMapper = new ObjectMapper();
-  private final Map<Long, EventBatchImpl> polledAcks = new ConcurrentHashMap<>(); //key ackID
+  private final Map<Long, EventBatchImpl> polledAcksByAckId = new ConcurrentHashMap<>(); //key ackID
+ // private final Map<Long, EventBatchImpl> polledAcksByEvent = new ConcurrentHashMap<>(); //key ackID
   //private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
   private final HttpSender sender;
 
@@ -56,16 +57,19 @@ public class AcknowledgementTracker implements EventTracker {
 
   @Override
   public void cancel(EventBatchImpl e) {
-    //if (null != eventBatches.remove(e.getId())) {
+      if(null != e.getAckId()){
+            polledAcksByAckId.remove(e.getAckId());
+      }
       //hunt for it in the polledAcks
-      for (Iterator<Map.Entry<Long, EventBatchImpl>> it = polledAcks.entrySet().
+      /*
+      for (Iterator<Map.Entry<Long, EventBatchImpl>> it = polledAcksByAckId.entrySet().
               iterator(); it.hasNext();) {
         Map.Entry<Long, EventBatchImpl> entry = it.next();
         if (e.getId() == entry.getValue().getId()) {
           it.remove();         
         }
       }
-    //}
+      */
   }
 
   /**
@@ -75,7 +79,7 @@ public class AcknowledgementTracker implements EventTracker {
    * @return
    */
   public AckRequest getAckRequest() {
-    return new AckRequest(polledAcks.keySet());
+    return new AckRequest(polledAcksByAckId.keySet());
   }
 
   public boolean isEmpty() {
@@ -95,7 +99,7 @@ public class AcknowledgementTracker implements EventTracker {
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatchImpl events) {
     Long ackId = epr.getAckId();
-    polledAcks.put(ackId, events);
+    polledAcksByAckId.put(ackId, events);
   }
 
   public void handleAckPollResponse(AckPollResponseValueObject apr) {
@@ -108,7 +112,7 @@ public class AcknowledgementTracker implements EventTracker {
         return;
       }
       for (long ackId : succeeded) {
-        events = polledAcks.get(ackId);
+        events = polledAcksByAckId.get(ackId);
         if (null == events) {
           LOG.warn(
                   "Got acknowledgement on ackId: {} but we're no long tracking that ackId",
@@ -131,7 +135,7 @@ public class AcknowledgementTracker implements EventTracker {
                 LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
                 events,sender.getBaseUrl()));
         //eventBatches.remove(events.getId());
-        polledAcks.remove(ackId);
+        polledAcksByAckId.remove(ackId);
       }
     } catch (Exception e) {
       LOG.error("caught exception in handleAckPollResponse: " + e.getMessage(),
@@ -145,7 +149,7 @@ public class AcknowledgementTracker implements EventTracker {
   }
 
   public Collection<Long> getPostedButUnackedEvents() {
-    return Collections.unmodifiableSet(polledAcks.keySet());
+    return Collections.unmodifiableSet(polledAcksByAckId.keySet());
   }
 
   /**

@@ -39,7 +39,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_OK;
 public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract implements CoordinatedResponseHandler {
 
     private final Logger LOG;
-    private TwoResponseCoordinator coordinator;
+    private ResponseCoordinator coordinator;
 
     public HttpCallbacksPreflightHealthCheck(HecIOManager m, String name) {
         super(m, name);
@@ -60,7 +60,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract imp
                 warn(reply, statusCode);
                 LOG.warn(
                         "Server busy while attempting {} on {}, waiting 60 seconds to retry",
-                        getName(), getChannel());
+                        getOperation(), getChannel());
                 Thread.sleep(60000);
                 type = PREFLIGHT_BUSY;
                 break;
@@ -69,7 +69,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract imp
                 type = LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT;
                 break;
             case 200:
-                LOG.info("{} is good on {}", getName(), getChannel());
+                LOG.info("{} is good on {}", getOperation(), getChannel());
                 type = PREFLIGHT_OK;
                 break;
             default: //various non-200 errors such as 400/ack-is-disabled
@@ -84,7 +84,7 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract imp
             handleResponse(code, reply);
         } catch (Exception ex) {
             LOG.error(
-                    "failed to handle server response for {}:  {}", getName(),
+                    "failed to handle server response for {}:  {}", getOperation(),
                     reply);
             error(ex);
         }
@@ -98,14 +98,14 @@ public class HttpCallbacksPreflightHealthCheck extends HttpCallbacksAbstract imp
 //            return;
 //        }
         LOG.warn(
-                "{} failed with exception {} on {}", getName(), ex.getMessage(),
+                "{} failed with exception {} on {}", getOperation(), ex.getMessage(),
                 getChannel());
         notifyFailed(PREFLIGHT_FAILED, ex);
         // TODO: retry if this fails.. otherwise channel just sits around until it is reaped
     }
 
     @Override
-    public void setCoordinator(TwoResponseCoordinator coordinator) {
+    public void setCoordinator(ResponseCoordinator coordinator) {
         this.coordinator = coordinator;
     }
 

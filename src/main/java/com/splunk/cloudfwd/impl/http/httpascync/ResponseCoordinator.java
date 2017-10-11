@@ -16,8 +16,8 @@
 package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,54 +27,42 @@ import org.slf4j.Logger;
  *
  * @author ghendrey
  */
-public class TwoResponseCoordinator {
+public class ResponseCoordinator {
 
     private Logger LOG;
     //in the case of health polling, we hit both the ack and the health endpoint
     private AtomicBoolean alreadyNotOk = new AtomicBoolean(false); //tells us if one of the two responses has already come back NOT OK
     private AtomicInteger responseCount = new AtomicInteger(0); //count how many responses/fails we hsve processed
-    //Due to ELB session cookies, preflight checks, which are the first requests sent on a channel, must be serialized if the req
-    //is the first request sent over the channel. This allows the ELB Session-Cookie to take hold in the HTTP client.
-    //This latch enables the serialization of requests.
-    private LifecycleEventLatch latch = new LifecycleEventLatch(1); 
-    private boolean serialize;
+    private int numExpectedResponses;
+    private LifecycleEventLatch[] latches ; //provide the ability to wait on any response in the serialized sequence
 
-    private TwoResponseCoordinator() {
-
+    private ResponseCoordinator(int numExpectedResponses) {
+        this.numExpectedResponses = numExpectedResponses;
+        latches = new LifecycleEventLatch[numExpectedResponses];
+        for(int i=0;i<numExpectedResponses;i++){
+            latches[i] = new LifecycleEventLatch(1);
+        }
     }
 
     /**
-     * Gets a TwoResponseCoodinator that can be used to coordinate two
+     * Gets a TwoResponseCoodinator that can be used to coordinate two or more 
      * CoordinatedResponseHandlers
      *
-     * @param h1
-     * @param h2
-     * @param serialize if set to true, awaitFirstResponse() method will awaitFirstResponse the arrival or
- h1's response
+     * @param serialize if set to true, awaitNthResponse() method will awaitNthResponse the arrival or
+h1's response
+     * @param responseHandlers each CoordinatedResponseHandler must be provided in the vararg list
      * @return
      */
-    public static TwoResponseCoordinator create(CoordinatedResponseHandler h1,
-            CoordinatedResponseHandler h2, boolean serialize) {
-        TwoResponseCoordinator coord = new TwoResponseCoordinator();
-        h1.setCoordinator(coord);
-        h2.setCoordinator(coord);
-        coord.setSerialize(serialize);
-        coord.LOG = h1.getConnection().getLogger(TwoResponseCoordinator.class.
+    public static ResponseCoordinator create(CoordinatedResponseHandler... responseHandlers) {        
+        ResponseCoordinator coord = new ResponseCoordinator(responseHandlers.length);
+        for(CoordinatedResponseHandler h: responseHandlers){
+            h.setCoordinator(coord);
+        }
+        coord.LOG = responseHandlers[0].getConnection().getLogger(ResponseCoordinator.class.
                 getName());
         return coord;
     }
 
-    public static TwoResponseCoordinator createNonSerializing(
-            CoordinatedResponseHandler h1,
-            CoordinatedResponseHandler h2) {
-        return create(h1, h2, false);
-    }
-
-    public static TwoResponseCoordinator createSerializing(
-            CoordinatedResponseHandler h1,
-            CoordinatedResponseHandler h2) {
-        return create(h1, h2, true);
-    }
 
     /**
      * Two response coordinator tells us, through this call, if a given
@@ -86,20 +74,25 @@ public class TwoResponseCoordinator {
      * it would hide the NOT OK event).
      *
      * @param e the LifecycleEvent that we are asking if it should be ignored
-     * @return true if the LifecycleEvent e should be igored
+     * @param channelMetrics will be updated if e is not ignorable
      */
     public synchronized void conditionallyUpate(LifecycleEvent e,
-            ChannelMetrics m) {
-        if (isSerialize()) {
-            this.latch.countDown(e);
-        }
+            ChannelMetrics channelMetrics) {
+        latches[responseCount.get()].countDown(e); //allows someone to await the nth response
         responseCount.incrementAndGet();
-        alreadyNotOk.set(!e.isOK()); //record fact that we saw a not OK
-        if (isFirstAndOK(e)
-                || isOKButPredecessorWasNotOK(e)) {
+        if(!e.isOK()){
+            alreadyNotOk.set(true); //record fact that we saw a not OK
+        }
+        //send OK response to /dev/null if they can be ignored
+        if (isOKIgnorable(e)) {
             return; //under the above conditions we ignore OK responses
         }
-        m.update(e);
+        channelMetrics.update(e);
+    }
+
+    private boolean isOKIgnorable(LifecycleEvent e) {
+        return okButNotLastResponse(e)
+                || isOKButPredecessorWasNotOK(e);
     }
 
     private boolean isOKButPredecessorWasNotOK(LifecycleEvent e) {
@@ -111,8 +104,8 @@ public class TwoResponseCoordinator {
         return ignore;
     }
 
-    private boolean isFirstAndOK(LifecycleEvent e) {
-        boolean ignore = isFirst() && e.isOK();
+    private boolean okButNotLastResponse(LifecycleEvent e) {
+        boolean ignore = !isLast() && e.isOK();
         if (ignore) {
             LOG.debug(
                     "Ignoring '{}' (must await second of 2 responses).", e);
@@ -120,19 +113,21 @@ public class TwoResponseCoordinator {
         return ignore;
     }
 
-    private boolean isFirst() {
-        return responseCount.get() == 1;
+    private boolean isLast() {
+        return (responseCount.get() == numExpectedResponses);
     }
 
-    public LifecycleEvent awaitFirstResponse() throws InterruptedException {
-        if (!isSerialize()) {
-            throw new IllegalStateException(
-                    "Cannot await non-serialized TwoResponseCoordinator");
-        }
+    /**
+     * Allows caller to seriaze request by awaiting a response before sending a request.
+     * @param n the zero-based sequence number of the response you are waiting for.
+     * @return the LifecycleEvent that corresponds to the nth response
+     * @throws InterruptedException
+     */
+    public LifecycleEvent awaitNthResponse(int n) throws InterruptedException {
         //TODO FIXME - for sure we need to also have timeouts at the HTTP layer. If network is down this is going
         //to block the full five minutes. Furthermore, preflight retries will occur N times and the blocking will stack!
-        if (latch.await(5, TimeUnit.MINUTES)) {//wait for ackcheck response before hitting ack endpoint  
-            return this.latch.getLifecycleEvent();
+        if (latches[n].await(5, TimeUnit.MINUTES)) {//wait for ackcheck response before hitting ack endpoint  
+            return this.latches[n].getLifecycleEvent();
         } else {
             LOG.warn("TwoResponseCoordinator timed out (5 minutes)  waiting for first response.");
             return null;
@@ -144,34 +139,6 @@ public class TwoResponseCoordinator {
      */
     public AtomicBoolean getAlreadyNotOk() {
         return alreadyNotOk;
-    }
-
-    /**
-     * @return the responseCount
-     */
-    public AtomicInteger getResponseCount() {
-        return responseCount;
-    }
-
-    /**
-     * @return the latch
-     */
-    public LifecycleEventLatch getLatch() {
-        return latch;
-    }
-
-    /**
-     * @return the serialize
-     */
-    public boolean isSerialize() {
-        return serialize;
-    }
-
-    /**
-     * @param serialize the serialize to set
-     */
-    public void setSerialize(boolean serialize) {
-        this.serialize = serialize;
     }
 
 }

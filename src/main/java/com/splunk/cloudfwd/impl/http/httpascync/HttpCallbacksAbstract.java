@@ -63,7 +63,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
-            LOG.warn("reply with code {} was empty for function '{}'",code,  getName());
+            LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
         if(code != 200){
             LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
@@ -80,7 +80,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     @Override
     public void cancelled() {
         try {
-            LOG.trace("HTTP post cancelled while polling for '{}' on channel {}", getName(), getChannel());
+            LOG.trace("HTTP post cancelled while polling for '{}' on channel {}", getOperation(), getChannel());
         } catch (Exception ex) {
             error(ex);
         }
@@ -138,7 +138,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
      * Subclass should return the name indicative of it's purpose, such as "Health Poll" or "Event Post"
      * @return
      */
-    protected String getName(){
+    protected String getOperation(){
         return name;
     }
 
@@ -146,7 +146,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
             int statusCode) throws IOException {
         HecServerErrorResponseException e = ServerErrors.toErrorException(reply,
                 statusCode, getBaseUrl());
-        e.setContext(getName());
+        e.setContext(getOperation());
         error(e);
         return e.getLifecycleType();
     }
@@ -155,7 +155,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
             int statusCode) throws IOException {
         HecServerErrorResponseException e = ServerErrors.toErrorException(reply,
                 statusCode, getBaseUrl());
-        e.setContext(getName());
+        e.setContext(getOperation());
         warn(e);
         return e.getLifecycleType();
     }    
@@ -163,13 +163,13 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     //Hardened to catch exceptions that could come from the application's failed callback
     protected void error(Exception ex) {
         try {
-            LOG.error("System Error in Function '{}' Exception '{}'", getName(),  ex);
+            LOG.error("System Error in Function '{}' Exception '{}'", getOperation(),  ex);
             getCallbacks().systemError(ex);
         } catch (Exception e) {
             //if the application's callback is throwing an exception we have no way to handle this, other
             //than log an error
             LOG.error("Exception '{}'in ConnectionCallbacks.systemError) for  '{}'",
-                    ex, getName());
+                    ex, getOperation());
         }
     }
     
@@ -177,7 +177,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
             int statusCode) throws IOException {
         HecServerErrorResponseException e = ServerErrors.toErrorException(reply,
                 statusCode, getBaseUrl());
-        e.setContext(getName());
+        e.setContext(getOperation());
             invokeFailedEventsCallback(events, e);
         return e.getLifecycleType();
     }    
@@ -186,26 +186,26 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     //Hardened to catch exceptions that could come from the application's failed callback
     protected void invokeFailedEventsCallback(EventBatch events, Exception ex) {
         try {
-            LOG.error("Failed events in Function '{}' Events  '{}' Exception '{}'",getName(), events, ex.getMessage());
+            LOG.error("Failed events in Function '{}' Events  '{}' Exception '{}'",getOperation(), events, ex.getMessage());
             getCallbacks().
                     failed(events, ex);
         } catch (Exception e) {
             //if the applicatoin's callback is throwing an exception we have no way to handle this, other
             //than log an error
             LOG.error("Exception '{}'in ConnectionCallbacks.failed() for  '{}' for events {}",
-                    ex, events, getName());
+                    ex, events, getOperation());
         }           
     }
     
     protected void warn(Exception ex) {
         try {
-            LOG.warn("{} System Warning in Function '{}' Exception '{}'", getChannel(), getName(), ex.getMessage());
+            LOG.warn("{} System Warning in Function '{}' Exception '{}'", getChannel(), getOperation(), ex.getMessage());
             getCallbacks().systemWarning(ex);
         } catch (Exception e) {
             //if the applicatoin's callback is throwing an exception we have no way to handle this, other
             //than log an error
             LOG.error("{} Exception '{}'in ConnectionCallbacks.systemWarning() for  '{}'",
-                    getChannel(), ex.getMessage(), getName());
+                    getChannel(), ex.getMessage(), getOperation());
         }           
     }    
     

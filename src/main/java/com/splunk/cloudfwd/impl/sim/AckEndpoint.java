@@ -45,12 +45,15 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     
     private static final Logger LOG = LoggerFactory.getLogger(AckEndpoint.class.
             getName());
+    private static final ObjectMapper serializer = new ObjectMapper();
     
     protected AtomicLong ackId = new AtomicLong(-1); //so post increment, first id returned is 0
-    protected NavigableMap<Long, Boolean> acksStates = new ConcurrentSkipListMap<>(); //key is ackId
+    protected SortedMap<Long, Boolean> acksStates = new TreeMap<>(); //key is ackId
     Random rand = new Random(System.currentTimeMillis());
     volatile boolean started;
     private final ScheduledThreadPoolExecutor executor;
+    private final Map resp = new HashMap(); //accessed from synchronized block
+    SortedMap<Long, Boolean> acks = new TreeMap<>();    //accessed from synchronized block
     
     public AckEndpoint() {
         ThreadFactory f = new ThreadFactory() {
@@ -79,7 +82,10 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             public void run() {
                 try {
                     synchronized (AckEndpoint.this) {
-                        Long lowestKey = acksStates.ceilingKey(0L);
+                        if(acksStates.isEmpty()){
+                            return;
+                        }
+                        Long lowestKey = acksStates.firstKey();
                         if (null == lowestKey) {
                             return;
                         }
@@ -105,10 +111,10 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
         return newId;
     }
     
-    private synchronized Boolean check(long ackId) {
-        //System.out.println("checking " + ackId);
-        return this.acksStates.remove(ackId);
-    }
+//    private synchronized Boolean check(long ackId) {
+//        //System.out.println("checking " + ackId);
+//        return this.acksStates.remove(ackId);
+//    }
     
     @Override
     public synchronized void pollAcks(HecIOManager ackMgr,
@@ -118,17 +124,18 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             Collection<Long> unacked = ackMgr.getAcknowledgementTracker().
                     getPostedButUnackedEvents();
             //System.out.println("Channel  " +AckEndpoint.this.toString()+" recieved these acks to check: " + unacked + " and had this state " + acksStates);      
-            SortedMap<Long, Boolean> acks = new TreeMap<>();
+            acks.clear();
             for (long ackId : unacked) {
-                Boolean was = check(ackId);
+                Boolean was = acksStates.remove(ackId);//check(ackId);
                 if (was != null) {
                     acks.put(ackId, was);
                 }
             }
-            Map resp = new HashMap();            
+            resp.clear();
             resp.put("acks", acks);
+            final HttpResponse httpResp = getResult(resp); //this must be calculated and made final, not call getResult from Runnable since we are using class fields (acks, and resp) which can mutate during the delay before the runnable runs
             Runnable r = () -> {
-                cb.completed(getResult(resp));
+                cb.completed(httpResp);
             };
             delayResponse(r);
             //executor.schedule(r, 1, TimeUnit.MILLISECONDS);
@@ -141,7 +148,6 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     }
     
     protected HttpResponse getResult(Map acks) {
-        ObjectMapper serializer = new ObjectMapper();
         String str = null;
         try {
             str = serializer.writeValueAsString(acks);

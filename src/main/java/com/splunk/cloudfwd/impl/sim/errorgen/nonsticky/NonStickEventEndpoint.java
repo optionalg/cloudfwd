@@ -49,10 +49,11 @@ public class NonStickEventEndpoint extends EventEndpoint {
   }
 
   @Override
-  public synchronized long nextAckId() {
-    LOG.trace("next ack id");
+  public synchronized long nextAckId() {    
     maybeUnstick();
-    return getAckEndpoint().nextAckId();
+    long id = getAckEndpoint().nextAckId();
+    LOG.trace("next ack id {} from {}", id, this);
+    return id;
   }
 
   private void maybeUnstick() {

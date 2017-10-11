@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl;
 
-import com.splunk.cloudfwd.ConfigStatus;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
@@ -25,9 +24,7 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecLoggerFactory;
-
 import static com.splunk.cloudfwd.PropertyKeys.*;
-
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.HecChannel;
@@ -37,7 +34,9 @@ import com.splunk.cloudfwd.impl.util.TimeoutChecker;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
@@ -49,20 +48,11 @@ import org.slf4j.LoggerFactory;
  * @author ghendrey
  */
 public class ConnectionImpl implements Connection {
+    
+ //memoized loggers   
+  private static final Map<String, Logger> loggers = new ConcurrentHashMap<>();    
+    
   private HecLoggerFactory loggerFactory;
-
-  /**
-   * @return the propertiesFileHelper
-   */
-  public PropertiesFileHelper getPropertiesFileHelper() {
-    return propertiesFileHelper;
-  }
-
-    @Override
-    public ConnectionSettings getSettings() {
-        return getPropertiesFileHelper();
-    }
-
   private final Logger LOG;
   private final LoadBalancer lb;
   private CallbackInterceptor callbacks;
@@ -70,6 +60,7 @@ public class ConnectionImpl implements Connection {
   private boolean closed;
   private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
   private PropertiesFileHelper propertiesFileHelper;
+
 
   public ConnectionImpl(ConnectionCallbacks callbacks) {
     this(callbacks, new Properties());
@@ -96,6 +87,19 @@ public class ConnectionImpl implements Connection {
     //*before* those two functions (failed, or acknowledged) are invoked.
     throwExceptionIfNoChannelOK();
   }
+  
+  /**
+   * @return the propertiesFileHelper
+   */
+  public PropertiesFileHelper getPropertiesFileHelper() {
+    return propertiesFileHelper;
+  }
+
+    @Override
+    public ConnectionSettings getSettings() {
+        return getPropertiesFileHelper();
+    }
+  
   
   public long getAckTimeoutMS() {
     return propertiesFileHelper.getAckTimeoutMS();
@@ -285,26 +289,24 @@ public class ConnectionImpl implements Connection {
     loggerFactory = f;
   }
 
-  public Logger getLogger(String name) {
-      if (loggerFactory != null) {
-        return loggerFactory.getLogger(name);
-      } else {
-        return LoggerFactory.getLogger(name);
-      }
-  }
+    public Logger getLogger(String name) {
+        Logger logger = loggers.get(name); //memoize the loggers
+        if (null == logger) {
+            if (null != loggerFactory) {
+                logger = loggerFactory.getLogger(name);
+            } else {
+                logger = LoggerFactory.getLogger(name);
+            }
+            loggers.put(name, logger);
+        }
+        return logger;
+    }
 
     @Override
     public List<HecHealth> getHealth() {
         return lb.getHealth();
     }
 
-   /*
-    private void throwExceptionIfNoChannelOK()  {
-        if(checkConfigs().stream().noneMatch(ConfigStatus::isOk)){
-            throw checkConfigs().stream().filter(e->!e.isOk()).findFirst().get().getProblem();
-        } 
-   }
-    */
     
     private void throwExceptionIfNoChannelOK()  {
         List<HecHealth> healths = lb.getHealth(); //returns after every channel either has gotten its health or given up trying
