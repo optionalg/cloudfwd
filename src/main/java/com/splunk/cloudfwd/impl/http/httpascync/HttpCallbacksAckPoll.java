@@ -31,9 +31,10 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private final Logger LOG;
+    public static final String Name = "ack_poll";
 
     public HttpCallbacksAckPoll(final HecIOManager m) {
-        super(m, "ack_poll");
+        super(m, Name);
         this.LOG = getConnection().getLogger(HttpCallbacksAckPoll.class.getName());
     }
 

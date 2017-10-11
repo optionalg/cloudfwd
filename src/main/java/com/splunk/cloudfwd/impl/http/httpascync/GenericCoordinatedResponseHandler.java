@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 public class GenericCoordinatedResponseHandler extends HttpCallbacksGeneric implements CoordinatedResponseHandler{
 
     private Logger LOG;
-    private TwoResponseCoordinator coordinator;
+    private ResponseCoordinator coordinator;
     
 
     public GenericCoordinatedResponseHandler(HecIOManager m, LifecycleEvent.Type okType,
@@ -36,6 +36,12 @@ public class GenericCoordinatedResponseHandler extends HttpCallbacksGeneric impl
                 HttpCallbacksGeneric.class.
                 getName());
     }
+    
+    public GenericCoordinatedResponseHandler(HecIOManager m, LifecycleEvent.Type okType,
+            LifecycleEvent.Type failType, LifecycleEvent.Type gatewayTimeoutType,
+            LifecycleEvent.Type indexerBusyType, String name) {
+        this(m, okType, failType, name);
+    }    
 
     /**
      *Overrides the base behavior which always notifies. We notify only when we have enough information from both 
@@ -53,7 +59,7 @@ public class GenericCoordinatedResponseHandler extends HttpCallbacksGeneric impl
      */
     @Override
     public void setCoordinator(
-            TwoResponseCoordinator coordinator) {
+            ResponseCoordinator coordinator) {
         this.coordinator = coordinator;
     }
 

@@ -27,7 +27,7 @@ public interface CoordinatedResponseHandler {
     /**
      * @param coordinator the coordinator to set
      */
-    void setCoordinator(TwoResponseCoordinator coordinator);
+    void setCoordinator(ResponseCoordinator coordinator);
     
     public ConnectionImpl getConnection();
     

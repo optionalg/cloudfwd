@@ -16,6 +16,7 @@ package mock_tests;/*
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
@@ -68,8 +69,10 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
   protected Properties getProps() {
     Properties props = new Properties();
     //simulate a non-sticky endpoint
-    props.put(MOCK_HTTP_CLASSNAME,
+    props.setProperty(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.impl.sim.errorgen.nonsticky.NonStickEndpoints");
+        props.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS,
+            "1");
     return props;
   }
   

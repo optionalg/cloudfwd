@@ -33,7 +33,7 @@ import org.apache.http.concurrent.FutureCallback;
  */
 public class InDetentionEndpoints extends SimulatedHECEndpoints {
   @Override
-  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
     ((HttpCallbacksAbstract)httpCallback).completed(
         "Not Found",
         404);

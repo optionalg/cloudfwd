@@ -15,11 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.LifecycleEvent;
-
-import java.util.Map;
-
 /**
  * if ack's disabled we get back {"text":"Success", "code":0}. If ack's enabled, on success we get back {"ackId":42}
  * @author ghendrey

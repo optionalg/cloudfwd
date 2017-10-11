@@ -38,7 +38,7 @@ public class Response extends LifecycleEvent {
   
   @Override
   public Exception getException(){
-      if(httpCode==200){
+      if(isOK()){
           return null;// OK = no Exception
       }else{
           try {

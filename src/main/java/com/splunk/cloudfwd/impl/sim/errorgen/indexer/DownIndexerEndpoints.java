@@ -35,7 +35,7 @@ import java.net.ConnectException;
  */
 public class DownIndexerEndpoints extends SimulatedHECEndpoints {
   @Override
-  public void ackEndpointCheck(FutureCallback<HttpResponse> httpCallback) {
+  public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
     System.out.println("splunk check fails because down");
     ((HttpCallbacksAbstract)httpCallback).failed(new ConnectException("Unable to connect"));
   }
