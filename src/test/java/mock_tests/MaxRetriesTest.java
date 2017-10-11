@@ -3,6 +3,7 @@ package mock_tests;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.error.HecChannelDeathException;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
 import java.util.Properties;
@@ -50,7 +51,7 @@ public class MaxRetriesTest extends AbstractConnectionTest {
     props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
     props.put(PropertyKeys.ACK_POLL_MS, "250");
     props.put(PropertyKeys.RETRIES, "2");
-    props.put(PropertyKeys.UNRESPONSIVE_MS, "250"); //for this test, lets QUICKLY determine the channel is dead
+    props.put(PropertyKeys.UNRESPONSIVE_MS, "100"); //for this test, lets QUICKLY determine the channel is dead
     return props;
   }
   
@@ -71,6 +72,7 @@ public class MaxRetriesTest extends AbstractConnectionTest {
       Assert.fail(
               "The first message should send - but we got an HecConnectionTimeoutException");
     }
+    //Thread.sleep(10000);//this is  a total hack - we have a race condition where ChannelDeathDetector is racing against Connection.close()
     connection.close();
     this.callbacks.await(1, TimeUnit.MINUTES);
     //we set this test up to detect too many retries by DeadChannelDetector
@@ -102,6 +104,16 @@ public class MaxRetriesTest extends AbstractConnectionTest {
          public boolean shouldFail(){
             return true;
           }
+         
+       @Override
+        protected boolean isExpectedWarningType(Exception e){
+          return e instanceof HecChannelDeathException;
+        }
+
+       @Override
+        public boolean shouldWarn(){
+            return true; //expect HecChannelDeathException warning
+        }         
     };
   }
 

@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
 
@@ -219,6 +218,7 @@ public class LoadBalancer implements Closeable {
 
     public synchronized boolean sendRoundRobin(EventBatchImpl events, boolean resend)
             throws HecConnectionTimeoutException, HecNoValidChannelsException {
+        LOG.trace("accepted events"); //fixme remove
         events.incrementNumTries();
         if (resend && !isResendable(events)) {
             LOG.trace("Not resendable {}", events);
@@ -228,7 +228,7 @@ public class LoadBalancer implements Closeable {
         long startTime = System.currentTimeMillis();
         int spinCount = 0;
         while (true) {//!closed || resend
-            if(closed && !resend){
+            if(closed && !resend){                
                 return false;
             }
             //note: the channelsSnapshot must be refreshed each time through this loop
@@ -246,8 +246,7 @@ public class LoadBalancer implements Closeable {
                     LOG.warn("no channels in load balancer");
                     Thread.sleep(100); 
                 } catch (InterruptedException ex) {
-                    java.util.logging.Logger.getLogger(LoadBalancer.class.getName()).
-                            log(Level.SEVERE, null, ex);
+                    LOG.warn("LoadBalancer Sleep interrupted.");//should rethrow ex
                 }
                 continue; //keep going until a channel is added
             }

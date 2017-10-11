@@ -33,15 +33,17 @@ public class SlowEndpoints extends SimulatedHECEndpoints {
   @Override
   public void pollAcks(HecIOManager ackMgr,
           FutureCallback<HttpResponse> httpCallback) {
-    sleep();
-    ackEndpoint.pollAcks(ackMgr, httpCallback);
-  }
-
-  private void sleep() {
     try {
       Thread.sleep(sleep);
     } catch (InterruptedException ex) {
         Thread.currentThread().interrupt(); //so we don't silently supporess interruption
+        //we MUST resurn, not call ackEndpoint.pollAcks. Because this gets interrupted when the executor running the 
+        //polling thread that calls this is shutdownNow. If you don't return then you fart out an ack poll response that 
+        //*isn't* delayed by sleep, and MaxRetriesTest will fail
+        return; //fixme todo this should probably throw the interrupted exception
     }
+    ackEndpoint.pollAcks(ackMgr, httpCallback);
   }
+
+
 }

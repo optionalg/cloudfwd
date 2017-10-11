@@ -26,6 +26,7 @@ import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
@@ -37,13 +38,13 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
-import java.util.concurrent.ExecutorService;
 import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
+import java.util.List;
 
 /**
  *
@@ -170,6 +171,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   @Override
   synchronized public void update(LifecycleEvent e) {
+    if(closed){
+        LOG.warn("Discarding {} on CLOSED channel {}", e, this);
+        return;
+    }
     boolean wasAvailable = isAvailable();
     switch (e.getType()) {
       case ACK_POLL_OK: {
@@ -469,8 +474,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
-          String msg = HecChannel.this  + " dead. Resending messages and force closing channel";
+          String msg = HecChannel.this  + " dead. Resending "+unackedCount.get()+" unacked messages and force closing channel";
           LOG.warn(msg);
+          quiesce();
           getCallbacks().systemWarning(new HecChannelDeathException(msg));
           //synchronize on the load balancer so we do not allow the load balancer to be
           //closed before  resendInFlightEvents. If that
@@ -486,6 +492,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             //don't force close until after events resent. 
             //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
             //and the events will never send.
+            LOG.warn("Force closing dead channel {}", HecChannel.this);
             interalForceClose();
           }
           if(getConnection().isClosed()) {
@@ -507,21 +514,28 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //take messages out of the jammed-up/dead channel and resend them to other channels
     private void resendInFlightEvents() {
         long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
-              getAckTimeoutMS();
-        loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(
-              HecChannel.this).forEach((e) -> {
+              getAckTimeoutMS();        
+        List<EventBatchImpl> unacked = loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(HecChannel.this);
+        LOG.trace("{} events need resending on dead channel {}", unacked.size(), HecChannel.this);       
+        AtomicInteger count = new AtomicInteger(0);
+        unacked.forEach((e) -> {
                 //we must force messages to be sent because the connection could have been gracefully closed
                 //already, in which case sendRoundRobbin will just ignore the sent messages
                 while (true) { 
                   try {
-                      loadBalancer.sendRoundRobin(e, true);
+                      if(!loadBalancer.sendRoundRobin(e, true)){
+                          LOG.trace("LoadBalancer did not accept resend of {} (it was resent max_retries times?)", e);
+                      }else{
+                        LOG.trace("LB ACCEPTED events");//fixme remove
+                        count.incrementAndGet();
+                      }
                       break;
                   } catch (HecConnectionTimeoutException|HecNoValidChannelsException ex) {
                      LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
                   }
                 }
               });
-        LOG.info("Resent Events from dead channel {}", HecChannel.this);
+        LOG.info("Resent {} Events from dead channel {}", count,  HecChannel.this);
     }
 
   }
