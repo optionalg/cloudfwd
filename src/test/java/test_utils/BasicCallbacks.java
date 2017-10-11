@@ -134,6 +134,8 @@ public class BasicCallbacks implements ConnectionCallbacks {
     exception = ex;
     if(!isExpectedFailureType(ex)){
       ex.printStackTrace(); //print the stack trace if we were not expecting failure
+    } else {
+        LOG.info("Got expected failed exception: " + ex);
     }
     //make sure we set the failed, failMsg and Exception *before* we unlatch    
     failLatch.countDown(); //will lest test exit

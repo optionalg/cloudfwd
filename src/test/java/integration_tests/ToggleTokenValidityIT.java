@@ -137,7 +137,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     }
 
     private class ToggleTokenCallbacks extends BasicCallbacks {
-        private final Logger LOG = LoggerFactory.getLogger(BasicCallbacks.class.getName());
+        private final Logger LOG = LoggerFactory.getLogger(ToggleTokenCallbacks.class.getName());
         public ToggleTokenCallbacks(int expected) {
             super(expected);
         }
