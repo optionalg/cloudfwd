@@ -89,10 +89,9 @@ RUN mkdir -p ${CLOUDFWD}
 COPY . ${CLOUDFWD}/
 WORKDIR ${CLOUDFWD}
 RUN cd ${CLOUDFWD} && ( mvn -B -Dmaven.test.skip=true install > install.log 2>&1 || ( FAILURE=$! && echo "Failed with exit code: $?" && tail -10000 install.log && exit $FAILURE))
-RUN rm -rf ${CLOUDFWD}
 
-RUN test -d ${CLOUDFWD} && rm -rf ${CLOUDFWD} || echo "directory doesn't exist"
-RUN mkdir -p ${CLOUDFWD}
-COPY . ${CLOUDFWD}/
+# RUN rm -rf ${CLOUDFWD}
 
-RUN ( /opt/splunk/bin/splunk start > splunk_start.log 2>&1 && echo 'last 100 records from splunk_start.log' && tail -100 splunk_start.log || (FAILURE=$? && tail -10000 splunk_start.log && exit $FAILURE)) && cd /build/cloudfwd && ( mvn -B clean verify > verify.log 2>&1 && echo "last 300 records from maven verify log:" && tail -300 verify.log || (FAILURE=$? && echo "Failed with exit code: $?" && tail -10000 verify.log ; exit $FAILURE))
+# RUN test -d ${CLOUDFWD} && rm -rf ${CLOUDFWD} || echo "directory doesn't exist"
+# RUN mkdir -p ${CLOUDFWD}
+# COPY . ${CLOUDFWD}/
