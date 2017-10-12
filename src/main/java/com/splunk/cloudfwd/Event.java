@@ -21,8 +21,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * An Event can be a JSON document or a blob of text. Every Event must have a comparable id. For each
- * Event sent to the Connection, the id must be greater than the previously sent id. That is, ids must
+ * An Event can be a JSON document or a blob of text. Every event must have a comparable id. For each
+ * event sent to the Connection, the id must be greater than the previously sent id. That is, ids must
  * be monotonically ascending. Ids can be integers, strings, or any other comparable.
  * @author ghendrey
  */

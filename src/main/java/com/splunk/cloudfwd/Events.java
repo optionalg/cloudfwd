@@ -18,7 +18,7 @@ package com.splunk.cloudfwd;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 
 /**
- *Factory for creating EventBatch instances
+ *Factory for creating EventBatch instances.
  * @author ghendrey
  */
 public class Events {

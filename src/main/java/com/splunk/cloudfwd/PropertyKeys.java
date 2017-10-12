@@ -16,8 +16,8 @@
 package com.splunk.cloudfwd;
 
 /**
- * Names of properties file keys, as well as their default values and minimum
- * allowed values where applicable.
+ * Names of properties file keys and their default and minimum
+ * allowed values.
  *
  * @author ghendrey
  */
@@ -25,7 +25,7 @@ public class PropertyKeys {
 
   /* **************************** KEYS ************************* */
   /**
-   * The authentication token for the Http Event Collector input on the Splunk
+   * The authentication token for the HTTP Event Collector input on the Splunk
    * destination.
    */
   public static final String TOKEN = "token";
@@ -58,13 +58,13 @@ public class PropertyKeys {
    * events have been delivered whose IDs are lower or equal to the highwater
    * mark provided in the ConnectionCallbacks.checkpoint call. By storing the
    * highwater mark to durable storage, the user of the Connection can recover
-   * from a crash/cold start by reading the highwater mark out of storage and
-   * resuming sending events based on the highwater mark. It is important to
-   * understand that, because acknowledgments occur out of order, that while
-   * a ConnectionCallbacks.acknowledged will be called for every event that is
-   * acknowledged by splunk HEC, that ConnectionCallbacks.checkpoint need
-   * not be called for each, and may skip over many acknowledged IDs landing
-   * only on the highwater mark itself.
+   * from a crash or cold start by reading the highwater mark out of storage and
+   * resuming sending events based on the highwater mark. It is important to understand
+   * that acknowledgments occur out of order, so while a ConnectionCallbacks.acknowledged is
+   * called for every event acknowledged by Splunk's HTTP Event Collector, ConnectionCallbacks.checkpoint
+   * does not need to be called for each event and may skip over acknowledged IDs to only
+   * land on the highwater mark itself.
+
    */
   public static final String ENABLE_CHECKPOINTS = "enable_checkpoints";
 
@@ -109,7 +109,7 @@ public class PropertyKeys {
   public static final String UNRESPONSIVE_MS = "unresponsive_channel_decom_ms";
 
   /**
-   * Integer that caps the total number of channels across all destinations.
+   * Integer that limits the total number of channels across all destinations.
    *
    * @see CHANNELS_PER_DESTINATION
    * @see DEFAULT_MAX_TOTAL_CHANNELS
@@ -117,8 +117,8 @@ public class PropertyKeys {
   public static final String MAX_TOTAL_CHANNELS = "max_total_channels";
 
   /**
-   * Integer that caps the total number of unacknowledged event batches per
-   * channel. If the cap is reached, the channel will be considered full and no
+   * Integer that limits the total number of unacknowledged event batches per
+   * channel. If the limit is reached, the channel will be considered full and no
    * more events will be sent through it until it receives acknowledgements from
    * Splunk software.
    *
@@ -147,7 +147,7 @@ public class PropertyKeys {
   public static final String ACK_POLL_MS = "ack_poll_ms";
 
   /**
-   * Interval (in milliseconds) to poll Splunk HEC for health check in case a
+   * Interval (in milliseconds) to poll Splunk HEC for a health check in case a
    * Splunk indexer queue (and therefore channel) is full.
    *
    * @see MIN_HEALTH_POLL_MS
@@ -321,10 +321,10 @@ public class PropertyKeys {
   public static final String DEFAULT_HEC_ENDPOINT_TYPE = "raw";
 
   /**
-   * By default checkpoints are disabled. When checkpoints are disabled the
+   * By default, checkpoints are disabled. When checkpoints are disabled, the
    * ConnectionCallbacks.checkpoint method is still invoked, but its meaning is
    * identical to ConnectionCallbacks.acknowledged. It will be called once for
-   * each acknowledged ID, and can occur out of order with respect to event IDs.
+   * each acknowledged ID and can occur out of order with respect to event IDs.
    * When disabled, the application does NOT have to send events in order of
    * monotonically increasing IDs.
    */

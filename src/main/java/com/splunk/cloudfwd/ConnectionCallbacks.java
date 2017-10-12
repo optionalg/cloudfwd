@@ -28,7 +28,7 @@ public interface ConnectionCallbacks {
 
   /**
    * The **acknowledged** function is called once for each EventBatchImpl that has been
- replicated amongst Splunk Indexers. Events sent via Connection.send are
+ replicated amongst Splunk indexers. Events sent via Connection.send are
  internally batched, even if there is only one event in an EventBatchImpl. This is
  why acknowledgments are per-EventBatchImpl and not per-Event.
    *
@@ -37,8 +37,8 @@ public interface ConnectionCallbacks {
   public void acknowledged(EventBatch events);
 
   /**
-   * The **failed** function is called if there is a failure to deliver EventBatch to
- Splunk.
+   * The **failed** function is called if there is a failure to deliver EventBatch to your
+ Splunk platform instance.
    *
    * @param events
    * @param ex
@@ -60,7 +60,7 @@ public interface ConnectionCallbacks {
     
     /**
      * Invoked when a system condition occurs that could be indicative of a problem. For example, server responses such 
-     * as 503/Indexer -busy are not errors, but the application may want to record their occurrence 
+     * as 503 or indexer is busy are not errors, but the application may want to record their occurrence.
      * @param e
      */
     public void systemWarning(Exception e);

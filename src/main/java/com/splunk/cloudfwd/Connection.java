@@ -27,8 +27,7 @@ import com.splunk.cloudfwd.impl.util.HecLoggerFactory;
 public interface Connection extends Closeable{
 
     /**
-     * The send method will send the Event immediately unless buffering is enabled. Buffering is
-    enabled via either the setEventBatchSize method, or the EVENT_BATCH_SIZE property key. The buffer
+     * The send method sends the Event immediately unless buffering is enabled. Enable Buffering via the setEventBatchSize method or the EVENT_BATCH_SIZE property key. The buffer
     is flushed either by closing the Connection, calling flush, or calling send until EVENT_BATCH_SIZE bytes
     have accumulated in the Connections internal EventBatchImpl. When an EventBatchImpl is flushed, the connection's
     ConnectionCallbacks will be invoked, asynchronously. The send method may block for up to BLOCKING_TIMEOUT_MS
@@ -41,7 +40,7 @@ public interface Connection extends Closeable{
     int send(Event event) throws HecConnectionTimeoutException;
 
     /**
-     * Used to select either structured HEC /event endpoint or /raw HEC endpoint
+     * Used to select either structured HEC /event endpoint or /raw HEC endpoint.
      */
     public static enum HecEndpoint {
         STRUCTURED_EVENTS_ENDPOINT, RAW_EVENTS_ENDPOINT
@@ -67,11 +66,11 @@ public interface Connection extends Closeable{
 
     /**
      * sendBatch will immediately send the EventBatchImpl, returning the number
-     * of bytes sent, or throws an HecConnectionTimeoutException if
-     * BLOCKING_TIMEOUT_MS have expired before the batch could be sent.
+     * of bytes sent, or throw an HecConnectionTimeoutException if
+     * BLOCKING_TIMEOUT_MS has expired before the batch could be sent.
      * HecIllegalStateException can be thrown if the connection has already
-     * acknowledged an EventBatchImpl with the same id, or if an EventBatchImpl
-     * with the same id has already previously been sent.
+     * acknowledged an EventBatchImpl with the same id or if an EventBatchImpl
+     * with the same id has already been sent.
      *
      * @param events
      * @return
@@ -80,7 +79,7 @@ public interface Connection extends Closeable{
     int sendBatch(EventBatch events) throws HecConnectionTimeoutException;
 
     /**
-     * healthCheck will retrieve health for each channel or trigger a health check if no channels have been made@return     
+     * Retrieves the health for each channel or triggers a health check if no channels have been made. @return
      */
     List<HecHealth> healthCheck();
 
