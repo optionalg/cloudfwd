@@ -63,10 +63,10 @@ public class ConnectionImpl implements Connection {
 
 
   public ConnectionImpl(ConnectionCallbacks callbacks) {
-    this(callbacks, new Properties());
+    this(callbacks, new ConnectionSettings());
   }
 
-  public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
+  public ConnectionImpl(ConnectionCallbacks callbacks, ConnectionSettings settings) {
     if(null == callbacks){
         throw new HecConnectionStateException("ConnectionCallbacks are null",
                 HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);

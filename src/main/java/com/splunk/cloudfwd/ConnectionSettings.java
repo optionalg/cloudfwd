@@ -16,6 +16,8 @@
 package com.splunk.cloudfwd;
 
 import static com.splunk.cloudfwd.PropertyKeys.ACK_POLL_MS;
+
+import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecMissingPropertiesException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
@@ -33,15 +35,15 @@ import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.Endpoints;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
+
 import org.slf4j.Logger;
 
 /**
@@ -65,6 +67,13 @@ public class ConnectionSettings {
         this.connection = (ConnectionImpl)c;
         this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
         this.parsePropertiesFile();
+    }
+
+    public void fromPropsFile(String pathToFile) {
+        // use Jackson to populate this ConnectionSettings instance from file
+        JavaPropsMapper mapper = new JavaPropsMapper();
+        Map<String,Object> map = mapper.readValue(new File("/cloudfwd.properties"));//new HashMap<String,Object>;
+
     }
 
     public void putProperty(String k, String v) {
