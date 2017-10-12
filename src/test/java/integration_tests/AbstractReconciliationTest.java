@@ -215,6 +215,20 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     return json.readTree(reply).path("sid").asText();
   }
 
+  protected void restartSplunk() {
+    try {
+      enableTestHttpDebug();
+      HttpPost httpPost = new HttpPost(mgmtSplunkUrl() +
+              "/services/server/control/restart");
+      HttpResponse httpResponse = httpClient.execute(httpPost);
+      parseHttpResponse(httpResponse);
+      LOG.info("restartSplunk: Splunk successfully restarted");
+    } catch (Exception ex) {
+      Assert.fail("restartSplunk: Failed to restart Splunk: " +
+              ex.getMessage());
+    }
+  }
+
   /*
    * Checks HTTP request for errors. If no errors, returns the response as a String.
    */

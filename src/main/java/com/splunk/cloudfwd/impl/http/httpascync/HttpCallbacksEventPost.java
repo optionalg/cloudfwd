@@ -52,11 +52,10 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private final Logger LOG;
     private final EventBatchImpl events;
     private final ObjectMapper mapper = new ObjectMapper();
-    public static final String Name = "event_post";
 
     public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {
-        super(m, Name);
+        super(m, "event_post");
         this.events = events;
         LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }
@@ -106,15 +105,21 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
 
     private void resend(Exception ex) {
-        try {
-            events.addSendException(ex);
-            LOG.warn("resending events through load balancer {} on channel {}",
-                events, getSender().getChannel());
-            getSender().getConnection().getLoadBalancer().
-                sendRoundRobin(events, true); //will callback failed if max retries exceeded
-        } catch (Exception e) {
-            invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
-        }
+        Runnable r = () -> {
+            try {
+                events.addSendException(ex);
+                LOG.warn("resending events through load balancer {} on channel {}",
+                        events, getSender().getChannel());
+                getSender().getConnection().getLoadBalancer().
+                        sendRoundRobin(events, true); //will callback failed if max retries exceeded
+            } catch (Exception e) {
+                invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
+            }
+        };
+        // Need to do this in a new thread: if resending happens in this thread and ends up spinning in the load balancer,
+        // it'll prevent other threads from being able to send on the http client, since this thread holds onto a
+        // lock in the http client until the callback finishes
+        new Thread(r, "event post callbacks resender for channel " + getChannel()).start();
     }
 
     private void notifyFailedAndResend(Exception ex) {

@@ -180,11 +180,12 @@ public abstract class AbstractConnectionTest {
           LOG.warn("In Test caught exception on Connection.send(): {} with message {}", e, e.getMessage());
       }
       checkSendExceptions();
-      connection.close(); //will flush
+      connection.flush();
 
       this.callbacks.await(10, TimeUnit.MINUTES);
       this.callbacks.checkFailures();
       this.callbacks.checkWarnings();
+      connection.close(); //will flush
   }
 
   public void checkSendExceptions() {
