@@ -70,7 +70,7 @@ RUN \
 ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
 
 # Install maven depending on Java
-RUN apt-get update && apt-get install -y --no-install-recommends maven
+RUN apt-get update && apt-get install -y --no-install-recommends maven time
 
 
 # Cleanup
@@ -90,7 +90,6 @@ COPY . ${CLOUDFWD}/
 WORKDIR ${CLOUDFWD}
 RUN cd ${CLOUDFWD} && ( mvn -B -Dmaven.test.skip=true install > install.log 2>&1 || ( FAILURE=$! && echo "Failed with exit code: $?" && tail -10000 install.log && exit $FAILURE))
 
-RUN apt-get install time
 
 # RUN rm -rf ${CLOUDFWD}
 

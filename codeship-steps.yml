@@ -1,3 +1,3 @@
-- name: dummy step
+- name: Tests
   service: docker-java-splunk-cloudfwd
   command: ./codeship-test-runner.sh -d
