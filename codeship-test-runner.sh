@@ -2,8 +2,6 @@
 #
 # This test intends to run each test individually to isolate side effects of tests not shutting down an env properly
 
-set -e
-
 TMP_DIR="/tmp"
 START_SPLUNK_LOG="${TMP_DIR}/splunk_start.log";
 
@@ -18,12 +16,17 @@ SHELL_PID=$$; # script process ID
 # trap to execute on receiving TERM signal 
 trap "exit $FAIL_CODE" TERM;
 
-
 DOCKER="";
 
 die() {
 	echo "dying $1"
 	kill -s TERM $SHELL_PID
+}
+
+detect_time_cmd() {
+	TIME=""
+	/usr/bin/time -v echo "ok" > /dev/null 2>&1 && TIME="/usr/bin/time -v"
+	/usr/bin/time -l echo "ok" > /dev/null 2>&1 && TIME="/usr/bin/time -l" 
 }
 
 # parse args
@@ -41,7 +44,7 @@ run_test() {
 
 	# try running each test file:
 	( 
-		/usr/bin/time -l mvn test -Dtest=$1  > ${TMP_DIR}/$1.log 2>&1 && 
+		${TIME} mvn test -Dtest=$1  > ${TMP_DIR}/$1.log 2>&1 && 
 		echo "succeeded" &&
 		grep '^Tests run:' ${TMP_DIR}/$1.log | grep "Time elapsed"
 	) || ( # in case a test command above failed:
@@ -65,6 +68,10 @@ start_splunk() {
 		die $FAIL_CODE
 	);
 }
+
+echo "Detecting time cmd..."
+detect_time_cmd
+echo "TIME: ${TIME}"
 
 echo "Run all unit tests one by one"
 for f in $UTESTS; do 

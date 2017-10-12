@@ -90,6 +90,8 @@ COPY . ${CLOUDFWD}/
 WORKDIR ${CLOUDFWD}
 RUN cd ${CLOUDFWD} && ( mvn -B -Dmaven.test.skip=true install > install.log 2>&1 || ( FAILURE=$! && echo "Failed with exit code: $?" && tail -10000 install.log && exit $FAILURE))
 
+RUN apt-get install time
+
 # RUN rm -rf ${CLOUDFWD}
 
 # RUN test -d ${CLOUDFWD} && rm -rf ${CLOUDFWD} || echo "directory doesn't exist"
