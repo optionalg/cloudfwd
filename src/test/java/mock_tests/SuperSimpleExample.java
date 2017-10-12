@@ -90,7 +90,7 @@ public class SuperSimpleExample {
             "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
 
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
-    try (Connection c = Connections.create(callbacks, customization);) {
+    try (Connection c = Connections.create(callbacks, customization)) {
       c.getSettings().setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
       c.getSettings().setAckTimeoutMS(60000); //60 sec
       for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object

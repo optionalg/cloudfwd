@@ -14,6 +14,7 @@ package mock_tests;/*
  * limitations under the License.
  */
 
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 import com.splunk.cloudfwd.Connection;
@@ -34,14 +35,14 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
     @Override
     protected Properties getProps() {
         Properties props = new Properties();
-        props.put(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088"); 
+        props.put(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088");
         return props;
     }
 
     @Test
-    public void getSSLCertContentForCloudInstance() {
+    public void getSSLCertContentForCloudInstance() throws UnknownHostException {
         ConnectionSettings settings = connection.getSettings();
-        settings.putProperty(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088");
+        settings.setUrls("https://customer.cloud.splunk.com:8088");
         Connection c = Connections.create(null);
 
         // For cloud instance, if we didn't set CLOUD_SSL_CERT_CONTENT in overrides,
@@ -68,13 +69,13 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
     }
 
     @Test
-    public void getSSLCertContentForNonCloudInstance() {
+    public void getSSLCertContentForNonCloudInstance() throws UnknownHostException {
         ConnectionSettings settings = connection.getSettings();
-        settings.putProperty(PropertyKeys.COLLECTOR_URI, "https://localhost:8088");
+        settings.setUrls("https://localhost:8088");
 
         // Non-empty ssl content
         String expectedSSLCert = "testing ssl cert";
-        settings.putProperty(PropertyKeys.SSL_CERT_CONTENT, expectedSSLCert);
+        settings.setSSLCertContent(expectedSSLCert);
         String sslCert = settings.getSSLCertContent();
         if (!sslCert.equals(expectedSSLCert)) {
             Assert.fail("Expect: " + expectedSSLCert + "\nbut got: " + sslCert);

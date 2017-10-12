@@ -413,7 +413,7 @@ public class LoadBalancer implements Closeable {
     }
 
     private boolean isResendable(EventBatchImpl events) {
-         final int maxRetries = getPropertiesFileHelper(). getMaxRetries();
+         final int maxRetries = getPropertiesFileHelper().getMaxRetries();
         if (events.getNumTries() > maxRetries) {
                               String msg = "Tried to send event id=" + events.
                               getId() + " " + events.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;

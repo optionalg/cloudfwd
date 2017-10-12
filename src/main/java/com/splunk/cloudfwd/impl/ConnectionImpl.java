@@ -102,8 +102,7 @@ public class ConnectionImpl implements Connection {
   }
 
   public synchronized void setBlockingTimeoutMS(long ms) {
-    this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.
-            valueOf(ms));
+    this.propertiesFileHelper.setBlockingTimeoutMS(ms); //TODO: well this feels redundant...
   }
   
 //  
