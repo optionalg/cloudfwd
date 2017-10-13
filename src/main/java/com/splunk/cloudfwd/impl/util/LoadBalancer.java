@@ -90,11 +90,6 @@ public class LoadBalancer implements Closeable {
         return h;
     }
 
-    @SuppressWarnings("unused")
-    private void updateChannels(IndexDiscoverer.Change change) {
-        LOG.debug(change.toString());
-    }
-
     public synchronized void sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException,
             HecNoValidChannelsException {
         if (null == this.connection.getCallbacks()) {
@@ -367,10 +362,9 @@ public class LoadBalancer implements Closeable {
         }
     }
 
-    public synchronized void refreshChannels(boolean dnsLookup, boolean throwIfBadUrl) throws UnknownHostException {
+    public synchronized void refreshChannels()  {
         // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
-        List<InetSocketAddress> addrs = dnsLookup ? discoverer.getAddrs(throwIfBadUrl) :
-                discoverer.getCachedAddrs();
+        List<InetSocketAddress> addrs = discoverer.getAddrs();
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
@@ -379,6 +373,7 @@ public class LoadBalancer implements Closeable {
         createChannels(addrs);
     }
 
+    /*
     public synchronized void refreshChannels(boolean dnsLookup) {
         try {
             refreshChannels(dnsLookup, false);
@@ -386,7 +381,7 @@ public class LoadBalancer implements Closeable {
             throw new RuntimeException(e); // should be unreachable
         }
     }
-
+*/
     /**
      * @return the channelsPerDestination
      */

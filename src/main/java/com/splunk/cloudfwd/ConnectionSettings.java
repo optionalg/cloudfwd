@@ -380,7 +380,6 @@ public class ConnectionSettings {
     public void setProperties(Properties props) throws UnknownHostException {
         Properties diffs = getDiff(props);
         boolean refreshChannels = false;
-        boolean dnsLookup = false;
 
         for (String key : diffs.stringPropertyNames()) {
             switch (key) {
@@ -390,7 +389,6 @@ public class ConnectionSettings {
                 case PropertyKeys.COLLECTOR_URI:
                     putProperty(PropertyKeys.COLLECTOR_URI,
                             diffs.getProperty(key));
-                    dnsLookup = true;
                     refreshChannels = true;
                     break;
                 case PropertyKeys.TOKEN:
@@ -407,7 +405,7 @@ public class ConnectionSettings {
             }
         }
         if (refreshChannels) {
-            connection.getLoadBalancer().refreshChannels(dnsLookup, true);
+            connection.getLoadBalancer().refreshChannels();
         }
     }
 
@@ -433,7 +431,7 @@ public class ConnectionSettings {
   public void setToken(String token) {
     if (!getToken().equals(token)) {
       putProperty(PropertyKeys.TOKEN, token);
-      connection.getLoadBalancer().refreshChannels(false);
+      connection.getLoadBalancer().refreshChannels();
     }
   }
 
@@ -442,12 +440,12 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  public void setUrls(String urls) throws UnknownHostException {
+  public void setUrls(String urls) {
     if (!urlsStringToList(urls).equals(
             getUrls())) {
       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      connection.getLoadBalancer().refreshChannels(true, true);
+      connection.getLoadBalancer().refreshChannels();
     }
   }
 
@@ -475,6 +473,7 @@ public class ConnectionSettings {
             // For any non-required properties, we allow them to remain null if they are not present in overrides
             // or cloudfwd.properties, because the property getters below will return the default values.
         } catch (IOException ex) {
+            LOG.error("Problem loading cloudfwd.properties: {}", ex.getMessage());
             throw new HecIllegalStateException("Problem loading cloudfwd.properties",
                     HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
         }
