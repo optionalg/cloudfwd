@@ -15,19 +15,11 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObservable;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
-import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 /**
  *
@@ -61,47 +53,5 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
     @Override
     public void update(LifecycleEvent e) {
         notifyObservers(e);
-        /*
-        switch (e.getType()) {
-            case EVENT_POST_OK:
-            case ACK_POLL_OK:
-            case HEALTH_POLL_OK:
-            case PREFLIGHT_OK:
-            case EVENT_POST_FAILURE:
-            case EVENT_POST_ACKS_DISABLED: //this *is* a 200/OK so it won't get covered by non-200 responses below
-            {
-                notifyObservers(e);
-                return;
-            }
-        }
-        if (e instanceof Response) {
-            Response r = (Response) e;
-            if (r.getHttpCode() != 200) {
-                LOG.error("Error from HEC endpoint in state "
-                        + e.getType().name()
-                        + ". Url: " + r.getUrl()
-                        + ", Code: " + r.getHttpCode()
-                        + ", Reply: " + r.getResp());
-                notifyObservers(e); //might as well tell everyone there was a problem
-            }
-        }
-        */
     }
-
-    /*
-    private Exception getStatusException(int httpCode, String reply, String url) {
-        ObjectMapper mapper = new ObjectMapper();
-        HecErrorResponseValueObject hecErrorResp;
-        try {
-            LOG.trace("unmarshalling HecErrorResponseValueObject from " + reply);
-            hecErrorResp = mapper.readValue(reply,
-                    HecErrorResponseValueObject.class);
-            LOG.trace("HecErrorResponseValueObject is {}", hecErrorResp);
-        } catch (IOException ex) {
-            throw new RuntimeException(ex.getMessage(), ex);
-        }
-        return new HecServerErrorResponseException(
-                hecErrorResp.getText(), hecErrorResp.getCode(), url);
-    }
-*/
 }

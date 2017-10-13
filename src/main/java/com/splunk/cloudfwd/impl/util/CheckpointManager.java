@@ -133,7 +133,7 @@ public class CheckpointManager implements LifecycleEventObserver {
         }
     }
 
-    synchronized void registeEventBatch(EventBatchImpl events, boolean forced) {
+    synchronized void registerEventBatch(EventBatchImpl events, boolean forced) {
         if (!enabled) {
             return;
         }

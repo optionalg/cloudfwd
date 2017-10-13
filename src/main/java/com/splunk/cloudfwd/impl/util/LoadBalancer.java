@@ -56,7 +56,7 @@ public class LoadBalancer implements Closeable {
     public LoadBalancer(ConnectionImpl c) {
         this.LOG = c.getLogger(LoadBalancer.class.getName());
         this.connection = c;
-        this.channelsPerDestination = c.getPropertiesFileHelper().
+        this.channelsPerDestination = c.getSettings().
                 getChannelsPerDestination();
         this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
         this.checkpointManager = new CheckpointManager(c);
@@ -85,10 +85,6 @@ public class LoadBalancer implements Closeable {
      * @return
      */
     public synchronized List<HecHealth> getHealth() {
-        if (channels.isEmpty()) { // DON'T NEED THIS
-            createChannels(discoverer.getAddrs());
-            // if channels are newly created, the status will be PREFLIGHT_HEALTH_CHECK_PENDING
-        }
         final List<HecHealth> h = new ArrayList<>();
         channels.values().forEach(c->h.add(c.getHealth()));
         return h;
@@ -105,9 +101,6 @@ public class LoadBalancer implements Closeable {
             throw new HecConnectionStateException(
                     "Connection FutureCallback has not been set.",
                     HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
-        }
-        if (channels.isEmpty()) { // don't need this
-            createChannels(discoverer.getAddrs());
         }
         sendRoundRobin(events);
     }
@@ -218,18 +211,26 @@ public class LoadBalancer implements Closeable {
 
     public synchronized boolean sendRoundRobin(EventBatchImpl events, boolean resend)
             throws HecConnectionTimeoutException, HecNoValidChannelsException {
-        LOG.trace("accepted events"); //fixme remove
+        
         events.incrementNumTries();
         if (resend && !isResendable(events)) {
             LOG.trace("Not resendable {}", events);
             return false; //bail if this EventBatch has already reached a final state
         }
-        prepareToFindChannel(events, resend);
+        preSend(events, resend);
+        if (spinSend(resend, events)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean spinSend(boolean resend, EventBatchImpl events) throws HecNoValidChannelsException {
         long startTime = System.currentTimeMillis();
         int spinCount = 0;
-        while (true) {//!closed || resend
-            if(closed && !resend){                
-                return false;
+        while (true) {
+            //!closed || resend
+            if (closed && !resend) {
+                return true;
             }
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
@@ -256,10 +257,10 @@ public class LoadBalancer implements Closeable {
             waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             throwExceptionIfTimeout(startTime, events, resend);
         }
-        return true;
+        return false;
     }
 
-    private void prepareToFindChannel(EventBatchImpl events, boolean forced)
+    private void preSend(EventBatchImpl events, boolean forced)
             throws HecIllegalStateException {
         if (channels.isEmpty()) {
             throw new HecIllegalStateException(
@@ -267,7 +268,10 @@ public class LoadBalancer implements Closeable {
                     HecIllegalStateException.Type.LOAD_BALANCER_NO_CHANNELS);
         }
         if (!closed || forced) {
-            this.checkpointManager.registeEventBatch(events, forced);
+            this.checkpointManager.registerEventBatch(events, forced);
+        }
+        if(this.channels.size() > this.connection.getSettings().getMaxTotalChannels()){
+            LOG.warn("{} exceeded. There are currently: {}",  PropertyKeys.MAX_TOTAL_CHANNELS, channels.size());
         }
     }
 

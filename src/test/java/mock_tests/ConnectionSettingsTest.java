@@ -20,6 +20,7 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.PropertyKeys;
+import java.io.IOException;
 import test_utils.AbstractConnectionTest;
 import org.junit.Test;
 import org.junit.Assert;
@@ -39,10 +40,10 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
     }
 
     @Test
-    public void getSSLCertContentForCloudInstance() {
+    public void getSSLCertContentForCloudInstance() throws IOException {
         ConnectionSettings settings = connection.getSettings();
         settings.putProperty(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088");
-        Connection c = Connections.create(null);
+        Connection c = Connections.create();
 
         // For cloud instance, if we didn't set CLOUD_SSL_CERT_CONTENT in overrides,
         // it will pick up from cloudfwd.properties

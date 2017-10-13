@@ -26,7 +26,6 @@ import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
@@ -130,6 +129,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             closeAndReplace();
           }catch(InterruptedException ex){
               LOG.warn("Interrupted trying to close and replace '{}'", HecChannel.this);
+          }catch(Exception e){
+              LOG.error("Exception trying to close and replace '{}': {}", HecChannel.this, e.getMessage());
           }
       }, decomMs, TimeUnit.MILLISECONDS);
     }
