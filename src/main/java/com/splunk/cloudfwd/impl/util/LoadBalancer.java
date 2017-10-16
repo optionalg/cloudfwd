@@ -84,13 +84,13 @@ public class LoadBalancer implements Closeable {
      * returns whatever each HecChannel's health is at the current instant.
      * @return
      */
-    public synchronized List<HecHealth> getHealth() {
+    public List<HecHealth> getHealth() {
         final List<HecHealth> h = new ArrayList<>();
         channels.values().forEach(c->h.add(c.getHealth()));
         return h;
     }
 
-    public synchronized void sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException,
+    public void sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException,
             HecNoValidChannelsException {
         if (null == this.connection.getCallbacks()) {
             throw new HecConnectionStateException(
@@ -111,7 +111,7 @@ public class LoadBalancer implements Closeable {
         this.closed = true;
     }
 
-    public synchronized void closeNow() {
+    public void closeNow() {
         //this.discoveryScheduler.stop();
         for (HecChannel c : this.channels.values()) {
             c.forceClose();
@@ -199,12 +199,12 @@ public class LoadBalancer implements Closeable {
 
     }
 
-    private synchronized void sendRoundRobin(EventBatchImpl events) throws HecConnectionTimeoutException,
+    private void sendRoundRobin(EventBatchImpl events) throws HecConnectionTimeoutException,
             HecNoValidChannelsException {
         sendRoundRobin(events, false);
     }
 
-    public synchronized boolean sendRoundRobin(EventBatchImpl events, boolean resend)
+    public boolean sendRoundRobin(EventBatchImpl events, boolean resend)
             throws HecConnectionTimeoutException, HecNoValidChannelsException {
         
         events.incrementNumTries();
