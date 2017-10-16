@@ -427,6 +427,61 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
   }
 
+  // closes channel and resends into the load balancer any events that
+  // haven't yet been acknowledged
+  private void handleDeadChannel(Exception e, String msg) {
+      LOG.warn(msg);
+      quiesce(); // so we don't accidentally resend into this very channel
+      getCallbacks().systemWarning(e);
+      //synchronize on the load balancer so we do not allow the load balancer to be
+      //closed before  resendInFlightEvents. If that
+      //could happen, then the channel we replace this one with
+      //can be removed before we resendInFlightEvents
+      synchronized (loadBalancer) {
+          try{
+              loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+          }catch(InterruptedException ex){
+              LOG.warn("Unable to replace dead channel: {}", ex);
+          }
+          resendInFlightEvents();
+          //don't force close until after events resent.
+          //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
+          //and the events will never send.
+          LOG.warn("Force closing dead channel {}", HecChannel.this);
+          interalForceClose();
+      }
+      if(getConnection().isClosed()) {
+          loadBalancer.close();
+      }
+  }
+
+  //take messages out of the jammed-up/dead channel and resend them to other channels
+  private void resendInFlightEvents() {
+        long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
+                getAckTimeoutMS();
+        List<EventBatchImpl> unacked = loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(HecChannel.this);
+        LOG.trace("{} events need resending on dead channel {}", unacked.size(), HecChannel.this);
+        AtomicInteger count = new AtomicInteger(0);
+        unacked.forEach((e) -> {
+            //we must force messages to be sent because the connection could have been gracefully closed
+            //already, in which case sendRoundRobbin will just ignore the sent messages
+            while (true) {
+                try {
+                    if(!loadBalancer.sendRoundRobin(e, true)){
+                        LOG.trace("LoadBalancer did not accept resend of {} (it was resent max_retries times?)", e);
+                    }else{
+                        LOG.trace("LB ACCEPTED events");//fixme remove
+                        count.incrementAndGet();
+                    }
+                    break;
+                } catch (HecConnectionTimeoutException|HecNoValidChannelsException ex) {
+                    LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
+                }
+            }
+        });
+        LOG.info("Resent {} Events from dead channel {}", count,  HecChannel.this);
+  }
+
     /**
      * @return the sender
      */
@@ -443,10 +498,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       if (ackId == 0) {
         LOG.info("{} Got ackId 0 {}", HecChannel.this, events);
         if (seenAckIdZero) {
-          Exception e = new HecNonStickySessionException(
-                  "ackId " + ackId + " has already been received on channel " + HecChannel.this);
-          HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
-                  events, e);
+          String msg = "ackId " + ackId + " has already been received on channel " + HecChannel.this;
+          Exception e = new HecNonStickySessionException(msg);
+          handleDeadChannel(e, msg);
         } else {
           seenAckIdZero = true;
         }
@@ -479,29 +533,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
           String msg = HecChannel.this  + " dead. Resending "+unackedCount.get()+" unacked messages and force closing channel";
-          LOG.warn(msg);
-          quiesce();
-          getCallbacks().systemWarning(new HecChannelDeathException(msg));
-          //synchronize on the load balancer so we do not allow the load balancer to be
-          //closed before  resendInFlightEvents. If that
-          //could happen, then the channel we replace this one with
-          //can be removed before we resendInFlightEvents
-          synchronized (loadBalancer) {
-            try{
-                loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement               
-            }catch(InterruptedException ex){
-                LOG.warn("Unable to replace dead channel: {}", ex);
-            }
-            resendInFlightEvents(); 
-            //don't force close until after events resent. 
-            //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
-            //and the events will never send.
-            LOG.warn("Force closing dead channel {}", HecChannel.this);
-            interalForceClose();
-          }
-          if(getConnection().isClosed()) {
-            loadBalancer.close();
-          }
+          handleDeadChannel(new HecChannelDeathException(msg), msg);
         } else { //channel was not 'frozen'
           lastCountOfAcked = ackedCount.get();
           lastCountOfUnacked = unackedCount.get();
@@ -513,33 +545,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     @Override
     public void close() {
       deadChannelChecker.stop();
-    }
-
-    //take messages out of the jammed-up/dead channel and resend them to other channels
-    private void resendInFlightEvents() {
-        long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
-              getAckTimeoutMS();        
-        List<EventBatchImpl> unacked = loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(HecChannel.this);
-        LOG.trace("{} events need resending on dead channel {}", unacked.size(), HecChannel.this);       
-        AtomicInteger count = new AtomicInteger(0);
-        unacked.forEach((e) -> {
-                //we must force messages to be sent because the connection could have been gracefully closed
-                //already, in which case sendRoundRobbin will just ignore the sent messages
-                while (true) { 
-                  try {
-                      if(!loadBalancer.sendRoundRobin(e, true)){
-                          LOG.trace("LoadBalancer did not accept resend of {} (it was resent max_retries times?)", e);
-                      }else{
-                        LOG.trace("LB ACCEPTED events");//fixme remove
-                        count.incrementAndGet();
-                      }
-                      break;
-                  } catch (HecConnectionTimeoutException|HecNoValidChannelsException ex) {
-                     LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
-                  }
-                }
-              });
-        LOG.info("Resent {} Events from dead channel {}", count,  HecChannel.this);
     }
 
   }

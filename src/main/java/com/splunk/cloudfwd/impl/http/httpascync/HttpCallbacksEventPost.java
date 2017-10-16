@@ -19,14 +19,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecServerBusyException;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.EventPostResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
+
+import com.splunk.cloudfwd.impl.http.ServerErrors;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import org.slf4j.Logger;
+
+import java.io.IOException;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -76,7 +81,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                     notifyBusyAndResend(reply, code, EVENT_POST_GATEWAY_TIMEOUT);
                     break;                    
                 default:
-                    invokeFailedEventsCallback(events, reply, code);
+                    handleServerError(reply, code);
                     notify(EVENT_POST_NOT_OK, code, reply, events);
             }
         } catch (Exception e) {
@@ -103,6 +108,15 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         }
     } //end cancelled()    
 
+
+    private void handleServerError(String reply, int statusCode) throws IOException {
+        HecServerErrorResponseException ex = ServerErrors.toErrorException(reply, statusCode, getBaseUrl());
+        if (ex.getErrorType() == HecServerErrorResponseException.Type.RECOVERABLE_CONFIG_ERROR) {
+            invokeFailedEventsCallback(events, ex); // fail fast on configuration errors
+        } else {
+            resend(ex); // try resending (e.g. Splunk server might be rebooting)
+        }
+    }
 
     private void resend(Exception ex) {
         Runnable r = () -> {

@@ -61,12 +61,8 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   final public void completed(HttpResponse response) {
     try {    
         int code = response.getStatusLine().getStatusCode();
-        if (getChannel().hasStickySessionViolation(extractELBCookieValue(response))) {
-            // we should basically consider the previously sent request as invalid
-        }
-//        Header[] headers = response.getHeaders("Set-Cookie");
-        // TODO: make
-//        LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
+        Header[] headers = response.getHeaders("Set-Cookie");
+        LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
@@ -224,22 +220,6 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
      */
     public HecIOManager getManager() {
         return manager;
-    }
-
-    private String extractELBCookieValue(HttpResponse response) {
-        String value = null;
-        HeaderIterator headerIterator = response.headerIterator("Set-Cookie");
-        while (headerIterator.hasNext()) {
-            Header header = (Header)headerIterator.next();
-            HeaderElement[] elements = header.getElements();
-            for (HeaderElement element : elements) {
-                if (element.getName().equals("AWSELB")) {
-                    value = element.getValue();
-                    break;
-                }
-            }
-            if (value != null) break;
-        }
     }
 
 }

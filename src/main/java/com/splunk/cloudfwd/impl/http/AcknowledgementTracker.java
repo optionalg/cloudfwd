@@ -96,12 +96,7 @@ public class AcknowledgementTracker implements EventTracker {
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatchImpl events) {
     Long ackId = epr.getAckId();
-
-    EventBatch evicted = polledAcks.put(ackId, events);
-    if (evicted != null) {
-      // in this case we already received the same ackId on the channel
-      // warn and resend in the load balancer
-    }
+    polledAcks.put(ackId, events);
   }
 
   public void handleAckPollResponse(AckPollResponseValueObject apr) {
