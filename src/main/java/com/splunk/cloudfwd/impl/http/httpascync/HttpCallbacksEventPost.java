@@ -137,8 +137,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
 
     private void notifyFailedAndResend(Exception ex) {
-        LOG.error("channel {} failed to post event batch {}",
-            getChannel(), events);
+        LOG.warn("channel {} failed to post event batch {} because {}",
+            getChannel(), events, ex.getMessage());
         notifyFailed(EVENT_POST_FAILED, events, ex);
         resend(ex);
     }

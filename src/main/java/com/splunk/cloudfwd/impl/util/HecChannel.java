@@ -26,7 +26,6 @@ import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
@@ -130,6 +129,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             closeAndReplace();
           }catch(InterruptedException ex){
               LOG.warn("Interrupted trying to close and replace '{}'", HecChannel.this);
+          }catch(Exception e){
+              LOG.error("Exception trying to close and replace '{}': {}", HecChannel.this, e.getMessage());
           }
       }, decomMs, TimeUnit.MILLISECONDS);
     }
@@ -153,6 +154,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   public synchronized boolean sendInternal(EventBatchImpl events) {
+      if (!isAvailable()) {
+          return false;
+      }
 //    if (!started) {
 //          start();
 //    }
@@ -174,7 +178,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
   @Override
-  synchronized public void update(LifecycleEvent e) {
+   public void update(LifecycleEvent e) {
     if(closed){
         LOG.warn("Discarding {} on CLOSED channel {}", e, this);
         return;
@@ -265,18 +269,19 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return getConnection().getSettings();
   }
 
-  private void ackReceived(LifecycleEvent s) {
-    int count = unackedCount.decrementAndGet();
-    ackedCount.incrementAndGet();
-    if (count < 0) {
-      String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
-      throw new HecIllegalStateException(msg, HecIllegalStateException.Type.NEGATIVE_UNACKED_COUNT);
-    } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
-      if (quiesced) {
-        close();
-      }
+    private void ackReceived(LifecycleEvent s) {
+        int count = unackedCount.decrementAndGet();
+        ackedCount.incrementAndGet();
+        if (count < 0) {
+            String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
+            throw new HecIllegalStateException(msg,
+                    HecIllegalStateException.Type.NEGATIVE_UNACKED_COUNT);
+        } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
+            if (quiesced) {
+                close();
+            }
+        }
     }
-  }
 
   //this cannot be synchronized - it will deadlock when addChannelFromRandomlyChosenHost()
   //tries get the LoadBalancer's monitor but the monitor is held by a thread in LoadBalancer's sendRoundRobin

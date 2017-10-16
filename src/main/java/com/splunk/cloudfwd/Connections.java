@@ -16,6 +16,8 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
@@ -38,11 +40,35 @@ public class Connections {
      * load balancer. If any of the channels finds misconfigurations, such as HEC acknowldegements disabled, or invalid HEC
      * token, then an exception is thrown from Connections.create. This is 'fail fast' behavior designed to quickly expose 
      * serverside configuration issues.
-     * @param c
-     * @param p
+     * @param c The ConnectionCallbacks 
+     * @param p Properties that customize the Connection
      * @return
      */
     public static Connection create(ConnectionCallbacks c, Properties p) {
         return new ConnectionImpl(c, p);
     }
+    
+    /**
+     * Creates a Connection with DefaultConnectionCallbacks
+     * @param p Properties that customize the Connection
+     * @return
+     */
+    public static Connection create(Properties p) {
+        return new ConnectionImpl(new DefaultConnectionCallbacks(), p);
+    }    
+    
+     /**
+     * Creates a Connection with DefaultConnectionCallbacks and default settings loaded from cloudfwd.properties
+     * @param pProperties that customize the Connection
+     * @return
+     */
+    public static Connection create() throws IOException {
+        Properties p = new Properties();
+        try(InputStream is = Connection.class.getResourceAsStream("cloudfwd.properties");){
+            p.load(is);
+            return new ConnectionImpl(new DefaultConnectionCallbacks(), p);
+        }
+    }    
+    
+   
 }

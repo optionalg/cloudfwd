@@ -117,7 +117,7 @@ public class ConnectionImpl implements Connection {
 //  }
    
   @Override
-  public void close() {
+  public synchronized void close() {
     try {
       flush();
     } catch (HecNoValidChannelsException ex) {
