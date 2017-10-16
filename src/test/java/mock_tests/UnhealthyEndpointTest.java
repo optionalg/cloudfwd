@@ -1,10 +1,12 @@
 package mock_tests;
 
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
+import java.util.List;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
 import java.util.Properties;
@@ -114,6 +116,9 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
         TriggerableUnhealthyEndpoints.healthy = false;
         LOG.trace("waiting to detect unhealthy channel");
         Thread.sleep(sleepTime); //make sure health poll becomes unhealthy (poll has interval so we must wait)
+        HecHealth h = connection.getHealth().get(0);
+        LOG.info("{}", h);
+        Assert.assertTrue("Expected unhealty channel but got: " + h, !h.isHealthy());
         LOG.trace("sending event that we expect to block on send");
         //must send from another thread
         new Thread(() -> {
@@ -129,9 +134,14 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
                   "Message only blocked for " + blockedOnUnhealthyChannelTime + " ms. Expected at least 4000 ms.",
                   blockedOnUnhealthyChannelTime > sleepTime); //we must have blocked longer than the unhealthy time 
         }).start();
-        Thread.sleep(sleepTime); //wait couple seconds to let channel become healthy
-        TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll  
+        TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll 
+        Thread.sleep(sleepTime); //wait couple seconds to let channel become healthy ...        
         //...which will cause acknowledged to be invoked again, but then count will be 2 so test will end.
+         h = connection.getHealth().get(0);
+        LOG.info("{}", h);
+        Assert.assertTrue("Expected healty channel but got: " + h, h.isHealthy());
+        LOG.trace("sending event that we expect to block on send");        
+
       } catch (InterruptedException ex) {
         LOG.error(ex.getMessage(), ex);
       }

@@ -21,32 +21,37 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import java.time.Duration;
 import org.slf4j.Logger;
 
 /**
- * Describes the health
+ * Describes the health of a channel.
  *
  * @author ghendrey
  */
 public class HecHealthImpl implements HecHealth {
+    private final long birth = System.currentTimeMillis();
+    private String channelCreatorThreadName;
     private CountDownLatch latch = new CountDownLatch(1); //wait for first setStatus to be called
     private Logger LOG;
 
     private boolean healthy;
     private LifecycleEvent status;
     private final HecChannel channel;
+    private long timeAtLastHealthStateChange = System.currentTimeMillis();
 
     public HecHealthImpl(HecChannel c, LifecycleEvent status) {
+        this.channelCreatorThreadName = Thread.currentThread().getName(); //record name of thread that created this channel
         this.channel = c;
         this.status = status;
         this.LOG = c.getConnection().getLogger(HecHealth.class.getName());
+        recordHealthEvent(status);
     }
 
     @Override
     public String toString() {
-        return "HecHealthImpl{healthy=" + healthy + ", status=" + status + ", channel=" + channel + '}';
+        return "HecHealthImpl{" + "channelCreatorThreadName=" + channelCreatorThreadName + ", healthy=" + healthy + ", status=" + status + ", channel=" + channel + " age="+getChannelAge()+ " timeSinceHealthChanged="+getTimeSinceHealthChanged()+'}';
     }
-
 
     @Override
     public LifecycleEvent getStatus() {
@@ -127,4 +132,32 @@ public class HecHealthImpl implements HecHealth {
            return false;
         }        
     }
+
+    @Override
+    public Duration getChannelAge() {
+       return Duration.ofMillis(System.currentTimeMillis() - birth);
+    }
+
+    /**
+     * @return the channelCreatorThreadName
+     */
+    @Override
+    public String getChannelCreatorThreadName() {
+        return channelCreatorThreadName;
+    }
+
+    private void recordHealthEvent(LifecycleEvent e) {
+        //If health state has changed, record time of change
+        if((e.isOK() && !isHealthy())  || ( e.isOK()&& isHealthy())){
+            this.timeAtLastHealthStateChange = System.currentTimeMillis();
+        }
+        
+    }
+
+    @Override
+    public Duration getTimeSinceHealthChanged() {
+        return Duration.ofMillis(System.currentTimeMillis() - timeAtLastHealthStateChange);
+    }
+    
+    
 }

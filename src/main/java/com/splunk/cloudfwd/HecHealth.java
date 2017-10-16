@@ -17,16 +17,29 @@ package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.util.HecChannel;
+import java.time.Duration;
 
 /**
  *
  * @author ghendrey
  */
 public interface HecHealth {
+    
+    public Duration getChannelAge();
+    
+    public String getChannelCreatorThreadName();
+    
+    /**
+     * provides the time since the current value of isHealthy has been in its current state. For example, if isHealthy() is false, 
+     * this method returns the Duration of time that the channel has been unhealthy, measured from the last moment the channel
+     * that isHealthy() would have returned true.
+     * @return
+     */
+    public Duration getTimeSinceHealthChanged();
+    
+    public LifecycleEvent getStatus();
 
-    LifecycleEvent getStatus();
-
-    String getUrl();
+    public String getUrl();
 
     public String getChannelId();
     
