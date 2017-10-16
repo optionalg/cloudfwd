@@ -72,7 +72,6 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
   @Override
   protected void sendEvents() throws HecConnectionTimeoutException, InterruptedException {
-    int expected = getNumEventsToSend();
     TriggerableUnhealthyEndpoints.healthy = true;
     try {
       connection.send(getTimestampedRawEvent(1)); //should acknowledge

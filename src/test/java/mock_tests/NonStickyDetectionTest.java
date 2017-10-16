@@ -15,14 +15,17 @@ package mock_tests;/*
  */
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
 import java.util.Properties;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +53,11 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
     return new BasicCallbacks(getNumEventsToSend()) {
 
           protected boolean isExpectedFailureType(Exception e) {
-              return e instanceof HecNonStickySessionException;
+              if(e instanceof HecNonStickySessionException){
+                NonStickyDetectionTest.super.connection.closeNow(); //in this branch we don't actually resend any messages from a non-sticky channel so they will just langish until they timeout                
+                return true;
+              }
+              return false;
           }
 
           public boolean shouldFail() {
@@ -58,6 +65,21 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
           }
       };
   }
+  
+  @Override
+  protected boolean isExpectedSendException(Exception e) {
+    if(e instanceof HecConnectionStateException){ //because we closeNow the connection as soon as we get the HecNonStickySessionException, all other sends will fail
+        HecConnectionStateException ex = (HecConnectionStateException)e;
+        Assert.assertTrue("Expected SEND_ON_CLOSED_CONNECTION but got " + ex, ex.getType()==HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
+        return true;
+    }
+    return false;
+  }
+
+  @Override
+  protected boolean shouldSendThrowException() {
+      return false;
+  }  
 
   @Test
   public void checkNonStickyChannelDetected() throws InterruptedException  {
@@ -73,6 +95,8 @@ public class NonStickyDetectionTest extends AbstractConnectionTest {
             "com.splunk.cloudfwd.impl.sim.errorgen.nonsticky.NonStickEndpoints");
         props.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS,
             "1");
+        props.setProperty(PropertyKeys.ACK_TIMEOUT_MS,
+            "10000");        
     return props;
   }
   

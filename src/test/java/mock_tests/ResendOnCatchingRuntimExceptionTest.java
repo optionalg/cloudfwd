@@ -40,7 +40,7 @@ public class ResendOnCatchingRuntimExceptionTest extends AbstractConnectionTest 
     props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint");
     props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
-    props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
+    props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "16"); //so we insure we resend on same channel   
     //in the ExceptionsEndpoint, error prob is 0.5. So 20 gives us 1/2^20  chance of never getting the message through
     props.put(PropertyKeys.RETRIES, "20");
     return props;

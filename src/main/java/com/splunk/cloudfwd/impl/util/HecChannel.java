@@ -145,15 +145,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     started = true;
   }
+  
+   public boolean send(EventBatchImpl events) {
+       if(!isAvailable()){
+           return false;
+       }
+       return sendInternal(events);
+   }
 
-  public synchronized boolean send(EventBatchImpl events) {
-//    if (!started) {
-//          start();
-//    }
-    if (!isAvailable()) {
-      return false;
-    }
-    
+  public boolean sendInternal(EventBatchImpl events) {    
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
     LOG.debug("channel=" + getChannelId() + " unack-count=" + count);
@@ -302,7 +302,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
   }
 
-  synchronized void forceClose() { //wraps internalForceClose in a log messages
+  void forceClose() { //wraps internalForceClose in a log messages
     LOG.info("FORCE CLOSING CHANNEL  {}", getChannelId());
     interalForceClose();
   }
@@ -483,9 +483,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           //closed before  resendInFlightEvents. If that
           //could happen, then the channel we replace this one with
           //can be removed before we resendInFlightEvents
-          synchronized (loadBalancer) {
+          //synchronized (loadBalancer) {
             try{
-                loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement               
+                loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement    
+                loadBalancer.removeChannel(channelId, true);
             }catch(InterruptedException ex){
                 LOG.warn("Unable to replace dead channel: {}", ex);
             }
@@ -495,10 +496,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             //and the events will never send.
             LOG.warn("Force closing dead channel {}", HecChannel.this);
             interalForceClose();
-          }
+          //}
+          /*
           if(getConnection().isClosed()) {
             loadBalancer.close();
-          }
+          }*/
         } else { //channel was not 'frozen'
           lastCountOfAcked = ackedCount.get();
           lastCountOfUnacked = unackedCount.get();

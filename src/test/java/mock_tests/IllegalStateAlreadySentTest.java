@@ -1,5 +1,6 @@
 package mock_tests;
 
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.PropertyKeys;
@@ -8,10 +9,12 @@ import test_utils.AbstractConnectionTest;
 
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
 import java.util.Properties;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import test_utils.BasicCallbacks;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -33,7 +36,7 @@ import org.junit.Test;
  * @author ghendrey
  */
 public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
-  private HecConnectionStateException.Type expectedExType;
+  //private HecConnectionStateException.Type expectedExType;
 
   @Override
   protected Properties getProps() {
@@ -48,16 +51,33 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
     return props;
   }
   
-  @Before
-  public void setUp() {
-    super.setUp();
-    this.expectedExType = getExceptionType();
-  }
-  
-  protected HecConnectionStateException.Type getExceptionType(){
-    return HecConnectionStateException.Type.ALREADY_SENT;
-  }
+  @Override
+  protected BasicCallbacks getCallbacks(){
+      return new BasicCallbacks(getNumEventsToSend()){
+          protected boolean isExpectedFailureType(Exception e){
+                Assert.assertTrue("Expected HecIllegalStateException but got " + e, e instanceof HecConnectionStateException);
+                HecConnectionStateException ise = (HecConnectionStateException)e;
+                Assert.assertTrue("", ise.getType() == HecConnectionStateException.Type.ALREADY_SENT);
+                return true;
+          }
 
+          public boolean shouldFail(){
+              return true;
+          }
+      };
+  }
+//  
+//  @Before
+//  public void setUp() {
+//    super.setUp();
+//    this.expectedExType = getExceptionType();
+//  }
+  
+//  protected HecConnectionStateException.Type getExceptionType(){
+//    return HecConnectionStateException.Type.ALREADY_SENT;
+//  }
+
+  /*
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
     System.out.println(
             "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
@@ -75,7 +95,6 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
       event = nextEvent(1); //duplicate event ID
       try {
         connection.send(event);
-        Assert.fail("Succeeded in sending a message, where HecConnectionStateException was expected");
       } catch (HecConnectionStateException ex) {
         Assert.assertTrue(
                 "Excpected Exception wasn't HecConnectionStateException. Was " + ex.
@@ -100,7 +119,7 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
               getException() + " and message " + callbacks.getFailMsg());
     }
   }
-
+*/
   /*
   protected BasicCallbacks getCallbacks() {
     return new ExpectingHecIllegalState(getNumEventsToSend());

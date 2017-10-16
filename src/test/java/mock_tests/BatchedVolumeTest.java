@@ -46,6 +46,11 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   protected void configureConnection(Connection connection) {
     connection.getSettings().setEventBatchSize(1024*32); //32k batching batching, roughly
   }
+  
+  @Override
+    protected boolean isBatched(){
+      return true; 
+  }
 
 
   @Test

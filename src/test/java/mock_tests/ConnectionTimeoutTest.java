@@ -54,7 +54,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
 
   @Override
   protected void sendEvents() throws InterruptedException {
-    if (getNumEventsToSend() > 2) {
+    if (getNumEventsToSend() > 10) {
       throw new RuntimeException(
               "This test uses close(), not closeNow(), so don't jam it up with more than one Batch to test on "
                       + "a jammed up channel. It will take too long to be practical.");
@@ -74,15 +74,16 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
       Event event = nextEvent(i);
       System.out.println("Send event: " + event.getId() + " i=" + i);
       int connTimeoutCount = 0;
-      while (true) {
+      int tryCount = 0;
+      while (connTimeoutCount < 10) {
         try {
+           if(tryCount > connTimeoutCount){
+               
+           }
+           tryCount++;
           connection.send(event);
-          break;
         } catch (HecConnectionTimeoutException e) {
-          if (connTimeoutCount++ > 20) {
-            //Assert.fail("Too many HecConnectionTimeouts");
-            return;
-          }
+          connTimeoutCount++ ;
         }
       }
       Assert.assertTrue("Did not get any HecConnectionTimeouts",
@@ -90,8 +91,13 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
     }
     connection.close();
     this.callbacks.await(10, TimeUnit.MINUTES);
+    if(!callbacks.isFailed()){
+        Assert.fail("Expected first message to fail with fail callback HecConnectionTimeoutException but instead got " + 
+                callbacks.getException());
+    }
     if (callbacks.isFailed()) {
-      Assert.fail(callbacks.getFailMsg());
+      Assert.assertTrue("Didn't get HecConnectionTimeoutException on failed callback", 
+              super.callbacks.getException() instanceof HecConnectionTimeoutException);
     }
   }
 

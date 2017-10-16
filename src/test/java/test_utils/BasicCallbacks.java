@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
+import java.util.Collections;
+import java.util.HashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +40,13 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected final CountDownLatch failLatch; //if failures are expected, this latch gates the test until it is released;
   protected final CountDownLatch latch; //if failures are expected, this latch gates the test until it is released;
   protected final CountDownLatch warnLatch;//if warnings are expected, this latch gates the test until it is released
-  protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
+  protected final Set<Comparable> acknowledgedBatches = Collections.synchronizedSet(new HashSet<>());
   protected boolean failed;
   private Comparable lastId;
   protected String failMsg;
   protected Exception exception;
   protected Exception systemWarning;
+  private boolean batched;
   
 
   public BasicCallbacks(int expected) {
@@ -78,6 +81,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
   
   public boolean shouldWarn(){
       return false;
+  }
+  
+    final  void setBatched(boolean batched){
+      this.batched = batched;
   }
 
   public Set<Comparable> getAcknowledgedBatches() { return this.acknowledgedBatches; }
@@ -122,6 +129,9 @@ public class BasicCallbacks implements ConnectionCallbacks {
       Assert.fail(
               "Received duplicate acknowledgement for event batch:" + events.
               getId());
+    }
+    if(!isBatched() && acknowledgedBatches.size()==expectedAckCount){
+        latch.countDown(); //we can procede to finish the test when we saw all the acks
     }
 
   }
@@ -169,7 +179,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   public void checkpoint(EventBatch events) {
     LOG.info("SUCCESS CHECKPOINT " + events.getId()); 
     if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
-      latch.countDown();
+        latch.countDown();
     }
   }
 
@@ -184,13 +194,6 @@ public class BasicCallbacks implements ConnectionCallbacks {
    if(!shouldFail() &&  !this.latch.await(timeout, u)){
         throw new RuntimeException("test timed out waiting on latch");
     }
-  }
-
-  /**
-   * @param expectedAckCount the expectedAckCount to set
-   */
-  public void setExpectedAckCount(int expectedAckCount) {
-    this.expectedAckCount = expectedAckCount;
   }
 
   
@@ -211,6 +214,13 @@ public class BasicCallbacks implements ConnectionCallbacks {
   public Exception getWarning(){
       return systemWarning;
   }
+
+    /**
+     * @return the batched
+     */
+    public boolean isBatched() {
+        return batched;
+    }
 
 
 }

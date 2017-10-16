@@ -8,6 +8,8 @@ import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.junit.Assert;
+import test_utils.BasicCallbacks;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -40,8 +42,21 @@ public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
     props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true"); //checkpoints are required for this to work      
     return props;
   }
-    protected HecConnectionStateException.Type getExceptionType(){
-    return HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED;
+    
+      @Override
+  protected BasicCallbacks getCallbacks(){
+      return new BasicCallbacks(getNumEventsToSend()){
+          protected boolean isExpectedFailureType(Exception e){
+                Assert.assertTrue("Expected HecIllegalStateException but got " + e, e instanceof HecConnectionStateException);
+                HecConnectionStateException ise = (HecConnectionStateException)e;
+                Assert.assertTrue("", ise.getType() == HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED);
+                return true;
+          }
+
+          public boolean shouldFail(){
+              return true;
+          }
+      };
   }
     
   @Override

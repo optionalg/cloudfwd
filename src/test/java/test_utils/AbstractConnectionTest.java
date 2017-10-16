@@ -86,6 +86,7 @@ public abstract class AbstractConnectionTest {
                 + "You should override getNumEventsToSend and return zero.");
     }
     this.callbacks = getCallbacks();
+    this.callbacks.setBatched(isBatched());
     Properties props = new Properties();
     props.putAll(getTestProps());
     props.putAll(getProps());
@@ -118,6 +119,14 @@ public abstract class AbstractConnectionTest {
           Assert.fail("expected a Connection instantiation Exception to be caught. None was caught.");
       }
       return conn;
+  }
+  
+    /**
+     * Override to return true for tests that use batching
+     * @return
+     */
+    protected boolean isBatched(){
+      return false; //default is no batching
   }
   
     /**

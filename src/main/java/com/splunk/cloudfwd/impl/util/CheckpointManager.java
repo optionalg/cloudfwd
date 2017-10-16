@@ -151,7 +151,7 @@ public class CheckpointManager implements LifecycleEventObserver {
         //Forced happens when we DeadChannelDetector needs to resend events
         //Retriable EventBatchImpl is one that has not yet received EVENT_POST_OK
         if (null != prev && !forced && !prev.isRetriable()) {
-            String msg = "Attempt to resend EventBatch that is not retriable because previous state was: {}  " + prev.
+            String msg = "Attempt to resend EventBatch that is not retriable because previous state was: " + prev.
                     getState();
             throw new HecConnectionStateException(msg,
                     HecConnectionStateException.Type.ALREADY_SENT);

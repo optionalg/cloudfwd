@@ -43,6 +43,12 @@ public class SslCertTestManualCloudClusterDirect extends AbstractConnectionTest 
     connection.getSettings().setEventBatchSize(1024*16);
     super.sendEvents();
   }
+  
+  
+  @Override
+    protected boolean isBatched(){
+      return true; 
+  }  
 
   /*
   public static void main(String[] args) throws InterruptedException, TimeoutException {
