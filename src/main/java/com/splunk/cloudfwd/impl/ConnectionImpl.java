@@ -207,7 +207,9 @@ public class ConnectionImpl implements Connection {
     if (events.getLength() == 0) {
       return 0;
     }
-
+    
+    logLBHealth();
+    
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
@@ -329,5 +331,38 @@ public class ConnectionImpl implements Connection {
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
    }    
+
+    private void logLBHealth() {
+        List<HecHealth> channelHealths = lb.getHealth();
+        int _closed=0;
+        int _quiesced=0;
+        int  _healthy = 0;
+        int _misconfigured=0;
+        int _dead=0;
+        int _decomissioned=0;
+        for(HecHealth h:channelHealths){
+            if(h.isHealthy()){
+                _healthy++;
+            }
+            if(h.isMisconfigured()){
+                _misconfigured++;
+            }
+            if(!h.getQuiescedDuration().isZero()){
+                _quiesced++;
+            }
+            if(!h.getTimeSinceDeclaredDead().isZero()){
+                _dead++;
+            }
+            if(!h.getTimeSinceDecomissioned().isZero()){
+                _decomissioned++;
+            }
+            if(!h.getTimeSinceCloseFinished().isZero()){
+                _closed++;
+            }
+        }
+        
+        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
+                channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
+    }
 
 }
