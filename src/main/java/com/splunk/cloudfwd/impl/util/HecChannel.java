@@ -286,7 +286,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-    this.loadBalancer.removeChannel(channelId, false); //remove from load balancer
+    //WE MUST NOT REMOVE THE CHANNEL NOW...MUST GIVE IT CHANCE TO DRAIN AND BE GRACEFULLY REMOVED
+    //ONCE IT IS DRAINED. Note that quiesce() call above will start a watchdog thread that will force-remove the channel
+    //if it does not gracefully close in 3 minutes.
+    //this.loadBalancer.removeChannel(channelId, false); //remove from load balancer
     this.health.decomissioned();
   }
 
