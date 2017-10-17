@@ -71,6 +71,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private DeadChannelDetector deadChannelDetector;
   private final String memoizedToString;
   private int preflightCount; //number of times to retry preflight checks due to 
+  private boolean closeWatchdogScheduled; //record whether or not we have scheduled watchdog    
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -285,7 +286,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-
+    this.loadBalancer.removeChannel(channelId, false); //remove from load balancer
+    this.health.decomissioned();
   }
 
   /**
@@ -294,6 +296,20 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
    */
   protected synchronized void quiesce() {
     LOG.debug("Quiescing channel: {}", this);
+    
+    if(!closeWatchdogScheduled){
+        this.health.quiesced();
+        LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
+        ackPollExecutor.schedule(()->{
+            if(!closed){
+                LOG.warn("Channel isn't closed. Watchdog will force close it now.");
+                HecChannel.this.interalForceClose();
+            }else{
+                LOG.debug("Channel was closed. Watchdog exiting.");
+            }
+        }, 3, TimeUnit.MINUTES);
+        closeWatchdogScheduled = true;
+    }
     quiesced = true;
 
     if (isEmpty()) {
@@ -308,7 +324,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  protected void interalForceClose() {  
+  void interalForceClose() {  
       this.closed = true;
       Runnable r = ()->{
         loadBalancer.removeChannel(getChannelId(), true);
@@ -494,8 +510,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             //don't force close until after events resent. 
             //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
             //and the events will never send.
-            LOG.warn("Force closing dead channel {}", HecChannel.this);
+            LOG.warn("Force closing dead channel {}", HecChannel.this);            
             interalForceClose();
+            health.dead();
           }
           if(getConnection().isClosed()) {
             loadBalancer.close();

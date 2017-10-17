@@ -34,11 +34,14 @@ public class HecHealthImpl implements HecHealth {
     private String channelCreatorThreadName;
     private CountDownLatch latch = new CountDownLatch(1); //wait for first setStatus to be called
     private Logger LOG;
-
     private boolean healthy;
     private LifecycleEvent status;
     private final HecChannel channel;
     private long timeAtLastHealthStateChange = System.currentTimeMillis();
+    private long decommisionedTime;
+    private long declaredDeadTime;
+    private long quiesceTime;
+    private long finishCloseTime;
 
     public HecHealthImpl(HecChannel c, LifecycleEvent status) {
         this.channelCreatorThreadName = Thread.currentThread().getName(); //record name of thread that created this channel
@@ -50,7 +53,14 @@ public class HecHealthImpl implements HecHealth {
 
     @Override
     public String toString() {
-        return "HecHealthImpl{" + "channelCreatorThreadName=" + channelCreatorThreadName + ", healthy=" + healthy + ", status=" + status + ", channel=" + channel + " age="+getChannelAge()+ " timeSinceHealthChanged="+getTimeSinceHealthChanged()+'}';
+        return "HecHealthImpl{" + "channelCreatorThreadName=" + channelCreatorThreadName 
+                + ", healthy=" + healthy + ", status=" + status + ", channel=" + channel + " age="+getChannelAge()
+                + ", timeSinceHealthChanged="+getTimeSinceHealthChanged()
+                + ", timeSinceDecommissioned="+getTimeSinceDecomissioned()
+                + ", timeSinceDeclaredDead="+getTimeSinceDeclaredDead()
+                + ", timeSinceQuiesced="+getQuiescedDuration()
+                + ", timeSinceCloseFinsihed="+getTimeSinceCloseFinished()
+                + '}';
     }
 
     @Override
@@ -157,6 +167,54 @@ public class HecHealthImpl implements HecHealth {
     @Override
     public Duration getTimeSinceHealthChanged() {
         return Duration.ofMillis(System.currentTimeMillis() - timeAtLastHealthStateChange);
+    }
+    
+    public void decomissioned(){
+        this.decommisionedTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public Duration getTimeSinceDecomissioned() {
+        if(decommisionedTime==0){
+            return Duration.ZERO;
+        }else{
+            return Duration.ofMillis(System.currentTimeMillis() - decommisionedTime);
+        }
+    }
+    
+    public void quiesced(){
+        this.quiesceTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public Duration getQuiescedDuration() {
+        if(quiesceTime==0){
+            return Duration.ZERO;
+        }else{
+            return Duration.ofMillis(System.currentTimeMillis() - quiesceTime);
+        }
+    }
+    
+    public void dead(){
+        this.declaredDeadTime = System.currentTimeMillis();
+    }    
+
+    @Override
+    public Duration getTimeSinceDeclaredDead() {
+        if(declaredDeadTime==0){
+            return Duration.ZERO;
+        }else{
+            return Duration.ofMillis(System.currentTimeMillis() - declaredDeadTime);
+        }
+    }
+
+    @Override
+    public Duration getTimeSinceCloseFinished() {
+        if(finishCloseTime==0){
+            return Duration.ZERO;
+        }else{
+            return Duration.ofMillis(System.currentTimeMillis() - finishCloseTime);
+        }
     }
     
     

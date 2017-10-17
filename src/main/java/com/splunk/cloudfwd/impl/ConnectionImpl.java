@@ -60,6 +60,7 @@ public class ConnectionImpl implements Connection {
   private boolean closed;
   private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
   private PropertiesFileHelper propertiesFileHelper;
+  private boolean quiesced;
 
 
   public ConnectionImpl(ConnectionCallbacks callbacks) {
@@ -110,13 +111,9 @@ public class ConnectionImpl implements Connection {
             valueOf(ms));
   }
   
-//  
-//  @Override
-//  public List<ConfigStatus> checkConfigs() {
-//    return lb.checkConfigs();
-//  }
-   
-  @Override
+   //close() is synchronized, as is send and sendBatch, therefore events cannot be sent before close has returned.
+  //After close has returned, any events sent would be rejected because the connection is closed.
+  @Override  
   public synchronized void close() {
     if(this.closed){
         return;
@@ -127,6 +124,7 @@ public class ConnectionImpl implements Connection {
       LOG.error("Events could not be flushed on connection close: " +
         ex.getMessage(), ex);
     }
+    //wait until after flush to set closed to true (otherwise flush->sendBatch will complain that connection is closed)
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
@@ -176,6 +174,9 @@ public class ConnectionImpl implements Connection {
    * @see com.splunk.cloudfwd.PropertyKeys
    */
   public synchronized int send(Event event) throws HecConnectionTimeoutException, HecNoValidChannelsException {
+    if (closed) {
+      throw new HecConnectionStateException("Attempt to send on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
+    }      
     if (null == this.events) {
       this.events = new EventBatchImpl();
     }
