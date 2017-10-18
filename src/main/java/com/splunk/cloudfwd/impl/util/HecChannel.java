@@ -70,6 +70,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private DeadChannelDetector deadChannelDetector;
   private final String memoizedToString;
   private int preflightCount; //number of times to retry preflight checks due to   
+    private boolean closeFinished;
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -328,7 +329,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         this.health.quiesced();
         LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
         reaperScheduler.schedule(()->{
-            if(!closed){
+            if(!this.closeFinished){
                 LOG.warn("Channel isn't closed. Watchdog will force close it now.");
                 HecChannel.this.interalForceClose();
             }else{
@@ -353,11 +354,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   void interalForceClose() {  
       this.closed = true;
       Runnable r = ()->{
-        loadBalancer.removeChannel(getChannelId(), true);
-        this.channelMetrics.removeObserver(this);
-        closeExecutors(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
         try {
+            loadBalancer.removeChannel(getChannelId(), true);
+            this.channelMetrics.removeObserver(this);
+            closeExecutors(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
             this.sender.close();
+            this.closeFinished = true;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
