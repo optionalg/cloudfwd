@@ -99,6 +99,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         }
         return health;
     }
+    
+    public HecHealthImpl getHealthNonblocking() {
+        return health;
+    }    
 
   private static String newChannelId() {
     return java.util.UUID.randomUUID().toString();

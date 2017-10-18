@@ -76,6 +76,12 @@ public class LoadBalancer implements Closeable {
         channels.values().forEach(c->h.add(c.getHealth()));
         return h;
     }
+    
+    public List<HecHealth> getHealthNonBlocking() {
+        final List<HecHealth> h = new ArrayList<>();
+        channels.values().forEach(c->h.add(c.getHealthNonblocking()));
+        return h;
+    }    
 
     public void sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException,
             HecNoValidChannelsException {
@@ -152,10 +158,6 @@ public class LoadBalancer implements Closeable {
         channel.getChannelMetrics().addObserver(this.checkpointManager);
         LOG.debug("Adding channel {}", channel);
         channels.put(channel.getChannelId(), channel);
-        //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
-
-        // have channel ready to send requests
-        //channel.start();
         return true;
     }
 

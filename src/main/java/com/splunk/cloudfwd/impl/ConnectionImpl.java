@@ -333,7 +333,7 @@ public class ConnectionImpl implements Connection {
    }    
 
     private void logLBHealth() {
-        List<HecHealth> channelHealths = lb.getHealth();
+        List<HecHealth> channelHealths = lb.getHealthNonBlocking();
         int _closed=0;
         int _quiesced=0;
         int  _healthy = 0;
