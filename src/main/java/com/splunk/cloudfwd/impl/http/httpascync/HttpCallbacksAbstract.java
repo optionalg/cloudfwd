@@ -59,7 +59,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   final public void completed(HttpResponse response) {
     try {    
         int code = response.getStatusLine().getStatusCode();
-        Header[] headers = response.getHeaders("Set-Cookie");      
+        Header[] headers = response.getHeaders("Set-Cookie");
         LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
