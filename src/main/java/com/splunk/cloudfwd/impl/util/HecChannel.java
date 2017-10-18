@@ -310,6 +310,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //the reaperScheduler, which will interrupt this very thread which was spawned by the reaper scheduler, and then  we
     //never get to add the channel.
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+    this.loadBalancer.removeChannel(channelId, true);
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
     //WE MUST NOT REMOVE THE CHANNEL NOW...MUST GIVE IT CHANCE TO DRAIN AND BE GRACEFULLY REMOVED
     //ONCE IT IS DRAINED. Note that quiesce() call above will start a watchdog thread that will force-remove the channel
