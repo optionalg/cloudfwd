@@ -58,7 +58,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private volatile boolean closed;
   private volatile boolean quiesced;
 
-  //private volatile boolean healthy = false; // Responsive to indexer 503 "queue full" error.
   private HecHealthImpl health;
   
   private final LoadBalancer loadBalancer;
@@ -70,8 +69,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final ChannelMetrics channelMetrics;
   private DeadChannelDetector deadChannelDetector;
   private final String memoizedToString;
-  private int preflightCount; //number of times to retry preflight checks due to 
-  private boolean closeWatchdogScheduled; //record whether or not we have scheduled watchdog    
+  private int preflightCount; //number of times to retry preflight checks due to   
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -91,6 +89,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     start();
   }
 
+    /**
+     * This method will BLOCK until the HecHealth instance receives its first update. As such it should be used with caution
+     * and never in a critical section of code that expects to complete quickly.
+     * @return
+     */
     public HecHealthImpl getHealth() {
         if(!health.await(5, TimeUnit.MINUTES)){
          Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
@@ -121,40 +124,53 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return;
     }
     this.sender.getHecIOManager().preflightCheck();
-
-    //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
-    ThreadFactory f = (Runnable r) -> new Thread(r, "Channel Reaper");
-
-    long decomMs = loadBalancer.getPropertiesFileHelper().getChannelDecomMS();
-    if (decomMs > 0) {
-      reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
-      reaperScheduler.schedule(() -> {
-          LOG.info("decommissioning channel (channel_decom_ms={}): {}", decomMs, HecChannel.this);
-          try{
-            closeAndReplace();
-          }catch(InterruptedException ex){
-              LOG.warn("Interrupted trying to close and replace '{}'", HecChannel.this);
-          }catch(Exception e){
-              LOG.error("Exception trying to close and replace '{}': {}", HecChannel.this, e.getMessage());
-          }
-      }, decomMs, TimeUnit.MILLISECONDS);
-    }
-    long unresponsiveDecomMS = loadBalancer.getPropertiesFileHelper().
-            getUnresponsiveChannelDecomMS();
-    if (unresponsiveDecomMS > 0) {
-      deadChannelDetector = new DeadChannelDetector(unresponsiveDecomMS);
-      deadChannelDetector.start();
-    }
-    f = (Runnable r) -> new Thread(r, "On-demand Ack Poller");
-    this.ackPollExecutor = Executors.newSingleThreadScheduledExecutor(f);
-
+    setupReaper();
+    setupDeadChannelDetector();
+    setupAckPoller();
     started = true;
   }
 
+    private void setupAckPoller() {
+        ThreadFactory f = (Runnable r) -> new Thread(r, "On-demand Ack Poller");
+        this.ackPollExecutor = Executors.newSingleThreadScheduledExecutor(f);
+    }
+
+    private void setupDeadChannelDetector() {
+        long unresponsiveDecomMS = getConnetionSettings(). getUnresponsiveChannelDecomMS();
+        if (unresponsiveDecomMS > 0) {
+            deadChannelDetector = new DeadChannelDetector(unresponsiveDecomMS);
+            deadChannelDetector.start();
+        }
+    }
+  
+  private ConnectionSettings getConnetionSettings(){
+      return loadBalancer.getConnection().getSettings();
+  }
+
+    private void setupReaper() {
+        //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
+        ThreadFactory f = (Runnable r) -> new Thread(r, "Channel Reaper");
+        long decomMs = getConnetionSettings().getChannelDecomMS();
+        if (decomMs > 0) {
+            reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
+            long decomTime = (long) (decomMs * Math.random());
+            reaperScheduler.schedule(() -> {
+                LOG.info("decommissioning channel (channel_decom_ms={}): {}",
+                        decomMs, HecChannel.this);
+                try {
+                    closeAndReplace();
+                } catch (InterruptedException ex) {
+                    LOG.warn("Interrupted trying to close and replace '{}'",
+                            HecChannel.this);
+                } catch (Exception e) {
+                    LOG.error("Exception trying to close and replace '{}': {}",
+                            HecChannel.this, e.getMessage());
+                }
+            }, (long)decomTime, TimeUnit.MILLISECONDS); //randomize the channel decommission - so that all channels do not decomission simultaneously.
+        }
+    }
+
   public boolean send(EventBatchImpl events) {
-//    if (!started) {
-//          start();
-//    }
     if (!isAvailable()) {
       return false;
     }
@@ -308,10 +324,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   protected synchronized void quiesce() {
     LOG.debug("Quiescing channel: {}", this);
     
-    if(!closeWatchdogScheduled){
+    if(!quiesced){
         this.health.quiesced();
         LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
-        ackPollExecutor.schedule(()->{
+        reaperScheduler.schedule(()->{
             if(!closed){
                 LOG.warn("Channel isn't closed. Watchdog will force close it now.");
                 HecChannel.this.interalForceClose();
@@ -319,7 +335,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                 LOG.debug("Channel was closed. Watchdog exiting.");
             }
         }, 3, TimeUnit.MINUTES);
-        closeWatchdogScheduled = true;
     }
     quiesced = true;
 
@@ -382,13 +397,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     if (null != reaperScheduler) {
       reaperScheduler.shutdown(); //do not use the shutdownNOW flavor. Because it causes the reaper-scheduler to get interrupted. 
-      try{
-        if(!reaperScheduler.isTerminated() && !reaperScheduler.awaitTermination(10, TimeUnit.SECONDS)){
-            LOG.error("failed to terminate reaper scheduler.");
-        }
-      }catch(InterruptedException e){
-          LOG.error("AwaitTermination of reaper scheduler interrupted.");
-      }
+//      try{
+//        if(!reaperScheduler.isTerminated() && !reaperScheduler.awaitTermination(10, TimeUnit.SECONDS)){
+//            LOG.error("failed to terminate reaper scheduler.");
+//        }
+//      }catch(InterruptedException e){
+//          LOG.error("AwaitTermination of reaper scheduler interrupted.");
+//      }
     }
  
     if (null != deadChannelDetector) {
