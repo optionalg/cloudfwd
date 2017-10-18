@@ -1,8 +1,10 @@
 package mock_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
 import org.junit.Test;
@@ -20,12 +22,10 @@ public class GatewayTimeoutTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = new Properties();
-        p.setProperty(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostGatewayTimeoutEndpoints");
-        p.setProperty(PropertyKeys.BLOCKING_TIMEOUT_MS, "5000");
-        p.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "500000");
-        return p;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostGatewayTimeoutEndpoints");
+        settings.setBlockingTimeoutMS(5000);
+        settings.setAckTimeoutMS(500000);
     }
 
     @Override

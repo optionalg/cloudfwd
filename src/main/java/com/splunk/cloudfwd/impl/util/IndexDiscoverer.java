@@ -53,7 +53,7 @@ public class IndexDiscoverer extends Observable {
     this.LOG = c.getLogger(IndexDiscoverer.class.getName());
     this.connection = c;
     this.propertiesFileHelper = f;
-    this.forceUrlMapToOne = this.propertiesFileHelper.isForcedUrlMapToSingleAddr();
+    this.forceUrlMapToOne = this.propertiesFileHelper.getMockForceUrlMapToOne();
   }
   
   public void forceUrlMapToOne(boolean b) {

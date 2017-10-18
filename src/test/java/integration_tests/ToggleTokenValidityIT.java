@@ -4,6 +4,7 @@ import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -77,13 +78,11 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken("__singleline"));
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setToken(createTestToken("__singleline"));
         // we don't want to hit any ack timeouts because it's easier to make our callbacks not expect them
-        p.put(PropertyKeys.ACK_TIMEOUT_MS, Long.toString(sendExceptionTimeout)
-            + PropertyKeys.DEFAULT_ACK_TIMEOUT_MS);
-        return p;
+        settings.setAckTimeoutMS(sendExceptionTimeout
+            + Long.parseLong(PropertyKeys.DEFAULT_ACK_TIMEOUT_MS)); //TODO this was previously string concat - is long concat ok?
     }
 
     private void deleteTokenOnServer() {

@@ -1,11 +1,15 @@
 package integration_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
+import org.apache.commons.lang.UnhandledException;
 import test_utils.BasicCallbacks;
 import org.junit.Test;
 
+import java.net.UnknownHostException;
 import java.util.Properties;
 import java.util.Set;
 
@@ -32,12 +36,14 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.setProperty(PropertyKeys.TOKEN, createTestToken("__singleline"));
-        p.setProperty(PropertyKeys.COLLECTOR_URI, unknownHost + ",https://localhost:8088");
-        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
-        return p;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setToken(createTestToken("__singleline"));
+        try {
+            settings.setUrls(unknownHost + ",https://localhost:8088");
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+        settings.setMaxTotalChannels(2);
     }
 
     @Override

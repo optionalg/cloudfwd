@@ -1,8 +1,10 @@
 package mock_tests;
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import org.junit.Assert;
 
@@ -24,7 +26,7 @@ public abstract class AbstractMutabilityTest extends AbstractConnectionTest {
     }
 
     @Override
-    abstract protected Properties getProps();
+    abstract protected void setProps(PropertiesFileHelper settings);
 
     protected void sendSomeEvents(int numEvents) throws InterruptedException, HecConnectionTimeoutException {
         System.out.println(

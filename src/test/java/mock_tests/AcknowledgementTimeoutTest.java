@@ -14,11 +14,13 @@ package mock_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
 import static com.splunk.cloudfwd.PropertyKeys.*;
@@ -55,7 +57,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
+    protected void setProps(PropertiesFileHelper settings) {
         Properties props = new Properties();
         // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
@@ -71,7 +73,6 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
                 "-1");//disable dead channel detection
         props.put(PropertyKeys.EVENT_BATCH_SIZE, 0);
         //props.put(PropertyKeys.MAX_TOTAL_CHANNELS, 1);
-        return props;
     }
 
     @Override

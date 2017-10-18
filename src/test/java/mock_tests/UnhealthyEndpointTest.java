@@ -1,10 +1,12 @@
 package mock_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import test_utils.BasicCallbacks;
 import java.util.Properties;
@@ -50,19 +52,15 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
+  protected void setProps(PropertiesFileHelper settings) {
     //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     //simulate a non-sticky endpoint
-    props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
-    props.put(MAX_TOTAL_CHANNELS, "1");
-    props.put(MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,"1000");
-    props.put(ACK_POLL_MS, "250");
-    props.put(HEALTH_POLL_MS, "250");
-    props.put(UNRESPONSIVE_MS, "-1"); //disable dead channel removal
-
-    return props;
+    settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
+    settings.setMaxTotalChannels(1);
+    settings.setMaxUnackedEventBatchPerChannel(1000);
+    settings.setAckPollMS(250);
+    settings.setHealthPollMS(250);
+    settings.setUnresponsiveMS(-1); //disable dead channel removal
   }
 
   @Override

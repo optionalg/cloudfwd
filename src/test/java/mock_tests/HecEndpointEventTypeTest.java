@@ -15,8 +15,10 @@ package mock_tests;/*
  */
 
 import com.splunk.cloudfwd.Connection.HecEndpoint;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import java.util.*;
 import org.junit.Test;
@@ -37,10 +39,8 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
  
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(PropertyKeys.MOCK_HTTP_KEY, "true");
-    return props;
+  protected void setProps(PropertiesFileHelper settings) {
+    settings.setMockHttp(true);
   }
 
   @Test

@@ -1,9 +1,11 @@
 package mock_tests.hec_server_error_response_tests;
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.BasicCallbacks;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,13 +64,10 @@ public class HecServerErrorResponseInvalidEventNumber extends AbstractHecServerE
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.invalidvent.InvalidEventEndpoint");
-        props.put(ACK_TIMEOUT_MS, "500000");  //in this case we excpect to see HecConnectionTimeoutException
-        props.put(BLOCKING_TIMEOUT_MS, "5000");
-        return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.invalidvent.InvalidEventEndpoint");
+        settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException
+        settings.setBlockingTimeoutMS(5000);
     }
 
     @Override

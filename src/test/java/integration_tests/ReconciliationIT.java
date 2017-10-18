@@ -14,11 +14,13 @@ package integration_tests;/*
  * limitations under the License.
  */
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import java.util.*;
 
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 import java.util.concurrent.TimeoutException;
 
@@ -117,10 +119,8 @@ public class ReconciliationIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken(null));
-        return p;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setToken(createTestToken(null));
     }
 
     @Override

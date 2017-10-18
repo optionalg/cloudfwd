@@ -1,13 +1,13 @@
 package integration_tests;
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
+
 import java.nio.ByteBuffer;
 import java.util.Properties;
 import java.util.Set;
+
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 
 /*
@@ -75,10 +75,8 @@ public class ByteBufferWithMixedEventsIT extends AbstractReconciliationTest {
   }
 
   @Override
-  protected Properties getProps() {
-    Properties p = super.getProps();
-    p.put(PropertyKeys.TOKEN, createTestToken(null));
-    return p;
+  protected void setProps(PropertiesFileHelper settings) {
+    settings.setToken(createTestToken(null));
   }
 
   @Override

@@ -1,9 +1,7 @@
 package mock_tests.in_detention_tests;
 
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import mock_tests.in_detention_tests.AbstractInDetentionTest;
 import test_utils.BasicCallbacks;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
@@ -38,24 +36,19 @@ public class InDetentionAllTest extends AbstractInDetentionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-                props.put(MOCK_HTTP_CLASSNAME,
-                        "com.splunk.cloudfwd.impl.sim.errorgen.indexer.InDetentionEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "30000");
-        props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
-
-        return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.InDetentionEndpoints");
+        settings.setBlockingTimeoutMS(30000);
+        settings.setUnresponsiveMS(-1); //no dead channel detection
+        settings.setMaxTotalChannels(2);
     }
 
     protected void createConnection(LifecycleEvent.Type problemType) {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
+        PropertiesFileHelper settings = this.getTestProps();
+        this.setProps(settings);
         boolean gotException = false;
         try{
-            this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+            this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         }catch(Exception e){
             Assert.assertTrue("Expected HecServerErrorResponseException",  e instanceof HecServerErrorResponseException);
             HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;

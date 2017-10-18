@@ -1,9 +1,11 @@
 package mock_tests.health_check_tests;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import test_utils.AbstractConnectionTest;
 
@@ -30,12 +32,11 @@ public class AbstractHealthCheckTest extends AbstractConnectionTest {
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     protected void createConnection(LifecycleEvent.Type problemType) {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
+        PropertiesFileHelper settings = this.getTestProps();
+        this.setProps(settings);
         boolean gotException = false;
         try{
-            this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+            this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         }catch(Exception e){
             Assert.assertTrue("Expected HecServerErrorResponseException but got "+ e,  e instanceof HecServerErrorResponseException);
             HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;

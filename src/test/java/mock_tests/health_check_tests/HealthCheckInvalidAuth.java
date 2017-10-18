@@ -1,6 +1,8 @@
 package mock_tests.health_check_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import mock_tests.health_check_tests.AbstractHealthCheckTest;
 import org.junit.Test;
 
@@ -17,12 +19,9 @@ import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 public class HealthCheckInvalidAuth extends AbstractHealthCheckTest {
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.InvalidAuthEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "3000");
-        return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.InvalidAuthEndpoints");
+        settings.setBlockingTimeoutMS(3000);
     }
 
     @Test

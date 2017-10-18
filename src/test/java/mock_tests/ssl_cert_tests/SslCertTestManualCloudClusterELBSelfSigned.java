@@ -14,9 +14,11 @@ package mock_tests.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import org.junit.Test;
 
@@ -50,11 +52,10 @@ public class SslCertTestManualCloudClusterELBSelfSigned extends AbstractConnecti
   }
    */
   @Override
-  protected Properties getProps() {
+  protected void setProps(PropertiesFileHelper settings) {
     Properties props = new Properties();
     props.put(TOKEN, "6AFC4B90-5974-478C-9EC6-5F586CDD2F46");
     props.put(DISABLE_CERT_VALIDATION, "true");
-    return props;
   }
 
   @Override

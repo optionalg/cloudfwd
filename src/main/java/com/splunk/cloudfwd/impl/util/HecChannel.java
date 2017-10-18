@@ -134,7 +134,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       }, decomMs, TimeUnit.MILLISECONDS);
     }
     long unresponsiveDecomMS = loadBalancer.getPropertiesFileHelper().
-            getUnresponsiveChannelDecomMS();
+            getUnresponsiveMS();
     if (unresponsiveDecomMS > 0) {
       deadChannelDetector = new DeadChannelDetector(unresponsiveDecomMS);
       deadChannelDetector.start();

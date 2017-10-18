@@ -1,6 +1,8 @@
 package mock_tests.health_check_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,12 +21,9 @@ public class HealthCheckAcksDisabledTest extends AbstractHealthCheckTest {
     private static final Logger LOG = LoggerFactory.getLogger(HealthCheckAcksDisabledTest.class.getName());
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-           "com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.AckDisabledEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "3000");
-        return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.AckDisabledEndpoints");
+        settings.setBlockingTimeoutMS(3000);
     }
 
     @Test

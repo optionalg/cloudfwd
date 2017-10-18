@@ -14,12 +14,15 @@ package mock_tests.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import org.junit.Test;
 
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 /**
@@ -50,13 +53,15 @@ public class SslCertTestManualCloudClusterELB extends AbstractConnectionTest {
   }
    */
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://http-inputs-kinesis1.splunkcloud.com:443");
-    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(DISABLE_CERT_VALIDATION, "false");
-    props.put(ENABLE_HTTP_DEBUG, "true");
-    return props;
+  protected void setProps(PropertiesFileHelper settings) {
+    try {
+      settings.setUrls("https://http-inputs-kinesis1.splunkcloud.com:443"); //http is not supported protocol. Must be https
+    } catch (UnknownHostException e) {
+      throw new RuntimeException(e);
+    }
+    settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
+    settings.setCertValidationEnabled(false);
+    settings.setHttpDebugEnabled(true);
   }
 
   @Override

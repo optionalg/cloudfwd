@@ -1,7 +1,9 @@
 package performance_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 
 import java.util.Properties;
@@ -52,15 +54,13 @@ public class OncePerSecondLongevityTest extends AbstractConnectionTest {
         }
     }
     
-      @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
+  @Override
+  protected void setProps(PropertiesFileHelper settings) {
     //simulate a non-sticky endpoint
-    props.put(PropertyKeys.MOCK_HTTP_KEY,"false");
-    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //send immediately
-    props.put(PropertyKeys.ACK_TIMEOUT_MS, "180000"); //3 minute ack timeout
-    props.put(PropertyKeys.UNRESPONSIVE_MS, "300000"); //kill dead channel when no activity for 5 minutes    
-    return props;
+      settings.setMockHttp(false);
+      settings.setEventBatchSize(0); //send immediately
+      settings.setAckTimeoutMS(180000); //3 minute ack timeout
+      settings.setUnresponsiveMS(300000); //kill dead channel when no activity for 5 minutes
   }
     
     

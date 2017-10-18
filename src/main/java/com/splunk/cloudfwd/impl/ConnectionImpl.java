@@ -63,16 +63,16 @@ public class ConnectionImpl implements Connection {
 
 
   public ConnectionImpl(ConnectionCallbacks callbacks) {
-    this(callbacks, new ConnectionSettings());
+      this(callbacks, ConnectionSettings.fromPropsFile("/cloudfwd.properties"));
   }
 
   public ConnectionImpl(ConnectionCallbacks callbacks, ConnectionSettings settings) {
-    if(null == callbacks){
+    if (null == callbacks) {
         throw new HecConnectionStateException("ConnectionCallbacks are null",
                 HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
     }   
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
-    this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
+    this.propertiesFileHelper = (PropertiesFileHelper)settings;
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
     this.events = new EventBatchImpl();
@@ -95,10 +95,10 @@ public class ConnectionImpl implements Connection {
     return propertiesFileHelper;
   }
 
-    @Override
-    public ConnectionSettings getSettings() {
-        return getPropertiesFileHelper();
-    }
+  @Override
+  public ConnectionSettings getSettings() {
+      return getPropertiesFileHelper();
+  }
   
   
   public long getAckTimeoutMS() {
@@ -106,8 +106,7 @@ public class ConnectionImpl implements Connection {
   }
 
   public synchronized void setBlockingTimeoutMS(long ms) {
-    this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.
-            valueOf(ms));
+    this.propertiesFileHelper.setBlockingTimeoutMS(ms); //TODO: well this feels redundant...
   }
   
 //  

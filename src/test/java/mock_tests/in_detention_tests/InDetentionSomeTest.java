@@ -1,6 +1,7 @@
 package mock_tests.in_detention_tests;
 
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import mock_tests.in_detention_tests.AbstractInDetentionTest;
 import test_utils.BasicCallbacks;
 import com.splunk.cloudfwd.*;
@@ -35,15 +36,11 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.indexer.SomeInDetentionEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "30000");
-        props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
-
-        return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.SomeInDetentionEndpoints");
+        settings.setBlockingTimeoutMS(30000);
+        settings.setUnresponsiveMS(-1); //no dead channel detection
+        settings.setMaxTotalChannels(2);
     }
 
     @Override
@@ -54,10 +51,9 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     protected void createConnection() {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        PropertiesFileHelper settings = this.getTestProps();
+        this.setProps(settings);
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 

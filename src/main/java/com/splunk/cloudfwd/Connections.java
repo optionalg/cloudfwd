@@ -30,7 +30,7 @@ public class Connections {
     }
 
     public static Connection create(ConnectionCallbacks c) {
-        return create(c, new Properties());
+        return create(c, new ConnectionSettings());
     }
 
     /**
@@ -38,11 +38,13 @@ public class Connections {
      * load balancer. If any of the channels finds misconfigurations, such as HEC acknowldegements disabled, or invalid HEC
      * token, then an exception is thrown from Connections.create. This is 'fail fast' behavior designed to quickly expose 
      * serverside configuration issues.
-     * @param c
-     * @param p
+     * @param cb
+     * @param settings
      * @return
      */
-    public static Connection create(ConnectionCallbacks c, Properties p) {
-        return new ConnectionImpl(c, p);
+    public static Connection create(ConnectionCallbacks cb, ConnectionSettings settings) {
+        ConnectionImpl c = new ConnectionImpl(cb, settings);
+        settings.setConnection(c);
+        return c;
     }
 }

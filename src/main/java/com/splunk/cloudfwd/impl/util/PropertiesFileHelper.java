@@ -15,55 +15,48 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
-import com.splunk.cloudfwd.Connection;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 
-import java.net.URL;
-import java.util.Properties;
-import static com.splunk.cloudfwd.PropertyKeys.*;
+import java.net.*;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import java.net.Inet6Address;
-import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
+
 /**
  *
  * @author ghendrey
  */
 public class PropertiesFileHelper extends ConnectionSettings {
 
-  public PropertiesFileHelper(Connection c, Properties overrides) {
-      super(c,overrides);
-  }
+    @JsonProperty("mock_force_url_map_to_one")
+    private Boolean mockForceUrlMapToOne;
 
-  /**
-   * create SenderFactory with default properties read from cloudfwd.properties file
-   */
-  public PropertiesFileHelper(Connection c) {
-      super(c);
-  }
+    public boolean getMockForceUrlMapToOne() {
+      return applyDefaultIfNull(this.mockForceUrlMapToOne, false);
+    }
 
-  public boolean isForcedUrlMapToSingleAddr() {
-    return Boolean.parseBoolean(this.defaultProps.getProperty(
-            MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
-  }
+    public void setMockForceUrlMapToOne(Boolean force) {
+        this.mockForceUrlMapToOne = force;
+    }
+
 
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
-    Properties props = new Properties(defaultProps);
-    props.put(COLLECTOR_URI, url.toString());
-    props.put(HOST, host.toString());
-    return createSender(props);
+        this.setUrlString(url.toString()); //TODO - reconcile 2 setUrl methods
+        this.setHost(host.toString());
+    return createSender();
   }
 
-  private HttpSender createSender(Properties props) {
+  private HttpSender createSender() {
       // enable http client debugging
-      if (enabledHttpDebug()) enableHttpDebug();
-      String url = props.getProperty(COLLECTOR_URI).trim();
-      String host = props.getProperty(HOST).trim();
-      String token = props.getProperty(TOKEN).trim();
-      String cert = getSSLCertContent();
-      HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert, host);
+      if (enabledHttpDebug()) {
+          setHttpDebugEnabled(true);
+      }
+      String url = this.getUrlString();
+      String host = this.getHost();
+      String token = this.getToken();
+      String cert = this.getSSLCertContent();
+      HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert , host);
       if(isMockHttp()){
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
@@ -80,7 +73,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
             }
 
             URL url = new URL("https://" + hostAddr + ":" + s.getPort());
-            LOG.debug("Trying to add URL: " + url);
+            getLog().debug("Trying to add URL: " + url);
             //We should provide a hostname for http client, so it can properly set Host header
             //this host is required for many proxy server and virtual servers implementations
             //https://tools.ietf.org/html/rfc7230#section-5.4
@@ -93,10 +86,5 @@ public class PropertiesFileHelper extends ConnectionSettings {
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
     }
-
-  //FIXME TODO. THis needs to get OUT of the public API
-  public HttpSender createSender() {
-    return createSender(this.defaultProps);
-  }
 
 }

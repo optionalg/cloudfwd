@@ -1,6 +1,7 @@
 package performance_tests;
 
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import mock_tests.ThroughputCalculatorCallback;
 import test_utils.BasicCallbacks;
 import org.junit.After;
@@ -99,12 +100,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = new Properties();
-        p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-        p.put(KEY_ENABLE_TEST_PROPERTIES, false);
-        p.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
-        return p;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttp(false);
+        settings.setMaxUnackedEventBatchPerChannel(2);
+        settings.setTestPropertiesEnabled(false);
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
     }
 
     public class SenderWorker {

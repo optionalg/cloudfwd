@@ -1,10 +1,13 @@
 package mock_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 /*
@@ -26,10 +29,12 @@ import java.util.Properties;
 
 public class UrlProtocolTest extends ExceptionConnInstantiationTest {
      @Override
-    protected Properties getProps() {
-       Properties props = new Properties();
-       props.put(PropertyKeys.COLLECTOR_URI, "http://foo.com"); //http is not supported protocol. Must be https
-       return props;
+     protected void setProps(PropertiesFileHelper settings) {
+         try {
+             settings.setUrls("http://foo.com"); //http is not supported protocol. Must be https
+         } catch (UnknownHostException e) {
+             throw new RuntimeException(e);
+         }
     }
     
     protected boolean isExpectedConnInstantiationException(Exception e) {

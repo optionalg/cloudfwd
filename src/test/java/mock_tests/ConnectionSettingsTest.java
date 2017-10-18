@@ -14,12 +14,14 @@ package mock_tests;/*
  * limitations under the License.
  */
 
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import org.junit.Test;
 import org.junit.Assert;
@@ -32,16 +34,18 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
     
     
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088"); 
-        return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        try {
+            settings.setUrls("https://customer.cloud.splunk.com:8088");
+        } catch(UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
-    public void getSSLCertContentForCloudInstance() {
+    public void getSSLCertContentForCloudInstance() throws UnknownHostException {
         ConnectionSettings settings = connection.getSettings();
-        settings.putProperty(PropertyKeys.COLLECTOR_URI, "https://customer.cloud.splunk.com:8088");
+        settings.setUrls("https://customer.cloud.splunk.com:8088");
         Connection c = Connections.create(null);
 
         // For cloud instance, if we didn't set CLOUD_SSL_CERT_CONTENT in overrides,
@@ -68,13 +72,13 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
     }
 
     @Test
-    public void getSSLCertContentForNonCloudInstance() {
+    public void getSSLCertContentForNonCloudInstance() throws UnknownHostException {
         ConnectionSettings settings = connection.getSettings();
-        settings.putProperty(PropertyKeys.COLLECTOR_URI, "https://localhost:8088");
+        settings.setUrls("https://localhost:8088");
 
         // Non-empty ssl content
         String expectedSSLCert = "testing ssl cert";
-        settings.putProperty(PropertyKeys.SSL_CERT_CONTENT, expectedSSLCert);
+        settings.setSSLCertContent(expectedSSLCert);
         String sslCert = settings.getSSLCertContent();
         if (!sslCert.equals(expectedSSLCert)) {
             Assert.fail("Expect: " + expectedSSLCert + "\nbut got: " + sslCert);

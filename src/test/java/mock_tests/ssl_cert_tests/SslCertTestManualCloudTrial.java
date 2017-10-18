@@ -14,12 +14,15 @@ package mock_tests.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import org.junit.Test;
 
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 /**
@@ -50,12 +53,14 @@ public class SslCertTestManualCloudTrial extends AbstractConnectionTest {
   }
    */
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
-    props.put(TOKEN, "6F339C3C-9658-4347-9DCA-A171E32072AF");
-    props.put(DISABLE_CERT_VALIDATION, "false");
-    return props;
+  protected void setProps(PropertiesFileHelper settings) {
+    try {
+      settings.setUrls("https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
+    } catch (UnknownHostException e) {
+      throw new RuntimeException(e);
+    }
+    settings.setToken("6F339C3C-9658-4347-9DCA-A171E32072AF");
+    settings.setCertValidationEnabled(false);
   }
 
   @Override

@@ -3,10 +3,12 @@ package integration_tests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.http.HttpClientFactory;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 import java.io.IOException;
 import java.util.*;
@@ -108,11 +110,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-    props.put(PropertyKeys.EVENT_BATCH_SIZE, "16000");
-    return props;
+  protected void setProps(PropertiesFileHelper settings) {
+    settings.setMockHttp(false);
+    settings.setEventBatchSize(16000);
   }
 
   @Override

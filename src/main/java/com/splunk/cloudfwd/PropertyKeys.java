@@ -72,7 +72,7 @@ public class PropertyKeys {
    * If true, disables certificate validation and allows sending to non-HTTPs
    * endpoints. Defaults to false.
    */
-  public static final String DISABLE_CERT_VALIDATION = "disableCertificateValidation";
+  public static final String DISABLE_CERT_VALIDATION = "disable_ertificate_validation";
 
   /**
    * Integer number of channels per internet socket address destination. Event

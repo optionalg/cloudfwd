@@ -1,9 +1,11 @@
 package mock_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import test_utils.AbstractConnectionTest;
 
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
@@ -36,16 +38,13 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
   private HecConnectionStateException.Type expectedExType;
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(MOCK_HTTP_KEY, "true");
-    props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
-    props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
-    props.put(PropertyKeys.ACK_TIMEOUT_MS, "-1");     
-    props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true"); //checkpoints are required for this to work      
-    return props;
+  protected void setProps(PropertiesFileHelper settings) {
+    settings.setMockHttp(true);
+    settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
+    settings.setEventBatchSize(0);
+    settings.setMaxTotalChannels(1);
+    settings.setAckTimeoutMS(-1);
+    settings.setCheckpointEnabled(true);
   }
   
   @Before
