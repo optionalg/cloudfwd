@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
  * Created by eprokop on 10/10/17.
  */
 public class RestartSplunkIT extends AbstractReconciliationTest {
+    protected static final Logger LOG = LoggerFactory.getLogger(RestartSplunkIT.class.getName());
 
     @Override
     protected int getNumEventsToSend() {
@@ -47,7 +48,7 @@ public class RestartSplunkIT extends AbstractReconciliationTest {
         HttpGet httpget = new HttpGet(
                 "https://" + cliProperties.get("splunkHost") + ":" + cliProperties.get("mgmtPort")
                         + "/services/search/jobs/" + sid + "/results?output_mode=json");
-        LOG.info("Sending request to " + httpget.getURI() + " to verify event count..");
+        LOG.info("Verifying event count with request to " + httpget.getURI() + " ...");
         HttpResponse getResponse = httpClient.execute(httpget);
         String getReply = parseHttpResponse(getResponse);
         int count = json.readTree(getReply).findValue("count").asInt();

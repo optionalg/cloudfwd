@@ -146,9 +146,6 @@ public class LoadBalancer implements Closeable {
         //and then the to-be-reaped channel would also be removed, leaving no channels, and
         //send will be stuck in a spin loop with no channels to send to
         System.out.println("Adding channel ");
-        for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
-            System.out.println(ste);
-        }
         PropertiesFileHelper propsHelper = this.connection.
                 getPropertiesFileHelper();
         if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {

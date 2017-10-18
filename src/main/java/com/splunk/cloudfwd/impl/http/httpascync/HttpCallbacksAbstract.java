@@ -33,8 +33,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import org.apache.http.Header;
 
-import org.apache.http.HeaderElement;
-import org.apache.http.HeaderIterator;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.util.EntityUtils;
@@ -221,5 +219,6 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     public HecIOManager getManager() {
         return manager;
     }
+
 
 }

@@ -78,7 +78,6 @@ public class TimeoutChecker implements EventTracker {
             return;
         }
         LOG.debug("checking timeouts for {} EventBatches", eventBatches.size());
-        System.out.println("checking timeouts for " + eventBatches.size() + " EventBatches");
         long now = System.currentTimeMillis();
         for (Iterator<Map.Entry<Comparable, EventBatchImpl>> iter = eventBatches.
                 entrySet().
