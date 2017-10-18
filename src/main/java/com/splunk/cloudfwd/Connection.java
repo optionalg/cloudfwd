@@ -41,13 +41,6 @@ public interface Connection extends Closeable{
      */
     int send(Event event) throws HecConnectionTimeoutException, HecNoValidChannelsException;
 
-//    /**
-//     * Synchronously generates an HTTP request to the ack endpoint on each channel, and assembles a list of 
-//     * ConfigStatus, one for each channel in the Connection. 
-//     * @return
-//     * @throws Exception
-//     */
-//    public List<ConfigStatus> checkConfigs() throws Exception;
 
     /**
      * Used to select either structured HEC /event endpoint or /raw HEC endpoint

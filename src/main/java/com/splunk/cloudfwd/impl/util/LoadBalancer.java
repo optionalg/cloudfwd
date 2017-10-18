@@ -66,20 +66,7 @@ public class LoadBalancer implements Closeable {
         createChannels(discoverer.getAddrs());
         //this.discoverer.addObserver(this);
     }
-    
-//    /**
-//     * Initiates an http request on each channel to synchronously check the configuration of the indexer
-//     * on each channel.
-//     * @return
-//     */
-//    public List<ConfigStatus> checkConfigs() {
-//      //return channels.values().stream().map(HecChannel::getConfigStatus).collect(Collectors.toList());
-//      List<ConfigStatus> statuses = new ArrayList<>();
-//      for(HecChannel c: channels.values()){          
-//          statuses.add(c.getConfigStatus());
-//      }
-//      return statuses;
-//    }
+
 
     /**
      * Gets the current HecHealth of each channel. This method does not initiate any HTTP traffic.  It just
@@ -91,6 +78,12 @@ public class LoadBalancer implements Closeable {
         channels.values().forEach(c->h.add(c.getHealth()));
         return h;
     }
+    
+    public List<HecHealth> getHealthNonBlocking() {
+        final List<HecHealth> h = new ArrayList<>();
+        channels.values().forEach(c->h.add(c.getHealthNonblocking()));
+        return h;
+    }    
 
     public void sendBatch(EventBatchImpl events) throws HecConnectionTimeoutException,
             HecNoValidChannelsException {
@@ -104,9 +97,6 @@ public class LoadBalancer implements Closeable {
 
     @Override
     public synchronized void close() {
-//        if(null != discoveryScheduler){
-//            this.discoveryScheduler.stop();
-//        }
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
@@ -174,10 +164,6 @@ public class LoadBalancer implements Closeable {
         channel.getChannelMetrics().addObserver(this.checkpointManager);
         LOG.debug("Adding channel {}", channel);
         channels.put(channel.getChannelId(), channel);
-        //consolidated metrics (i.e. across all channels) are maintained in the checkpointManager
-
-        // have channel ready to send requests
-        //channel.start();
         return true;
     }
 
@@ -381,15 +367,6 @@ public class LoadBalancer implements Closeable {
         createChannels(addrs);
     }
 
-    /*
-    public synchronized void refreshChannels(boolean dnsLookup) {
-        try {
-            refreshChannels(dnsLookup, false);
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e); // should be unreachable
-        }
-    }
-*/
     /**
      * @return the channelsPerDestination
      */

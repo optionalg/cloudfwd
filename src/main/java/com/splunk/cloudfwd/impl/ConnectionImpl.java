@@ -60,6 +60,7 @@ public class ConnectionImpl implements Connection {
   private boolean closed;
   private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
   private PropertiesFileHelper propertiesFileHelper;
+  private boolean quiesced;
 
 
   public ConnectionImpl(ConnectionCallbacks callbacks) {
@@ -110,20 +111,20 @@ public class ConnectionImpl implements Connection {
             valueOf(ms));
   }
   
-//  
-//  @Override
-//  public List<ConfigStatus> checkConfigs() {
-//    return lb.checkConfigs();
-//  }
-   
-  @Override
+   //close() is synchronized, as is send and sendBatch, therefore events cannot be sent before close has returned.
+  //After close has returned, any events sent would be rejected because the connection is closed.
+  @Override  
   public synchronized void close() {
+    if(this.closed){
+        return;
+    }
     try {
       flush();
     } catch (HecNoValidChannelsException ex) {
       LOG.error("Events could not be flushed on connection close: " +
         ex.getMessage(), ex);
     }
+    //wait until after flush to set closed to true (otherwise flush->sendBatch will complain that connection is closed)
     this.closed = true;
     //we must close asynchronously to prevent deadlocking
     //when close() is invoked from a callback like the
@@ -173,6 +174,9 @@ public class ConnectionImpl implements Connection {
    * @see com.splunk.cloudfwd.PropertyKeys
    */
   public synchronized int send(Event event) throws HecConnectionTimeoutException, HecNoValidChannelsException {
+    if (closed) {
+      throw new HecConnectionStateException("Attempt to send on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
+    }      
     if (null == this.events) {
       this.events = new EventBatchImpl();
     }
@@ -203,7 +207,9 @@ public class ConnectionImpl implements Connection {
     if (events.getLength() == 0) {
       return 0;
     }
-
+    
+    logLBHealth();
+    
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
     //batch while it is in the load balancer. Furthermore, if sending fails, then close() will try to
@@ -325,5 +331,38 @@ public class ConnectionImpl implements Connection {
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
    }    
+
+    private void logLBHealth() {
+        List<HecHealth> channelHealths = lb.getHealthNonBlocking();
+        int _closed=0;
+        int _quiesced=0;
+        int  _healthy = 0;
+        int _misconfigured=0;
+        int _dead=0;
+        int _decomissioned=0;
+        for(HecHealth h:channelHealths){
+            if(h.isHealthy()){
+                _healthy++;
+            }
+            if(h.isMisconfigured()){
+                _misconfigured++;
+            }
+            if(!h.getQuiescedDuration().isZero()){
+                _quiesced++;
+            }
+            if(!h.getTimeSinceDeclaredDead().isZero()){
+                _dead++;
+            }
+            if(!h.getTimeSinceDecomissioned().isZero()){
+                _decomissioned++;
+            }
+            if(!h.getTimeSinceCloseFinished().isZero()){
+                _closed++;
+            }
+        }
+        
+        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
+                channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
+    }
 
 }
