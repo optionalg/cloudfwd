@@ -150,13 +150,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       if (!isAvailable()) {
           return false;
       }
-      return sendInternal(events);
-  }
-
-  public synchronized boolean sendInternal(EventBatchImpl events) {
-      if (!isAvailable()) {
-          return false;
-      }
+      System.out.println("sending on " + this + " with health: " + getHealth() + " and availability " + isAvailable());
 //    if (!started) {
 //          start();
 //    }
@@ -278,6 +272,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                     HecIllegalStateException.Type.NEGATIVE_UNACKED_COUNT);
         } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
             if (quiesced) {
+                System.out.println("all acks received, calling close on channel: " + this);
                 close();
             }
         }
@@ -290,6 +285,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (closed || quiesced) {
       return;
     }
+    System.out.println("quiescing channel " + this);
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
 
@@ -315,7 +311,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-  protected void interalForceClose() {  
+  protected void interalForceClose() {
+      System.out.println("calling internal force close on channel " + this);
       this.closed = true;
       Runnable r = ()->{
         loadBalancer.removeChannel(getChannelId(), true);
@@ -538,6 +535,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
           String msg = HecChannel.this  + " dead. Resending "+unackedCount.get()+" unacked messages and force closing channel";
+          System.out.println(msg);
           handleDeadChannel(new HecChannelDeathException(msg), msg);
         } else { //channel was not 'frozen'
           lastCountOfAcked = ackedCount.get();

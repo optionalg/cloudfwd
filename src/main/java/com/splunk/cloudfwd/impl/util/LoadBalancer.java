@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
+
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
 
@@ -48,7 +50,7 @@ public class LoadBalancer implements Closeable {
     private final CheckpointManager checkpointManager; //consolidate metrics across all channels
     private final IndexDiscoverer discoverer;
     //private final IndexDiscoveryScheduler discoveryScheduler;
-    private int robin; //incremented (mod channels) to perform round robin
+    private AtomicInteger robin = new AtomicInteger(0); //incremented (mod channels) to perform round robin
     private final ConnectionImpl connection;
     private boolean closed;
     private volatile CountDownLatch latch;
@@ -153,6 +155,10 @@ public class LoadBalancer implements Closeable {
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
         //and then the to-be-reaped channel would also be removed, leaving no channels, and
         //send will be stuck in a spin loop with no channels to send to
+        System.out.println("Adding channel ");
+        for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+            System.out.println(ste);
+        }
         PropertiesFileHelper propsHelper = this.connection.
                 getPropertiesFileHelper();
         if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
@@ -246,10 +252,12 @@ public class LoadBalancer implements Closeable {
                 }
                 continue; //keep going until a channel is added
             }
-            if (tryChannelSend(channelsSnapshot, events, resend)) {
+            HecChannel triedChannel;
+            if ((triedChannel = tryChannelSend(channelsSnapshot, events, resend)) == null) {
+                // successful send
                 break;
             }
-            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
+            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events, triedChannel);
             throwExceptionIfTimeout(startTime, events, resend);
         }
         return false;
@@ -285,15 +293,15 @@ public class LoadBalancer implements Closeable {
         }
     }
 
-    private boolean tryChannelSend(List<HecChannel> channelsSnapshot,
+    private HecChannel tryChannelSend(List<HecChannel> channelsSnapshot,
             EventBatchImpl events, boolean forced) {
         HecChannel tryMe;
-        int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
+        int channelIdx = this.robin.getAndIncrement() % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         try {
             if (tryMe.send(events)) {
                 LOG.debug("sent EventBatch:{}  on channel: {} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
-                return true;
+                tryMe = null;
             }else{
                 LOG.trace("channel not healthy {}", tryMe);
                 LOG.debug("Skipped channel: {} available={} full={}", tryMe, tryMe.isAvailable(), tryMe.isFull());
@@ -301,18 +309,18 @@ public class LoadBalancer implements Closeable {
         } catch (RuntimeException e) {
             recoverAndThrowException(events, forced, e);
         }
-        return false;
+        return tryMe;
     }
 
-    private void waitIfSpinCountTooHigh(int spinCount,
-            List<HecChannel> channelsSnapshot, EventBatchImpl events) throws HecNoValidChannelsException {
+    private synchronized void waitIfSpinCountTooHigh(int spinCount,
+            List<HecChannel> channelsSnapshot, EventBatchImpl events, HecChannel triedChannel) throws HecNoValidChannelsException {
         if (spinCount % channelsSnapshot.size() == 0) {
             try {
                 latch = new CountDownLatch(1);
                 if (!latch.await(1, TimeUnit.SECONDS)) {
                     LOG.warn(
-                            "Round-robin load balancer waited 1 second at spin count {}, channel idx {}, eventBatch {}",
-                            spinCount, this.robin % channelsSnapshot.size(), events.getId());
+                            "Round-robin load balancer waited 1 second at spin count {}, channel {}, eventBatch {}",
+                            spinCount, triedChannel, events.getId());
                             //if we had no healthy channels, which is why we are here, it's possible tht we have no
                             //**valid** channels, which means every channel is returning an HecServerErrorResponse
                             //indicating misconfiguration of HEC

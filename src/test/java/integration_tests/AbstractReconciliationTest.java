@@ -68,7 +68,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   // junit test instantiate a new instance of the test class
   private static Boolean HEC_ENABLED = false;
   /* ************ CLI CONFIGURABLE ************ */
-  private static Map<String, String> cliProperties;
+  protected static Map<String, String> cliProperties;
   // Default values
   static {
     cliProperties = new HashMap<>();
@@ -210,9 +210,12 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     params.add(new BasicNameValuePair("adhoc_search_level", "smart")); // extracts fields
     httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
     //Execute and get the response.
+    LOG.info("Creating search job with search string " + getSearchString() + " ...");
     HttpResponse postResponse = httpClient.execute(httpPost);
     String reply = parseHttpResponse(postResponse);
-    return json.readTree(reply).path("sid").asText();
+    String sid = json.readTree(reply).path("sid").asText();
+    LOG.info("Search job created with sid=" + sid);
+    return sid;
   }
 
   protected void restartSplunk() {

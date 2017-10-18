@@ -133,6 +133,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
             getMessage();
     exception = ex;
     if(!isExpectedFailureType(ex)){
+        LOG.info(failMsg);
       ex.printStackTrace(); //print the stack trace if we were not expecting failure
     } else {
         LOG.info("Got expected failed exception: " + ex);
