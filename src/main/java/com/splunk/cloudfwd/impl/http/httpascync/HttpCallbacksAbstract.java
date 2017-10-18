@@ -219,6 +219,6 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     public HecIOManager getManager() {
         return manager;
     }
-
+    
 
 }
