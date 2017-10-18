@@ -172,19 +172,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
 
   public boolean send(EventBatchImpl events) {
-<<<<<<< HEAD
-      if (!isAvailable()) {
-          return false;
-      }
-      System.out.println("sending on " + this + " with health: " + getHealth() + " and availability " + isAvailable());
-//    if (!started) {
-//          start();
-//    }
-=======
     if (!isAvailable()) {
       return false;
     }
->>>>>>> origin/master
+    System.out.println("sending on " + this + " with health: " + getHealth() + " and availability " + isAvailable());
     
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
@@ -316,15 +307,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (closed || quiesced) {
       return;
     }
-<<<<<<< HEAD
-    System.out.println("quiescing channel " + this);
-    quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
-=======
     this.health.decomissioned();
     //must add channel *before* quiesce(). 'cause if channel empty, quiesce proceeds directly to close which will kill terminate
     //the reaperScheduler, which will interrupt this very thread which was spawned by the reaper scheduler, and then  we
     //never get to add the channel.
->>>>>>> origin/master
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
     this.loadBalancer.removeChannel(channelId, true);
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
@@ -368,12 +354,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     interalForceClose();
   }
 
-<<<<<<< HEAD
-  protected void interalForceClose() {
+  void interalForceClose() {
       System.out.println("calling internal force close on channel " + this);
-=======
-  void interalForceClose() {  
->>>>>>> origin/master
       this.closed = true;
       Runnable r = ()->{
         try {

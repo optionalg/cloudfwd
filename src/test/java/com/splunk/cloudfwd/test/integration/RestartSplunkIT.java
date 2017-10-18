@@ -1,13 +1,13 @@
-package integration_tests;
+package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import test_utils.BasicCallbacks;
 
 import java.io.IOException;
 import java.util.Properties;
