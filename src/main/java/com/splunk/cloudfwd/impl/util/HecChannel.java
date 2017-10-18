@@ -288,13 +288,17 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (closed || quiesced) {
       return;
     }
-    quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
+    this.health.decomissioned();
+    //must add channel *before* quiesce(). 'cause if channel empty, quiesce proceeds directly to close which will kill terminate
+    //the reaperScheduler, which will interrupt this very thread which was spawned by the reaper scheduler, and then  we
+    //never get to add the channel.
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+    quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
     //WE MUST NOT REMOVE THE CHANNEL NOW...MUST GIVE IT CHANCE TO DRAIN AND BE GRACEFULLY REMOVED
     //ONCE IT IS DRAINED. Note that quiesce() call above will start a watchdog thread that will force-remove the channel
     //if it does not gracefully close in 3 minutes.
     //this.loadBalancer.removeChannel(channelId, false); //remove from load balancer
-    this.health.decomissioned();
+
   }
 
   /**
@@ -377,7 +381,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     LOG.trace("closing executors on  {}", this);
 
     if (null != reaperScheduler) {
-      reaperScheduler.shutdownNow();
+      reaperScheduler.shutdown(); //do not use the shutdownNOW flavor. Because it causes the reaper-scheduler to get interrupted. 
       try{
         if(!reaperScheduler.isTerminated() && !reaperScheduler.awaitTermination(10, TimeUnit.SECONDS)){
             LOG.error("failed to terminate reaper scheduler.");
