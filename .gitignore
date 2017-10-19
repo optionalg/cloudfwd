@@ -4,3 +4,4 @@ nbproject
 *.iml
 .DS_Store
 codeship.aes
+*.tar.gz
