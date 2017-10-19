@@ -89,10 +89,12 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   @Before
-  public void init() {
+  public void setUp() {
     if (!HEC_ENABLED) {
       enableHec();
     }
+    LOG.info("Starting setUp");
+    super.setUp();
   }
 
   @After
@@ -291,6 +293,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   protected void enableHec() {
+    LOG.info("Starting enableHec");
     try {
       HttpPost httpRequest = new HttpPost(mgmtSplunkUrl() +
               "/services/data/inputs/http/http");
