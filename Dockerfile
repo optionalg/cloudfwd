@@ -3,7 +3,7 @@
 # to build run:
 # docker build . -f Dockerfile.docker-splunk-6.6.3-sun-java8
 #FROM ubuntu:latest
-FROM phusion/baseimage
+FROM mlaccetti/docker-oracle-java8-ubuntu-16.04
 ENV \
   SPLUNK_PRODUCT=splunk \
   SPLUNK_VERSION=6.6.3 \
@@ -65,12 +65,12 @@ COPY ${JAVA_ARCHIVE} ${CLOUDFWD}/
 #DO NOT INSTALL JAVA BEFORE SPLUNK. For some reason "apt-get purge -y --auto-remove wget" in the
 #splunk installation is messing with the previously installed java installation So install java
 #after splunk
-RUN \
-  echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
-  add-apt-repository -y ppa:webupd8team/java && \
-  apt-get update && \
-  apt-get install -y oracle-java8-installer && \
-  rm -rf /var/cache/oracle-jdk8-installer
+# RUN \
+#   echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+#   add-apt-repository -y ppa:webupd8team/java && \
+#   apt-get update && \
+#   apt-get install -y oracle-java8-installer && \
+#   rm -rf /var/cache/oracle-jdk8-installer
 
 # Define commonly used JAVA_HOME variable
 ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
@@ -93,7 +93,9 @@ RUN test -d ${CLOUDFWD} && rm -rf ${CLOUDFWD} || echo "directory doesn't exist"
 RUN mkdir -p ${CLOUDFWD}
 COPY . ${CLOUDFWD}/
 WORKDIR ${CLOUDFWD}
+ENV MAVEN_OPTS="-Xmx128M"
 RUN cd ${CLOUDFWD} && ( mvn -B -Dmaven.test.skip=true install > install.log 2>&1 || ( FAILURE=$! && echo "Failed with exit code: $?" && tail -10000 install.log && exit $FAILURE))
+
 #RUN rm -rf ${CLOUDFWD}
 #
 #RUN test -d ${CLOUDFWD} && rm -rf ${CLOUDFWD} || echo "directory doesn't exist"
