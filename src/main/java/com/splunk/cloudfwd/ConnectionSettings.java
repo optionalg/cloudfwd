@@ -114,7 +114,7 @@ public class ConnectionSettings {
     private long blockingTimeoutMS = Long.parseLong(DEFAULT_BLOCKING_TIMEOUT_MS);
 
     @JsonProperty("mock_http_classname")
-    private String mockHttpClassname = MOCK_HTTP_CLASSNAME;
+    private String mockHttpClassname;
 
     @JsonProperty("ssl_cert_content")
     private String sslCertContent;
@@ -292,10 +292,14 @@ public class ConnectionSettings {
     public long getBlockingTimeoutMS() {
         return applyDefaultIfNull(this.blockingTimeoutMS, Long.parseLong(DEFAULT_BLOCKING_TIMEOUT_MS));
     }
+    
+    public String getMockHttpClassname() {
+        return applyDefaultIfNull(this.mockHttpClassname, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
+    }
 
     public Endpoints getSimulatedEndpoints() {
         try {
-            return (Endpoints) Class.forName(this.mockHttpClassname).newInstance();
+            return (Endpoints) Class.forName(this.getMockHttpClassname()).newInstance();
         } catch (Exception ex) {
             getLog().error(ex.getMessage(), ex);
             throw new RuntimeException(ex.getMessage(), ex);
@@ -363,7 +367,7 @@ public class ConnectionSettings {
     }
 
     protected boolean isMockHttp() {
-        return this.mockHttp == false;
+        return applyDefaultIfNull(this.mockHttp, false);
     }
 
 
