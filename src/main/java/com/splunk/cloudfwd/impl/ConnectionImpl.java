@@ -208,7 +208,9 @@ public class ConnectionImpl implements Connection {
       return 0;
     }
     
-    logLBHealth();
+    if(LOG.isDebugEnabled()){
+        logLBHealth();
+    }
     
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
@@ -361,7 +363,7 @@ public class ConnectionImpl implements Connection {
             }
         }
         
-        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
+        LOG.debug("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
                 channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
     }
 

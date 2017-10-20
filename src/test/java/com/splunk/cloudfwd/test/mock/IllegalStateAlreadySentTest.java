@@ -71,7 +71,6 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
     connection.send(event); //send a first event. The event will get stuck waiting for acknowledgement
     int exceptionCount = 0;
     for (int i = 0; i < expected - 1; i++) {
-      System.out.println("Sending Duplicate Event ID");
       event = nextEvent(1); //duplicate event ID
       try {
         connection.send(event);

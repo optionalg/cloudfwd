@@ -213,9 +213,10 @@ public final class HttpSender implements Endpoints {
   public void start() {
     // attempt to create and start an http client
     try {
-      httpClient = new HttpClientFactory(disableCertificateValidation,
-              cert, host, this).build();
-      httpClient.start();
+        this.httpClient = HttpClientWrapper.getClient(this, disableCertificateValidation,cert, host);
+//      httpClient = new HttpClientFactory(disableCertificateValidation,
+//              cert, host, this).build();
+//      httpClient.start();
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
@@ -227,11 +228,12 @@ public final class HttpSender implements Endpoints {
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-      try {
-        httpClient.close();
-      } catch (IOException e) {
-          LOG.error("Failed to shutdown HttpSender {}", e.getMessage());
-      }
+//      try {
+        //httpClient.close();
+        HttpClientWrapper.releaseClient(this);
+//      } catch (IOException e) {
+//          LOG.error("Failed to shutdown HttpSender {}", e.getMessage());
+//      }
       httpClient = null;
     }
   }

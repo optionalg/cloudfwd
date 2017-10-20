@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.impl.sim;
 
 import java.util.Random;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +46,11 @@ public class ClosableDelayableResponder {
 
     protected void delayResponse(Runnable r) {
         //return a single response with a delay uniformly distributed between  [0,5] ms
-        executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+        try{
+            executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+        }catch(RejectedExecutionException e){
+            LOG.trace("rejected delayResponse by {}", Thread.currentThread().getName());
+        }
     }
     
   public void close() {
