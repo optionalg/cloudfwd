@@ -33,10 +33,12 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     private static Logger LOG;
 
     ConnectionCallbacks callbacks;
+    CheckpointManager cpManager;
 
     public CallbackInterceptor(ConnectionCallbacks callbacks, ConnectionImpl c) {
         this.LOG = c.getLogger(CallbackInterceptor.class.getName());
         this.callbacks = callbacks;
+        this.cpManager = c.getCheckpointManager();
     }
 
     @Override
@@ -66,6 +68,7 @@ public class CallbackInterceptor implements ConnectionCallbacks {
             if (null != events) {
                 ((EventBatchImpl)events).setFailed(true);
                 ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
+                this.cpManager.release((EventBatchImpl)events);
             }
         }
     }

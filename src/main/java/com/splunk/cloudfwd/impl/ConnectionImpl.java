@@ -27,6 +27,7 @@ import com.splunk.cloudfwd.HecLoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
+import com.splunk.cloudfwd.impl.util.CheckpointManager;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
@@ -55,6 +56,7 @@ public class ConnectionImpl implements Connection {
   private HecLoggerFactory loggerFactory;
   private final Logger LOG;
   private final LoadBalancer lb;
+  private CheckpointManager checkpointManager; //consolidate metrics across all channels
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
   private boolean closed;
@@ -74,6 +76,7 @@ public class ConnectionImpl implements Connection {
     }   
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
+    this.checkpointManager = new CheckpointManager(this);
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
     this.events = new EventBatchImpl();
@@ -101,6 +104,9 @@ public class ConnectionImpl implements Connection {
         return getPropertiesFileHelper();
     }
   
+    public CheckpointManager getCheckpointManager() {
+      return this.checkpointManager;
+    }
   
   public long getAckTimeoutMS() {
     return propertiesFileHelper.getAckTimeoutMS();
