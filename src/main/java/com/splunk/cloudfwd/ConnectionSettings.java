@@ -335,6 +335,22 @@ public class ConnectionSettings {
         return defaultProps.getProperty(PropertyKeys.TOKEN);
     }
 
+    public String getHost() {
+        return defaultProps.getProperty(PropertyKeys.HOST);
+    }
+
+    public String getSource() {
+        return defaultProps.getProperty(PropertyKeys.SOURCE);
+    }
+
+    public String getSourcetype() {
+        return defaultProps.getProperty(PropertyKeys.SOURCETYPE);
+    }
+
+    public String getIndex() {
+        return defaultProps.getProperty(PropertyKeys.INDEX);
+    }
+
     protected List<URL> urlsStringToList(String urlsListAsString) {
         List<URL> urlList = new ArrayList<>();
         String[] splits = urlsListAsString.split(",");
@@ -401,12 +417,32 @@ public class ConnectionSettings {
                     putProperty(PropertyKeys.HEC_ENDPOINT_TYPE,
                             diffs.getProperty(key));
                     break;
+                case PropertyKeys.HOST:
+                    putProperty(PropertyKeys.HOST,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.INDEX:
+                    putProperty(PropertyKeys.INDEX,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.SOURCE:
+                    putProperty(PropertyKeys.SOURCE,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.SOURCETYPE:
+                    putProperty(PropertyKeys.SOURCETYPE,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
                 default:
                     LOG.warn("Attempt to change property not supported: " + key);
             }
         }
         if (refreshChannels) {
-            connection.getLoadBalancer().refreshChannels();
+            checkAndRefreshChannels();
         }
     }
 
@@ -432,7 +468,7 @@ public class ConnectionSettings {
   public void setToken(String token) {
     if (!getToken().equals(token)) {
       putProperty(PropertyKeys.TOKEN, token);
-      connection.getLoadBalancer().refreshChannels();
+      checkAndRefreshChannels();
     }
   }
 
@@ -446,10 +482,66 @@ public class ConnectionSettings {
             getUrls())) {
       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      connection.getLoadBalancer().refreshChannels();
+      checkAndRefreshChannels();
     }
   }
 
+  /**
+   * Checking if LoadBalancer exists before refreshing channels
+   */
+  private void checkAndRefreshChannels() {
+      if (connection.getLoadBalancer() != null) {
+          connection.getLoadBalancer().refreshChannels();
+      }
+  }
+
+    /**
+     * Set Host value for the data feed
+     * @param host Host value for the data feed
+     */
+    public void setHost(String host) {
+        if (!getHost().equals(host)) {
+            // a single url or a list of comma separated urls
+            putProperty(PropertyKeys.HOST, host);
+            checkAndRefreshChannels();
+        }
+    }
+
+    /**
+     * Set Splunk index in which the data feed is stored
+     * @param index The Splunk index in which the data feed is stored
+     */
+    public void setIndex(String index) {
+        if (!getIndex().equals(index)) {
+            // a single url or a list of comma separated urls
+            putProperty(PropertyKeys.INDEX, index);
+            checkAndRefreshChannels();
+        }
+    }
+
+    /**
+     * Set the source of the data feed
+     * @param source The source of the data feed
+     */
+    public void setSource(String source) {
+        if (!getHost().equals(source)) {
+            // a single url or a list of comma separated urls
+            putProperty(PropertyKeys.SOURCE, source);
+            checkAndRefreshChannels();
+        }
+    }
+
+    /**
+     * Set the source type of events of data feed
+     * @param sourcetype The source type of events of data feed
+     */
+    public void setSourcetype(String sourcetype) {
+        if (!getHost().equals(sourcetype)) {
+            // a single url or a list of comma separated urls
+            putProperty(PropertyKeys.SOURCETYPE, sourcetype);
+            checkAndRefreshChannels();
+        }
+    }
   
     // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.
     private void parsePropertiesFile() {

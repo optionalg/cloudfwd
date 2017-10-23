@@ -50,20 +50,18 @@ public class PropertiesFileHelper extends ConnectionSettings {
 
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
-    Properties props = new Properties(defaultProps);
-    props.put(COLLECTOR_URI, url.toString());
-    props.put(HOST, host.toString());
-    return createSender(props);
+    this.connection.getSettings().setUrls(url.toString());
+    if (this.connection.getSettings().getHost().isEmpty()) {
+      this.connection.getSettings().setHost(host);
+    }
+    return createSender();
   }
 
-  private HttpSender createSender(Properties props) {
+  private HttpSender createSender() {
       // enable http client debugging
       if (enabledHttpDebug()) enableHttpDebug();
-      String url = props.getProperty(COLLECTOR_URI).trim();
-      String host = props.getProperty(HOST).trim();
-      String token = props.getProperty(TOKEN).trim();
-      String cert = getSSLCertContent();
-      HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert, host);
+      String sslCert = getSSLCertContent();
+      HttpSender sender = new HttpSender(this, isCertValidationDisabled(), sslCert);
       if(isMockHttp()){
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
@@ -93,10 +91,5 @@ public class PropertiesFileHelper extends ConnectionSettings {
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
     }
-
-  //FIXME TODO. THis needs to get OUT of the public API
-  public HttpSender createSender() {
-    return createSender(this.defaultProps);
-  }
 
 }
