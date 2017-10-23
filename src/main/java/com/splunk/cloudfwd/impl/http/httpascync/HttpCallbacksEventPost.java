@@ -92,7 +92,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     @Override
     public void failed(Exception ex) {
-        notifyFailedAndResend(ex);
+        try {
+            notifyFailedAndResend(ex);
+        } catch (Exception e) {
+            invokeFailedEventsCallback(events, e);
+        }
     }
 
     @Override
@@ -155,6 +159,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {
+            if (epr.getAckId() < 6 ) System.out.println("setting ackId=" + epr.getAckId() + " on channel: " + getChannel());
             events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
         } else if (epr.isAckDisabled()) {
             throwConfigurationException(getSender(), httpCode, resp);

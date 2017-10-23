@@ -208,7 +208,7 @@ public class ConnectionImpl implements Connection {
       return 0;
     }
     
-    logLBHealth();
+//    logLBHealth();
     
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
@@ -332,7 +332,7 @@ public class ConnectionImpl implements Connection {
         } 
    }    
 
-    private void logLBHealth() {
+    public void logLBHealth() {
         List<HecHealth> channelHealths = lb.getHealthNonBlocking();
         int _closed=0;
         int _quiesced=0;

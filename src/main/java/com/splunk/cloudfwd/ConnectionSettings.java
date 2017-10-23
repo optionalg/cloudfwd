@@ -175,6 +175,7 @@ public class ConnectionSettings {
         long decomMs = Long.parseLong(defaultProps.getProperty(
                 PropertyKeys.CHANNEL_DECOM_MS,
                 PropertyKeys.DEFAULT_DECOM_MS).trim());
+        // TODO: don't allow disabling channel decommission and add MAX_DECOM_MS (so ackIds don't reach max value on Splunk server)
         if (decomMs <= 1) {
             return -1;
         }

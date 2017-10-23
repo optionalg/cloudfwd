@@ -171,10 +171,6 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    * created for the test.
    */
   protected Set<String> getEventsFromSplunk() {
-    // Give events a few seconds to be indexed so they show up in search.
-    // Even after acks are received, there is a lag before events are searchable
-    // Unfortunately there is no programmatically deterministic way of waiting for this, so we sleep.
-    sleep(3000);
     Set<String> results = new HashSet<>();
     try {
       // credentials
@@ -198,6 +194,10 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    * returns the search id of the job.
    */
   protected String createSearchJob(HttpClient httpClient) throws IOException {
+    // Give events a few seconds to be indexed so they show up in search.
+    // Even after acks are received, there is a lag before events are searchable
+    // Unfortunately there is no programmatically deterministic way of waiting for this, so we sleep.
+    sleep(3000);
     // POST to create a new search job
     HttpPost httpPost = new HttpPost(
             mgmtSplunkUrl() + "/services/search/jobs");

@@ -42,6 +42,11 @@ public class NoDataEventPostResponseHandler extends GenericCoordinatedResponseHa
         super(m,okType, failType, gatewayTimeoutType, indexerBusyType, name);
     }
     
+    public NoDataEventPostResponseHandler(HecIOManager m, LifecycleEvent.Type okType,
+            LifecycleEvent.Type failType, String name) {
+        super(m, okType, failType, name);
+    }
+    
   @Override
     public void completed(String reply, int httpCode) {
         try {

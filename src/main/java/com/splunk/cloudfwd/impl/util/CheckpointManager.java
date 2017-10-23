@@ -127,7 +127,7 @@ public class CheckpointManager implements LifecycleEventObserver {
 
         //todo: maybe schedule checkpoint to be async
         if (null != acknowledgedEvents) {
-            LOG.info("CHECKPOINT at {}", acknowledgedEvents.getId());
+//            LOG.info("CHECKPOINT at {}", acknowledgedEvents.getId());
             cb.checkpoint(acknowledgedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
             checkpoint = acknowledgedEvents.getId();
         }

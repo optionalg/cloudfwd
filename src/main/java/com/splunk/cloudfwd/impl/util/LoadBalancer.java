@@ -145,7 +145,7 @@ public class LoadBalancer implements Closeable {
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
         //and then the to-be-reaped channel would also be removed, leaving no channels, and
         //send will be stuck in a spin loop with no channels to send to
-        System.out.println("Adding channel ");
+        System.out.println("Adding channel.");
         PropertiesFileHelper propsHelper = this.connection.
                 getPropertiesFileHelper();
         if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {

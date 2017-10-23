@@ -29,7 +29,7 @@ public class RestartSplunkIT extends AbstractReconciliationTest {
     // Scenario: Splunk is restarted while we are sending events
     // Expected behavior: Since restart is relatively quick and we set timeouts high, all events should
     // still it into Splunk (with some duplicates). Splunk restarts and resets the ack count.
-    // Cloudfwd notices this and resends all events that haven't yet been acked, so we expect
+    // Unacked events are resent when channel is decomissioned, so we expect
     // some duplicates in this case.
     @Test
     public void testRestartSplunk() throws InterruptedException, IOException {
@@ -56,7 +56,8 @@ public class RestartSplunkIT extends AbstractReconciliationTest {
             Assert.fail("Search only returned " + count + " events, but "
                     + getNumEventsToSend() + " events were sent.");
         }
-        LOG.info("Event count verified.");
+        LOG.info("Event count verified. {} events were indexed, {} events were sent (duplicates are expected).", 
+            count, getNumEventsToSend());
     }
 
     @Override
@@ -68,12 +69,13 @@ public class RestartSplunkIT extends AbstractReconciliationTest {
     protected Properties getProps() {
         Properties p = super.getProps();
         p.put(PropertyKeys.TOKEN, createTestToken("__singleline"));
-        p.put(PropertyKeys.CHANNEL_DECOM_MS, "60000");
+        p.put(PropertyKeys.CHANNEL_DECOM_MS, PropertyKeys.MIN_DECOM_MS); // so test runs quickly
         p.put(PropertyKeys.ACK_TIMEOUT_MS, "100000000"); // we don't want any timeouts
         p.put(PropertyKeys.BLOCKING_TIMEOUT_MS, "100000000");
         p.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); // make all batches don't get sent before Splunk can restart
         p.put(PropertyKeys.UNRESPONSIVE_MS, "20000");
         p.put(PropertyKeys.ENABLE_CHECKPOINTS, "true");
+        p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
         return p;
     }
 

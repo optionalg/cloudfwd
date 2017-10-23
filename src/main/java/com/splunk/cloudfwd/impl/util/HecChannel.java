@@ -78,6 +78,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.loadBalancer = b;
     this.sender = sender;
     this.channelId = newChannelId();
+    System.out.println("creating channel with id=" + channelId);
     this.channelMetrics = new ChannelMetrics(c);
     this.channelMetrics.addObserver(this);
     this.full = loadBalancer.getPropertiesFileHelper().
@@ -154,7 +155,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
             reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
-            long decomTime = (long) (decomMs * Math.random());
+            long decomTime = (long) (decomMs * (Math.random() + 0.5)); // [0.5*decomMS, 1.5*decomMS)
             reaperScheduler.schedule(() -> {
                 LOG.info("decommissioning channel (channel_decom_ms={}): {}",
                         decomMs, HecChannel.this);
@@ -175,7 +176,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (!isAvailable()) {
       return false;
     }
-    System.out.println("sending event batch " + events.getId() + " on " + this + " with health: " + getHealth() + " and availability " + isAvailable());
+//    System.out.println("sending event batch " + events.getId() + " on " + this + " with health: " + getHealth() + " and availability " + isAvailable());
     
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
@@ -226,16 +227,19 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     private void updateHealth(LifecycleEvent e, boolean wasAvailable) {
         //only health poll  or preflight ok will set health to true
         if(e.getType()==LifecycleEvent.Type.PREFLIGHT_OK || e.getType()==LifecycleEvent.Type.HEALTH_POLL_OK){
+            LOG.info("setting health=true on channel " + this + " from response " + e);
             this.health.setStatus(e, true);
         }
         //any other non-200 that we have not excplicitly handled above will set the health false
         if (e instanceof Response) {
             Response r = (Response) e;
             if(!r.isOK()){
+                LOG.error("Setting Chanel health false due to non-200 Response. " + r);
                 this.health.setStatus(e, false);
             }
         }
         if(e instanceof Failure){
+            LOG.error("Setting Chanel health false due to Failure. " + e);
             this.health.setStatus(e, false);
         }
         //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
@@ -333,7 +337,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
         reaperScheduler.schedule(()->{
             if(!this.closeFinished){
-                LOG.warn("Channel isn't closed. Watchdog will force close it now.");
+                LOG.warn("Channel isn't closed. Watchdog will resend events and force close it now.");
+                resendInFlightEvents();
                 HecChannel.this.interalForceClose();
             }else{
                 LOG.debug("Channel was closed. Watchdog exiting.");
@@ -473,37 +478,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
   }
 
-  // closes channel and resends into the load balancer any events that
-  // haven't yet been acknowledged
-  private void handleDeadChannel(Exception e, String msg) {
-      LOG.warn(msg);
-      quiesce(); // so we don't accidentally resend into this very channel
-      getCallbacks().systemWarning(e);
-      //synchronize on the load balancer so we do not allow the load balancer to be
-      //closed before  resendInFlightEvents. If that
-      //could happen, then the channel we replace this one with
-      //can be removed before we resendInFlightEvents
-      synchronized (loadBalancer) {
-          try{
-              loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
-          }catch(InterruptedException ex){
-              LOG.warn("Unable to replace dead channel: {}", ex);
-          }
-          resendInFlightEvents();
-          //don't force close until after events resent.
-          //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
-          //and the events will never send.
-          LOG.warn("Force closing dead channel {}", HecChannel.this);
-          interalForceClose();
-          health.dead();
-      }
-      if(getConnection().isClosed()) {
-          loadBalancer.close();
-      }
-  }
-
-  //take messages out of the jammed-up/dead channel and resend them to other channels
-  private void resendInFlightEvents() {
+    //take messages out of the jammed-up/dead channel and resend them to other channels
+    private void resendInFlightEvents() {
         long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
                 getAckTimeoutMS();
         List<EventBatchImpl> unacked = loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(HecChannel.this);
@@ -527,7 +503,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             }
         });
         LOG.info("Resent {} Events from dead channel {}", count,  HecChannel.this);
-  }
+    }
 
     /**
      * @return the sender
@@ -545,9 +521,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       if (ackId == 0) {
         LOG.info("{} Got ackId 0 {}", HecChannel.this, events);
         if (seenAckIdZero) {
-          String msg = "ackId " + ackId + " has already been received on channel " + HecChannel.this;
-          Exception e = new HecNonStickySessionException(msg);
-          handleDeadChannel(e, msg);
+          Exception e = new HecNonStickySessionException(
+                  "ackId " + ackId + " has already been received on channel " + HecChannel.this);
+          HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
+                  events, e);
         } else {
           seenAckIdZero = true;
         }
@@ -580,8 +557,30 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
                 && lastCountOfUnacked == unackedCount.get()) {
           String msg = HecChannel.this  + " dead. Resending "+unackedCount.get()+" unacked messages and force closing channel";
-          System.out.println(msg);
-          handleDeadChannel(new HecChannelDeathException(msg), msg);
+          LOG.warn(msg);
+          quiesce();
+          getCallbacks().systemWarning(new HecChannelDeathException(msg));
+          //synchronize on the load balancer so we do not allow the load balancer to be
+          //closed before  resendInFlightEvents. If that
+          //could happen, then the channel we replace this one with
+          //can be removed before we resendInFlightEvents
+          synchronized (loadBalancer) {
+            try{
+                loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement               
+            }catch(InterruptedException ex){
+                LOG.warn("Unable to replace dead channel: {}", ex);
+            }
+            resendInFlightEvents(); 
+            //don't force close until after events resent. 
+            //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
+            //and the events will never send.
+            LOG.warn("Force closing dead channel {}", HecChannel.this);            
+            interalForceClose();
+            health.dead();
+          }
+          if(getConnection().isClosed()) {
+            loadBalancer.close();
+          }
         } else { //channel was not 'frozen'
           lastCountOfAcked = ackedCount.get();
           lastCountOfUnacked = unackedCount.get();
@@ -594,7 +593,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     public void close() {
       deadChannelChecker.stop();
     }
-
   }
 
 }
