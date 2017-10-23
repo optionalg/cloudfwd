@@ -22,12 +22,16 @@ import com.splunk.cloudfwd.impl.sim.errorgen.PreFlightAckEndpoint;
 import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author ghendrey
  */
 public class SimulatedHECEndpoints implements Endpoints {
+    private static final Logger LOG = LoggerFactory.getLogger(SimulatedHECEndpoints.class.getName());
+    
     protected AcknowledgementEndpoint ackEndpoint;
     protected EventEndpoint eventEndpoint;
     protected HealthEndpoint healthEndpoint;
