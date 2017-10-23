@@ -301,7 +301,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //this cannot be synchronized - it will deadlock when addChannelFromRandomlyChosenHost()
   //tries get the LoadBalancer's monitor but the monitor is held by a thread in LoadBalancer's sendRoundRobin
   //waiting for monitor on this's send.
-  void closeAndReplace() throws InterruptedException{
+  public void closeAndReplace() throws InterruptedException{
     if (closed || quiesced) {
       return;
     }

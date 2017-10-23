@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import org.apache.http.HttpResponse;
@@ -31,7 +32,6 @@ import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Set;
@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * This class performs the actually HTTP send to HEC
  * event collector.
  */
-public final class HttpSender implements Endpoints {
+public final class HttpSender implements Endpoints, CookieClient {
 
   // Default to SLF4J Logger, and set custom LoggerFactory when channel (and therefore Connection instance) is available
   private Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
@@ -67,7 +67,8 @@ public final class HttpSender implements Endpoints {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl; 
-  //the following  posts/gets are used by health checks an preflight checks 
+  private String cookie;
+  //the following  posts/gets are used by health checks and preflight checks. We record them so we can cancel them on close. 
   private HttpPost ackCheck;
   private HttpGet healthEndpointCheck;
   private HttpPost dummyEventPost;
@@ -214,9 +215,6 @@ public final class HttpSender implements Endpoints {
     // attempt to create and start an http client
     try {
         this.httpClient = HttpClientWrapper.getClient(this, disableCertificateValidation,cert, host);
-//      httpClient = new HttpClientFactory(disableCertificateValidation,
-//              cert, host, this).build();
-//      httpClient.start();
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
@@ -228,12 +226,7 @@ public final class HttpSender implements Endpoints {
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-//      try {
-        //httpClient.close();
         HttpClientWrapper.releaseClient(this);
-//      } catch (IOException e) {
-//          LOG.error("Failed to shutdown HttpSender {}", e.getMessage());
-//      }
       httpClient = null;
     }
   }
@@ -241,6 +234,13 @@ public final class HttpSender implements Endpoints {
   private void setHeaders(HttpRequestBase r){
       setHttpHeadersNoChannel(r);
       setHttpChannelHeaders(r);
+      setCookieHeader(r);
+  }
+  
+  private void setCookieHeader(HttpRequestBase r){
+      if(null != this.cookie && !this.cookie.isEmpty()){
+          r.setHeader("Cookie", this.cookie);
+      }
   }
   
     // set splunk specific http request headers
@@ -437,5 +437,23 @@ public final class HttpSender implements Endpoints {
   public String getBaseUrl() {
     return baseUrl;
   }
+
+    @Override
+    public void setSessionCookies(String cookie) {
+        if(null == cookie || cookie.isEmpty()){
+            return;
+        }
+        if(null != this.cookie && !this.cookie.equals(cookie)){
+            LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
+            LOG.warn("Closing and replacing {}", getChannel());
+            try {
+                this.getChannel().closeAndReplace();
+            } catch (InterruptedException ex) {
+                LOG.error("Caught InterruptedException trying to close and replace {}", getChannel());
+            }
+        }else{
+            this.cookie = cookie;
+        }
+    }
   
 }

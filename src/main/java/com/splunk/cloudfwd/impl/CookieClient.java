@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http;
-
-import org.apache.http.HttpEntity;
+package com.splunk.cloudfwd.impl;
 
 /**
- * This interface exists mainly to allow us EventBatch to provide an HttpEntity. This allows EventBatch to be responsible for
- * how it provides bytes to http POST. In particular, it allows EventBatchImpl to provide a customized HttpEventBatchEntity
- * that can stream data out of individual Events, avoiding copies.
+ * A CookieClient is responsible for handling a cookie provided by the server (sending it with each subsequent request).
  * @author ghendrey
  */
-public interface HttpPostable {
-  //public void setSender(HttpSender sender);
-  public void post(HecIOManager ioManager);
-  public boolean isFlushed();
-  public HttpEntity getEntity();
-  
+public interface CookieClient {
+
+    /**
+     * Set the session cookies that the client should send with subsequent requests.
+     * @param cookies a semi-colon separated list of cookies.s
+     */
+    public void setSessionCookies(String cookies); 
 }

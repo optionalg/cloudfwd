@@ -193,7 +193,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.20.1</version>
                 <configuration>
-                    <argLine>-Xmx64m</argLine><!-- set heap memory for mvn junit tests -->
+                    <argLine>-Xmx256m</argLine><!-- set heap memory for mvn junit tests -->
                     <skipITs>${skipITs}</skipITs>
                 </configuration>
                 <executions>

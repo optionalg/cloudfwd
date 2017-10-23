@@ -43,12 +43,9 @@ public class HttpClientWrapper {
         requestors.remove(requestor);
         if (requestors.size() == 0) {
             try {
-                Logger.getLogger(HttpClientWrapper.class.getName()).
-                        log(Level.SEVERE, "CLOSING HTTP CLIENT");
                 httpClient.close();
             } catch (IOException ex) {
-                Logger.getLogger(HttpClientWrapper.class.getName()).
-                        log(Level.SEVERE, null, ex);
+                throw new RuntimeException(ex.getMessage(), ex);
             }
         }
     }
@@ -58,14 +55,11 @@ public class HttpClientWrapper {
             String cert, String host) {
         if (requestors.isEmpty()) {
             try {
-                Logger.getLogger(HttpClientWrapper.class.getName()).
-                        log(Level.SEVERE, "CREATING HTTP CLIENT");
                 httpClient = new HttpClientFactory(disableCertificateValidation,
                         cert, host, requestor).build();
                 httpClient.start();              
             } catch (Exception ex) {
-                Logger.getLogger(HttpClientWrapper.class.getName()).
-                        log(Level.SEVERE, null, ex);
+                throw new RuntimeException(ex.getMessage(), ex);
             }
         }
         requestors.add(requestor);  
