@@ -102,12 +102,20 @@ public class LoadBalancer implements Closeable {
     public void closeNow() {
         //this.discoveryScheduler.stop();
         for (HecChannel c : this.channels.values()) {
-            c.forceClose();
+            failEventsAndCloseChannel(c);
         }
         for (HecChannel c : this.staleChannels.values()) {
-            c.forceClose();
+            failEventsAndCloseChannel(c);
         }
         this.closed = true;
+    }
+    
+    // Calls failed callback on all unacked events in the channel and force closes it 
+    private void failEventsAndCloseChannel(HecChannel c) {
+        List<EventBatchImpl> unacked = getConnection().getTimeoutChecker().getUnackedEvents(c);
+        unacked.forEach((e)->getConnection().getCallbacks().failed(e, new HecConnectionStateException(
+                "Connection closed with unacknowleged events remaining.", HecConnectionStateException.Type.CONNECTION_CLOSED)));
+        c.forceClose();
     }
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
