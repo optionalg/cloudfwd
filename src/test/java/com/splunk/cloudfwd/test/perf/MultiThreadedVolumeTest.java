@@ -101,6 +101,14 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     @Override
     protected Properties getProps() {
         Properties p = new Properties();
+        String token = System.getProperty("token");
+        String url = System.getProperty("url");
+        if (System.getProperty("token") != null) {
+            p.put(PropertyKeys.TOKEN, token);
+        }
+        if (System.getProperty("url") != null) {
+            p.put(PropertyKeys.COLLECTOR_URI, url);
+        }
         p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
         p.put(KEY_ENABLE_TEST_PROPERTIES, false);
         p.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
