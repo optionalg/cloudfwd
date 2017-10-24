@@ -59,7 +59,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
               "This test uses close(), not closeNow(), so don't jam it up with more than one Batch to test on "
                       + "a jammed up channel. It will take too long to be practical.");
     }
-    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
+    LOG.trace("sendEvents: SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     try {
       //send a first message to block the channel (we are using the slowendpoints to jam up the channel, see getProps)
@@ -72,7 +72,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
     int expected = getNumEventsToSend();
     for (int i = 2; i <= expected; i++) { //"-1" because we already sent one of the events (above)
       Event event = nextEvent(i);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
+      LOG.trace("sendEvents: Send event: " + event.getId() + " i=" + i);
       int connTimeoutCount = 0;
       while (true) {
         try {
