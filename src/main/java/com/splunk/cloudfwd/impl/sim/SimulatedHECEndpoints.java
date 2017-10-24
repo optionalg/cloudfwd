@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.sim;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.Endpoints;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
+import com.splunk.cloudfwd.impl.sim.errorgen.PreFlightAckEndpoint;
 import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
@@ -27,10 +28,10 @@ import org.apache.http.concurrent.FutureCallback;
  * @author ghendrey
  */
 public class SimulatedHECEndpoints implements Endpoints {
-
     protected AcknowledgementEndpoint ackEndpoint;
     protected EventEndpoint eventEndpoint;
     protected HealthEndpoint healthEndpoint;
+    protected PreFlightAckEndpoint preFlightAckEndpoint;
     protected boolean started;
 
     @Override
@@ -66,9 +67,7 @@ public class SimulatedHECEndpoints implements Endpoints {
 
     @Override
     public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
-        httpCallback.completed(
-                new CannedOKHttpResponse(
-                        new CannedEntity("{\"acks\":[0:false]}")));
+        preFlightAckEndpoint.checkAckEndpoint(httpCallback);
     }
 
     @Override
@@ -81,6 +80,9 @@ public class SimulatedHECEndpoints implements Endpoints {
         }
         if (null != healthEndpoint) {
             healthEndpoint.close();
+        }
+        if(null != preFlightAckEndpoint) {
+            preFlightAckEndpoint.close();
         }
     }
 
@@ -101,6 +103,10 @@ public class SimulatedHECEndpoints implements Endpoints {
         if (null != healthEndpoint) {
             healthEndpoint.start();
         }
+        this.preFlightAckEndpoint = createPreFlightAckEndpoint();
+        if (null != preFlightAckEndpoint) {
+            preFlightAckEndpoint.start();
+        }
         started = true;
     }
 
@@ -114,6 +120,10 @@ public class SimulatedHECEndpoints implements Endpoints {
 
     protected HealthEndpoint createHealthEndpoint() {
         return new HealthEndpoint();
+    }
+
+    protected PreFlightAckEndpoint createPreFlightAckEndpoint() {
+        return new PreFlightAckEndpoint();
     }
 
 }

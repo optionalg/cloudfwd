@@ -66,7 +66,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     @Override
     public void failed(Exception ex) {
         try {
-            LOG.error("Channel {} failed to poll acks because {}",
+            LOG.warn("Channel {} failed to poll acks because {}",
                     getChannel(), ex);    
             notifyFailed(LifecycleEvent.Type.ACK_POLL_FAILURE, ex);
         } catch (Exception e) {

@@ -47,30 +47,30 @@ public class ConnectionSettings {
     protected ConnectionSettings overrides;
     protected ConnectionImpl connection;
 
-    @JsonProperty("token")
-    private String token;
+    @JsonProperty("splunk_hec_url")
+    private String splunkHecUrl;
 
-    @JsonProperty("url")
-    private String url;
+    @JsonProperty("splunk_hec_token")
+    private String splunkHecToken;
 
-    @JsonProperty("host")
-    private String host;
+    @JsonProperty("splunk_hec_host")
+    private String splunkHecHost;
 
-    @JsonProperty("source")
-    private String source;
+    @JsonProperty("splunk_hec_index")
+    private String splunkHecIndex;
 
-    @JsonProperty("sourcetype")
-    private String sourcetype;
-
-    @JsonProperty("index")
-    private String index;
+    @JsonProperty("splunk_hec_source")
+    private String splunkHecSource;
+    
+    @JsonProperty("splunk_hec_sourcetype")
+    private String splunkHecSourcetype;
     
     @JsonProperty("ssl_cert_hostname_regex")
     private String sslCertHostnameRegex;
 
     @JsonProperty("hec_endpoint_type")
     private String hecEndpointType = DEFAULT_HEC_ENDPOINT_TYPE;
-
+    
     @JsonProperty("enable_checkpoints")
     private Boolean enableCheckpoints = Boolean.parseBoolean(DEFAULT_ENABLE_CHECKPOINTS);
 
@@ -131,18 +131,6 @@ public class ConnectionSettings {
     @JsonProperty("max_preflight_retries")
     private int maxPreflightTries = Integer.parseInt(DEFAULT_PREFLIGHT_RETRIES);
 
-
-    //TODO figure out how to add logger, and cleanup connection instance references in setters
-//    public ConnectionSettings(Connection c) {
-//        this.connection = (ConnectionImpl)c;
-//        this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
-//        ConnectionSettings.fromPropsFile("/cloudfwd.properties");
-//    }
-
-//    public ConnectionSettings() {
-//        // TODO? Populate properties on itself from properties file
-//    }
-
     public static PropertiesFileHelper fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
         JavaPropsMapper mapper = new JavaPropsMapper();
@@ -156,6 +144,7 @@ public class ConnectionSettings {
             throw new RuntimeException("Could not map Properties file to Java object - please check file path.", e);
         }
 
+        //TODO!!
         // If required properties are missing from cloudfwd.properties, overrides, and defaults, then throw exception.
 //        for (String key : REQUIRED_KEYS) {
 //            if (keyGetter(key) == null) {
@@ -169,21 +158,14 @@ public class ConnectionSettings {
         this.connection = (ConnectionImpl)c;
         this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
 
-        if (this.getToken() != null) {
-            connection.getLoadBalancer().refreshChannels(false);
-        }
-
+        //TODO: should all this only when new timeout has been set by setAckTimemoutMS() and connection was not available at the time, and so must be called now
         if (Long.valueOf(this.getAckTimeoutMS()) != null) {
             connection.getTimeoutChecker().setTimeout(this.getAckTimeoutMS());
         }
 
-        if (this.getUrls() != null) {
-            try {
-                connection.getLoadBalancer().refreshChannels(true, true);
-            } catch(UnknownHostException e) {
-                throw new RuntimeException("Attempt to set invalid urls", e);
-            }
-        }
+        //TODO: we do not necessarily have to call this every time (only when token, host, and other select properties
+        // are set on ConnectionSettings. Can optimize later to do this conditionally. 
+        checkAndRefreshChannels();
     }
 
     /* ***************************** UTIL ******************************* */
@@ -201,14 +183,13 @@ public class ConnectionSettings {
 
 
     public List<URL> getUrls() {
-        return urlsStringToList(this.url);
+        return urlsStringToList(this.splunkHecUrl);
     }
 
     public String getUrlString() {
-        return this.url;
+        return this.splunkHecUrl;
     }
 
-    // TODO: Requires connection instance
     protected List<URL> urlsStringToList(String urlsListAsString) {
         List<URL> urlList = new ArrayList<>();
         String[] splits = urlsListAsString.split(",");
@@ -220,10 +201,10 @@ public class ConnectionSettings {
                 url =getUrlWithAutoAssignedPorts(urlString);
                 urlList.add(url);
             } catch (MalformedURLException ex) {
-                String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage() ;
+                String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage();
                 HecConnectionStateException e = new HecConnectionStateException(msg,
                         HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
-                connection.getCallbacks().systemError(e);
+                connection.getCallbacks().systemError(e); // TODO: THIS IS NOT AVAILABLE!!!
                 getLog().error(e.getMessage(), e);
                 throw e;
             }
@@ -358,12 +339,12 @@ public class ConnectionSettings {
     }
 
     public String getToken() {
-        if (this.token == null) {
+        if (this.splunkHecToken == null) {
             throw new HecConnectionStateException(
                     "HEC token missing from Connection configuration. " + "See PropertyKeys.TOKEN",
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
-        return this.token;
+        return this.splunkHecToken;
     }
 
     protected boolean isMockHttp() {
@@ -376,9 +357,20 @@ public class ConnectionSettings {
     }
 
     public String getHost() {
-        return this.host;
+        return this.splunkHecHost;
     }
 
+    public String getSource() {
+        return this.splunkHecSource;
+    }
+
+    public String getSourcetype() {
+        return this.splunkHecSourcetype;
+    }
+
+    public String getIndex() {
+        return this.splunkHecIndex;
+    }
 
     /* ***************************** SETTERS ******************************* */
 
@@ -396,7 +388,11 @@ public class ConnectionSettings {
         String newUrls = props.getProperty(COLLECTOR_URI);
         String newToken = props.getProperty(TOKEN);
         String newHecEndpointType = props.getProperty(HEC_ENDPOINT_TYPE);
-        Set keySet = props.keySet(); //keySet()?
+        String host = props.getProperty(HOST);
+        String index = props.getProperty(INDEX);
+        String source = props.getProperty(SOURCE);
+        String sourcetype = props.getProperty(SOURCETYPE);
+        Set keySet = props.keySet();
 
         // Ack Timeout
         if (this.getAckTimeoutMS() != newAckTimeout) {
@@ -424,6 +420,30 @@ public class ConnectionSettings {
             this.setHecEndpointType(newHecEndpointType);
             keySet.remove(HEC_ENDPOINT_TYPE);
         }
+        
+        // Host
+        if (this.getHost() != host) {
+            this.setHost(host);
+            refreshChannels = true;
+        }
+        
+        // Index
+        if (this.getIndex() != index) {
+            this.setIndex(index);
+            refreshChannels = true;
+        }
+        
+        // Source
+        if (this.getSource() != source) {
+            this.setSource(source);
+            refreshChannels = true;
+        }
+        
+        // Sourcetype
+        if (this.getSourcetype() != sourcetype) {
+            this.setSourcetype(sourcetype);
+            refreshChannels = true;
+        }
 
         // Unsupported property change attempt
         for (Object key : keySet)
@@ -431,14 +451,13 @@ public class ConnectionSettings {
             getLog().warn("Attempt to change property not supported: " + key);
         }
 
-        if (refreshChannels && connection != null) {
-            connection.getLoadBalancer().refreshChannels(dnsLookup, true);
+        if (refreshChannels) {
+            checkAndRefreshChannels();
         }
     }
 
     //TODO: write unit tests for each setter
 
-    //TODO: String args into all setters?
     public void setChannelsPerDestination(int numChannels) {
         if (numChannels < 1) {
             getLog().debug("{}, defaulting {} to {}", numChannels, CHANNELS_PER_DESTINATION, Integer.parseInt(DEFAULT_CHANNELS_PER_DESTINATION));
@@ -620,13 +639,10 @@ public class ConnectionSettings {
      * to go into effect.
      * @param token
      */
-    // TODO: Requires connection instance
     public void setToken(String token) {
-        if (this.token == null || !this.token.equals(token)) {
-            this.token = token;
-            if (connection != null) { //If connection has been initialized
-                connection.getLoadBalancer().refreshChannels(false);
-            }
+        if (this.splunkHecToken == null || !this.splunkHecToken.equals(token)) {
+            this.splunkHecToken = token;
+            checkAndRefreshChannels();
         }
     }
 
@@ -639,29 +655,66 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  // TODO: Requires connection instance
-  public void setUrls(String urls) throws UnknownHostException {
-    if (!urlsStringToList(urls).equals(getUrls())) {
+  public void setUrls(String urls) {
+    if (urls != getUrlString()) {
         // a single url or a list of comma separated urls
-        this.url = urls;
-        if (connection != null) {
-            connection.getLoadBalancer().refreshChannels(true, true);
-        }
+        this.splunkHecUrl = urls;
+        checkAndRefreshChannels();
     }
   }
 
   public void setUrlString(String urls) {
-      this.url = urls;
+      this.splunkHecUrl = urls;
   }
 
   public void setTestPropertiesEnabled(Boolean enabled) {
       this.testPropertiesEnabled = enabled;
   }
-
+  
+    /**
+     * Set Host value for the data feed
+     * @param host Host value for the data feed
+     */
   public void setHost(String host) {
-      this.host = host;
+      if (!getHost().equals(host)) {
+          this.splunkHecHost = host;
+          checkAndRefreshChannels();  
+      }
   }
 
+    /**
+     * Set Splunk index in which the data feed is stored
+     * @param index The Splunk index in which the data feed is stored
+     */
+  public void setIndex(String index) {
+      if (!getIndex().equals(index)) {
+          this.splunkHecIndex = index;
+          checkAndRefreshChannels();
+      }
+  }
+
+    /**
+     * Set the source of the data feed
+     * @param source The source of the data feed
+     */
+  public void setSource(String source) {
+      if (!getSource().equals(source)) {
+          this.splunkHecSource = source;
+          checkAndRefreshChannels();
+      }
+  }
+
+    /**
+     * Set the source type of events of data feed
+     * @param sourcetype The source type of events of data feed
+     */
+  public void setSourcetype(String sourcetype) {
+      if (!getSourcetype().equals(sourcetype)) {
+          this.splunkHecSourcetype = sourcetype;
+          checkAndRefreshChannels(); 
+      }
+  }
+  
 
 //    // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.
 //    private void populateProperties() {
@@ -696,6 +749,15 @@ public class ConnectionSettings {
 //        }
 //
 //    }
+
+    /**
+     * Checking if LoadBalancer exists before refreshing channels
+     */
+    private void checkAndRefreshChannels() {
+        if (connection != null && connection.getLoadBalancer() != null) {
+            connection.getLoadBalancer().refreshChannels();
+        }
+    }
 
     protected Logger getLog() {
       if (this.connection != null) {

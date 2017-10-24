@@ -53,13 +53,8 @@ public class LifecycleEventObservable {
     } catch (Exception ex) {
       LOG.error(ex.getMessage(), ex);
       ConnectionCallbacks c = connection.getCallbacks();
-      final EventBatchImpl events = (ex instanceof EventBatchLifecycleEvent) ? ((EventBatchLifecycleEvent) ex).
-              getEvents() : null;
-      //new Thread(() -> {//FIXME TODO - usea thread pool
-        c.failed(events, ex); //FIXME TODO -- there are many places where we should be calling failed.
-      //}).start();
+      c.systemError(ex);
     }
-
   }
 
 }

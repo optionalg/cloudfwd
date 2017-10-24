@@ -192,8 +192,9 @@
                     <!--forkedProcessTimeoutInSeconds>0</forkedProcessTimeoutInSeconds-->
                     <argLine>-Xmx500M ${argLine}</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
-                        <exclude>**/performance_tests/*.java</exclude>
+                        <exclude>**/perf/*.java</exclude>
                         <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
+                         <exclude>**/WatchdogChannelKillerTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
                     </excludes>
                 </configuration>
             </plugin>

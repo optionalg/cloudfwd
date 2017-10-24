@@ -42,8 +42,10 @@ public class PropertiesFileHelper extends ConnectionSettings {
 
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
-        this.setUrlString(url.toString()); //TODO - reconcile 2 setUrl methods
-        this.setHost(host.toString());
+    setUrls(url.toString());
+    if (getHost().isEmpty()) {
+      setHost(host);
+    }
     return createSender();
   }
 
@@ -52,11 +54,8 @@ public class PropertiesFileHelper extends ConnectionSettings {
       if (enabledHttpDebug()) {
           setHttpDebugEnabled(true);
       }
-      String url = this.getUrlString();
-      String host = this.getHost();
-      String token = this.getToken();
-      String cert = this.getSSLCertContent();
-      HttpSender sender = new HttpSender(url, token, isCertValidationDisabled(), cert , host);
+      String sslCert = getSSLCertContent();
+      HttpSender sender = new HttpSender(this, isCertValidationDisabled(), sslCert);
       if(isMockHttp()){
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }

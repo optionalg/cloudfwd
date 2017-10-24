@@ -34,11 +34,12 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
-import java.util.logging.Level;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * This class performs the actually HTTP send to HEC
@@ -53,13 +54,15 @@ public final class HttpSender implements Endpoints {
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8"; //FIX ME application/json not all the time
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
-  private static final String Host = "Host";
-
+  private static final String Host = "host";
   private final String eventUrl;
   private final String rawUrl;
   private final String token;
   private final String cert;
   private final String host;
+  private final String index;
+  private final String source;
+  private final String sourcetype;
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
@@ -76,27 +79,26 @@ public final class HttpSender implements Endpoints {
   /**
    * Initialize HttpEventCollectorSender
    *
-   * @param url http event collector input server.
-   * @param token application token
+   * @param connectionSettings ConnectionSettings
    * @param disableCertificateValidation disables Certificate Validation
    * @param cert SSL Certificate Authority Public key to verify TLS with
    * Self-Signed SSL Certificate chain
-   * @param host Hostname to use in HTTP requests. It is needed when we use IP
-   * addresses in url by RFC
    */
-  public HttpSender(final String url, final String token,
-          final boolean disableCertificateValidation,
-          final String cert, final String host) {
-    this.baseUrl = url;
-    this.host = host;
-    this.eventUrl = url.trim() + "/services/collector/event";
-    this.rawUrl = url.trim() + "/services/collector/raw";
-    this.ackUrl = url.trim() + "/services/collector/ack";
-    this.healthUrl = url.trim() + "/services/collector/health";
-    this.token = token;
+  public HttpSender(final ConnectionSettings connectionSettings,
+                    final boolean disableCertificateValidation, final String cert) {
+    this.baseUrl = connectionSettings.getUrls().get(0).toString().trim();
+    this.host = connectionSettings.getHost();
+    this.index = connectionSettings.getIndex();
+    this.sourcetype = connectionSettings.getSourcetype();
+    this.source = connectionSettings.getSource();
+    this.token = connectionSettings.getToken();
     this.cert = cert;
-    this.disableCertificateValidation = disableCertificateValidation;
     this.hecIOManager = new HecIOManager(this);
+    this.eventUrl = this.baseUrl.trim() + "/services/collector/event";
+    this.rawUrl = this.baseUrl.trim() + "/services/collector/raw";
+    this.ackUrl = this.baseUrl.trim() + "/services/collector/ack";
+    this.healthUrl = this.baseUrl.trim() + "/services/collector/health";
+    this.disableCertificateValidation = disableCertificateValidation;
   }
   
     
@@ -236,6 +238,22 @@ public final class HttpSender implements Endpoints {
       httpClient = null;
     }
   }
+
+  private String appendUri(String endpoint) {
+    String url = endpoint + "?";
+    if (!index.isEmpty()) {
+      url = url + "&index=" + index;
+    }
+
+    if (!source.isEmpty()) {
+      url = url + "&source=" + source;
+    }
+
+    if (!sourcetype.isEmpty()) {
+      url = url + "&sourcetype=" + sourcetype;
+    }
+    return url;
+  }
   
   private void setHeaders(HttpRequestBase r){
       setHttpHeadersNoChannel(r);
@@ -280,7 +298,9 @@ public final class HttpSender implements Endpoints {
     if (endpointUrl == null) {
       throw new NullPointerException("endpointUrl was null.");
     }
-    final HttpPost httpPost = new HttpPost(endpointUrl);
+
+    String completeUrl = appendUri(endpointUrl);
+    final HttpPost httpPost = new HttpPost(completeUrl);
     setHeaders(httpPost);
     
     httpPost.setEntity(events.getEntity());

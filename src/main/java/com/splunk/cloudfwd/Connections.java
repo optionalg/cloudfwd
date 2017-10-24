@@ -16,6 +16,10 @@
 package com.splunk.cloudfwd;
 
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.impl.util.LoadBalancer;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
@@ -47,4 +51,18 @@ public class Connections {
         settings.setConnection(c);
         return c;
     }
+    
+    /**
+     * Creates a Connection with DefaultConnectionCallbacks
+     * @param p Properties that customize the Connection
+     * @return
+     */
+    public static Connection create(ConnectionSettings settings) {
+        ConnectionImpl c = new ConnectionImpl(new DefaultConnectionCallbacks(), settings);
+        LoadBalancer lb = c.getLoadBalancer();
+        settings.setConnection(c);
+        // TODO: PRINT PROPERTIES JSON OUT USING JACKSON ON INIT
+        return c;
+    }    
+    
 }
