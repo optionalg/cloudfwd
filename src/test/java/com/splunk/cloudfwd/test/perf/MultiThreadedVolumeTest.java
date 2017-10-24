@@ -18,6 +18,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Optionally pass command line parameters "token" and "url" as: 
+ * mvn test -Dtest=MultiThreadedVolumeTest -DargLine="-Durl=<URL> -Dtoken=<TOKEN>"
+ * 
  * Created by eprokop on 9/13/17.
  */
 public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
