@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -34,20 +36,22 @@ import org.slf4j.Logger;
  */
 public class TimeoutChecker implements EventTracker {
     private final Logger LOG;
-    private PollScheduler timeoutCheckScheduler = new PollScheduler("Event Timeout Scheduler");
+   // private ThreadScheduler timeoutCheckScheduler = new ThreadScheduler("Event Timeout Scheduler");
+    private ScheduledThreadPoolExecutor timeoutCheckScheduler = ThreadScheduler.getInstance("Event Timeout Scheduler");
+    private ScheduledFuture task;
     private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
     private ConnectionImpl connection;
     private boolean quiesced;
 
     public TimeoutChecker(ConnectionImpl c) {
         this.LOG = c.getLogger(TimeoutChecker.class.getName());
-        timeoutCheckScheduler.setLogger(c);
+        //timeoutCheckScheduler.setLogger(c);
 
         this.connection = c;
     }
 
     public void setTimeout(long ms) {
-        queisce();
+        //queisce();
         start();
     }
 
@@ -62,9 +66,20 @@ public class TimeoutChecker implements EventTracker {
         return Math.min(getTimeoutMs(), 1000);
     }
 
-    public synchronized void start() {
-        timeoutCheckScheduler.start(this::checkTimeouts, getCheckInterval(),
+    /**
+     * This method defers synchronization so it can avoid getting locked out by checkTimeouts which takes a long time to run.
+     * Most of the time task will not be null, so start just returns quickly without having to wait for checkTimeouts to finish.
+     */
+    public void start() {
+        if(null == this.task){
+            synchronized(this){
+                if(null != this.task){ //we must double check now that we are inside synchronized
+                    return; 
+                }
+                this.task = timeoutCheckScheduler.scheduleWithFixedDelay(this::checkTimeouts, 0, getCheckInterval(),
                 TimeUnit.MILLISECONDS);
+            }
+        }
     }
 
     private synchronized void checkTimeouts() {
@@ -74,7 +89,7 @@ public class TimeoutChecker implements EventTracker {
             //itself does not stop the timeoutCheckScheduler (which causes interrupted exception...
             //a thread running in a scheduler cannot awaitTermination of the scheduler itself WITHOUT
             //being interrupted. It's kinda like being asked to record your own time of death. Won't work.
-            new Thread(()->{timeoutCheckScheduler.stop();},"TimeoutChecker closer").start();           
+            new Thread(()->{if(null != task)task.cancel(false);},"TimeoutChecker closer").start();           
             return;
         }
         LOG.debug("checking timeouts for {} EventBatches", eventBatches.size());
@@ -105,7 +120,10 @@ public class TimeoutChecker implements EventTracker {
         quiesced = true;
         if (eventBatches.isEmpty()) {
             LOG.debug("Stopping TimeoutChecker (no EventBatches in flight)");
-            timeoutCheckScheduler.stop();
+            //timeoutCheckScheduler.stop();
+            if(null != task){
+                task.cancel(true);
+            }
         }
     }
 

@@ -15,12 +15,11 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
-import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
@@ -31,9 +30,6 @@ import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
@@ -43,7 +39,9 @@ import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
+import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import java.util.List;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  *
@@ -53,13 +51,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final Logger LOG;
   private final HttpSender sender;
   private final int full;
-  private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
-  private ScheduledExecutorService ackPollExecutor;
+  private ScheduledFuture reaperTask;
+  private ScheduledFuture closeWatchDogTask;
+  private ScheduledFuture onDemandAckPoll;
   private volatile boolean closed;
   private volatile boolean quiesced;
-
   private HecHealthImpl health;
-  
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
@@ -69,8 +66,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final ChannelMetrics channelMetrics;
   private DeadChannelDetector deadChannelDetector;
   private final String memoizedToString;
-  private int preflightCount; //number of times to retry preflight checks due to   
-    private boolean closeFinished;
+  private int preflightCount; //number of times we have sent the preflight checks  
+  private boolean closeFinished;
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -117,7 +114,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //guess about it). What happens is HecIOManager will want to call channelMetrics.ackPollOK, but channelMetrics
   //is also trying to acquire the lock on this object. So deadlock.
   synchronized void pollAcks() {
-    ackPollExecutor.execute(sender.getHecIOManager()::pollAcks);
+     if(null == onDemandAckPoll || onDemandAckPoll.isDone()){
+           onDemandAckPoll = ThreadScheduler.getInstance("on_demand_ack-poller").schedule(sender.getHecIOManager()::pollAcks, 0, TimeUnit.MILLISECONDS);
+       }
+
   }
 
   public synchronized void start() throws InterruptedException{
@@ -127,14 +127,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.sender.getHecIOManager().preflightCheck();
     setupReaper();
     setupDeadChannelDetector();
-    setupAckPoller();
     started = true;
   }
 
-    private void setupAckPoller() {
-        ThreadFactory f = (Runnable r) -> new Thread(r, "On-demand Ack Poller");
-        this.ackPollExecutor = Executors.newSingleThreadScheduledExecutor(f);
-    }
 
     private void setupDeadChannelDetector() {
         long unresponsiveDecomMS = getConnetionSettings(). getUnresponsiveChannelDecomMS();
@@ -150,12 +145,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
     private void setupReaper() {
         //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
-        ThreadFactory f = (Runnable r) -> new Thread(r, "Channel Reaper");
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
-            reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
             long decomTime = (long) (decomMs * Math.random());
-            reaperScheduler.schedule(() -> {
+            this.reaperTask  = ThreadScheduler.getInstance("channel_reaper").schedule(() -> {
                 LOG.info("decommissioning channel (channel_decom_ms={}): {}",
                         decomMs, HecChannel.this);
                 try {
@@ -329,7 +322,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if(!quiesced){
         this.health.quiesced();
         LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
-        reaperScheduler.schedule(()->{
+        closeWatchDogTask = ThreadScheduler.getInstance("channel_reaper").schedule(()->{
             if(!this.closeFinished){
                 LOG.warn("Channel isn't closed. Watchdog will force close it now.");
                 HecChannel.this.interalForceClose();
@@ -358,7 +351,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         try {
             loadBalancer.removeChannel(getChannelId(), true);
             this.channelMetrics.removeObserver(this);
-            closeExecutors(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
+            cancelTasks(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
             this.sender.close();
             this.closeFinished = true;
         } catch (Exception e) {
@@ -395,11 +388,17 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //Object's monitor. This method will get called from a thread kicked off during close. However, the ChannelDeathChecker
   //may also kick in and try to close the channel. But it can't. Because its blocked if this method is synchronized. But this 
   //method would be blocked on awaitTermination waiting for that *very* ChannelDeathChecker thread to terminate. Deadlock.
-  private void closeExecutors() {
+  private void cancelTasks() {
     LOG.trace("closing executors on  {}", this);
-
-    if (null != reaperScheduler) {
-      reaperScheduler.shutdown(); //do not use the shutdownNOW flavor. Because it causes the reaper-scheduler to get interrupted. 
+    
+    if(null != reaperTask && !reaperTask.isCancelled()){
+        reaperTask.cancel(false);
+    }
+    if(null != closeWatchDogTask && !closeWatchDogTask.isCancelled()){
+        closeWatchDogTask.cancel(false);
+    }    
+//    if (null != reaperScheduler) {
+//      reaperScheduler.shutdown(); //do not use the shutdownNOW flavor. Because it causes the reaper-scheduler to get interrupted. 
 //      try{
 //        if(!reaperScheduler.isTerminated() && !reaperScheduler.awaitTermination(10, TimeUnit.SECONDS)){
 //            LOG.error("failed to terminate reaper scheduler.");
@@ -407,21 +406,21 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 //      }catch(InterruptedException e){
 //          LOG.error("AwaitTermination of reaper scheduler interrupted.");
 //      }
-    }
+//    }
  
     if (null != deadChannelDetector) {
       deadChannelDetector.close(); 
     }
-    if(null != ackPollExecutor && !ackPollExecutor.isTerminated()){
-      ackPollExecutor.shutdownNow();
-      try{
-        if(!ackPollExecutor.isTerminated() && !ackPollExecutor.awaitTermination(10, TimeUnit.SECONDS)){
-            LOG.error("failed to terminate on-demand ack poller.");
-        }
-      }catch(InterruptedException e){
-          LOG.error("AwaitTermination of on-demnd ack poller interrupted.");
-      }
-    }
+//    if(null != ackPollExecutor && !ackPollExecutor.isTerminated()){
+//      ackPollExecutor.shutdownNow();
+//      try{
+//        if(!ackPollExecutor.isTerminated() && !ackPollExecutor.awaitTermination(10, TimeUnit.SECONDS)){
+//            LOG.error("failed to terminate on-demand ack poller.");
+//        }
+//      }catch(InterruptedException e){
+//          LOG.error("AwaitTermination of on-demnd ack poller interrupted.");
+//      }
+//    }
   }
 
   /**
@@ -499,23 +498,22 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   private class DeadChannelDetector implements Closeable {
 
-    private PollScheduler deadChannelChecker = new PollScheduler(
-            "ChannelDeathChecker", 1);
+    //private ThreadScheduler deadChannelChecker = new ThreadScheduler(
+   //         "ChannelDeathChecker", 1);
+    private ScheduledFuture task;
     private int lastCountOfAcked;
     private int lastCountOfUnacked;
-    private boolean started;
     private long intervalMS;
 
     public DeadChannelDetector(long intervalMS) {
       this.intervalMS = intervalMS;
-      deadChannelChecker.setLogger(getSender().getConnection());
+      //deadChannelChecker.setLogger(getSender().getConnection());
     }
 
     public synchronized void start() {
-      if (started) {
+      if (null != task) {
         return;
       }
-      started = true;
       Runnable r = () -> {
         //we here check to see of there has been any activity on the channel since
         //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
@@ -551,12 +549,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           lastCountOfUnacked = unackedCount.get();
         }
       };
-      deadChannelChecker.start(r, intervalMS, TimeUnit.MILLISECONDS);
+      task = ThreadScheduler.getInstance( "ChannelDeathChecker").scheduleWithFixedDelay(r, 0, intervalMS, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void close() {
-      deadChannelChecker.stop();
+      if(null != task && !task.isCancelled()){
+          task.cancel(false);
+      }
     }
 
     //take messages out of the jammed-up/dead channel and resend them to other channels

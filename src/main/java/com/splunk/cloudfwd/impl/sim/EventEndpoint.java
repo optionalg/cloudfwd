@@ -69,8 +69,10 @@ public class EventEndpoint extends ClosableDelayableResponder implements Endpoin
 
   @Override
   public void close() {
+      /*
     LOG.debug("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
     executor.shutdownNow();
+    */
   }
 
   @Override
