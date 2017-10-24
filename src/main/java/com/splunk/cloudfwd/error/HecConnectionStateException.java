@@ -79,7 +79,11 @@ public class HecConnectionStateException extends IllegalStateException {
         /**
          * No ConnectionCallbacks provided
          */
-        NO_CALLBACKS_PROVIDED        
+        NO_CALLBACKS_PROVIDED,
+        /**
+         * Connection was closed and with unacknowledged events still in flight.
+         */
+        CONNECTION_CLOSED
     }
     private final Type type;
 
