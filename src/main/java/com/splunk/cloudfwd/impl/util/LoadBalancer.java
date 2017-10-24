@@ -47,6 +47,7 @@ public class LoadBalancer implements Closeable {
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
+    private final ResendQueue resendQueue;
     private final CheckpointManager checkpointManager; //consolidate metrics across all channels
     private final IndexDiscoverer discoverer;
     //private final IndexDiscoveryScheduler discoveryScheduler;
@@ -62,6 +63,8 @@ public class LoadBalancer implements Closeable {
                 getChannelsPerDestination();
         this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
         this.checkpointManager = new CheckpointManager(c);
+        this.resendQueue = new ResendQueue(c);
+        resendQueue.start();
         //this.discoveryScheduler = new IndexDiscoveryScheduler(c);
         createChannels(discoverer.getAddrs());
         //this.discoverer.addObserver(this);
@@ -362,6 +365,15 @@ public class LoadBalancer implements Closeable {
         staleChannels.putAll(channels);
         channels.clear();
         createChannels(addrs);
+    }
+    
+    public void resend(EventBatchImpl e) {
+        if (!resendQueue.offer(e)) {
+            String msg = "Attempt to resend when resend queue poller thread is stopped.";
+            LOG.error(msg);
+            getConnection().getCallbacks().failed(e, new HecIllegalStateException(
+                msg, HecIllegalStateException.Type.RESEND_ATTEMPTED_ON_INACTIVE_RESEND_QUEUE));
+        }
     }
 
     /**

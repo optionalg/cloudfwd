@@ -74,7 +74,11 @@ public class HecIllegalStateException extends IllegalStateException {
     /**
      * This type gets thrown when InputStream experiences an error in loading cloudfwd.properties resources (example: wrong file name).
      */
-    CANNOT_LOAD_PROPERTIES
+    CANNOT_LOAD_PROPERTIES,
+    /**
+     * This type gets thrown if a resend is attempted when the resend queue poller thread is not running.
+     */
+    RESEND_ATTEMPTED_ON_INACTIVE_RESEND_QUEUE
   }
   private final Type type;
 

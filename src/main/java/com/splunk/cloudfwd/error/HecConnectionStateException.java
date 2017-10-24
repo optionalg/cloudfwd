@@ -79,7 +79,11 @@ public class HecConnectionStateException extends IllegalStateException {
         /**
          * No ConnectionCallbacks provided
          */
-        NO_CALLBACKS_PROVIDED        
+        NO_CALLBACKS_PROVIDED,
+        /**
+         * Connection was closed and events in the resend queue could not be resent
+         */
+        RESEND_INTERRUPTED_BY_CONNECTION_CLOSE
     }
     private final Type type;
 
