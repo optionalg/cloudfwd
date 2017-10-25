@@ -57,20 +57,15 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
 
     @Override
     protected void setProps(PropertiesFileHelper settings) {
-        Properties props = new Properties();
         // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
-        props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
         if (SlowEndpoints.sleep > 10000) {
             throw new RuntimeException("Let's not get carried away here");
         }
-
-        props.put(ACK_TIMEOUT_MS, Long.toString(1000));
-        props.put(UNRESPONSIVE_MS,
-                "-1");//disable dead channel detection
-        props.put(PropertyKeys.EVENT_BATCH_SIZE, 0);
+        settings.setAckTimeoutMS(1000);
+        settings.setUnresponsiveMS(-1); //disable dead channel detection
+        settings.setEventBatchSize(0);
         //props.put(PropertyKeys.MAX_TOTAL_CHANNELS, 1);
     }
 
