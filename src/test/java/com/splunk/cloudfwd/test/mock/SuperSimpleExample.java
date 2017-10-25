@@ -75,7 +75,7 @@ public class SuperSimpleExample {
 
     //overide defaults in cloudfwd.properties
     ConnectionSettings customization = ConnectionSettings.fromPropsFile("cloudfwd.properties");
-    customization.setUrlString("https://127.0.0.1:8088");
+    customization.setUrl("https://127.0.0.1:8088");
     customization.setToken("ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
     customization.setUnresponsiveMS(100000);//100 sec - Kill unresponsive channel
     customization.setMockHttp(true);

@@ -36,7 +36,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         ConnectionSettings settings = connection.getSettings();
         settings.setToken("a token");
         settings.setAckTimeoutMS(120000);
-        settings.setUrlString("https://127.0.0.1:8188");
+        settings.setUrl("https://127.0.0.1:8188");
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
 
@@ -44,7 +44,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         // Set the same properties
         settings.setToken("a token");
         settings.setAckTimeoutMS(120000);
-        settings.setUrlString("https://127.0.0.1:8188");
+        settings.setUrl("https://127.0.0.1:8188");
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
 
@@ -52,7 +52,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         // Set some more new properties
         settings.setToken("different token");
         settings.setAckTimeoutMS(240000);
-        settings.setUrlString("https://127.0.0.1:8288, https://127.0.0.1:8388");
+        settings.setUrl("https://127.0.0.1:8288, https://127.0.0.1:8388");
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
         close();
@@ -152,7 +152,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     }
 
     private void setUrls(String urls) throws UnknownHostException {
-        connection.getSettings().setUrlString(urls);
+        connection.getSettings().setUrl(urls);
         ValidatePropsEndpoint.URLS = connection.getSettings().getUrls();
     }
 

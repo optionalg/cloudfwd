@@ -30,7 +30,7 @@ import java.util.Properties;
 public class UrlProtocolTest extends ExceptionConnInstantiationTest {
      @Override
      protected void setProps(PropertiesFileHelper settings) {
-         settings.setUrlString("http://foo.com"); //http is not supported protocol. Must be https
+         settings.setUrl("http://foo.com"); //http is not supported protocol. Must be https
     }
     
     protected boolean isExpectedConnInstantiationException(Exception e) {

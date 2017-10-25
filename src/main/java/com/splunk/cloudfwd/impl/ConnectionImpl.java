@@ -76,7 +76,6 @@ public class ConnectionImpl implements Connection {
     }   
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = (PropertiesFileHelper)settings;
-//      this.propertiesFileHelper.setConnection(this);
     this.checkpointManager = new CheckpointManager(this);
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
@@ -113,10 +112,6 @@ public class ConnectionImpl implements Connection {
     return propertiesFileHelper.getAckTimeoutMS();
   }
 
-  public synchronized void setBlockingTimeoutMS(long ms) {
-    this.propertiesFileHelper.setBlockingTimeoutMS(ms); //TODO: well this feels redundant...
-  }
-  
    //close() is synchronized, as is send and sendBatch, therefore events cannot be sent before close has returned.
   //After close has returned, any events sent would be rejected because the connection is closed.
   @Override  

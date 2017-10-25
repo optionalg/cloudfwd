@@ -158,15 +158,14 @@ public class ConnectionSettings {
         this.connection = (ConnectionImpl)c;
         this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
 
-        //TODO: should all this only when new timeout has been set by setAckTimemoutMS() and connection was not available at the time, and so must be called now
+        // Perform any actions that throw any config exceptions here (aka. on Connections.create())
+        //urlsStringToList(getUrlString()) --> validates urls and throws exception if invalid
+        
+        // Perform any actions that had required a Connection object in the property setter, 
+        // where one may not have been available
         if (Long.valueOf(this.getAckTimeoutMS()) != null) {
             connection.getTimeoutChecker().setTimeout(this.getAckTimeoutMS());
         }
-        
-        // Perform any actions that throw any config exceptions here (aka. on Connections.create())
-        setUrls(getUrlString());
-        
-        checkAndRefreshChannels();
     }
 
     /* ***************************** UTIL ******************************* */
@@ -206,7 +205,7 @@ public class ConnectionSettings {
                 HecConnectionStateException e = new HecConnectionStateException(msg,
                         HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
                 if (connection != null) {
-                    connection.getCallbacks().systemError(e); // TODO: THIS IS NOT AVAILABLE!!! FIXME - conditional is not enough
+                    connection.getCallbacks().systemError(e);
                 }
                 getLog().error(e.getMessage(), e);
                 throw e;
@@ -409,7 +408,7 @@ public class ConnectionSettings {
 
         // Collector URI
         if (this.getUrlString() != newUrls) {
-            this.setUrlString(newUrls);
+            this.setUrl(newUrls);
             dnsLookup = true;
             refreshChannels = true;
             keySet.remove(COLLECTOR_URI);
@@ -647,8 +646,9 @@ public class ConnectionSettings {
      * @param token
      */
     public void setToken(String token) {
-        if (this.splunkHecToken == null || !this.splunkHecToken.equals(token)) {
-            this.splunkHecToken = token;
+        this.splunkHecToken = token;
+        
+        if (!this.splunkHecToken.equals(token)) {
             checkAndRefreshChannels();
         }
     }
@@ -662,16 +662,12 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  private void setUrls(String urls) {
-      if (!urlsStringToList(urls).equals(getUrls())) {
-        // a single url or a list of comma separated urls
-        this.splunkHecUrl = urls;
-        checkAndRefreshChannels(); ////////////////
-    }
-  }
-
-  public void setUrlString(String urls) {
+  public void setUrl(String urls) {
       this.splunkHecUrl = urls;
+
+      if (connection != null && !urlsStringToList(urls).equals(getUrls())) {
+          checkAndRefreshChannels();
+      }
   }
 
   public void setTestPropertiesEnabled(Boolean enabled) {
@@ -683,9 +679,10 @@ public class ConnectionSettings {
      * @param host Host value for the data feed
      */
   public void setHost(String host) {
+      this.splunkHecHost = host;
+
       if (!getHost().equals(host)) {
-          this.splunkHecHost = host;
-          checkAndRefreshChannels();  
+          checkAndRefreshChannels();
       }
   }
 
@@ -694,8 +691,9 @@ public class ConnectionSettings {
      * @param index The Splunk index in which the data feed is stored
      */
   public void setIndex(String index) {
+      this.splunkHecIndex = index;
+      
       if (!getIndex().equals(index)) {
-          this.splunkHecIndex = index;
           checkAndRefreshChannels();
       }
   }
@@ -705,8 +703,9 @@ public class ConnectionSettings {
      * @param source The source of the data feed
      */
   public void setSource(String source) {
+      this.splunkHecSource = source;
+      
       if (!getSource().equals(source)) {
-          this.splunkHecSource = source;
           checkAndRefreshChannels();
       }
   }
@@ -716,47 +715,13 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
   public void setSourcetype(String sourcetype) {
+      this.splunkHecSourcetype = sourcetype;
+      
       if (!getSourcetype().equals(sourcetype)) {
-          this.splunkHecSourcetype = sourcetype;
           checkAndRefreshChannels(); 
       }
   }
   
-
-//    // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.
-//    private void populateProperties() {
-//        try {
-//            InputStream is = getClass().getResourceAsStream("/cloudfwd.properties");
-//            if (is != null) {
-//                defaultProps.load(is); //TODO: confirm - does this parse all values into strings?
-//            }
-//
-//            if (overrides != null) {
-//////                defaultProps.putAll(overrides); //TODO: should call setters instead of putProperty() to make sure we validate it
-////                Enumeration en = overrides.propertyNames();
-////                while(en.hasMoreElements()) {
-////                    String key = (String)en.nextElement();
-////                    putProperty(key, String.valueOf(overrides.getProperty(key))); // Enforce string type of property values
-////                }
-//            }
-//
-//            // If required properties are missing from cloudfwd.properties, overrides, and defaults, then throw exception.
-//            for (String key : REQUIRED_KEYS) {
-//                if (defaultProps.getProperty(key) == null) {
-//                    throw new HecMissingPropertiesException(
-//                            "Missing required key: " + key);
-//                }
-//            }
-//
-//            // For any non-required properties, we allow them to remain null if they are not present in overrides
-//            // or cloudfwd.properties, because the property getters below will return the default values.
-//        } catch (IOException ex) {
-//            throw new HecIllegalStateException("Problem loading cloudfwd.properties",
-//                    HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
-//        }
-//
-//    }
-
     /**
      * Checking if LoadBalancer exists before refreshing channels
      */
