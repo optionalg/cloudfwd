@@ -19,6 +19,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Optionally pass command line parameters "token" and "url" as: 
+ * mvn test -Dtest=MultiThreadedVolumeTest -DargLine="-Durl=<URL> -Dtoken=<TOKEN>"
+ * 
  * Created by eprokop on 9/13/17.
  */
 public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
@@ -101,8 +104,15 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
     @Override
     protected void setProps(PropertiesFileHelper settings) {
+        String token = System.getProperty("token");
+        String url = System.getProperty("url");
+        if (System.getProperty("token") != null) {
+            settings.setToken(token);
+        }
+        if (System.getProperty("url") != null) {
+            settings.setUrlString(url);
+        }
         settings.setMockHttp(false);
-        settings.setMaxUnackedEventBatchPerChannel(2);
         settings.setTestPropertiesEnabled(false);
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
     }

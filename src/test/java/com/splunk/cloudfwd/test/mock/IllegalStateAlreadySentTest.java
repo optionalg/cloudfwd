@@ -53,8 +53,8 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
   }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-    System.out.println(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+    LOG.trace(
+            "sendEvents: SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     if (expected < 2) {
@@ -65,7 +65,7 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
     connection.send(event); //send a first event. The event will get stuck waiting for acknowledgement
     int exceptionCount = 0;
     for (int i = 0; i < expected - 1; i++) {
-      System.out.println("Sending Duplicate Event ID");
+      LOG.info("Sending Duplicate Event ID i: " + i);
       event = nextEvent(1); //duplicate event ID
       try {
         connection.send(event);

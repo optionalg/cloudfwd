@@ -2,5 +2,6 @@ target
 nbproject
 .idea
 *.iml
+*.log
 .DS_Store
 codeship.aes

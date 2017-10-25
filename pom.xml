@@ -16,7 +16,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <argLine>-Xmx4G</argLine>
+        <argLine>-Xmx128M</argLine>
         <skipITs>true</skipITs>
     </properties>
     <dependencies>
@@ -190,7 +190,7 @@
                 <version>2.12.4</version>
                 <configuration>
                     <!--forkedProcessTimeoutInSeconds>0</forkedProcessTimeoutInSeconds-->
-                    <argLine>-Xmx500M ${argLine}</argLine><!-- set heap memory for mvn junit tests -->
+                    <argLine>${argLine}</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
                         <exclude>**/perf/*.java</exclude>
                         <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
@@ -203,7 +203,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.20.1</version>
                 <configuration>
-                    <argLine>-Xmx500M ${argLine}</argLine><!-- set heap memory for mvn junit tests -->
+                    <argLine>${argLine}</argLine><!-- set heap memory for mvn junit tests -->
                     <skipITs>${skipITs}</skipITs>
                 </configuration>
                 <executions>

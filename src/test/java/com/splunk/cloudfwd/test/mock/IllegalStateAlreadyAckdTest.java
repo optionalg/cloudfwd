@@ -41,7 +41,7 @@ public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
         settings.setCheckpointEnabled(true); //checkpoints are required for this to work
   }
     protected HecConnectionStateException.Type getExceptionType(){
-    return HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED;
+    return HecConnectionStateException.Type.ALREADY_HANDLED;
   }
     
   @Override

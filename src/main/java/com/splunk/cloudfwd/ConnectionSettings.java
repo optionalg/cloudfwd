@@ -163,12 +163,9 @@ public class ConnectionSettings {
             connection.getTimeoutChecker().setTimeout(this.getAckTimeoutMS());
         }
         
+        // Perform any actions that throw any config exceptions here (aka. on Connections.create())
         setUrls(getUrlString());
         
-        //TODO: throw any exceptions pertaining to misconfigurations here (aka. on Connections.create())
-
-        //TODO: we do not necessarily have to call this every time (only when token, host, and other select properties
-        // are set on ConnectionSettings. Can optimize later to do this conditionally. 
         checkAndRefreshChannels();
     }
 

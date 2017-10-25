@@ -88,10 +88,12 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   @Before
-  public void init() {
+  public void setUp() {
     if (!HEC_ENABLED) {
       enableHec();
     }
+    LOG.info("Starting setUp");
+    super.setUp();
   }
 
   @After
@@ -230,21 +232,25 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     }
     return EntityUtils.toString(httpResponse.getEntity(), "utf-8");
   }
-
-  protected void deleteTestToken() {
-    if (TOKEN_VALUE != null) {
+  protected void deleteTestToken(String tokenName) {
       try {
         HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
-                "/services/data/inputs/http/" + TOKEN_NAME);
+                "/services/data/inputs/http/" + tokenName);
         HttpResponse httpResponse = httpClient.execute(httpRequest);
         parseHttpResponse(httpResponse);
         LOG.debug("deleteTestToken: httpResponse: " + httpResponse);
         LOG.info("deleteTestToken: Successfully deleted token: TOKEN_NAME=" +
-                TOKEN_NAME + " TOKEN_VALUE=" + TOKEN_VALUE);
-        TOKEN_VALUE = null;
+          tokenName);
       } catch (Exception ex) {
-        Assert.fail("deleteTestToken: failed with ex: " + ex.getMessage());
+        Assert.fail("deleteTestToken: Couldn't delete token_name=" + tokenName 
+          + ". Failed with ex: " + ex.getMessage());
       }
+  }
+
+  protected void deleteTestToken() {
+    if (TOKEN_VALUE != null) {
+      deleteTestToken(TOKEN_NAME);
+      TOKEN_VALUE = null;
     } else {
       LOG.warn("Skipped deleting test token since test didn't create a token.");
     }
@@ -288,6 +294,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   protected void enableHec() {
+    LOG.info("Starting enableHec");
     try {
       HttpPost httpRequest = new HttpPost(mgmtSplunkUrl() +
               "/services/data/inputs/http/http");
@@ -329,7 +336,13 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
 
   // pass sourcetype=null to use the token default sourcetype
   protected String createTestToken(String sourcetype, boolean useACK) {
-    if (TOKEN_VALUE != null) deleteTestToken();
+    String oldToken = null;
+    // delete the existing token AFTER the new one is created so Connection
+    // doesn't get stuck with an invalid token
+    if (TOKEN_VALUE != null) {
+      oldToken = TOKEN_NAME;
+    }
+    
     createTestIndex();
     TOKEN_NAME = java.util.UUID.randomUUID().toString();
     try {
@@ -369,6 +382,11 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       Assert.fail("createTestToken: Failed to create token, ex: " +
               ex.getMessage());
     }
+    
+    if (oldToken != null) {
+      deleteTestToken(oldToken);
+    }
+    
     return TOKEN_VALUE;
   }
 

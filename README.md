@@ -88,8 +88,8 @@ This example will use the same configurations set up in the [Amazon Kinesis Stre
 2. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas.
 3. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
-url=https://127.0.0.1:8088
-token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
+splunk_hec_url=https://127.0.0.1:8088
+splunk_hec_token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 4. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 5. Save your modified cloudfwd.properties file.
@@ -114,8 +114,8 @@ This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk
 2. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas.
 3. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
-url=https://127.0.0.1:8088
-token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
+splunk_hec_url=https://127.0.0.1:8088
+splunk_hec_token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 4. In your preferred IDE, run LogWriter with the following arguments: ```<stream_name> <AWS_region_name> <AWS_profile_name> <name_of_log_file>```<br>
 	a. Example: ``` mystream us-west-2 default cloudwatchEventLogs  ```<br>

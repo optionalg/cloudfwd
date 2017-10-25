@@ -43,7 +43,7 @@ public class HecServerErrorResponseAcksDisabledTest extends AbstractHecServerErr
     @Override
     protected void setProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.AckDisabledEndpoints");
-        settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException
+        settings.setAckTimeoutMS(500000); //in this case we expect to see HecConnectionTimeoutException
         settings.setBlockingTimeoutMS(5000);
     }
 
