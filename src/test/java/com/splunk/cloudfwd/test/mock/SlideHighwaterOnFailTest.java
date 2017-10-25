@@ -39,6 +39,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
       props.put(PropertyKeys.ACK_POLL_MS, "250");
       props.put(PropertyKeys.RETRIES, "2");
       props.put(PropertyKeys.UNRESPONSIVE_MS, "100"); //for this test, lets QUICKLY determine the channel is dead
+      props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true");
       return props;
     }
     
@@ -70,7 +71,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
     }
 
     @Test
-    public void testMaxRetries() throws InterruptedException {
+    public void testShouldCheckpointOnFail() throws InterruptedException {
       sendEvents();
     }
     
