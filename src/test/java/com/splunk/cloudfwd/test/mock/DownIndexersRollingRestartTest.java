@@ -29,7 +29,7 @@ public class DownIndexersRollingRestartTest extends AbstractConnectionTest {
         // mocking 4 indexers with 1 channel each
         // although no guarantee which channel goes to which indexer by LoadBalancer
         // but simulate anyway
-        settings.setUrl("https://127.0.0.1:8088,https://127.0.1.1:8088,https://127.0.2.1:8088,https://127.0.3.1:8088");
+        settings.setUrls("https://127.0.0.1:8088,https://127.0.1.1:8088,https://127.0.2.1:8088,https://127.0.3.1:8088");
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.RollingRestartEndpoints");
         settings.setMaxTotalChannels(4);
         settings.setMaxUnackedEventBatchPerChannel(2);

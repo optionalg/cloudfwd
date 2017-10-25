@@ -32,13 +32,13 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
     
     @Override
     protected void setProps(PropertiesFileHelper settings) {
-        settings.setUrl("https://customer.cloud.splunk.com:8088");
+        settings.setUrls("https://customer.cloud.splunk.com:8088");
     }
 
     @Test
     public void getSSLCertContentForCloudInstance() throws IOException {
         ConnectionSettings settings = connection.getSettings();
-        settings.setUrl("https://customer.cloud.splunk.com:8088");
+        settings.setUrls("https://customer.cloud.splunk.com:8088");
         Connection c = Connections.create(settings);
 
         // For cloud instance, if we didn't set CLOUD_SSL_CERT_CONTENT in overrides,
@@ -67,7 +67,7 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
     @Test
     public void getSSLCertContentForNonCloudInstance() throws UnknownHostException {
         ConnectionSettings settings = connection.getSettings();
-        settings.setUrl("https://localhost:8088");
+        settings.setUrls("https://localhost:8088");
 
         // Non-empty ssl content
         String expectedSSLCert = "testing ssl cert";

@@ -1,4 +1,4 @@
-package com.splunk.cloudfwd.test.mock;
+package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.PropertyKeys;

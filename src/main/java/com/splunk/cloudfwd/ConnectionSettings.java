@@ -408,7 +408,7 @@ public class ConnectionSettings {
 
         // Collector URI
         if (this.getUrlString() != newUrls) {
-            this.setUrl(newUrls);
+            this.setUrls(newUrls);
             dnsLookup = true;
             refreshChannels = true;
             keySet.remove(COLLECTOR_URI);
@@ -662,7 +662,7 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  public void setUrl(String urls) {
+  public void setUrls(String urls) {
       this.splunkHecUrl = urls;
 
       if (connection != null && !urlsStringToList(urls).equals(getUrls())) {

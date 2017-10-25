@@ -36,7 +36,7 @@ public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
 
     @Override
     protected void setProps(PropertiesFileHelper settings) {
-        settings.setUrl("floort");
+        settings.setUrls("floort");
     }
     
     @Test

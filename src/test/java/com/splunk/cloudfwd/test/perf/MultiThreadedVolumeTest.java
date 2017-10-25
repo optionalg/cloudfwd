@@ -110,7 +110,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             settings.setToken(token);
         }
         if (System.getProperty("url") != null) {
-            settings.setUrl(url);
+            settings.setUrls(url);
         }
         settings.setMockHttp(false);
         settings.setTestPropertiesEnabled(false);
