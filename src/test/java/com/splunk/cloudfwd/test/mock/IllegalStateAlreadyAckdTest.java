@@ -41,7 +41,7 @@ public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
     return props;
   }
     protected HecConnectionStateException.Type getExceptionType(){
-    return HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED;
+    return HecConnectionStateException.Type.ALREADY_HANDLED;
   }
     
   @Override
