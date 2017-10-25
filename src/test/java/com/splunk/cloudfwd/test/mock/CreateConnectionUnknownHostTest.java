@@ -19,7 +19,7 @@ import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGU
 public class CreateConnectionUnknownHostTest extends ExceptionConnInstantiationTest {
     @Override
     protected void setProps(PropertiesFileHelper settings) {
-        settings.setUrls("https://foobarunknownhostbaz:8088");
+        settings.setUrlString("https://foobarunknownhostbaz:8088");
     }
 
     protected boolean isExpectedConnInstantiationException(Exception e) {

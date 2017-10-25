@@ -74,6 +74,7 @@ public class ConnectionImpl implements Connection {
     }   
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = (PropertiesFileHelper)settings;
+//      this.propertiesFileHelper.setConnection(this);
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
     this.events = new EventBatchImpl();

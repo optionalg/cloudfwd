@@ -59,7 +59,6 @@ public class Connections {
      */
     public static Connection create(ConnectionSettings settings) {
         ConnectionImpl c = new ConnectionImpl(new DefaultConnectionCallbacks(), settings);
-        LoadBalancer lb = c.getLoadBalancer();
         settings.setConnection(c);
         // TODO: PRINT PROPERTIES JSON OUT USING JACKSON ON INIT
         return c;

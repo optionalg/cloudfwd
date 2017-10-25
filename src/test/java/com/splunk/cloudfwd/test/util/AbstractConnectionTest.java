@@ -89,7 +89,7 @@ public abstract class AbstractConnectionTest {
     this.callbacks = getCallbacks();
     PropertiesFileHelper settings = this.getTestProps();
     this.setProps(settings);
-    this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
+    this.connection = createConnection(callbacks, settings);
     if(null == this.connection){
         return;
     }

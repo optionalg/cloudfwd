@@ -51,7 +51,7 @@ public class SslCertTestManualCloudClusterELB extends AbstractConnectionTest {
    */
   @Override
   protected void setProps(PropertiesFileHelper settings) {
-    settings.setUrls("https://http-inputs-kinesis1.splunkcloud.com:443"); //http is not supported protocol. Must be https
+    settings.setUrlString("https://http-inputs-kinesis1.splunkcloud.com:443"); //http is not supported protocol. Must be https
     settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     settings.setCertValidationEnabled(false);
     settings.setHttpDebugEnabled(true);

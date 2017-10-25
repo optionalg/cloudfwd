@@ -51,7 +51,7 @@ public class SslCertTestManualCloudTrial extends AbstractConnectionTest {
    */
   @Override
   protected void setProps(PropertiesFileHelper settings) {
-    settings.setUrls("https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
+    settings.setUrlString("https://input-prd-p-tgmk5hs6pgkt.cloud.splunk.com:8088");
     settings.setToken("6F339C3C-9658-4347-9DCA-A171E32072AF");
     settings.setCertValidationEnabled(false);
   }

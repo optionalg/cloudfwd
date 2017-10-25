@@ -162,6 +162,10 @@ public class ConnectionSettings {
         if (Long.valueOf(this.getAckTimeoutMS()) != null) {
             connection.getTimeoutChecker().setTimeout(this.getAckTimeoutMS());
         }
+        
+        setUrls(getUrlString());
+        
+        //TODO: throw any exceptions pertaining to misconfigurations here (aka. on Connections.create())
 
         //TODO: we do not necessarily have to call this every time (only when token, host, and other select properties
         // are set on ConnectionSettings. Can optimize later to do this conditionally. 
@@ -204,7 +208,9 @@ public class ConnectionSettings {
                 String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage();
                 HecConnectionStateException e = new HecConnectionStateException(msg,
                         HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
-                connection.getCallbacks().systemError(e); // TODO: THIS IS NOT AVAILABLE!!!
+                if (connection != null) {
+                    connection.getCallbacks().systemError(e); // TODO: THIS IS NOT AVAILABLE!!! FIXME - conditional is not enough
+                }
                 getLog().error(e.getMessage(), e);
                 throw e;
             }
@@ -373,7 +379,11 @@ public class ConnectionSettings {
     }
 
     /* ***************************** SETTERS ******************************* */
-
+    // Setters should not throw Exceptions or call callbacks on Connection instance
+    // because they may be called before the Connection is instantiated.
+    // Any setter behavior that should happen on the Connection instance should be defined
+    // in ConnectionSettings > setConnection() method (or in Connections > create())
+    
     /**
      * Use this method to change multiple settings on the connection. See
      * PropertyKeys class for more information.
@@ -655,11 +665,11 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  public void setUrls(String urls) {
-    if (urls != getUrlString()) {
+  private void setUrls(String urls) {
+      if (!urlsStringToList(urls).equals(getUrls())) {
         // a single url or a list of comma separated urls
         this.splunkHecUrl = urls;
-        checkAndRefreshChannels();
+        checkAndRefreshChannels(); ////////////////
     }
   }
 

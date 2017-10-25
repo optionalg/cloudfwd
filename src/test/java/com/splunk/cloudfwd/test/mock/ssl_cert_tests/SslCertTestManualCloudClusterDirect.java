@@ -51,7 +51,7 @@ public class SslCertTestManualCloudClusterDirect extends AbstractConnectionTest 
    */
   @Override
   protected void setProps(PropertiesFileHelper settings) {
-    settings.setUrls("https://inputs1.kinesis1.splunkcloud.com:8088");
+    settings.setUrlString("https://inputs1.kinesis1.splunkcloud.com:8088");
     settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     settings.setCertValidationEnabled(true);
   }

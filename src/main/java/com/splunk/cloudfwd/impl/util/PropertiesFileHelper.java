@@ -42,7 +42,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
 
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
-    setUrls(url.toString());
+    setUrlString(url.toString()); /////////////////setUrl
     if (getHost().isEmpty()) {
       setHost(host);
     }
