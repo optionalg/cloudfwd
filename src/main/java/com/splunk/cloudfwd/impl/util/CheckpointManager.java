@@ -145,10 +145,10 @@ public class CheckpointManager implements LifecycleEventObserver {
         }
         //event id must not be below the highwater mark
         if (null != checkpoint && events.getId().compareTo(checkpoint) <= 0) {
-            String msg = "EventBatch already acknowldeged. EventBatch ID is " + events.
+            String msg = "EventBatch already handled (acknowledged or failed). EventBatch ID is " + events.
                     getId() + " but checkpoint at " + checkpoint;
             throw new HecConnectionStateException(msg,
-                    HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED);
+                    HecConnectionStateException.Type.ALREADY_HANDLED);
         }
         EventBatchImpl prev = this.orderedEvents.get(events.getId());
         if (null != prev) {
