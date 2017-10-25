@@ -60,7 +60,7 @@ public class HecServerErrorResponseIndexerBusyButHealthCheckOKAndExpectAckTimeou
         Properties props = new Properties();
         props.put(MOCK_HTTP_CLASSNAME,
                 "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
-        props.put(ACK_TIMEOUT_MS, "2000");  //in this case we excpect to see HecConnectionTimeoutException
+        props.put(ACK_TIMEOUT_MS, "2000");  //in this case we expect to see HecConnectionTimeoutException
         props.put(BLOCKING_TIMEOUT_MS, "5000");
         return props;
     }
