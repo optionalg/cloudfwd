@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 
 /**
@@ -499,8 +500,7 @@ public class ConnectionSettings {
      * @param host Host value for the data feed
      */
     public void setHost(String host) {
-        if (!getHost().equals(host)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(getHost()) && !getHost().equals(host)) {
             putProperty(PropertyKeys.HOST, host);
             checkAndRefreshChannels();
         }
@@ -511,8 +511,7 @@ public class ConnectionSettings {
      * @param index The Splunk index in which the data feed is stored
      */
     public void setIndex(String index) {
-        if (!getIndex().equals(index)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(getIndex()) && !getHost().equals(index)) {
             putProperty(PropertyKeys.INDEX, index);
             checkAndRefreshChannels();
         }
@@ -523,8 +522,7 @@ public class ConnectionSettings {
      * @param source The source of the data feed
      */
     public void setSource(String source) {
-        if (!getHost().equals(source)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(getSource()) && !getHost().equals(source)) {
             putProperty(PropertyKeys.SOURCE, source);
             checkAndRefreshChannels();
         }
@@ -535,8 +533,7 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
     public void setSourcetype(String sourcetype) {
-        if (!getHost().equals(sourcetype)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(getSourcetype()) && !getHost().equals(sourcetype)) {
             putProperty(PropertyKeys.SOURCETYPE, sourcetype);
             checkAndRefreshChannels();
         }

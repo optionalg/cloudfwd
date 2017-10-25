@@ -23,6 +23,7 @@ import java.net.URL;
 import java.util.Properties;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
+import org.apache.commons.lang.StringUtils;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -51,7 +52,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
     this.connection.getSettings().setUrls(url.toString());
-    if (this.connection.getSettings().getHost().isEmpty()) {
+    if (StringUtils.isEmpty(this.connection.getSettings().getHost())) {
       this.connection.getSettings().setHost(host);
     }
     return createSender();
