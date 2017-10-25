@@ -31,18 +31,29 @@ public class ThreadScheduler {
 
   //private Logger LOG = LoggerFactory.getLogger(ThreadScheduler.class.getName());
   private static final ConcurrentMap<String, ScheduledThreadPoolExecutor> schedulers = new ConcurrentHashMap<>();
+  private static final int MAX_THREADS_IN_POOL = 8;
   //private static  ScheduledThreadPoolExecutor scheduler;
   //private boolean started;
 
-  public static ScheduledThreadPoolExecutor getInstance(String name){
-      return schedulers.computeIfAbsent(name, k->{
+  public synchronized  static ScheduledThreadPoolExecutor getInstance(String name){
+      ScheduledThreadPoolExecutor returnMe = schedulers.computeIfAbsent(name, k->{
         ThreadFactory f = (Runnable r) -> new Thread(r, name);
-         ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(4, f);
+         ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, f);
          scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
          scheduler.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
-         scheduler.setRemoveOnCancelPolicy(true);
+         scheduler.setRemoveOnCancelPolicy(true); 
          return scheduler;
       });
+      //expand core pool size if needed
+      int curThreads = returnMe.getCorePoolSize();
+      if(returnMe.getActiveCount() == curThreads && curThreads < MAX_THREADS_IN_POOL){
+          returnMe.setCorePoolSize(returnMe.getCorePoolSize()+1);
+          System.out.println("EXPANDED '"+name+"' POOL TO " + returnMe.getCorePoolSize());
+      }else if(curThreads >1 && returnMe.getActiveCount() < curThreads){
+         // returnMe.setCorePoolSize(returnMe.getCorePoolSize() - 1);
+          //System.out.println("SHRANK '"+name+"' POOL TO " + returnMe.getCorePoolSize());
+      }
+      return returnMe;
   }
   
     public static void shutdownNowAndAwaitTermination() {

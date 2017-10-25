@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.impl.sim.errorgen;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
 import com.splunk.cloudfwd.impl.sim.CannedOKHttpResponse;
 import com.splunk.cloudfwd.impl.sim.Endpoint;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.slf4j.Logger;
@@ -20,12 +21,12 @@ import java.util.concurrent.TimeUnit;
 public class PreFlightAckEndpoint implements Endpoint {
     private static final Logger LOG = LoggerFactory.getLogger(PreFlightAckEndpoint.class.getName());
 
-    final ScheduledExecutorService executor;
+    //final ScheduledExecutorService executor;
     Random rand = new Random(System.currentTimeMillis());
 
     public PreFlightAckEndpoint() {
-        ThreadFactory f = (Runnable r) -> new Thread(r, "PreFlightAckEndpoint");
-        executor = Executors.newScheduledThreadPool(1, f);
+//        ThreadFactory f = (Runnable r) -> new Thread(r, "PreFlightAckEndpoint");
+//        executor = Executors.newScheduledThreadPool(1, f);
     }
 
     @Override
@@ -35,8 +36,8 @@ public class PreFlightAckEndpoint implements Endpoint {
 
     @Override
     public void close() {
-        LOG.debug("SHUTDOWN PREFLIGHT ENDPOINT DELAY SIMULATOR");
-        executor.shutdownNow();
+//        LOG.debug("SHUTDOWN PREFLIGHT ENDPOINT DELAY SIMULATOR");
+//        executor.shutdownNow();
     }
 
     public void checkAckEndpoint(FutureCallback<HttpResponse> cb) {
@@ -51,6 +52,6 @@ public class PreFlightAckEndpoint implements Endpoint {
 
     protected void delayResponse(Runnable r) {
         //return a single response with a delay uniformly distributed between  [0,5] ms
-        executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+        ThreadScheduler.getInstance("PreFlightAckEndpoint").schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
     }
 }

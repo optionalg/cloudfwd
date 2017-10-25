@@ -44,6 +44,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected String failMsg;
   protected Exception exception;
   protected Exception systemWarning;
+  protected int ackdEventCount; //not Batch count...EVENT count
   
 
   public BasicCallbacks(int expected) {
@@ -127,6 +128,12 @@ public class BasicCallbacks implements ConnectionCallbacks {
               "Received duplicate acknowledgement for event batch:" + events.
               getId());
     }
+    synchronized(this){
+        ackdEventCount += events.getNumEvents();
+        if(ackdEventCount == expectedAckCount){
+            latch.countDown();
+        }    
+    }
 
   }
 
@@ -172,9 +179,9 @@ public class BasicCallbacks implements ConnectionCallbacks {
   @Override
   public void checkpoint(EventBatch events) {
     LOG.info("SUCCESS CHECKPOINT " + events.getId()); 
-    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
-      latch.countDown();
-    }
+//    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
+//      latch.countDown();
+//    }
   }
 
   public void await(long timeout, TimeUnit u) throws InterruptedException {
