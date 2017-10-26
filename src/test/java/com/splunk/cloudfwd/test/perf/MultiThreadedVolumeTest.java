@@ -41,7 +41,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private int numSenderThreads = 64;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
-    private ExecutorService senderExecutor;
     private ByteBuffer buffer;
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
@@ -54,7 +53,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     @Test
     public void sendTextToRaw() throws InterruptedException {   
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
-        senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
+        ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
                 (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
@@ -160,7 +159,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 Assert.assertTrue("Throughput must be above minimum value of " + cliProperties.get(MIN_THROUGHPUT_MBPS_KEY),
                     mbps > Float.parseFloat(cliProperties.get(MIN_THROUGHPUT_MBPS_KEY)));
             }
-            Assert.assertTrue("Percentage failed must be below 5%", percentFailed < 5F);
+            Assert.assertTrue("Percentage failed must be below 2%", percentFailed < 2F);
             Assert.assertTrue("Thread count must be below maximum value of " + cliProperties.get(MAX_THREADS_KEY),
                 threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
             Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
