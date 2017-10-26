@@ -100,12 +100,12 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     }
   }
 
-  protected void showThroughput(long finish, long start) {
+  protected float showThroughput(long finish, long start) {
     //throughput is computed from the currently *acknowledged* size
     long nChars = ((ThroughputCalculatorCallback) super.callbacks).
             getAcknowledgedSize();
     if (finish == start) {
-      return;
+      return Float.NaN;
     }
     if (finish < start) {
       throw new RuntimeException(
@@ -114,7 +114,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     long time = finish - start; //ms
     float sec = ((float) time) / 1000f;
     if (sec <= 0) {
-      return;
+      return Float.NaN;
     }
     LOG.info("Sent " + nChars + " chars in " + time + " ms");
     LOG.info("Chars-per-second: " + nChars / sec);
@@ -124,5 +124,6 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     if (mbps < 0) {
       throw new IllegalStateException("Negative throughput is not allowed");
     }
+    return mbps;
   }
 }
