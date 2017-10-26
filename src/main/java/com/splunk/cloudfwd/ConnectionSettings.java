@@ -545,7 +545,7 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
     public void setSourcetype(String sourcetype) {
-        if (!StringUtils.isEmpty(sourcetype) && !getHost().equals(sourcetype)) {
+        if (!StringUtils.isEmpty(sourcetype) && !getSourcetype().equals(sourcetype)) {
             putProperty(PropertyKeys.SOURCETYPE, sourcetype);
             checkAndRefreshChannels();
         }
