@@ -164,7 +164,7 @@ public class ConnectionSettings {
         // Perform any actions that had required a Connection object in the property setter, 
         // where one may not have been available
         if (Long.valueOf(getAckTimeoutMS()) != null) {
-            connection.getTimeoutChecker().setTimeout(getAckTimeoutMS());
+            connection.getTimeoutChecker().setTimeout();
         }
     }
 
@@ -546,7 +546,7 @@ public class ConnectionSettings {
             }
             this.ackTimeoutMS = timeoutMS;
             if (connection != null) {
-                connection.getTimeoutChecker().setTimeout(timeoutMS);
+                connection.getTimeoutChecker().setTimeout();
             }
         }
     }

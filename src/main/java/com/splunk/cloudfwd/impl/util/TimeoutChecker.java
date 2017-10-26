@@ -46,7 +46,7 @@ public class TimeoutChecker implements EventTracker {
         this.connection = c;
     }
 
-    public void setTimeout(long ms) {
+    public void setTimeout() {
         queisce();
         start();
     }
@@ -90,6 +90,7 @@ public class TimeoutChecker implements EventTracker {
                 events.setState(EVENT_TIMED_OUT);
                 //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
                 //to the user-supplied callback. Otherwise we just loop back here over and over!
+                //FIXME MH: should reach this in ack timeout test
                 ((CallbackInterceptor) connection.getCallbacks()).unwrap().
                         failed(events,
                                 new HecAcknowledgmentTimeoutException(
