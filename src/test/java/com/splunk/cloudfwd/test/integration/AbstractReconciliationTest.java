@@ -52,8 +52,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractReconciliationTest extends AbstractConnectionTest {
 
   protected static final Logger LOG = LoggerFactory.getLogger(AbstractReconciliationTest.class.getName());
-
-  /* ************ /CONFIGURABLE ************ */
+  
   protected int numToSend = 10;
   private final Boolean ENABLE_TEST_HTTP_DEBUG = false; // Enable HTTP debug in test client
   private String TOKEN_NAME; // per-test generated HEC Token Name
@@ -67,22 +66,21 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   // enable HEC only once per class run. Has to be a class variable, as each
   // junit test instantiate a new instance of the test class
   private static Boolean HEC_ENABLED = false;
+
   /* ************ CLI CONFIGURABLE ************ */
-  private static Map<String, String> cliProperties;
   // Default values
   static {
-    cliProperties = new HashMap<>();
     cliProperties.put("splunkHost", "localhost");
     cliProperties.put("mgmtPort", "8089");
     cliProperties.put("user", "admin");
     cliProperties.put("password", "changeme");
   }
+  /* ************ /CLI CONFIGURABLE ************ */
 
   public AbstractReconciliationTest() {
     super();
     LOG.info("NEXT RECONCILIATION TEST...");
-    // Get any command line arguments
-    cliProperties = getCliTestProperties();
+
     // Build a client to share among tests
     httpClient = buildSplunkClient();
     if (ENABLE_TEST_HTTP_DEBUG) enableTestHttpDebug();
@@ -129,7 +127,8 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   /*
   Get command line arguments for Test
    */
-  protected Map<String, String> getCliTestProperties() {
+  @Override
+  protected void extractCliTestProperties() {
     if (System.getProperty("argLine") != null) {
       LOG.warn("Replacing test properties with command line arguments");
       Set<String> keys = cliProperties.keySet();
@@ -139,8 +138,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
         }
       }
     }
-    LOG.warn("Test Arguments:" + cliProperties);
-    return cliProperties;
+    LOG.info("Test Arguments:" + cliProperties);
   }
 
   /*
