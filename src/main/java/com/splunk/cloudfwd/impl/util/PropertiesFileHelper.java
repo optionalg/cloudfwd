@@ -52,6 +52,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
     this.connection.getSettings().setUrls(url.toString());
+    // Use splunk_hec_host if set else use the hostname
     if (StringUtils.isEmpty(this.connection.getSettings().getHost())) {
       this.connection.getSettings().setHost(host);
     }

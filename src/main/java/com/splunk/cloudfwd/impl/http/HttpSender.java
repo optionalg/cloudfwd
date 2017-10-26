@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -241,15 +242,15 @@ public final class HttpSender implements Endpoints {
 
   private String appendUri(String endpoint) {
     String url = endpoint + "?";
-    if (!index.isEmpty()) {
+    if (!StringUtils.isEmpty(index)) {
       url = url + "&index=" + index;
     }
 
-    if (!source.isEmpty()) {
+    if (!StringUtils.isEmpty(source)) {
       url = url + "&source=" + source;
     }
 
-    if (!sourcetype.isEmpty()) {
+    if (!StringUtils.isEmpty(sourcetype)) {
       url = url + "&sourcetype=" + sourcetype;
     }
     return url;
