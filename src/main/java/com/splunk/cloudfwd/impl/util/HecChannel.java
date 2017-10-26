@@ -67,7 +67,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private DeadChannelDetector deadChannelDetector;
   private final String memoizedToString;
   private int preflightCount; //number of times we have sent the preflight checks  
-  private boolean closeFinished;
+  private volatile boolean closeFinished;
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -115,7 +115,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //is also trying to acquire the lock on this object. So deadlock.
   synchronized void pollAcks() {
      if(null == onDemandAckPoll || onDemandAckPoll.isDone()){
-           onDemandAckPoll = ThreadScheduler.getInstance("on_demand_ack-poller").schedule(sender.getHecIOManager()::pollAcks, 0, TimeUnit.MILLISECONDS);
+           onDemandAckPoll = ThreadScheduler.getSchedulerInstance("on_demand_ack-poller").schedule(sender.getHecIOManager()::pollAcks, 0, TimeUnit.MILLISECONDS);
        }
 
   }
@@ -148,7 +148,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
             long decomTime = (long) (decomMs * Math.random());
-            this.reaperTask  = ThreadScheduler.getInstance("channel_reaper").schedule(() -> {
+            this.reaperTask  = ThreadScheduler.getSchedulerInstance("channel_reaper").schedule(() -> {
                 LOG.info("decommissioning channel (channel_decom_ms={}): {}",
                         decomMs, HecChannel.this);
                 try {
@@ -322,7 +322,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if(!quiesced){
         this.health.quiesced();
         LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
-        closeWatchDogTask = ThreadScheduler.getInstance("channel_reaper").schedule(()->{
+        closeWatchDogTask = ThreadScheduler.getSchedulerInstance("channel_reaper").schedule(()->{
             if(!this.closeFinished){
                 LOG.warn("Channel isn't closed. Watchdog will force close it now.");
                 HecChannel.this.interalForceClose();
@@ -349,6 +349,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       this.closed = true;
       Runnable r = ()->{
         try {
+            LOG.debug("finishing closing channel");
             loadBalancer.removeChannel(getChannelId(), true);
             this.channelMetrics.removeObserver(this);
             cancelTasks(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
@@ -551,7 +552,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
           lastCountOfUnacked = unackedCount.get();
         }
       };
-      task = ThreadScheduler.getInstance( "ChannelDeathChecker").scheduleWithFixedDelay(r, 0, intervalMS, TimeUnit.MILLISECONDS);
+      task = ThreadScheduler.getSchedulerInstance( "ChannelDeathChecker").scheduleWithFixedDelay(r, 0, intervalMS, TimeUnit.MILLISECONDS);
     }
 
     @Override

@@ -20,7 +20,11 @@ import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * Maintains a singleton map of ScheduledThreadPoolExecutors, one for each threadpool name.
@@ -31,30 +35,19 @@ public class ThreadScheduler {
 
   //private Logger LOG = LoggerFactory.getLogger(ThreadScheduler.class.getName());
   private static final ConcurrentMap<String, ScheduledThreadPoolExecutor> schedulers = new ConcurrentHashMap<>();
-  private static final int MAX_THREADS_IN_POOL = 8;
+  private static final ConcurrentMap<String, ExecutorService> executors = new ConcurrentHashMap<>(); 
+  private static final int MAX_THREADS_IN_SCHEDULER_POOL = 1;
+  private static int MAX_THREADS_IN_EXECUTOR_POOL = 8;  
   //private static  ScheduledThreadPoolExecutor scheduler;
   //private boolean started;
 
-  public synchronized  static ScheduledThreadPoolExecutor getInstance(String name){
-      ScheduledThreadPoolExecutor returnMe = schedulers.computeIfAbsent(name, k->{
-        ThreadFactory f = (Runnable r) -> new Thread(r, name);
-         ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, f);
-         scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
-         scheduler.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
-         scheduler.setRemoveOnCancelPolicy(true); 
-         return scheduler;
-      });
-      //expand core pool size if needed
-      int curThreads = returnMe.getCorePoolSize();
-      if(returnMe.getActiveCount() == curThreads && curThreads < MAX_THREADS_IN_POOL){
-          returnMe.setCorePoolSize(returnMe.getCorePoolSize()+1);
-          System.out.println("EXPANDED '"+name+"' POOL TO " + returnMe.getCorePoolSize());
-      }else if(curThreads >1 && returnMe.getActiveCount() < curThreads){
-         // returnMe.setCorePoolSize(returnMe.getCorePoolSize() - 1);
-          //System.out.println("SHRANK '"+name+"' POOL TO " + returnMe.getCorePoolSize());
-      }
-      return returnMe;
+  public synchronized  static ScheduledThreadPoolExecutor getSchedulerInstance(String name){
+      return getFromSchedulerCache(name);
   }
+  
+  public synchronized  static ExecutorService getExecutorInstance(String name){
+      return getFromExecutorCache(name);
+  }  
   
     public static void shutdownNowAndAwaitTermination() {
         for (ScheduledThreadPoolExecutor scheduler:schedulers.values()) {
@@ -85,5 +78,26 @@ public class ThreadScheduler {
         }
 
     }       
+
+    private static ExecutorService getFromExecutorCache(String name) {
+        return executors.computeIfAbsent(name, k->{
+            ThreadFactory f = (Runnable r) -> new Thread(r, name);
+             return new ThreadPoolExecutor(0, MAX_THREADS_IN_EXECUTOR_POOL,
+                                   30L, TimeUnit.SECONDS,
+                                   new LinkedBlockingQueue<Runnable>(), f);
+      });
+    }
+    
+    private static ScheduledThreadPoolExecutor getFromSchedulerCache(String name) {
+        return schedulers.computeIfAbsent(name, k->{
+            ThreadFactory f = (Runnable r) -> new Thread(r, name);
+             ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(MAX_THREADS_IN_SCHEDULER_POOL, f);
+             scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+             scheduler.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
+             scheduler.setRemoveOnCancelPolicy(true); 
+             scheduler.setKeepAliveTime(1, TimeUnit.MINUTES); //probably this is not applicable to ScheduledThreadPoolExecutor since it always keeps exactly corePoolSize 
+             return scheduler;
+      });
+    }    
   
 }

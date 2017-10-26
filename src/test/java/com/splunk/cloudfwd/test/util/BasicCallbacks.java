@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,11 +41,11 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected final CountDownLatch warnLatch;//if warnings are expected, this latch gates the test until it is released
   protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
-  private Comparable lastId;
+  //private Comparable lastId;
   protected String failMsg;
   protected Exception exception;
   protected Exception systemWarning;
-  protected int ackdEventCount; //not Batch count...EVENT count
+  protected AtomicInteger ackdEventCount = new AtomicInteger(0); //not Batch count...EVENT count
   
 
   public BasicCallbacks(int expected) {
@@ -114,28 +115,23 @@ public class BasicCallbacks implements ConnectionCallbacks {
         }
     }    
   
-  @Override
-  public void acknowledged(EventBatch events) {
-    //LOG.info("acked {}", events);
-    if (null != lastId && lastId.compareTo(events.getId()) >= 0) {
-      Assert.fail(
-              "checkpoints received out of order. " + lastId + " before " + events.
-              getId());
-    }
+    @Override
+    public void acknowledged(EventBatch events) {
+        //LOG.info("test saw ack for  {}", events);
 
-    if (!acknowledgedBatches.add(events.getId())) {
-      Assert.fail(
-              "Received duplicate acknowledgement for event batch:" + events.
-              getId());
-    }
-    synchronized(this){
-        ackdEventCount += events.getNumEvents();
-        if(ackdEventCount == expectedAckCount){
+        int c = ackdEventCount.addAndGet(events.getNumEvents());
+        //LOG.info("expected ack count {}, current {}", expectedAckCount, ackdEventCount);
+        if (c == expectedAckCount) {
             latch.countDown();
-        }    
-    }
+        }
 
-  }
+        if (!acknowledgedBatches.add(events.getId())) {
+            Assert.fail(
+                    "Received duplicate acknowledgement for event batch:" + events.
+                    getId());
+        }
+
+    }
 
   @Override
   public void failed(EventBatch events, Exception ex) {
@@ -178,13 +174,14 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   @Override
   public void checkpoint(EventBatch events) {
-    LOG.info("SUCCESS CHECKPOINT " + events.getId()); 
+    LOG.info("SUCCESS CHECKPOINT {}", events.getId()); 
 //    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
 //      latch.countDown();
 //    }
   }
 
   public void await(long timeout, TimeUnit u) throws InterruptedException {
+    LOG.info("Started waiting for test latches");
     if(shouldFail() && !this.failLatch.await(timeout, u)){
         throw new RuntimeException("test timed out waiting on failLatch");
     }
@@ -195,6 +192,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
    if(!shouldFail() &&  !this.latch.await(timeout, u)){
         throw new RuntimeException("test timed out waiting on latch");
     }
+    LOG.info("finished waiting for tests latches");
   }
 
   /**

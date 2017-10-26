@@ -20,7 +20,9 @@ import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_NOT_OK;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.io.IOException;
+import java.util.logging.Level;
 import org.slf4j.Logger;
 
 /**
@@ -31,10 +33,10 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private final Logger LOG;
-    public static final String Name = "ack_poll";
+    public static final String NAME = "ack_poll";
 
     public HttpCallbacksAckPoll(final HecIOManager m) {
-        super(m, Name);
+        super(m, NAME);
         this.LOG = getConnection().getLogger(HttpCallbacksAckPoll.class.getName());
     }
 
@@ -43,7 +45,15 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         try {
             switch(code){
                 case 200:
-                    consumeAckPollResponse(reply);
+                    ThreadScheduler.getExecutorInstance("ack_poll_resp_executor").execute(
+                            ()->{
+                                try {
+                                    consumeAckPollResponse(reply);
+                                } catch (IOException ex) {
+                                    error(ex);
+                                }
+                            }
+                    );
                     break;
                 case 503: //busy
                     warn(reply, code);                    

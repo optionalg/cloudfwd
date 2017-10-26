@@ -55,8 +55,8 @@ public class HecIOManager implements Closeable {
 //            "ack poller");
 //    private final ThreadScheduler healthPollController = new ThreadScheduler(
 //            "health poller");
-    private ScheduledFuture ackPollTask;
-    private ScheduledFuture healthPollTask;
+    private volatile ScheduledFuture ackPollTask;
+    private volatile ScheduledFuture healthPollTask;
     private final AcknowledgementTracker ackTracker;
     private volatile boolean ackPollInProgress;
 
@@ -72,30 +72,38 @@ public class HecIOManager implements Closeable {
         return ackTracker.toString();
     }
 
-    public synchronized void startAckPolling() {
-        if (null == ackPollTask) {
-            Runnable poller = () -> {
-                if (this.getAcknowledgementTracker().isEmpty()) {
-                    LOG.trace("No acks to poll for");
-                    return;
-                } else if (this.isAckPollInProgress()) {
-                    LOG.trace("skipping ack poll - already have one in flight");
-                    return;
-                }
-                this.pollAcks();
-            };
-            long interval = sender.getConnection().getSettings().getAckPollMS();
-            this.ackPollTask = ThreadScheduler.getInstance("ack poller").scheduleWithFixedDelay(
-                    poller, 0, interval, TimeUnit.MILLISECONDS);
+    public void startAckPolling() {
+        if(null != ackPollTask){
+            return;
+        }
+        synchronized(this){
+            if (null == ackPollTask) {
+                Runnable poller = () -> {
+                    if (this.getAcknowledgementTracker().isEmpty()) {
+                        LOG.trace("No acks to poll for");
+                        return;
+                    } else if (this.isAckPollInProgress()) {
+                        LOG.trace("skipping ack poll - already have one in flight");
+                        return;
+                    }
+                    this.pollAcks();
+                };
+                long interval = sender.getConnection().getSettings().getAckPollMS();
+                this.ackPollTask = ThreadScheduler.getSchedulerInstance("ack poller").scheduleWithFixedDelay(poller, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
+            }
         }
     }
 
-    public synchronized void startHealthPolling() {
-        if (null == healthPollTask) {
-            long interval = sender.getConnection().getSettings().
-                    getHealthPollMS();
-            this.healthPollTask = ThreadScheduler.getInstance("health poller").scheduleWithFixedDelay(
-                    this::pollHealth, 0, interval, TimeUnit.MILLISECONDS);
+    public void startHealthPolling() {
+        if(null != healthPollTask){
+            return;
+        }
+        synchronized(this){
+            if (null == healthPollTask) {
+                long interval = sender.getConnection().getSettings().
+                        getHealthPollMS();
+                this.healthPollTask = ThreadScheduler.getSchedulerInstance("health poller").scheduleWithFixedDelay(this::pollHealth, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
+            }
         }
     }
 
@@ -116,9 +124,12 @@ public class HecIOManager implements Closeable {
 
     //called by the AckPollScheduler
     public void pollAcks() {
-        LOG.trace("POLLING ACKS on {}", sender.getChannel());
-        FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
-        sender.pollAcks(this, cb);
+//        ThreadScheduler.getExecutorInstance("ack_poll_executor_thread").execute(
+//                ()->{
+                     LOG.trace("POLLING ACKS on {}", sender.getChannel());
+                    FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
+                    sender.pollAcks(this, cb);
+             //   });
     }
 
     /**
@@ -126,30 +137,33 @@ public class HecIOManager implements Closeable {
      * successfully
      */
     public void pollHealth() {
-        LOG.trace("health checks on {}", sender.getChannel());
+        //ThreadScheduler.getExecutorInstance("health_poll_executor_thread").execute(
+            //    ()->{
+                    LOG.trace("health checks on {}", sender.getChannel());
 
-        GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
-                this,
-                LifecycleEvent.Type.HEALTH_POLL_OK,
-                LifecycleEvent.Type.HEALTH_POLL_FAILED,
-                "health_poll_health_endpoint_check");
+                    GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                            this,
+                            LifecycleEvent.Type.HEALTH_POLL_OK,
+                            LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                            "health_poll_health_endpoint_check");
 
-        GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
-                this,
-                LifecycleEvent.Type.HEALTH_POLL_OK,
-                LifecycleEvent.Type.HEALTH_POLL_FAILED,
-                "health_poll_ack_endpoint_check");
+                    GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
+                            this,
+                            LifecycleEvent.Type.HEALTH_POLL_OK,
+                            LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                            "health_poll_ack_endpoint_check");
 
-        GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(
-                this,
-                LifecycleEvent.Type.HEALTH_POLL_OK,
-                LifecycleEvent.Type.HEALTH_POLL_FAILED,
-                "health_poll_raw_endpoint_check");
+                    GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(
+                            this,
+                            LifecycleEvent.Type.HEALTH_POLL_OK,
+                            LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                            "health_poll_raw_endpoint_check");
 
-        ResponseCoordinator.create(cb1, cb2, cb3);
-        sender.checkHealthEndpoint(cb1);
-        sender.checkAckEndpoint(cb2);
-        sender.checkAckEndpoint(cb3);
+                    ResponseCoordinator.create(cb1, cb2, cb3);
+                    sender.checkHealthEndpoint(cb1);
+                    sender.checkAckEndpoint(cb2);
+                    sender.checkAckEndpoint(cb3);
+       // });
     }
 
     public void preflightCheck() throws InterruptedException {

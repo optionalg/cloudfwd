@@ -52,8 +52,9 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
  * @author ghendrey
  */
 public class EventBatchImpl implements EventBatch {
+  private static final Logger DEFAULT_LOGGER =  LoggerFactory.getLogger(EventBatchImpl.class.getName());
   // Default to SLF4J Logger, and set custom LoggerFactory when Channel (and therefore Connection instance) is available.
-  private Logger LOG = LoggerFactory.getLogger(EventBatchImpl.class.getName());
+  private Logger LOG =  DEFAULT_LOGGER; //unless we default this to the static instance we will pay big penalty for instantiating one for each EventBatchImpl
 
   protected Comparable id=-1; //will be set to the id of the last (most recent) Event added to the batch. Defaults to invalid -1.
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC

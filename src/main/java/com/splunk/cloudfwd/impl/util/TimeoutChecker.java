@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 public class TimeoutChecker implements EventTracker {
     private final Logger LOG;
    // private ThreadScheduler timeoutCheckScheduler = new ThreadScheduler("Event Timeout Scheduler");
-    private ScheduledThreadPoolExecutor timeoutCheckScheduler = ThreadScheduler.getInstance("Event Timeout Scheduler");
+    private ScheduledThreadPoolExecutor timeoutCheckScheduler = ThreadScheduler.getSchedulerInstance("Event Timeout Scheduler");
     private ScheduledFuture task;
     private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
     private ConnectionImpl connection;
@@ -125,6 +125,13 @@ public class TimeoutChecker implements EventTracker {
                 task.cancel(true);
             }
         }
+    }
+    
+    public void closeNow(){
+       eventBatches.clear();
+       if(null != task){
+            task.cancel(true);
+        }                
     }
 
     public void add(EventBatchImpl events) {

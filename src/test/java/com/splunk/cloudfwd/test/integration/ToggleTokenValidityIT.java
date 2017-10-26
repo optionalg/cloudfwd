@@ -4,11 +4,13 @@ import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
+import static com.splunk.cloudfwd.test.integration.AbstractReconciliationTest.LOG;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import java.io.IOException;
 
 import java.net.UnknownHostException;
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.junit.After;
 
 /**
  * Created by eprokop on 10/5/17.
@@ -27,6 +30,14 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     private String assertionFailure = null;
     private CountDownLatch tokenRestoredLatch = new CountDownLatch(1);
     private long sendExceptionTimeout = 30000; // 30 sec
+    
+    
+    @After
+    @Override
+    public void tearDown(){
+        super.tearDown();
+        connection.closeNow(); //channels from before
+    }
 
     // Scenario: 1) Connection is created with valid token and start sending events 2) Token is deleted on server 3) New token is created on server 4) Connection settings updated with new token
     // Behavior: Throw an exception on "send" when token is deleted and becomes invalid. After token is updated, all events should make it into Splunk.
@@ -34,15 +45,19 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     public void toggleTokenValidity() throws InterruptedException {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         executor.schedule(()->{
+            LOG.info("deleting token on server");
             deleteTokenOnServer();
+            LOG.info("waiting for health poll to become unhealthy due to deleted token");
             try {
                 Thread.sleep(connection.getSettings().getHealthPollMS()*5); // give health poll enough time to update health
-            } catch (InterruptedException e) {
+                checkHealth();
+                LOG.info("restoring token");
+                restoreToken();                
+            } catch (Exception e) {
                 this.assertionFailure = e.getMessage();
                 return;
             }
-            checkHealth();
-            restoreToken();
+
         }, 3000, TimeUnit.MILLISECONDS);
 
         HecNoValidChannelsException e = null;
@@ -50,17 +65,20 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
             long start = System.currentTimeMillis();
             int i = 0;
             while (System.currentTimeMillis()-start < sendExceptionTimeout) {
+                LOG.info("sending event...");
                 connection.sendBatch(
                     Events.createBatch().add(RawEvent.fromText("foo", i++)));
                 sleep(250); // don't overwhelm Splunk instance
             }
             Assert.fail("Test timed out waiting for sendBatch to throw an exception.");
         } catch (HecNoValidChannelsException ex) {
+            LOG.info("caught expected HecNoValidChannelsException");
             e = ex;
         }
         Assert.assertNotNull("Should receive exception on send.", e);
-
+        LOG.info("waiting for token to be restored on server");
         tokenRestoredLatch.await();
+        LOG.info("Token restored, sending more events...");
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
@@ -79,10 +97,11 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     @Override
     protected Properties getProps() {
         Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken("__singleline"));
+        p.setProperty(PropertyKeys.TOKEN, createTestToken("__singleline"));
         // we don't want to hit any ack timeouts because it's easier to make our callbacks not expect them
-        p.put(PropertyKeys.ACK_TIMEOUT_MS, Long.toString(sendExceptionTimeout)
+        p.setProperty(PropertyKeys.ACK_TIMEOUT_MS, Long.toString(sendExceptionTimeout)
             + PropertyKeys.DEFAULT_ACK_TIMEOUT_MS);
+        p.setProperty(PropertyKeys.EVENT_BATCH_SIZE, "0"); //batching MUST be disabled for this test. If not, they way that we send some events "outside" the test framework (not using sendEvents) causes acknowledged not to countdown the latch
         return p;
     }
 
@@ -111,6 +130,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
             connection.getSettings().setProperties(p);
             LOG.info("Connection object updated with new token.");
         } catch (UnknownHostException e) {
+            LOG.error("TEST FAILED DUE TO " + e);
             this.assertionFailure = e.getMessage(); // should never happen in this test
         }
         tokenRestoredLatch.countDown();
@@ -156,7 +176,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
             public void systemWarning(Exception ex) {
                 if (tokenRestoredLatch.getCount() == 0) {
                     if (ex instanceof HecServerErrorResponseException
-                        && ((HecServerErrorResponseException)ex).getContext().equals(HttpCallbacksAckPoll.Name)) {
+                        && ((HecServerErrorResponseException)ex).getContext().equals(HttpCallbacksAckPoll.NAME)) {
                         // even after token is restored on server, cloudfwd will continue to poll for acks on the old channels with the invalid tokens, so we will ignore those warnings
                         LOG.warn("SYSTEM WARNING {}", ex.getMessage());
                         return;

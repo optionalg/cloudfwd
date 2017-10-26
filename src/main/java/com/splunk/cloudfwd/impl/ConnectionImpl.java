@@ -151,7 +151,7 @@ public class ConnectionImpl implements Connection {
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.closeNow();
-      timeoutChecker.queisce();
+      timeoutChecker.closeNow();
       latch.countDown();
     }, "Connection Closer").start();
     try {

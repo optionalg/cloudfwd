@@ -59,7 +59,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   private final String token;
   private final String cert;
   private final String host;
-  private CloseableHttpAsyncClient httpClient;
+  private volatile CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
   private final String ackUrl;
@@ -204,14 +204,18 @@ public final class HttpSender implements Endpoints, CookieClient {
     }
     
     if (httpClient != null) {
-      // http client is already started
-      return true;
+        synchronized(this){
+            if (httpClient != null) { //double check required once we enter synchronized block
+                // http client is already started
+                return true;
+            }
+        }
     }
     return false;
   }
 
   @Override
-  public void start() {
+  public synchronized void start() {
     // attempt to create and start an http client
     try {
         this.httpClient = HttpClientWrapper.getClient(this, disableCertificateValidation,cert, host);

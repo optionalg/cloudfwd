@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.sim;
 
-import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -32,30 +31,29 @@ import org.slf4j.LoggerFactory;
 public class ClosableDelayableResponder {
      private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.getName());
 
-    //final ScheduledExecutorService executor;
+    final ScheduledExecutorService executor;
     Random rand = new Random(System.currentTimeMillis());
 
     public ClosableDelayableResponder() {
-//        ThreadFactory f = new ThreadFactory() {
-//            @Override
-//            public Thread newThread(Runnable r) {
-//                return new Thread(r, "EventEndpoint");
-//            }
-//        };
-//        executor = Executors.newScheduledThreadPool(1, f);
+        ThreadFactory f = new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "EventEndpoint");
+            }
+        };
+        executor = Executors.newScheduledThreadPool(4, f);
     }
 
     protected void delayResponse(Runnable r) {
         //return a single response with a delay uniformly distributed between  [0,5] ms
         try{
-            ThreadScheduler.getInstance("EventEndpoint").schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+            executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
         }catch(RejectedExecutionException e){
             LOG.trace("rejected delayResponse by {}", Thread.currentThread().getName());
         }
     }
     
   public void close() {
-      /*
     LOG.debug("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
     executor.shutdownNow();
       try {
@@ -63,8 +61,7 @@ public class ClosableDelayableResponder {
               LOG.error("Failed to terminate executor in alloted time.");
           } } catch (InterruptedException ex) {
           LOG.error("Interrupted awaiting termination ClosableDelayedResponder executor.");
-      } 
-*/
+      }    
   }
 
 }
