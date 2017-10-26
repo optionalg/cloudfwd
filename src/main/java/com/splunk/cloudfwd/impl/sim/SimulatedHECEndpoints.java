@@ -18,7 +18,7 @@ package com.splunk.cloudfwd.impl.sim;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.Endpoints;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
-import com.splunk.cloudfwd.impl.sim.errorgen.PreFlightAckEndpoint;
+import com.splunk.cloudfwd.impl.sim.PreFlightAckEndpoint;
 import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;

@@ -151,8 +151,12 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             LOG.error(ex.getMessage(), ex);
             throw new RuntimeException(str, ex);
         }
-        AckEndpointResponseEntity e = new AckEndpointResponseEntity(str);
-        return new AckEndpointResponse(e);
+        return getHttpResponse(str);
+    }
+    
+    protected HttpResponse getHttpResponse(String entity) {
+      AckEndpointResponseEntity e = new AckEndpointResponseEntity(entity);
+      return new AckEndpointResponse(e);
     }
     
     @Override

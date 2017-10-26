@@ -1,4 +1,4 @@
-package com.splunk.cloudfwd.impl.sim.errorgen;
+package com.splunk.cloudfwd.impl.sim;
 
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
 import com.splunk.cloudfwd.impl.sim.CannedOKHttpResponse;

@@ -3,7 +3,7 @@ package com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
-import com.splunk.cloudfwd.impl.sim.errorgen.PreFlightAckEndpoint;
+import com.splunk.cloudfwd.impl.sim.PreFlightAckEndpoint;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 

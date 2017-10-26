@@ -8,7 +8,7 @@ import com.splunk.cloudfwd.impl.sim.CannedEntity;
 import com.splunk.cloudfwd.impl.sim.Forbidden403StatusLine;
 import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
-import com.splunk.cloudfwd.impl.sim.errorgen.PreFlightAckEndpoint;
+import com.splunk.cloudfwd.impl.sim.PreFlightAckEndpoint;
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
