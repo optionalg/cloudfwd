@@ -97,4 +97,4 @@ RUN cd ${CLOUDFWD} && ( mvn -B -Dmaven.test.skip=true install > install.log 2>&1
 #RUN mkdir -p ${CLOUDFWD}
 #COPY . ${CLOUDFWD}/
 
-RUN ( /opt/splunk/bin/splunk start > splunk_start.log 2>&1 && echo 'last 100 records from splunk_start.log' && tail -100 splunk_start.log || (FAILURE=$? && tail -10000 splunk_start.log && exit $FAILURE)) && cd /build/cloudfwd && ( mvn -B clean verify -DskipITs=false || (FAILURE=$? && echo "Failed with exit code: $?" && tail -10000 verify.log ; exit $FAILURE))
+RUN ( /opt/splunk/bin/splunk start > splunk_start.log 2>&1 && echo 'last 100 records from splunk_start.log' && tail -100 splunk_start.log || (FAILURE=$? && tail -10000 splunk_start.log && exit $FAILURE)) && cd /build/cloudfwd && (  mvn test -Dtest=MultiThreadedVolumeTest -DargLine="-Durl=https://http-inputs-kinesis4.splunkcloud.com:443 -Dtoken=3664A2C4-50B4-485E-86E0-C65D5A4B9232 -Dmin_tp=80 -Dmax_threads=8 -Dduration_mins=15 -Dmem_mb=100" > verify.log 2>&1 || (FAILURE=$? && echo "Failed with exit code: $?" && tail -10000 verify.log ; exit $FAILURE))
