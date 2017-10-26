@@ -23,7 +23,10 @@ import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
 import java.net.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -110,7 +113,6 @@ public class LoadBalancer implements Closeable {
         }
         this.closed = true;
     }
-    
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
         //add multiple channels for each InetSocketAddress
