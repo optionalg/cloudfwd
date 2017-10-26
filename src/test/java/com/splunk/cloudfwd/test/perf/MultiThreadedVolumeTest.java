@@ -156,13 +156,15 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
         // asserts
         if (shouldAssert) {
-            Assert.assertTrue("Throughput must be above minimum value of " + cliProperties.get(MIN_THROUGHPUT_MBPS_KEY),
+            if (mbps != Float.NaN) {
+                Assert.assertTrue("Throughput must be above minimum value of " + cliProperties.get(MIN_THROUGHPUT_MBPS_KEY),
                     mbps > Float.parseFloat(cliProperties.get(MIN_THROUGHPUT_MBPS_KEY)));
+            }
             Assert.assertTrue("Percentage failed must be below 5%", percentFailed < 5F);
             Assert.assertTrue("Thread count must be below maximum value of " + cliProperties.get(MAX_THREADS_KEY),
-                    threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
+                threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
             Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
-                    memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
+                memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
         }
     }
 
