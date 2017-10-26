@@ -24,6 +24,7 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -101,21 +102,16 @@ public class LoadBalancer implements Closeable {
 
     public void closeNow() {
         //this.discoveryScheduler.stop();
+        Collection<EventBatchImpl> unacked = getConnection().getTimeoutChecker().getUnackedEvents();
+        unacked.forEach((e)->getConnection().getCallbacks().failed(e, new HecConnectionStateException(
+            "Connection closed with unacknowleged events remaining.", HecConnectionStateException.Type.CONNECTION_CLOSED)));
         for (HecChannel c : this.channels.values()) {
-            failEventsAndCloseChannel(c);
+            c.forceClose();
         }
         for (HecChannel c : this.staleChannels.values()) {
-            failEventsAndCloseChannel(c);
+            c.forceClose();
         }
         this.closed = true;
-    }
-    
-    // Calls failed callback on all unacked events in the channel and force closes it 
-    private void failEventsAndCloseChannel(HecChannel c) {
-        List<EventBatchImpl> unacked = getConnection().getTimeoutChecker().getUnackedEvents(c);
-        unacked.forEach((e)->getConnection().getCallbacks().failed(e, new HecConnectionStateException(
-                "Connection closed with unacknowleged events remaining.", HecConnectionStateException.Type.CONNECTION_CLOSED)));
-        c.forceClose();
     }
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
