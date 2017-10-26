@@ -79,6 +79,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
 
     @Override
     protected void setProps(PropertiesFileHelper settings) {
+        super.setProps(settings);
         settings.setToken(createTestToken("__singleline"));
         // we don't want to hit any ack timeouts because it's easier to make our callbacks not expect them
         settings.setAckTimeoutMS(sendExceptionTimeout

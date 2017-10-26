@@ -23,6 +23,7 @@ public class CreateConnectionNoRouteToHost extends AbstractReconciliationTest {
 
     @Override
     protected void setProps(PropertiesFileHelper settings) {
+        super.setProps(settings);
         settings.setMockHttp(true);
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.NoRouteToHostEndpoints");
     }
