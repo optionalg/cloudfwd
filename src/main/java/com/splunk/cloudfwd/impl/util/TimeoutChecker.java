@@ -167,7 +167,7 @@ public class TimeoutChecker implements EventTracker {
     }
 
     boolean isFull() {
-        return  getSizeInBytes() >= 1024*1024*16;//1MB max 'in flight'
+        return  getSizeInBytes() >= 1024*1024*256;//256 MB max 'in flight' FIXME TODO this needs to be a config param
     }
 
 }
