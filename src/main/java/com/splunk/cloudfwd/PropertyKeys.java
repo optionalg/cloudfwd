@@ -239,8 +239,15 @@ public class PropertyKeys {
    * The maximum number of attempts to try preflight checks
    * @see DEFAULT_RETRIES
    */
-  public static final String PREFLIGHT_RETRIES = "max_preflight_tries";  
-
+  public static final String PREFLIGHT_RETRIES = "max_preflight_tries";
+  
+  /**
+   * Channel Quiesce Timeout in MS define how much time to wait for a channel to 
+   * drain all events. Channel will be killed if not quiesced in the time.
+   * @see DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS
+   */
+  public static final String CHANNEL_QUIESCE_TIMEOUT_MS = "channel_quiesce_timeout_ms";
+  
 
   /* **************************** REQUIRED KEYS ************************* */
 
@@ -349,6 +356,14 @@ public class PropertyKeys {
    * monotonically increasing IDs.
    */
   public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
+  
+  /**
+   * Channel Quiesce Timeout define how much time to wait for a channel to 
+   * drain all events. Channel will be killed if not quiesced in the time.
+   * @see CHANNEL_QUIESCE_TIMEOUT_MS
+   */
+  public static final String DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS = "180000";
+
 
 
   /* **************************** LIMITS ************************* */
@@ -396,5 +411,13 @@ public class PropertyKeys {
    * @see MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL
    */
   public static final int MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL = 1;
-
+  
+  /**
+   * Minimum allowed value for CHANNEL_QUIESCE_TIMEOUT_MS property. Should be 
+   * bigger than MIN_ACK_TIMEOUT_MS to let ack to be timed out.
+   *
+   * @see ACK_TIMEOUT_MS
+   */
+  public static final long MIN_CHANNEL_QUIESCE_TIMEOUT_MS = MIN_ACK_TIMEOUT_MS + 30000; 
+  
 }
