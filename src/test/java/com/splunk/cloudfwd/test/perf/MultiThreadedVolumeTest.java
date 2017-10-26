@@ -30,23 +30,23 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     
     // defaults for CLI parameters
     static {
-        cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "80");
+        cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "75");
         cliProperties.put(MAX_THREADS_KEY, "300");
-        cliProperties.put(DURATION_MINUTES_KEY, "30");
-        cliProperties.put(MAX_MEMORY_MB_KEY, "1000"); //1GB
-        cliProperties.put(PropertyKeys.TOKEN, null);
-        cliProperties.put(PropertyKeys.COLLECTOR_URI, null);
+        cliProperties.put(DURATION_MINUTES_KEY, "15");
+        cliProperties.put(MAX_MEMORY_MB_KEY, "500"); //500MB
+        cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
+        cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
     }
     
     private int numSenderThreads = 64;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
-    private ExecutorService executor;
+    private ExecutorService senderExecutor;
     private ByteBuffer buffer;
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
     private long testStartTime = System.currentTimeMillis();
-    private long warmUpTimeMillis = 60000*2; // 2 mins
+    private long warmUpTimeMillis = 60000*4; // 4 mins
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
@@ -54,39 +54,32 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     @Test
     public void sendTextToRaw() throws InterruptedException {   
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
-        executor = Executors.newFixedThreadPool(numSenderThreads,
+        senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
                 (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
-        List<Callable<Object>> callables = new ArrayList<>();
-        for (int i = 0; i < numSenderThreads; i++) {
-            callables.add(Executors.callable(new SenderWorker()::sendAndWaitForAcks));
-        }
+        List<Future> futureList = new ArrayList<>();
 
-        // schedule a thread to interrupt and end the test 
-        scheduleInterruptor(Thread.currentThread());
+        for (int i = 0; i < numSenderThreads; i++) {
+            futureList.add(senderExecutor.submit(new SenderWorker()::sendAndWaitForAcks));
+        }
         
         try {
-            executor.invokeAll(callables); // blocks
+            Thread.sleep(Long.parseLong(cliProperties.get(DURATION_MINUTES_KEY))*60*1000); // blocks
         } catch (InterruptedException ex) {
-            checkAndLogPerformance();
-        } finally {
-            executor.shutdownNow();
-            LOG.info("Closing connection");
-            connection.closeNow();
+            Assert.fail("Main thread was interrupted and test did not run for intended duration.");
         }
-    }
-    
-    private void scheduleInterruptor(Thread mainThread) {
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-//        if (Long.parseLong(cliProperties.get(DURATION_MINUTES_KEY)) < warmUpTimeMillis / (1000*60) ) {
-//            Assert.fail("Test must run for at least 10 minutes");
-//        }
-        executor.schedule(()-> {
-            LOG.info("Stopping sender threads");
-            mainThread.interrupt();
-        }, Long.parseLong(cliProperties.get(DURATION_MINUTES_KEY)), TimeUnit.MINUTES);
+        
+        checkAndLogPerformance(true);
+        LOG.info("Performance passed all checks.");
+        LOG.info("Stopping sender threads");
+        futureList.forEach((f)->{
+            f.cancel(true);
+        });
+        senderExecutor.shutdownNow();
+        LOG.info("Closing connection");
+        connection.close();
     }
     
     @Override
@@ -99,7 +92,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 }
             }
         }
-        LOG.info("CLI Test Arguments: " + cliProperties);
+        LOG.info("Test arguments: " + cliProperties 
+            + " (token and url will be pulled from cloudfwd.properties if null)");
     }
 
     private void readEventsFile() {
@@ -142,7 +136,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         return p;
     }
 
-    private void checkAndLogPerformance() {
+    private void checkAndLogPerformance(boolean shouldAssert) {
         // throughput
         float mbps = showThroughput(System.currentTimeMillis(), start);
 
@@ -159,15 +153,17 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         // memory usage
         long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
         LOG.info("Memory usage: " + memoryUsed + " MB");
-        
+
         // asserts
-        Assert.assertTrue("Throughput must be above minimum value of " + cliProperties.get(MIN_THROUGHPUT_MBPS_KEY), 
-            mbps > Float.parseFloat(cliProperties.get(MIN_THROUGHPUT_MBPS_KEY)));
-        Assert.assertTrue("Percentage failed must be below 5%", percentFailed < 5F);
-        Assert.assertTrue("Thread count must be below maximum value of " + cliProperties.get(MAX_THREADS_KEY), 
-            threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
-        Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
-            memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
+        if (shouldAssert) {
+            Assert.assertTrue("Throughput must be above minimum value of " + cliProperties.get(MIN_THROUGHPUT_MBPS_KEY),
+                    mbps > Float.parseFloat(cliProperties.get(MIN_THROUGHPUT_MBPS_KEY)));
+            Assert.assertTrue("Percentage failed must be below 5%", percentFailed < 5F);
+            Assert.assertTrue("Thread count must be below maximum value of " + cliProperties.get(MAX_THREADS_KEY),
+                    threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
+            Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
+                    memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
+        }
     }
 
     public class SenderWorker {
@@ -210,11 +206,10 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             }
 
             ((ThroughputCalculatorCallback) callbacks).deferCountUntilAck(batch.getId(), sent);
-            //if (!warmingUp && !windingDown) {
+
             if (seqno % 25 == 0) {
-                checkAndLogPerformance();
+                checkAndLogPerformance(!warmingUp); // assert only if we are not warming up
             }
-            //}
         }
 
         private EventBatch nextBatch(int seqno) {
