@@ -2,13 +2,10 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.*;
 
-import java.net.UnknownHostException;
-import java.util.Properties;
-
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -74,7 +71,7 @@ public class SuperSimpleExample {
     }; //end callbacks
 
     //overide defaults in cloudfwd.properties
-    ConnectionSettings customization = ConnectionSettings.fromPropsFile("cloudfwd.properties");
+    PropertiesFileHelper customization = PropertiesFileHelper.fromPropsFile("/cloudfwd.properties");
     customization.setUrls("https://127.0.0.1:8088");
     customization.setToken("ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
     customization.setUnresponsiveMS(100000);//100 sec - Kill unresponsive channel

@@ -163,9 +163,9 @@ public class ConnectionSettings {
         
         // Perform any actions that had required a Connection object in the property setter, 
         // where one may not have been available
-        if (Long.valueOf(getAckTimeoutMS()) != null) {
-            connection.getTimeoutChecker().setTimeout();
-        }
+//        if (Long.valueOf(getAckTimeoutMS()) != null) {
+//            connection.getTimeoutChecker().setTimeout(); //this is causing deadlock
+//        }
     }
 
     /* ***************************** UTIL ******************************* */

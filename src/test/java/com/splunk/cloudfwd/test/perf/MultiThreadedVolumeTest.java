@@ -83,7 +83,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
     @Override
     protected String getTestPropertiesFileName() {
-        return "cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
+        return "/cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
     }
 
     @After
