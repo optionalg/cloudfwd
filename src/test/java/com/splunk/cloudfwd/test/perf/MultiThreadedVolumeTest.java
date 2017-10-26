@@ -46,7 +46,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
     private long testStartTime = System.currentTimeMillis();
-    private long warmUpTimeMillis = 60000*4; // 4 mins
+    private long warmUpTimeMillis = 2*60*1000; // 2 mins
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
@@ -197,13 +197,16 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
         private void logMetrics(EventBatch batch, long sent) {
             Integer seqno = (Integer)batch.getId();
+            long elapsed = System.currentTimeMillis() - testStartTime;
             boolean warmingUp = System.currentTimeMillis() - testStartTime < warmUpTimeMillis;
             if (warmingUp) {
                 LOG.info("WARMING UP");
             }
+            LOG.info("Elapsed time (mins): " + elapsed/(60 * 1000));
             
             // not synchronized but OK since approximate start and finish time is fine
             if (start == 0L && !warmingUp) { //true first time we exit the warmup period and enter valid sampling period
+                LOG.info("Setting start time!");
                 start = System.currentTimeMillis(); //start timing after warmup
             }
 
