@@ -48,8 +48,9 @@ public class WatchdogChannelKillerTest extends AbstractConnectionTest {
                 "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
         props.setProperty(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
         props.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel  
-        props.setProperty(PropertyKeys.CHANNEL_DECOM_MS, "5000"); //decomission the channel after 5 seconds  
-        props.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "1000"); //1 second for ack timeoout
+        props.setProperty(PropertyKeys.CHANNEL_DECOM_MS, "500"); //decommission the channel after 500ms  
+        props.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "250"); //time out ack in 250ms
+        props.setProperty(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS, "750"); //watchdog to kill the channel in 750ms 
         props.setProperty(PropertyKeys.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "1");       
         return props;
     }
@@ -79,12 +80,12 @@ public class WatchdogChannelKillerTest extends AbstractConnectionTest {
     @Test
     public void sendMessageToJammedChannelThatCannotCloseCleanly()
             throws InterruptedException {
-        SlowEndpoints.sleep = 500000; //endpoint won't respond for 500 seconds
+        SlowEndpoints.sleep = 1000; //endpoint won't respond for 10 seconds
         LOG.info(connection.getHealth().toString());
         super.sendEvents();
         LOG.info(connection.getHealth().toString());
         LOG.info("Sorry: this test needs to wait 3 minutes... :-(");
-        Thread.sleep(180000); //wait 3 minutes
+        Thread.sleep(1500);
         List<HecHealth> healths = connection.getHealth();    
         LOG.info(healths.toString());
         Assert.assertEquals("Expected no channels, but found " + healths, 0,

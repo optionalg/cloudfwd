@@ -185,6 +185,18 @@ public class ConnectionSettings {
         }
         return decomMs;
     }
+    
+    public long getChannelQuiesceTimeoutMS() {
+        long timeout = Long.parseLong(defaultProps.getProperty(
+                PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS,
+                PropertyKeys.DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS).trim());
+        if (timeout < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
+            LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS + 
+                    " was set to a potentially too-low value, reset to min value: " + timeout);
+            timeout = PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
+        }
+        return timeout;
+    }
 
     public long getAckTimeoutMS() {
         long timeout = Long.parseLong(defaultProps.getProperty(
@@ -194,7 +206,7 @@ public class ConnectionSettings {
             timeout = Long.MAX_VALUE;
         } else if (timeout < PropertyKeys.MIN_ACK_TIMEOUT_MS) {
             LOG.warn(
-                    PropertyKeys.ACK_TIMEOUT_MS + " was set to a potentially too-low value: " + timeout);
+                    PropertyKeys.ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeout);
         }
         return timeout;
     }
