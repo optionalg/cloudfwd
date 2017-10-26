@@ -37,7 +37,7 @@ public class ThreadScheduler {
   private static final ConcurrentMap<String, ScheduledThreadPoolExecutor> schedulers = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, ExecutorService> executors = new ConcurrentHashMap<>(); 
   private static final int MAX_THREADS_IN_SCHEDULER_POOL = 1;
-  private static int MAX_THREADS_IN_EXECUTOR_POOL = 8;  
+  private static int MAX_THREADS_IN_EXECUTOR_POOL = 4;  
   //private static  ScheduledThreadPoolExecutor scheduler;
   //private boolean started;
 
@@ -82,9 +82,11 @@ public class ThreadScheduler {
     private static ExecutorService getFromExecutorCache(String name) {
         return executors.computeIfAbsent(name, k->{
             ThreadFactory f = (Runnable r) -> new Thread(r, name);
-             return new ThreadPoolExecutor(0, MAX_THREADS_IN_EXECUTOR_POOL,
+            ThreadPoolExecutor tpe = new ThreadPoolExecutor(2, MAX_THREADS_IN_EXECUTOR_POOL,
                                    30L, TimeUnit.SECONDS,
                                    new LinkedBlockingQueue<Runnable>(), f);
+            tpe.prestartAllCoreThreads();
+            return tpe;
       });
     }
     
@@ -96,6 +98,7 @@ public class ThreadScheduler {
              scheduler.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
              scheduler.setRemoveOnCancelPolicy(true); 
              scheduler.setKeepAliveTime(1, TimeUnit.MINUTES); //probably this is not applicable to ScheduledThreadPoolExecutor since it always keeps exactly corePoolSize 
+             scheduler.prestartAllCoreThreads();
              return scheduler;
       });
     }    

@@ -41,7 +41,7 @@ public class ClosableDelayableResponder {
                 return new Thread(r, "EventEndpoint");
             }
         };
-        executor = Executors.newScheduledThreadPool(4, f);
+        executor = Executors.newScheduledThreadPool(1, f);
     }
 
     protected void delayResponse(Runnable r) {

@@ -24,6 +24,7 @@ import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
 import java.util.Properties;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,6 +48,13 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     public void setUp() {
         super.setUp();
     }
+    
+  @After
+  @Override
+  public void tearDown() {
+        super.tearDown();
+        connection.closeNow();
+  }    
 
     @Test
     public void testTimeout() throws InterruptedException, HecConnectionTimeoutException {
@@ -83,7 +91,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
         super.sendEvents();
         Assert.assertTrue("didn't get expected timeout",
-                ((TimeoutCatcher) super.callbacks).gotTimeout);
+                ((TimeoutCatcher) super.callbacks).gotTimeout);       
     }
 
     @Override

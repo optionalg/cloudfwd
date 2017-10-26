@@ -213,6 +213,7 @@ public class LoadBalancer implements Closeable {
             if (closed && !resend) {
                 return true;
             }
+            waitWhileFull(startTime, events, closed);
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
             //consisting of closed channels. Also, it must be a snapshot, not use the live
@@ -313,6 +314,26 @@ public class LoadBalancer implements Closeable {
             }
         }
     }
+    
+    private void waitWhileFull(long start, EventBatchImpl events,
+            boolean forced){
+        while(connection.getTimeoutChecker().isFull()){
+            try {
+                LOG.warn("ConnectionBuffers full ({} bytes). Load Balancer will block...", connection.getTimeoutChecker().getSizeInBytes());                
+                latch = new CountDownLatch(1);
+                if (!latch.await(100, TimeUnit.MILLISECONDS)) {
+                    LOG.warn(
+                            "Round-robin load balancer waited 100 ms because connection was full" );
+                }
+                latch = null;
+            } catch (InterruptedException e) {
+                LOG.error(
+                        "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
+                        getMessage());
+            }
+            throwExceptionIfTimeout(start, events, forced);
+        }//while        
+    }
 
     private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
             EventBatchImpl events) throws HecNoValidChannelsException {
@@ -352,7 +373,7 @@ public class LoadBalancer implements Closeable {
         // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
         List<InetSocketAddress> addrs = discoverer.getAddrs();
         for (HecChannel c : this.channels.values()) {
-            c.close();
+            c.closeAndFinish();
         }
         staleChannels.putAll(channels);
         channels.clear();

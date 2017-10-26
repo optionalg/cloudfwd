@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 
@@ -42,6 +43,7 @@ public class TimeoutChecker implements EventTracker {
     private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
     private ConnectionImpl connection;
     private boolean quiesced;
+    private AtomicLong sizeInBytes = new AtomicLong(0); //total amount of event bytes that are buffered in the 'eventBatches' map
 
     public TimeoutChecker(ConnectionImpl c) {
         this.LOG = c.getLogger(TimeoutChecker.class.getName());
@@ -137,12 +139,13 @@ public class TimeoutChecker implements EventTracker {
     public void add(EventBatchImpl events) {
         this.eventBatches.put(events.getId(), events);
         events.registerEventTracker(this);
+        this.sizeInBytes.addAndGet(events.getLength());
     }
-
+    
     @Override
     public void cancel(EventBatchImpl events) {
         this.eventBatches.remove(events.getId());
-
+        this.sizeInBytes.addAndGet(-1*events.getLength());
     }
 
     public List<EventBatchImpl> getUnackedEvents(HecChannel c) {
@@ -154,6 +157,17 @@ public class TimeoutChecker implements EventTracker {
 
     public Collection<EventBatchImpl> getUnackedEvents() {
         return eventBatches.values();
+    }
+
+    /**
+     * @return the sizeInBytes
+     */
+    public long getSizeInBytes() {
+        return sizeInBytes.get();
+    }
+
+    boolean isFull() {
+        return  getSizeInBytes() >= 1024*1024*16;//1MB max 'in flight'
     }
 
 }

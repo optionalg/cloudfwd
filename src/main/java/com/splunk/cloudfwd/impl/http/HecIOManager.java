@@ -166,71 +166,67 @@ public class HecIOManager implements Closeable {
        // });
     }
 
-    public void preflightCheck() throws InterruptedException {
-        LOG.trace("preflight checks on {}", sender.getChannel());
-        GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
-                this,
-                LifecycleEvent.Type.PREFLIGHT_OK,
-                LifecycleEvent.Type.PREFLIGHT_FAILED,
-                LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                LifecycleEvent.Type.PREFLIGHT_BUSY,
-                "preflight_ack_endpoint_check");
-        GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
-                this,
-                LifecycleEvent.Type.PREFLIGHT_OK,
-                LifecycleEvent.Type.PREFLIGHT_FAILED,
-                LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                LifecycleEvent.Type.PREFLIGHT_BUSY,
-                "preflight_health_endpoint_check");
-        GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
-                this,
-                LifecycleEvent.Type.PREFLIGHT_OK,
-                LifecycleEvent.Type.PREFLIGHT_FAILED,
-                LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                LifecycleEvent.Type.PREFLIGHT_BUSY,
-                "preflight_raw_endpoint_check");
-        ResponseCoordinator coordinator = ResponseCoordinator.create(cb1, cb2,
-                cb3);
-        sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
-        try {
-            LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
-            if (null != firstResp) {
-                if (firstResp.isOK()) {
-                    sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
-                    LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
-                    if (null != secondResp) {
-                        if (secondResp.isOK()) {
-                            sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
+    public void preflightCheck() {
+//        ThreadScheduler.getExecutorInstance("preflight_executor_thread").execute(
+//                ()->{        
+                    LOG.trace("preflight checks on {}", sender.getChannel());
+                    GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                            this,
+                            LifecycleEvent.Type.PREFLIGHT_OK,
+                            LifecycleEvent.Type.PREFLIGHT_FAILED,
+                            LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                            LifecycleEvent.Type.PREFLIGHT_BUSY,
+                            "preflight_ack_endpoint_check");
+                    GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
+                            this,
+                            LifecycleEvent.Type.PREFLIGHT_OK,
+                            LifecycleEvent.Type.PREFLIGHT_FAILED,
+                            LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                            LifecycleEvent.Type.PREFLIGHT_BUSY,
+                            "preflight_health_endpoint_check");
+                    GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
+                            this,
+                            LifecycleEvent.Type.PREFLIGHT_OK,
+                            LifecycleEvent.Type.PREFLIGHT_FAILED,
+                            LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                            LifecycleEvent.Type.PREFLIGHT_BUSY,
+                            "preflight_raw_endpoint_check");
+                    ResponseCoordinator coordinator = ResponseCoordinator.create(cb1, cb2,
+                            cb3);
+                    sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
+                    try {
+                        LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
+                        if (null != firstResp) {
+                            if (firstResp.isOK()) {
+                                sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
+                                LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
+                                if (null != secondResp) {
+                                    if (secondResp.isOK()) {
+                                        sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
+                                    }
+                                } else {
+                                    LOG.warn(
+                                            "Preflight timed out (5 minutes)  waiting for /raw empty-event check on {}",
+                                            sender.getChannel());
+                                }
+                            } else {
+                                LOG.warn(
+                                        "Preflight timed out (5 minutes)  waiting for /health check on {}",
+                                        sender.getChannel());
+                            }
+                        } else {
+                            LOG.warn(
+                                    "Preflight timed out (5 minutes)  waiting for /ack endpoint check on {}",
+                                    sender.getChannel());
                         }
-                    } else {
-                        LOG.warn(
-                                "Preflight timed out (5 minutes)  waiting for /raw empty-event check on {}",
-                                sender.getChannel());
-                    }
-                } else {
-                    LOG.warn(
-                            "Preflight timed out (5 minutes)  waiting for /health check on {}",
-                            sender.getChannel());
-                }
-            } else {
-                LOG.warn(
-                        "Preflight timed out (5 minutes)  waiting for /ack endpoint check on {}",
-                        sender.getChannel());
-            }
 
-//            
-//            if (null != () && firstResp.isOK()) { 
-//                sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
-//                if (null != (secondResp = coordinator.awaitNthResponse(1)) && secondResp.isOK()) {//WAIT SECOND RESPONSE
-//                    sender.postEmptyEvent(cb3); //SEND THIRD REQUEST
-//                }
-//            } 
-        } catch (InterruptedException ex) {
-            LOG.warn(
-                    "Preflight interrupted on channel {} waiting for response from ack endpoint.",
-                    sender.getChannel());
-            throw ex;
-        }
+                    } catch (InterruptedException ex) {
+                        LOG.warn(
+                                "Preflight interrupted on channel {} waiting for response from ack endpoint.",
+                                sender.getChannel());
+                        //throw ex;
+                    }
+//        });
 
     }
 
@@ -255,10 +251,10 @@ public class HecIOManager implements Closeable {
     @Override
     public void close() {
         if(null != ackPollTask && !ackPollTask.isCancelled()){
-            this.ackPollTask.cancel(false);
+            this.ackPollTask.cancel(true);
         }
         if(null != healthPollTask && !healthPollTask.isCancelled()){
-            this.healthPollTask.cancel(false);
+            this.healthPollTask.cancel(true);
         }
     }
 

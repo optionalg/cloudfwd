@@ -82,10 +82,10 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
                 @Override
                 public void run() {
                     try {
-                        synchronized (AckEndpoint.this) {
+                        synchronized (AckEndpoint.this) {         
                             if(acksStates.isEmpty()){
-                                return;
-                            }
+                               return;
+                            }                                              
                             Long lowestKey = acksStates.firstKey();
                             if (null == lowestKey) {
                                 return;
