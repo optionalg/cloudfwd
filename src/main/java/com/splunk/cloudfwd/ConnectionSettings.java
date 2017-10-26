@@ -163,8 +163,8 @@ public class ConnectionSettings {
         
         // Perform any actions that had required a Connection object in the property setter, 
         // where one may not have been available
-        if (Long.valueOf(this.getAckTimeoutMS()) != null) {
-            connection.getTimeoutChecker().setTimeout(this.getAckTimeoutMS());
+        if (Long.valueOf(getAckTimeoutMS()) != null) {
+            connection.getTimeoutChecker().setTimeout(getAckTimeoutMS());
         }
     }
 
@@ -386,7 +386,6 @@ public class ConnectionSettings {
      *
      * @param props
      */
-    // TODO: Requires connection instance
     public void setProperties(Properties props) throws UnknownHostException {
         boolean refreshChannels = false;
         boolean dnsLookup = false;
@@ -646,10 +645,11 @@ public class ConnectionSettings {
      * @param token
      */
     public void setToken(String token) {
-        this.splunkHecToken = token;
-        
         if (!this.splunkHecToken.equals(token)) {
+            this.splunkHecToken = token;
             checkAndRefreshChannels();
+        } else {
+            this.splunkHecToken = token;
         }
     }
 
@@ -663,10 +663,11 @@ public class ConnectionSettings {
    * @param urls comma-separated list of urls
    */
   public void setUrls(String urls) {
-      this.splunkHecUrl = urls;
-
       if (connection != null && !urlsStringToList(urls).equals(getUrls())) {
+          this.splunkHecUrl = urls;
           checkAndRefreshChannels();
+      } else {
+          this.splunkHecUrl = urls;
       }
   }
 
@@ -679,10 +680,11 @@ public class ConnectionSettings {
      * @param host Host value for the data feed
      */
   public void setHost(String host) {
-      this.splunkHecHost = host;
-
       if (!getHost().equals(host)) {
+          this.splunkHecHost = host;
           checkAndRefreshChannels();
+      } else {
+          this.splunkHecHost = host;
       }
   }
 
@@ -691,10 +693,11 @@ public class ConnectionSettings {
      * @param index The Splunk index in which the data feed is stored
      */
   public void setIndex(String index) {
-      this.splunkHecIndex = index;
-      
       if (!getIndex().equals(index)) {
+          this.splunkHecIndex = index;
           checkAndRefreshChannels();
+      } else {
+          this.splunkHecIndex = index;
       }
   }
 
@@ -703,10 +706,11 @@ public class ConnectionSettings {
      * @param source The source of the data feed
      */
   public void setSource(String source) {
-      this.splunkHecSource = source;
-      
       if (!getSource().equals(source)) {
+          this.splunkHecSource = source;
           checkAndRefreshChannels();
+      } else {
+          this.splunkHecSource = source;
       }
   }
 
@@ -715,10 +719,11 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
   public void setSourcetype(String sourcetype) {
-      this.splunkHecSourcetype = sourcetype;
-      
       if (!getSourcetype().equals(sourcetype)) {
+          this.splunkHecSourcetype = sourcetype;
           checkAndRefreshChannels(); 
+      } else {
+          this.splunkHecSourcetype = sourcetype;
       }
   }
   
