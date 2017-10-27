@@ -174,9 +174,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
 
   public boolean send(EventBatchImpl events) {
-    if (!isAvailable()) {
-      return false;
-    }
+//    if (!isAvailable()) {
+//      return false;
+//    }
     
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
