@@ -31,7 +31,7 @@ public class TriggerableUnhealthyEndpoints extends SimulatedHECEndpoints {
   private static final Logger LOG = LoggerFactory.getLogger(TriggerableUnhealthyEndpoints.class.getName());
 
   public static boolean healthy = true;
-
+  
   @Override
   protected HealthEndpoint createHealthEndpoint() {
     return new TriggerableHealthEndpoint();

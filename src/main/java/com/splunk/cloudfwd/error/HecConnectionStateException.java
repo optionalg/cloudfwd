@@ -46,7 +46,7 @@ public class HecConnectionStateException extends IllegalStateException {
         /**
          * This type is only thrown if PropertyKeys.ENABLE_CHECKPOINT=true. EventBatch is already acknowledged and the EventBatchID is smaller than CheckpointID.
          */
-        ALREADY_ACKNOWLEDGED,
+        ALREADY_HANDLED,
         /**
          * This type is thrown when EventBatch contains events whose type is incompatible with the HEC endpoint.
          */
@@ -81,9 +81,9 @@ public class HecConnectionStateException extends IllegalStateException {
          */
         NO_CALLBACKS_PROVIDED,
         /**
-         * Connection was closed and events in the resend queue could not be resent
+         * Connection was closed and with unacknowledged events still in flight.
          */
-        RESEND_INTERRUPTED_BY_CONNECTION_CLOSE
+        CONNECTION_CLOSED
     }
     private final Type type;
 

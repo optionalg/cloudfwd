@@ -28,7 +28,7 @@ import java.util.TreeMap;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import static com.splunk.cloudfwd.error.HecIllegalStateException.Type.EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED;
+import static com.splunk.cloudfwd.error.HecIllegalStateException.Type.EVENT_ON_FLIGHT_BUT_HIGHWATER_RECOMPUTED;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_OK;
 
 /**
@@ -42,7 +42,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     private Comparable checkpoint;
     private boolean enabled;
 
-    CheckpointManager(ConnectionImpl c) {
+    public CheckpointManager(ConnectionImpl c) {
         this.LOG = c.getLogger(CheckpointManager.class.getName());
         this.connection = c;
         this.enabled = c.getPropertiesFileHelper().isCheckpointEnabled();
@@ -75,61 +75,67 @@ public class CheckpointManager implements LifecycleEventObserver {
         ConnectionCallbacks cb = this.connection.getCallbacks();
         //callback acknowledge - must do this before bailing if events isn't highwater
         cb.acknowledged(events); //hit the callback to tell the user code that the EventBatchImpl succeeded 
+        release(events);
+    }
 
-        //Do not under penalty of death remove this commented sys out line below :-)
-        //very useful for debugging...
-        LOG.debug("handling ack-checkpoint-logic for event {}", events);
-        LOG.trace("window state: {}", this);
-        if (orderedEvents.isEmpty() || !orderedEvents.
-                containsKey(events.getId())) {
-            //this can happen when the on-demand ack-poll overlaps with the periodic ack poll,
-            String msg = "No callback registered for successfully acknowledged event batch id: " + events.
-                    getId() + ". This can happen when an  ack-poll comes back after success checkpoint";
-            LOG.debug(msg);
-            return;
-        }
+    public synchronized void release(EventBatchImpl events) {
+      // we need an event batch to checkpoint
+      if (events == null) {
+        return;
+      }
 
-        if (!events.getId().equals(this.orderedEvents.firstKey())) { //if this batch isn't the highwater
-            //bail because there are unacknowleged EventBatches with lower sequence IDs
-            //In other words, highwater hasn't moved
-            LOG.debug("Cant slide {}", events.getId());
-            return;
-        }
-        slideHighwaterUp(cb, events); //might call the highwater/checkpoint callback
-        //musn't call cb.acknowledged until after we slideHighwater, because calling cb.acknowleged
-        //will cause the CallbackInterceptor in Connection to cancel tracking of the EventBatchImpl. Then
-        //then slideHighwater won't work  
+      ConnectionCallbacks cb = this.connection.getCallbacks();
 
+      //Do not under penalty of death remove this commented sys out line below :-)
+      //very useful for debugging...
+      LOG.debug("handling ack/failed-checkpoint-logic for event {}", events);
+      LOG.trace("window state: {}", this);
+      if (orderedEvents.isEmpty() || !orderedEvents.
+              containsKey(events.getId())) {
+          //this can happen when the on-demand ack-poll overlaps with the periodic ack poll,
+          String msg = "No callback registered for successfully acknowledged event batch id: " + events.
+                  getId() + ". This can happen when an  ack-poll comes back after success checkpoint";
+          LOG.debug(msg);
+          return;
+      }
+
+      if (!events.getId().equals(this.orderedEvents.firstKey())) { //if this batch isn't the highwater
+          //bail because there are on-flight EventBatches with lower sequence IDs
+          //In other words, highwater hasn't moved
+          LOG.debug("Cant slide {}", events.getId());
+          return;
+      }
+      slideHighwaterUp(cb, events);
     }
 
     private synchronized void slideHighwaterUp(ConnectionCallbacks cb,
             EventBatchImpl events) {
         LOG.debug("trying to slide highwater for {}", events.getId());
-        if (!events.isAcknowledged()) {
-            String msg = "Attempt to recompute highwater mark on unacknowledged EventBatch: " + events.
+        if (!events.isAcknowledged() && !events.isFailed()) {
+            String msg = "Attempt to recompute highwater mark on on-flight EventBatch: " + events.
                     getId();
             throw new HecIllegalStateException(msg,
-                    EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED);
+                    EVENT_ON_FLIGHT_BUT_HIGHWATER_RECOMPUTED);
         }
-        EventBatchImpl acknowledgedEvents = null;
+        EventBatchImpl ackedOrFailedEvents = null;
         //walk forward in the order of EventBatches, from the tail
         for (Iterator<Map.Entry<Comparable, EventBatchImpl>> iter = this.orderedEvents.
                 entrySet().iterator(); iter.hasNext();) {
             Map.Entry<Comparable, EventBatchImpl> e = iter.next();
             //this causes us to cancelEventTrackers all *consecutive* acknowledged EventBatchImpl, forward from the tail
-            if (e.getValue().isAcknowledged()) {
+            if (e.getValue().isAcknowledged() || e.getValue().isFailed()) {
                 iter.remove(); //remove the callback (we are going to call it now, so no need to track it any longer)
-                acknowledgedEvents = e.getValue(); //hang on to highest acknowledged batch id
+                ackedOrFailedEvents = e.getValue(); //hang on to highest acknowledged or failed batch id
             } else {
                 break;
             }
         }
 
         //todo: maybe schedule checkpoint to be async
-        if (null != acknowledgedEvents) {
-//            LOG.info("CHECKPOINT at {}", acknowledgedEvents.getId());
-            cb.checkpoint(acknowledgedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
-            checkpoint = acknowledgedEvents.getId();
+        if (null != ackedOrFailedEvents) {
+            LOG.info("CHECKPOINT at {}", ackedOrFailedEvents.getId());
+            cb.checkpoint(ackedOrFailedEvents); //only checkpoint the highwater mark. Checkpointing lower ones is redundant.
+            checkpoint = ackedOrFailedEvents.getId();
         }
     }
 
@@ -139,10 +145,10 @@ public class CheckpointManager implements LifecycleEventObserver {
         }
         //event id must not be below the highwater mark
         if (null != checkpoint && events.getId().compareTo(checkpoint) <= 0) {
-            String msg = "EventBatch already acknowldeged. EventBatch ID is " + events.
+            String msg = "EventBatch already handled (acknowledged or failed). EventBatch ID is " + events.
                     getId() + " but checkpoint at " + checkpoint;
             throw new HecConnectionStateException(msg,
-                    HecConnectionStateException.Type.ALREADY_ACKNOWLEDGED);
+                    HecConnectionStateException.Type.ALREADY_HANDLED);
         }
         EventBatchImpl prev = this.orderedEvents.get(events.getId());
         if (null != prev) {

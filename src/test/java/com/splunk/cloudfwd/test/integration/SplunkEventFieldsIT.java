@@ -65,6 +65,19 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         Set<String> results = getEventsFromSplunk();
         verifyResults(getSentEvents(), results);
     }
+
+    @Test
+    public void sendEventsWithNullValueFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        connection.getSettings().setHost(null);
+        connection.getSettings().setIndex(null);
+        connection.getSettings().setSource(null);
+        connection.getSettings().setSourcetype(null);
+        super.sendEvents();
+        LOG.warn("SEARCH STRING: " + getSearchString());
+        Set<String> results = getEventsFromSplunk();
+        verifyResults(getSentEvents(), results);
+    }
+
     @Test
     public void sendEventsWithCustomFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
         connection.getSettings().setIndex(INDEX_NAME);

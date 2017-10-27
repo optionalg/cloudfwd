@@ -97,4 +97,4 @@ RUN cd ${CLOUDFWD} && ( mvn -B -Dmaven.test.skip=true install > install.log 2>&1
 #RUN mkdir -p ${CLOUDFWD}
 #COPY . ${CLOUDFWD}/
 
-RUN ( /opt/splunk/bin/splunk start > splunk_start.log 2>&1 && echo 'last 100 records from splunk_start.log' && tail -100 splunk_start.log || (FAILURE=$? && tail -10000 splunk_start.log && exit $FAILURE)) && cd /build/cloudfwd && ( mvn -B clean verify -DskipITs=false > verify.log 2>&1 && echo "last 300 records from maven verify log:" && tail -300 verify.log || (FAILURE=$? && echo "Failed with exit code: $?" && tail -10000 verify.log ; exit $FAILURE))
+RUN ( /opt/splunk/bin/splunk start > splunk_start.log 2>&1 && echo 'last 100 records from splunk_start.log' && tail -100 splunk_start.log || (FAILURE=$? && tail -10000 splunk_start.log && exit $FAILURE)) && cd /build/cloudfwd && ( mvn -B clean verify -DskipITs=false || (FAILURE=$? && echo "Failed with exit code: $?" && tail -10000 verify.log ; exit $FAILURE))

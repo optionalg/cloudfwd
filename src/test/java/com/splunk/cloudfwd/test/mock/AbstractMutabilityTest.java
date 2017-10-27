@@ -27,8 +27,8 @@ public abstract class AbstractMutabilityTest extends AbstractConnectionTest {
     abstract protected Properties getProps();
 
     protected void sendSomeEvents(int numEvents) throws InterruptedException, HecConnectionTimeoutException {
-        System.out.println(
-                "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+        LOG.trace(
+                "sendSomeEvents: SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
                         + "And test method GUID " + testMethodGUID);
 
         stop += numEvents;

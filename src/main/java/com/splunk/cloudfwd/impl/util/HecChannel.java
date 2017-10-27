@@ -331,6 +331,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
    */
   protected synchronized void quiesce() {
     LOG.debug("Quiescing channel: {}", this);
+    long channelQuiesceTimeout = getConnection().getSettings().getChannelQuiesceTimeoutMS();
     
     if(!quiesced){
         this.health.quiesced();
@@ -343,7 +344,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             }else{
                 LOG.debug("Channel was closed. Watchdog exiting.");
             }
-        }, 3, TimeUnit.MINUTES);
+        }, channelQuiesceTimeout, TimeUnit.MILLISECONDS);
     }
     quiesced = true;
 

@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 
 /**
@@ -186,6 +187,18 @@ public class ConnectionSettings {
         }
         return decomMs;
     }
+    
+    public long getChannelQuiesceTimeoutMS() {
+        long timeout = Long.parseLong(defaultProps.getProperty(
+                PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS,
+                PropertyKeys.DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS).trim());
+        if (timeout < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
+            LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS + 
+                    " was set to a potentially too-low value, reset to min value: " + timeout);
+            timeout = PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
+        }
+        return timeout;
+    }
 
     public long getAckTimeoutMS() {
         long timeout = Long.parseLong(defaultProps.getProperty(
@@ -195,7 +208,7 @@ public class ConnectionSettings {
             timeout = Long.MAX_VALUE;
         } else if (timeout < PropertyKeys.MIN_ACK_TIMEOUT_MS) {
             LOG.warn(
-                    PropertyKeys.ACK_TIMEOUT_MS + " was set to a potentially too-low value: " + timeout);
+                    PropertyKeys.ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeout);
         }
         return timeout;
     }
@@ -500,8 +513,7 @@ public class ConnectionSettings {
      * @param host Host value for the data feed
      */
     public void setHost(String host) {
-        if (!getHost().equals(host)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(host) && !getHost().equals(host)) {
             putProperty(PropertyKeys.HOST, host);
             checkAndRefreshChannels();
         }
@@ -512,8 +524,7 @@ public class ConnectionSettings {
      * @param index The Splunk index in which the data feed is stored
      */
     public void setIndex(String index) {
-        if (!getIndex().equals(index)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(index) && !getIndex().equals(index)) {
             putProperty(PropertyKeys.INDEX, index);
             checkAndRefreshChannels();
         }
@@ -524,8 +535,7 @@ public class ConnectionSettings {
      * @param source The source of the data feed
      */
     public void setSource(String source) {
-        if (!getHost().equals(source)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(source) && !getSource().equals(source)) {
             putProperty(PropertyKeys.SOURCE, source);
             checkAndRefreshChannels();
         }
@@ -536,8 +546,7 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
     public void setSourcetype(String sourcetype) {
-        if (!getHost().equals(sourcetype)) {
-            // a single url or a list of comma separated urls
+        if (!StringUtils.isEmpty(sourcetype) && !getSourcetype().equals(sourcetype)) {
             putProperty(PropertyKeys.SOURCETYPE, sourcetype);
             checkAndRefreshChannels();
         }

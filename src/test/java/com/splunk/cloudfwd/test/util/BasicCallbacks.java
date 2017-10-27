@@ -4,6 +4,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
@@ -41,6 +42,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
   private Comparable lastId;
+  private AtomicInteger failedCount = new AtomicInteger(0);
   protected String failMsg;
   protected Exception exception;
   protected Exception systemWarning;
@@ -132,7 +134,8 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   @Override
   public void failed(EventBatch events, Exception ex) {
-    failed = true;   
+    failed = true;
+    failedCount.incrementAndGet();
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
     exception = ex;
@@ -215,6 +218,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
   
   public Exception getWarning(){
       return systemWarning;
+  }
+
+  public Integer getFailedCount() {
+      return failedCount.get();
   }
 
 

@@ -33,10 +33,12 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     private static Logger LOG;
 
     ConnectionCallbacks callbacks;
+    CheckpointManager cpManager;
 
     public CallbackInterceptor(ConnectionCallbacks callbacks, ConnectionImpl c) {
         this.LOG = c.getLogger(CallbackInterceptor.class.getName());
         this.callbacks = callbacks;
+        this.cpManager = c.getCheckpointManager();
     }
 
     @Override
@@ -47,7 +49,12 @@ public class CallbackInterceptor implements ConnectionCallbacks {
             LOG.error("Caught exception from ConnectionCallbacks.acknowledged: " + e.getMessage());
             LOG.error(e.getMessage(), e);
         } finally {
-            ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
+            try {
+                ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
+            } catch (Exception e) {
+                LOG.error("Caught exception in finally block of callback interceptor acknowledged: " + e.getMessage());
+                LOG.error(e.getMessage(), e);
+            }
         }
     }
 
@@ -63,9 +70,15 @@ public class CallbackInterceptor implements ConnectionCallbacks {
             LOG.error("Caught exception from ConnectionCallbacks.failed: " + e.getMessage());
             LOG.error(e.getMessage(), e);
         } finally {
-            if (null != events) {
-                ((EventBatchImpl)events).setFailed(true);
-                ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
+            try {
+                if (null != events) {
+                    ((EventBatchImpl) events).setFailed(true);
+                    ((EventBatchImpl) events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
+                    this.cpManager.release((EventBatchImpl) events);
+                }
+            } catch (Exception e) {
+                LOG.error("Caught exception in finally block of callback interceptor failed: " + e.getMessage());
+                LOG.error(e.getMessage(), e);
             }
         }
     }
@@ -86,12 +99,22 @@ public class CallbackInterceptor implements ConnectionCallbacks {
 
     @Override
     public void systemError(Exception e) {
-        callbacks.systemError(e);
+        try {
+            callbacks.systemError(e);
+        } catch (Exception ex) {
+            LOG.error("Caught exception from ConnectionCallbacks.systemError: " + ex.getMessage());
+            LOG.error(ex.getMessage(), ex);
+        }
     }
 
     @Override
     public void systemWarning(Exception e) {
-        callbacks.systemWarning(e);
+        try {
+            callbacks.systemWarning(e);
+        } catch (Exception ex) {
+            LOG.error("Caught exception from ConnectionCallbacks.systemWarning: " + ex.getMessage());
+            LOG.error(ex.getMessage(), ex);
+        }
     }
 
 }

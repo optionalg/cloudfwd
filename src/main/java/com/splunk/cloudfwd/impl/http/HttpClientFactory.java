@@ -4,8 +4,7 @@ import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLContexts;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import javax.net.ssl.SSLContext;
 import java.io.ByteArrayInputStream;
@@ -18,6 +17,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import org.slf4j.Logger;
 import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.util.PublicSuffixMatcher;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
 import org.apache.http.cookie.CookieSpecProvider;
@@ -56,7 +56,7 @@ import sun.security.provider.X509Factory;
 public final class HttpClientFactory {
     public static int MAX_CONN_PER_ROUTE = 0; //unlimited
     public static int MAX_CONN_TOTAL = 0; //unlimited
-    public  static int CONNECT_TIMEOUT = 30000; //30 sec
+    public static int CONNECT_TIMEOUT = 30000; //30 sec
     public static int SOCKET_TIMEOUT = 30000; //30 sec
     public static int REACTOR_SELECT_INTERVAL = 1000;   
     
@@ -72,7 +72,6 @@ public final class HttpClientFactory {
 
     /**
      * Constructor
-     * @param url http event collector input server
      * @param disableCertVerification disable SSL Certificate verification
      *                                set to true if using a self-signed cert on the HEC endpoint
      * @param cert SSL Certificate Authority public key to verify TLS with
@@ -189,7 +188,7 @@ public final class HttpClientFactory {
                 .setDefaultCookieSpecRegistry(buildRegistry())
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
-                .setHostnameVerifier(new SslStaticHostVerifier(this.host))
+                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
                 .build();
     }
 
@@ -221,7 +220,7 @@ public final class HttpClientFactory {
                 .setDefaultCookieSpecRegistry(buildRegistry())
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
-                .setHostnameVerifier(new SslStaticHostVerifier(this.host))
+                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
                 .setSSLContext(ssl_context)
                 .build();
     }
@@ -237,7 +236,7 @@ public final class HttpClientFactory {
     public final CloseableHttpAsyncClient build_http_client_insecure() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         return builderWithCustomOptions()
                 .setDefaultCookieSpecRegistry(buildRegistry())
-                .setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
+                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                 .setSSLContext(build_ssl_context_allow_all())
                 .build();
     }

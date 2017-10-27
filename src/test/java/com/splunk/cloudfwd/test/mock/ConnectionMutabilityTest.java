@@ -205,12 +205,12 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     }
 
     private void sendSomeEvents(int numEvents) throws InterruptedException, HecConnectionTimeoutException {
-        System.out.println(
-                "SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
+        LOG.trace(
+                "sendSomeEvents: SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
                         + "And test method GUID " + testMethodGUID);
 
         stop += numEvents;
-        System.out.println("Start = "+start + " stop = " + stop);
+        LOG.trace("sendSomeEvents: Start = "+start + " stop = " + stop);
         for (int i = start; i <= stop; i++) {
             Event event = nextEvent(i + 1);
             connection.send(event);
