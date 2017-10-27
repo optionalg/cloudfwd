@@ -45,15 +45,15 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         try {
             switch(code){
                 case 200:
-                    ThreadScheduler.getExecutorInstance("ack_poll_resp_executor").execute(
-                            ()->{
-                                try {
+//                    ThreadScheduler.getExecutorInstance("ack_poll_resp_executor").execute(
+//                            ()->{
+//                                try {
                                     consumeAckPollResponse(reply);
-                                } catch (IOException ex) {
-                                    error(ex);
-                                }
-                            }
-                    );
+//                                } catch (IOException ex) {
+//                                    error(ex);
+//                                }
+//                            }
+//                    );
                     break;
                 case 503: //busy
                     warn(reply, code);                    

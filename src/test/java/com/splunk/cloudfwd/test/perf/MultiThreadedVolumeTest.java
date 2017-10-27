@@ -119,16 +119,16 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                     LOG.info("Sent batch with id=" + batchCounter.get());
                     next = nextBatch(batchCounter.incrementAndGet());
 
-                    synchronized (this) {
+                    //synchronized (this) {
                         // wait while the batch hasn't been acknowledged and it hasn't failed
                         while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
                             waitingSenders.put(eb.getId(), this);
-                            wait(connection.getSettings().getAckTimeoutMS());
+                            //wait(connection.getSettings().getAckTimeoutMS());
                         }
-                    }
+                    //}
                     waitingSenders.remove(eb.getId());
                 }
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 throw new RuntimeException(e.getMessage());
             }
         }
@@ -169,9 +169,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
 
         public void tell() {
-            synchronized (this) {
-                notify();
-            }
+//            synchronized (this) {
+//                notify();
+//            }
         }
 
         public void failed() {
