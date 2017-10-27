@@ -213,7 +213,6 @@ public class LoadBalancer implements Closeable {
             if (closed && !resend) {
                 return true;
             }
-            waitWhileFull(startTime, events, closed);
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
             //consisting of closed channels. Also, it must be a snapshot, not use the live
@@ -234,6 +233,9 @@ public class LoadBalancer implements Closeable {
                 continue; //keep going until a channel is added
             }
             if (tryChannelSend(channelsSnapshot, events, resend)) {
+                //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
+                //because everyone stuck in perpetual wait
+                waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
                 break;
             }
             waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
