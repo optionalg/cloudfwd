@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author ghendrey
  */
-public class OncePerSecondLongevityTest extends AbstractConnectionTest {
+public class OncePerSecondLongevityTest extends AbstractPerformanceTest {
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(OncePerSecondLongevityTest.class.getName());
     
     @Test
@@ -54,7 +54,6 @@ public class OncePerSecondLongevityTest extends AbstractConnectionTest {
   protected void setProps(PropertiesFileHelper settings) {
       super.setProps(settings);
     //simulate a non-sticky endpoint
-      settings.setMockHttp(false);
       settings.setEventBatchSize(0); //send immediately
       settings.setAckTimeoutMS(180000); //3 minute ack timeout
       settings.setUnresponsiveMS(300000); //kill dead channel when no activity for 5 minutes
