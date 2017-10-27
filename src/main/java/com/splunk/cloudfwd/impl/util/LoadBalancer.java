@@ -235,7 +235,7 @@ public class LoadBalancer implements Closeable {
             if (tryChannelSend(channelsSnapshot, events, resend)) {
                 //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
                 //because everyone stuck in perpetual wait
-                waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
+                //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
                 break;
             }
             waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
