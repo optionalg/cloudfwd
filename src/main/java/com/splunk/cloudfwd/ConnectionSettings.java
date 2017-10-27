@@ -152,28 +152,12 @@ public class ConnectionSettings {
             throw new RuntimeException("Could not map Properties file to Java object - please check file path.", e);
         }
 
-        //TODO!!
-        // If required properties are missing from cloudfwd.properties, overrides, and defaults, then throw exception.
-//        for (String key : REQUIRED_KEYS) {
-//            if (keyGetter(key) == null) {
-//                throw new HecMissingPropertiesException("Missing required key: " + key);
-//            }
-//        }
         return null;
     }
 
     public void setConnection(Connection c) {
         this.connection = (ConnectionImpl)c;
         this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
-
-        // Perform any actions that throw any config exceptions here (aka. on Connections.create())
-        //urlsStringToList(getUrlString()) --> validates urls and throws exception if invalid
-        
-        // Perform any actions that had required a Connection object in the property setter, 
-        // where one may not have been available
-//        if (Long.valueOf(getAckTimeoutMS()) != null) {
-//            connection.getTimeoutChecker().setTimeout(); //this is causing deadlock
-//        }
     }
 
     /* ***************************** UTIL ******************************* */
@@ -391,90 +375,9 @@ public class ConnectionSettings {
     // because they may be called before the Connection is instantiated.
     // Any setter behavior that should happen on the Connection instance should be defined
     // in ConnectionSettings > setConnection() method (or in Connections > create())
+
+    //TODO: write unit tests for setters
     
-    /**
-     * Use this method to change multiple settings on the connection. See
-     * PropertyKeys class for more information.
-     *
-     * @param props
-     */
-    public void setProperties(Properties props) throws UnknownHostException {
-        boolean refreshChannels = false;
-        boolean dnsLookup = false;
-        Long newAckTimeout = Long.parseLong(props.getProperty(ACK_TIMEOUT_MS));
-        String newUrls = props.getProperty(COLLECTOR_URI);
-        String newToken = props.getProperty(TOKEN);
-        String newHecEndpointType = props.getProperty(HEC_ENDPOINT_TYPE);
-        String host = props.getProperty(HOST);
-        String index = props.getProperty(INDEX);
-        String source = props.getProperty(SOURCE);
-        String sourcetype = props.getProperty(SOURCETYPE);
-        Set keySet = props.keySet();
-
-        // Ack Timeout
-        if (this.getAckTimeoutMS() != newAckTimeout) {
-            this.setAckTimeoutMS(newAckTimeout);
-            keySet.remove(ACK_TIMEOUT_MS);
-        }
-
-        // Collector URI
-        if (this.getUrlString() != newUrls) {
-            this.setUrls(newUrls);
-            dnsLookup = true;
-            refreshChannels = true;
-            keySet.remove(COLLECTOR_URI);
-        }
-
-        // Token
-        if (this.getToken() != newToken) {
-            this.setToken(newToken);
-            refreshChannels = true;
-            keySet.remove(TOKEN);
-        }
-
-        // HEC endpoint
-        if (this.getHecEndpointTypeString() != newHecEndpointType) {
-            this.setHecEndpointType(newHecEndpointType);
-            keySet.remove(HEC_ENDPOINT_TYPE);
-        }
-        
-        // Host
-        if (this.getHost() != host) {
-            this.setHost(host);
-            refreshChannels = true;
-        }
-        
-        // Index
-        if (this.getIndex() != index) {
-            this.setIndex(index);
-            refreshChannels = true;
-        }
-        
-        // Source
-        if (this.getSource() != source) {
-            this.setSource(source);
-            refreshChannels = true;
-        }
-        
-        // Sourcetype
-        if (this.getSourcetype() != sourcetype) {
-            this.setSourcetype(sourcetype);
-            refreshChannels = true;
-        }
-
-        // Unsupported property change attempt
-        for (Object key : keySet)
-        {
-            getLog().warn("Attempt to change property not supported: " + key);
-        }
-
-        if (refreshChannels) {
-            checkAndRefreshChannels();
-        }
-    }
-
-    //TODO: write unit tests for each setter
-
     public void setChannelsPerDestination(int numChannels) {
         if (numChannels < 1) {
             getLog().debug("{}, defaulting {} to {}", numChannels, CHANNELS_PER_DESTINATION, Integer.parseInt(DEFAULT_CHANNELS_PER_DESTINATION));
@@ -667,11 +570,9 @@ public class ConnectionSettings {
      * @param token
      */
     public void setToken(String token) {
-        if (!this.splunkHecToken.equals(token)) {
+        if (!getToken().equals(token)) {
             this.splunkHecToken = token;
             checkAndRefreshChannels();
-        } else {
-            this.splunkHecToken = token;
         }
     }
 
@@ -705,8 +606,6 @@ public class ConnectionSettings {
       if (!StringUtils.isEmpty(host) && !getHost().equals(host)) {
           this.splunkHecHost = host;
           checkAndRefreshChannels();
-//      } else {
-//          this.splunkHecHost = host;
       }
   }
 
@@ -718,8 +617,6 @@ public class ConnectionSettings {
       if (!StringUtils.isEmpty(index) && !getIndex().equals(index)) {
           this.splunkHecIndex = index;
           checkAndRefreshChannels();
-//      } else {
-//          this.splunkHecIndex = index;
       }
   }
 
@@ -731,8 +628,6 @@ public class ConnectionSettings {
       if (!StringUtils.isEmpty(source) && !getSource().equals(source)) {
           this.splunkHecSource = source;
           checkAndRefreshChannels();
-//      } else {
-//          this.splunkHecSource = source;
       }
   }
 
@@ -744,8 +639,6 @@ public class ConnectionSettings {
       if (!StringUtils.isEmpty(sourcetype) && !getSourcetype().equals(sourcetype)) {
           this.splunkHecSourcetype = sourcetype;
           checkAndRefreshChannels(); 
-//      } else {
-//          this.splunkHecSourcetype = sourcetype;
       }
   }
   

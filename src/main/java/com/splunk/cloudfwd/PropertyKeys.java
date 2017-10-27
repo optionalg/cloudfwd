@@ -249,12 +249,6 @@ public class PropertyKeys {
   public static final String CHANNEL_QUIESCE_TIMEOUT_MS = "channel_quiesce_timeout_ms";
   
 
-  /* **************************** REQUIRED KEYS ************************* */
-
-  // Connection object cannot be instantiated without these keys being provided, either in overrides or cloudfwd.properties
-  public static final String[] REQUIRED_KEYS = {TOKEN, COLLECTOR_URI};
-
-
   /* **************************** DEFAULTS ************************* */
   /**
    * Default value for EVENT_BATCH_SIZE property.

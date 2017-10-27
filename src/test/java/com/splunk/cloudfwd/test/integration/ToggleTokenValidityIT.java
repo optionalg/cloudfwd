@@ -83,7 +83,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         settings.setToken(createTestToken("__singleline"));
         // we don't want to hit any ack timeouts because it's easier to make our callbacks not expect them
         settings.setAckTimeoutMS(sendExceptionTimeout
-            + Long.parseLong(PropertyKeys.DEFAULT_ACK_TIMEOUT_MS)); //TODO this was previously string concat - is long concat ok?
+            + Long.parseLong(PropertyKeys.DEFAULT_ACK_TIMEOUT_MS));
     }
 
     private void deleteTokenOnServer() {
@@ -98,21 +98,12 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     }
 
     private void restoreToken() {
-        Properties p = new Properties();
         LOG.info("Restoring token on server...");
-        p.put(PropertyKeys.TOKEN, createTestToken("__singleline"));
-        LOG.info("Token restored.");
         // normally if this fails it will causes the test to fail via an assert,
         // but it won't in this case since it's not being called in the main thread so we need to check
-        if (getTokenValue() == null) {
-            this.assertionFailure = "Failed to create token.";
-        }
-        try {
-            connection.getSettings().setProperties(p);
-            LOG.info("Connection object updated with new token.");
-        } catch (UnknownHostException e) {
-            this.assertionFailure = e.getMessage(); // should never happen in this test
-        }
+        connection.getSettings().setToken(createTestToken("__singleline"));
+        LOG.info("Connection object updated with new token.");
+        
         tokenRestoredLatch.countDown();
     }
 

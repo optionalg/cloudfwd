@@ -24,7 +24,7 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecLoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.error.HecMissingPropertiesException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.CheckpointManager;
@@ -36,12 +36,14 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.splunk.cloudfwd.PropertyKeys.COLLECTOR_URI;
+import static com.splunk.cloudfwd.PropertyKeys.TOKEN;
 
 /**
  * Internal implementation of Connection. Should be obtained through a Factory method. 
@@ -73,7 +75,13 @@ public class ConnectionImpl implements Connection {
     if (null == callbacks) {
         throw new HecConnectionStateException("ConnectionCallbacks are null",
                 HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
-    }   
+    }
+    if (settings.getToken() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + TOKEN);
+    }
+    if (settings.getUrlString() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + COLLECTOR_URI);
+    }
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = (PropertiesFileHelper)settings;
     this.checkpointManager = new CheckpointManager(this);
