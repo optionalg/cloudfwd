@@ -189,7 +189,6 @@
                     <excludes>
                         <exclude>**/perf/*.java</exclude>
                         <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
-                         <exclude>**/WatchdogChannelKillerTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
                     </excludes>
                 </configuration>
             </plugin>

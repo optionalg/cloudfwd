@@ -22,6 +22,9 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.net.*;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 /**
  *
  * @author ghendrey

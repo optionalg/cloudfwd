@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
@@ -41,10 +42,11 @@ public class WatchdogChannelKillerTest extends AbstractConnectionTest {
     protected void setProps(PropertiesFileHelper settings) {
         settings.setMockHttp(true);
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-        settings.setEventBatchSize(0);
-        settings.setMaxRetries(1);
-        settings.setChannelDecomMS(5000);
-        settings.setAckTimeoutMS(1000);
+        settings.setEventBatchSize(0); //make sure no batching
+        settings.setMaxRetries(1); //so we insure we resend on same channel  
+        settings.setChannelDecomMS(500); //decommission the channel after 500ms  
+        settings.setAckTimeoutMS(250); //time out ack in 250ms
+        settings.setChannelQuiesceTimeoutMS(750); //watchdog to kill the channel in 750ms
         settings.setMaxUnackedEventBatchPerChannel(1);
     }
 
@@ -73,12 +75,12 @@ public class WatchdogChannelKillerTest extends AbstractConnectionTest {
     @Test
     public void sendMessageToJammedChannelThatCannotCloseCleanly()
             throws InterruptedException {
-        SlowEndpoints.sleep = 500000; //endpoint won't respond for 500 seconds
+        SlowEndpoints.sleep = 1000; //endpoint won't respond for 10 seconds
         LOG.info(connection.getHealth().toString());
         super.sendEvents();
         LOG.info(connection.getHealth().toString());
         LOG.info("Sorry: this test needs to wait 3 minutes... :-(");
-        Thread.sleep(180000); //wait 3 minutes
+        Thread.sleep(1500);
         List<HecHealth> healths = connection.getHealth();    
         LOG.info(healths.toString());
         Assert.assertEquals("Expected no channels, but found " + healths, 0,

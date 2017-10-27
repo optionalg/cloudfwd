@@ -45,6 +45,7 @@ import java.nio.ByteBuffer;
  * @author ghendrey
  */
 public abstract class AbstractConnectionTest {
+  protected static Map<String, String> cliProperties = new HashMap<>();
 
   private class HecLoggerFactoryImpl implements HecLoggerFactory {
     public Logger getLogger(String name) {
@@ -82,6 +83,7 @@ public abstract class AbstractConnectionTest {
 
   @Before
   public void setUp() {
+    extractCliTestProperties();
     if(connectionInstantiationShouldFail() && getNumEventsToSend() != 0){
         throw new RuntimeException("connectionInstantiationShouldFail returns true, but getNumEventsToSend not returning 0. "
                 + "You should override getNumEventsToSend and return zero.");
@@ -136,6 +138,13 @@ public abstract class AbstractConnectionTest {
     protected boolean connectionInstantiationShouldFail() {
         return false;
     }
+
+  /**
+   * Test should override to extract the CLI properties it cares about
+   */
+  protected void extractCliTestProperties() {
+      // no op
+  }
 
   @After
   public void tearDown() {

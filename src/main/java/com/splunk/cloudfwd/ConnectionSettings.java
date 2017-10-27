@@ -29,6 +29,11 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Properties;
+import org.apache.commons.lang.StringUtils;
 import java.util.*;
 
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
@@ -106,6 +111,9 @@ public class ConnectionSettings {
 
     @JsonProperty("channel_decom_ms")
     private long channelDecomMS = Long.parseLong(DEFAULT_DECOM_MS);
+    
+    @JsonProperty("channel_quiesce_timeout_ms")
+    private long channelQuiesceTimeoutMS = Long.parseLong(DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS);
 
     @JsonProperty("ack_timeout_ms")
     private long ackTimeoutMS = Long.parseLong(DEFAULT_ACK_TIMEOUT_MS);
@@ -266,6 +274,10 @@ public class ConnectionSettings {
 
     public long getChannelDecomMS() {
         return applyDefaultIfNull(this.channelDecomMS, Long.parseLong(DEFAULT_DECOM_MS));
+    }
+    
+    public long getChannelQuiesceTimeoutMS() {
+        return applyDefaultIfNull(this.channelQuiesceTimeoutMS, Long.parseLong(DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS));
     }
 
     public long getAckTimeoutMS() {
@@ -534,6 +546,16 @@ public class ConnectionSettings {
         }
         this.channelDecomMS = decomMS;
     }
+    
+    public void setChannelQuiesceTimeoutMS(long timeoutMS) {
+        if (timeoutMS < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
+            LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS +
+                    " was set to a potentially too-low value, reset to min value: " + timeoutMS);
+            this.channelQuiesceTimeoutMS = PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
+        } else {
+            this.channelQuiesceTimeoutMS = timeoutMS;
+        }
+    }
 
     public void setAckTimeoutMS(long timeoutMS) {
         if (timeoutMS != getAckTimeoutMS()) {
@@ -680,11 +702,11 @@ public class ConnectionSettings {
      * @param host Host value for the data feed
      */
   public void setHost(String host) {
-      if (!getHost().equals(host)) {
+      if (!StringUtils.isEmpty(host) && !getHost().equals(host)) {
           this.splunkHecHost = host;
           checkAndRefreshChannels();
-      } else {
-          this.splunkHecHost = host;
+//      } else {
+//          this.splunkHecHost = host;
       }
   }
 
@@ -693,11 +715,11 @@ public class ConnectionSettings {
      * @param index The Splunk index in which the data feed is stored
      */
   public void setIndex(String index) {
-      if (!getIndex().equals(index)) {
+      if (!StringUtils.isEmpty(index) && !getIndex().equals(index)) {
           this.splunkHecIndex = index;
           checkAndRefreshChannels();
-      } else {
-          this.splunkHecIndex = index;
+//      } else {
+//          this.splunkHecIndex = index;
       }
   }
 
@@ -706,11 +728,11 @@ public class ConnectionSettings {
      * @param source The source of the data feed
      */
   public void setSource(String source) {
-      if (!getSource().equals(source)) {
+      if (!StringUtils.isEmpty(source) && !getSource().equals(source)) {
           this.splunkHecSource = source;
           checkAndRefreshChannels();
-      } else {
-          this.splunkHecSource = source;
+//      } else {
+//          this.splunkHecSource = source;
       }
   }
 
@@ -719,11 +741,11 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
   public void setSourcetype(String sourcetype) {
-      if (!getSourcetype().equals(sourcetype)) {
+      if (!StringUtils.isEmpty(sourcetype) && !getSourcetype().equals(sourcetype)) {
           this.splunkHecSourcetype = sourcetype;
           checkAndRefreshChannels(); 
-      } else {
-          this.splunkHecSourcetype = sourcetype;
+//      } else {
+//          this.splunkHecSourcetype = sourcetype;
       }
   }
   
