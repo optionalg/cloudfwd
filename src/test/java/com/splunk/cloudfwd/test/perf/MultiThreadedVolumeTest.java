@@ -188,9 +188,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         public void acknowledged(EventBatch events) {
             super.acknowledged(events);
             // sometimes events get acknowledged before the SenderWorker starts waiting
-            if (waitingSenders.get(events.getId()) != null) {
-                waitingSenders.get(events.getId()).tell();
-            }
+//            if (waitingSenders.get(events.getId()) != null) {
+//                waitingSenders.get(events.getId()).tell();
+//            }
         }
 
         @Override

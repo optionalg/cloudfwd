@@ -198,7 +198,7 @@ public class ConnectionImpl implements Connection {
    * @throws HecConnectionTimeoutException
    */
     @Override
-  public synchronized int sendBatch(EventBatch events) throws HecConnectionTimeoutException, HecNoValidChannelsException {
+  public int sendBatch(EventBatch events) throws HecConnectionTimeoutException, HecNoValidChannelsException {
     if (closed) {
       throw new HecConnectionStateException("Attempt to sendBatch on closed connection.", HecConnectionStateException.Type.SEND_ON_CLOSED_CONNECTION);
     }
@@ -208,7 +208,7 @@ public class ConnectionImpl implements Connection {
       return 0;
     }
     
-    if(LOG.isDebugEnabled()){
+    if(LOG.isInfoEnabled()){
         logLBHealth();
     }
     
