@@ -363,7 +363,7 @@ public class ConnectionImpl implements Connection {
             }
         }
         
-        LOG.debug("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
+        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
                 channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
     }
 
