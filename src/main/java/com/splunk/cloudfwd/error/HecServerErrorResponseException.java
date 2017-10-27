@@ -97,7 +97,7 @@ public class HecServerErrorResponseException extends RuntimeException {
     }
     
 
-    public void setUrls(String url) {
+    public void setUrl(String url) {
         this.url = url;
     }
 

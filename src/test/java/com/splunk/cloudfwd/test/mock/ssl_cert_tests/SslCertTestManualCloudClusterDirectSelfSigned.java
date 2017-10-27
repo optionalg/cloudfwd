@@ -51,7 +51,7 @@ public class SslCertTestManualCloudClusterDirectSelfSigned extends AbstractConne
    */
   @Override
   protected void setProps(PropertiesFileHelper settings) {
-    settings.setUrls("https://inputs1.pr16-kimono.splunkcloud.com:8088");
+    settings.setUrl("https://inputs1.pr16-kimono.splunkcloud.com:8088");
     settings.setToken("6AFC4B90-5974-478C-9EC6-5F586CDD2F46");
     settings.setCertValidationEnabled(true);
   }

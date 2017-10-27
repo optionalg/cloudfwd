@@ -36,7 +36,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         ConnectionSettings settings = connection.getSettings();
         settings.setToken("a token");
         settings.setAckTimeoutMS(120000);
-        settings.setUrls("https://127.0.0.1:8188");
+        settings.setUrl("https://127.0.0.1:8188");
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
 
@@ -44,7 +44,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         // Set the same properties
         settings.setToken("a token");
         settings.setAckTimeoutMS(120000);
-        settings.setUrls("https://127.0.0.1:8188");
+        settings.setUrl("https://127.0.0.1:8188");
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
 
@@ -52,7 +52,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         // Set some more new properties
         settings.setToken("different token");
         settings.setAckTimeoutMS(240000);
-        settings.setUrls("https://127.0.0.1:8288, https://127.0.0.1:8388");
+        settings.setUrl("https://127.0.0.1:8288, https://127.0.0.1:8388");
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
         close();
@@ -107,17 +107,17 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         setPropsOnEndpoint();
         sendSomeEvents(getNumEventsToSend()/4);
 
-        setUrls("https://127.0.0.1:8188");
+        setUrl("https://127.0.0.1:8188");
         setAckTimeout(120000);
 
         sendSomeEvents(getNumEventsToSend()/4);
 
         setAckTimeout(65000);
-        setUrls("https://127.0.0.1:8288, https://127.0.0.1:8388");
+        setUrl("https://127.0.0.1:8288, https://127.0.0.1:8388");
 
         sendSomeEvents(getNumEventsToSend()/4);
 
-        setUrls("https://127.0.0.1:8488, https://127.0.0.1:8588, https://127.0.0.1:8688");
+        setUrl("https://127.0.0.1:8488, https://127.0.0.1:8588, https://127.0.0.1:8688");
         setAckTimeout(80000);
 
         sendSomeEvents(getNumEventsToSend()/4);
@@ -151,8 +151,8 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         return numEvents;
     }
 
-    private void setUrls(String urls) throws UnknownHostException {
-        connection.getSettings().setUrls(urls);
+    private void setUrl(String urls) throws UnknownHostException {
+        connection.getSettings().setUrl(urls);
         ValidatePropsEndpoint.URLS = connection.getSettings().getUrls();
     }
 

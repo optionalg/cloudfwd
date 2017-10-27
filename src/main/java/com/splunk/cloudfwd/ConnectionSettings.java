@@ -28,13 +28,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Properties;
 import org.apache.commons.lang.StringUtils;
-import java.util.*;
 
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.slf4j.Logger;
@@ -52,8 +49,8 @@ public class ConnectionSettings {
     protected ConnectionSettings overrides;
     protected ConnectionImpl connection;
 
-    @JsonProperty("splunk_hec_url")
-    private String splunkHecUrl;
+    @JsonProperty("url")
+    private String url;
 
     @JsonProperty("splunk_hec_token")
     private String splunkHecToken;
@@ -175,11 +172,11 @@ public class ConnectionSettings {
 
 
     public List<URL> getUrls() {
-        return urlsStringToList(this.splunkHecUrl);
+        return urlsStringToList(this.url);
     }
 
     public String getUrlString() {
-        return this.splunkHecUrl;
+        return this.url;
     }
 
     protected List<URL> urlsStringToList(String urlsListAsString) {
@@ -585,12 +582,12 @@ public class ConnectionSettings {
    * for more information.
    * @param urls comma-separated list of urls
    */
-  public void setUrls(String urls) {
+  public void setUrl(String urls) {
       if (connection != null && !urlsStringToList(urls).equals(getUrls())) {
-          this.splunkHecUrl = urls;
+          this.url = urls;
           checkAndRefreshChannels();
       } else {
-          this.splunkHecUrl = urls;
+          this.url = urls;
       }
   }
 

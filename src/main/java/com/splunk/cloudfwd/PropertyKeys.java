@@ -35,7 +35,7 @@ public class PropertyKeys {
    * front of Splunk cluster. This can also be a comma-separated list of urls.
    * Example: https://127.0.0.1:8088
    */
-  public static final String COLLECTOR_URI = "splunk_hec_url";
+  public static final String COLLECTOR_URI = "url";
 
   /**
    * Host value for the data feed
