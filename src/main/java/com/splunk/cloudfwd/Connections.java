@@ -15,12 +15,12 @@
  */
 package com.splunk.cloudfwd;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.impl.util.LoadBalancer;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory for getting a Connection.
@@ -28,6 +28,8 @@ import java.util.Properties;
  * @author ghendrey
  */
 public class Connections {
+    
+    private static Logger LOG = LoggerFactory.getLogger(Connections.class.getName());
 
     private Connections() {
 
@@ -36,7 +38,7 @@ public class Connections {
     public static Connection create(ConnectionCallbacks c) {
         return create(c, new ConnectionSettings());
     }
-
+    
     /**
      * When creating a connection, an attempt is made to check the server-side configurations of every channel managed by the 
      * load balancer. If any of the channels finds misconfigurations, such as HEC acknowldegements disabled, or invalid HEC
@@ -48,20 +50,32 @@ public class Connections {
      */
     public static Connection create(ConnectionCallbacks cb, ConnectionSettings settings) {
         ConnectionImpl c = new ConnectionImpl(cb, settings);
-        settings.setConnection(c);
+        Connections.setupConnection(c, settings);
         return c;
     }
     
     /**
      * Creates a Connection with DefaultConnectionCallbacks
-     * @param p Properties that customize the Connection
      * @return
      */
     public static Connection create(ConnectionSettings settings) {
         ConnectionImpl c = new ConnectionImpl(new DefaultConnectionCallbacks(), settings);
-        settings.setConnection(c);
-        // TODO: PRINT PROPERTIES JSON OUT USING JACKSON ON INIT
+        Connections.setupConnection(c, settings);
         return c;
-    }    
+    }   
+    
+    private static void setupConnection(ConnectionImpl c, ConnectionSettings settings) {
+        LOG = c.getLogger(Connections.class.getName());
+        settings.setConnection(c);
+
+        // Print out ConnectionSettings properties
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        try {
+            LOG.info("ConnectionSettings properties are:\n" + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(settings));
+        } catch (JsonProcessingException e) {
+            LOG.error("Could not pretty print ConnectionSettings properties");
+        }
+    }
     
 }

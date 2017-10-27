@@ -37,8 +37,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(
             AcknowledgementTimeoutTest.class.getName());
 
-    public AcknowledgementTimeoutTest() {
-    }
+    public AcknowledgementTimeoutTest() {}
 
     @Override
     @Before

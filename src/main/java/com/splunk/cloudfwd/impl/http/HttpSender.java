@@ -35,12 +35,10 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
-import java.util.Properties;
 import java.util.Set;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * This class performs the actually HTTP send to HEC
