@@ -78,6 +78,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
 
     @Test
     public void vpcFlowLogsToRaw() throws IOException, InterruptedException {
+        LOG.info("test: vpcFlowLogsToRaw");
         this.EXPECTED_FIELDS = vpcFlowFields;
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         connection.getSettings().setToken(createTestToken("aws:cloudwatchlogs:vpcflow"));
@@ -88,6 +89,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
 
     @Test
     public void cloudtrailToRaw() throws IOException, InterruptedException {
+        LOG.info("test: cloudtrailToRaw");
         this.EXPECTED_FIELDS = cloudtrailFields;
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         connection.getSettings().setToken(createTestToken("aws:cloudtrail"));
@@ -98,6 +100,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
 
     @Test
     public void cloudwatchToRaw() throws IOException, InterruptedException {
+        LOG.info("test: cloudwatchToRaw");
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         connection.getSettings().setToken(createTestToken("aws:cloudwatch:events"));
         sendFromFile(cloudwatchFileName);

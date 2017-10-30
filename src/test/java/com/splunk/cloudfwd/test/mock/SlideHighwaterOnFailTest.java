@@ -109,7 +109,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
          public void failed(EventBatch events, Exception ex) {
            exception = ex;
            if(!isExpectedFailureType(ex)){
-             ex.printStackTrace(); //print the stack trace if we were not expecting failure
+             LOG.error(ex.getMessage());
            } else {
              LOG.info("Got expected failed exception: " + ex);
            }

@@ -13,21 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http.httpascync;
-
-import com.splunk.cloudfwd.impl.ConnectionImpl;
+package com.splunk.cloudfwd.test.integration;
 
 /**
  *
  * @author ghendrey
  */
-public interface CoordinatedResponseHandler {
-
-    /**
-     * @param coordinator the coordinator to set
-     */
-    void setCoordinator(ResponseCoordinator coordinator);
-    
-    public ConnectionImpl getConnection();
-    
+public class NoSourcetype extends AbstractReconciliationTest{
+    @Override
+    protected String getSourceType(){
+        return null;
+    }
 }

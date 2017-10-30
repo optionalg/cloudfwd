@@ -49,7 +49,8 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         try {
             host = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            LOG.error("{}", e.getMessage());
         }
         return host;
     }
@@ -60,6 +61,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
 
     @Test
     public void sendEventsWithDefaultFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithDefaultFields");
         super.sendEvents();
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
@@ -68,6 +70,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
 
     @Test
     public void sendEventsWithNullValueFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithNullValueFields");
         connection.getSettings().setHost(null);
         connection.getSettings().setIndex(null);
         connection.getSettings().setSource(null);
@@ -80,6 +83,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
 
     @Test
     public void sendEventsWithCustomFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithCustomFields");
         connection.getSettings().setIndex(INDEX_NAME);
         connection.getSettings().setHost(getLocalHost());
         connection.getSettings().setSource(getSource());

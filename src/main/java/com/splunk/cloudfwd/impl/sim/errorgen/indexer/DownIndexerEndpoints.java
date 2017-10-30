@@ -23,20 +23,24 @@ import com.splunk.cloudfwd.impl.sim.AcknowledgementEndpoint;
 import com.splunk.cloudfwd.impl.sim.HealthEndpoint;
 import com.splunk.cloudfwd.impl.sim.EventEndpoint;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
+import static com.splunk.cloudfwd.impl.sim.errorgen.indexer.DownIndexerEndpoints.LOG;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
 import java.net.ConnectException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simulate communicating with indexer in manual detention
  * @author meemax
  */
 public class DownIndexerEndpoints extends SimulatedHECEndpoints {
+   static final Logger LOG = LoggerFactory.getLogger(DownIndexerEndpoints.class.getName());
   @Override
   public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    System.out.println("splunk check fails because down");
+    LOG.trace("splunk ack endpoint check fails because down");
     ((HttpCallbacksAbstract)httpCallback).failed(new ConnectException("Unable to connect"));
   }
 
@@ -59,7 +63,7 @@ public class DownIndexerEndpoints extends SimulatedHECEndpoints {
 class DownIndexerAckEndpoint extends AckEndpoint {
   @Override
   public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
-    System.out.println("/ack rest endpoint fails because down");
+    LOG.trace("splunk ack endpoint check fails because down");
     ((HttpCallbacksAbstract) cb).failed(new Exception("Unable to connect"));
   }
 
@@ -72,7 +76,7 @@ class DownIndexerAckEndpoint extends AckEndpoint {
 class DownIndexerHealthEndpoint extends HealthEndpoint {
   @Override
   public void pollHealth(FutureCallback<HttpResponse> cb) {
-    System.out.println("/health rest endpoint fails because down");
+    LOG.trace("/health rest endpoint fails because down");
     ((HttpCallbacksAbstract) cb).failed(new Exception("Unable to connect"));
   }
 }
@@ -80,7 +84,7 @@ class DownIndexerHealthEndpoint extends HealthEndpoint {
 class DownIndexerEventEndpoint extends EventEndpoint {
   @Override
   public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
-    System.out.println("/event rest endpoint fails because down");
+    LOG.trace("/event rest endpoint fails because down");
     Runnable respond = () -> {
       ((HttpCallbacksAbstract) cb).failed(new Exception("Unable to connect"));
     };

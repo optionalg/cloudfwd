@@ -16,13 +16,18 @@ limitations under the License.
 -->
 <Configuration status="info">
   <Appenders>
+    <!-- Do not enable %methof (performance killer) -->
     <RandomAccessFile name="VerifyLogFile" fileName="verify.log" immediateFlush="false" append="false">
-      <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1}::%method - %msg%n"/>
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n"/>
     </RandomAccessFile>
-  </Appenders>
+  <!-- DO NOT REMOVE Console appender (useful for debugging) -->
+-    <Console name="Console" target="SYSTEM_OUT">
+-      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
+-    </Console>     
+  </Appenders> 
   <Loggers>
-    <Root level="info">
-      <AppenderRef ref="VerifyLogFile"/>
+    <Root level="error">
+      <AppenderRef ref="Console"/>
     </Root>
   </Loggers>
 </Configuration>

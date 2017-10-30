@@ -1,15 +1,3 @@
-package com.splunk.cloudfwd.test.integration;
-
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
-import java.nio.ByteBuffer;
-import java.util.Properties;
-import java.util.Set;
-import org.junit.Test;
-
 /*
  * Copyright 2017 Splunk, Inc..
  *
@@ -25,19 +13,27 @@ import org.junit.Test;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- *
- * @author ghendrey
- */
-public class ByteBufferWithMixedEventsIT extends AbstractByteBufferWithMixedEventsTest {
+package com.splunk.cloudfwd.test.integration;
+
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import java.util.Set;
+import org.junit.Test;
 
 
+public class ByteBufferWithMixedEventsNoSourcetypeIT extends AbstractByteBufferWithMixedEventsTest {
+    
   @Test
-  public void chalkFullOBytesForRawEndpoint() throws InterruptedException, HecConnectionTimeoutException {
-    connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+  public void chalkFullOBytesForEventEndpoint() throws InterruptedException, HecConnectionTimeoutException {
+    connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    
   }
-
+  
+   @Override
+    protected String getSourceType(){
+        return null;
+    }
+    
 }

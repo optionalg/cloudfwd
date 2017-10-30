@@ -21,7 +21,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 
 /**
- *
+ * This interface exists in order to allow us to make simulated HTTP endpoints.
  * @author ghendrey
  */
 public interface Endpoints extends Closeable{

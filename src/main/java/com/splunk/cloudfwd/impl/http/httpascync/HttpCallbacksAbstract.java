@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
@@ -59,19 +60,34 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   final public void completed(HttpResponse response) {
     try {    
         int code = response.getStatusLine().getStatusCode();
-        Header[] headers = response.getHeaders("Set-Cookie");      
-        LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
+        handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
-        if(code != 200){
-            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
-        }
+//        if(code != 200){
+//            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
+//        }
         completed(reply, code);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
+  }
+  
+  private void handleCookies(HttpResponse response){
+        Header[] headers = response.getHeaders("Set-Cookie");     
+        if(null == headers ){
+            return;
+        }
+        LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
+        StringBuilder buf = new StringBuilder();
+        for(int i=0;i<headers.length;i++){
+            buf.append(headers[i]);
+            if(i < headers.length-1){
+                buf.append(';'); //cookies are semi-colon separated
+            }
+        }
+        ((CookieClient) getSender()).setSessionCookies(buf.toString());
   }
   
     /**

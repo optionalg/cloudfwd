@@ -231,6 +231,9 @@ public class LoadBalancer implements Closeable {
                 continue; //keep going until a channel is added
             }
             if (tryChannelSend(channelsSnapshot, events, resend)) {
+                //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
+                //because everyone stuck in perpetual wait
+                //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
                 break;
             }
             waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
@@ -311,6 +314,26 @@ public class LoadBalancer implements Closeable {
             }
         }
     }
+    
+    private void waitWhileFull(long start, EventBatchImpl events,
+            boolean forced){
+        while(connection.getTimeoutChecker().isFull()){
+            try {
+                LOG.warn("ConnectionBuffers full ({} bytes). Load Balancer will block...", connection.getTimeoutChecker().getSizeInBytes());                
+                latch = new CountDownLatch(1);
+                if (!latch.await(100, TimeUnit.MILLISECONDS)) {
+                    LOG.warn(
+                            "Round-robin load balancer waited 100 ms because connection was full" );
+                }
+                latch = null;
+            } catch (InterruptedException e) {
+                LOG.error(
+                        "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
+                        getMessage());
+            }
+            throwExceptionIfTimeout(start, events, forced);
+        }//while        
+    }
 
     private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
             EventBatchImpl events) throws HecNoValidChannelsException {
@@ -350,7 +373,7 @@ public class LoadBalancer implements Closeable {
         // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
         List<InetSocketAddress> addrs = discoverer.getAddrs();
         for (HecChannel c : this.channels.values()) {
-            c.close();
+            c.closeAndFinish();
         }
         staleChannels.putAll(channels);
         channels.clear();

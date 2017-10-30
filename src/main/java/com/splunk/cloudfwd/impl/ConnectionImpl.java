@@ -157,7 +157,7 @@ public class ConnectionImpl implements Connection {
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.closeNow();
-      timeoutChecker.queisce();
+      timeoutChecker.closeNow();
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -214,7 +214,9 @@ public class ConnectionImpl implements Connection {
       return 0;
     }
     
-    logLBHealth();
+    if(LOG.isInfoEnabled()){
+        logLBHealth();
+    }
     
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 

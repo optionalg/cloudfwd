@@ -317,6 +317,9 @@ public abstract class AbstractConnectionTest {
    * @return
    */
   protected Event nextEvent(int seqno) {
+     if(seqno%100==0){
+         LOG.info("sending id={}", seqno);
+     }
     Event event = null;
     switch (this.eventType) {
       case TEXT: {
