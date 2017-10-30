@@ -5,6 +5,7 @@ import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.LoggerFactory;
 
 /*
@@ -32,17 +33,17 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
           getName());
 
   Map<Comparable, Long> batchSizes = new ConcurrentHashMap<>();
-  long count = 0;
-  long ackedSize = 0;
-  long failedCount = 0;
-  long batchCount = 0;
-  long totLatency = 0;
-  private double avgLatency = 0;
+  AtomicLong count = new AtomicLong(0);
+  AtomicLong ackedSize = new AtomicLong(0);
+  AtomicLong failedCount = new AtomicLong(0);
+  AtomicLong batchCount = new AtomicLong(0);
+  AtomicLong totLatency = new AtomicLong(0);
+  long lastLatency;
   double meanSquaredLatency = 0;
 
 
   public long getAcknowledgedSize() {
-    return ackedSize;
+    return ackedSize.get();
   }
 
   @Override
@@ -53,23 +54,21 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
     if(null != events){
         LOG.error("Failed event batch: {}", events);
     }
-    failedCount++;
+    failedCount.incrementAndGet();
   }
 
   @Override
   public void acknowledged(EventBatch events) {
     super.acknowledged(events);
-    long eventLatency = System.currentTimeMillis() - ((EventBatchImpl)events).getSendTimestamp();
-    totLatency += eventLatency;
-    avgLatency = ((double)totLatency)/++count;
-    //meanSquaredLatency = meanSquaredLatency(eventLatency, avgLatency, totLatency);
+    lastLatency = System.currentTimeMillis() - ((EventBatchImpl)events).getSendTimestamp();
+    totLatency.addAndGet(lastLatency);
 
     Long size = batchSizes.remove(events.getId());
     if (size != null) {
       if (size < 0) {
         throw new RuntimeException("negative size:" + size);
       }
-      ackedSize += size;
+      ackedSize.addAndGet(size);
     } else {
       //no-op. acknowledgements happen for batches that were sent during the perf test warmup period
       //during which we would not have recorded the batch via deferCountUntilAck
@@ -97,7 +96,11 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
      * @return the avgLatency
      */
     public double getAvgLatency() {
-        return avgLatency;
+        return ((double)ackedSize.get())/totLatency.get();
+    }
+    
+    public double getLastLatency(){
+        return lastLatency;
     }
 
 }
