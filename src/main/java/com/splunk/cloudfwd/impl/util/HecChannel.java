@@ -53,7 +53,7 @@ import java.util.logging.Level;
 public class HecChannel implements Closeable, LifecycleEventObserver {
   private final Logger LOG;
   private final HttpSender sender;
-  private final int full;
+  private final int maxUnackedEvents;
   private ScheduledFuture reaperTaskFuture;
   private ScheduledFuture closeWatchDogTaskFuture;
   private Future onDemandAckPollFuture;
@@ -82,7 +82,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.channelId = newChannelId();
     this.channelMetrics = new ChannelMetrics(c);
     this.channelMetrics.addObserver(this);
-    this.full = loadBalancer.getPropertiesFileHelper().
+    this.maxUnackedEvents = loadBalancer.getPropertiesFileHelper().
             getMaxUnackedEventBatchPerChannel();
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     
@@ -185,7 +185,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     events.setHecChannel(this);
     sender.sendBatch(events);
-    if (unackedCount.get() == full) {
+    if (unackedCount.get() == maxUnackedEvents) {
       pollAcks();
     }
     return true;
@@ -248,10 +248,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     
     public boolean isFull(){
-        if( this.unackedCount.get()> full){
-            LOG.error("{} illegal channel state full={}, unackedCount={}", this, full, unackedCount.get());
+        if( this.unackedCount.get()> maxUnackedEvents){
+            LOG.error("{} illegal channel state full={}, unackedCount={}", this, maxUnackedEvents, unackedCount.get());
         }
-        return  this.unackedCount.get() == full;
+        return this.unackedCount.get() == maxUnackedEvents;
     }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {

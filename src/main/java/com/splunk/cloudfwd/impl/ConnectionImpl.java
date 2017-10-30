@@ -345,13 +345,17 @@ public class ConnectionImpl implements Connection {
         int _closed=0;
         int _quiesced=0;
         int  _healthy = 0;
+        int _full = 0;
         int _misconfigured=0;
         int _dead=0;
-        int _decomissioned=0;
+        int _decomissioned=0;        
         for(HecHealth h:channelHealths){
             if(h.isHealthy()){
                 _healthy++;
             }
+            if(h.isFull()){
+                _full++;
+            }            
             if(h.isMisconfigured()){
                 _misconfigured++;
             }
@@ -369,8 +373,8 @@ public class ConnectionImpl implements Connection {
             }
         }
         
-        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
-                channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
+        LOG.info("LOAD BALANCER: channels={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}", 
+                channelHealths.size(),_healthy, _full,  _quiesced, _decomissioned, _dead, _closed, _misconfigured);
     }
 
 }
