@@ -181,9 +181,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
                         synchronized (this) {
                             // wait while the batch hasn't been acknowledged and it hasn't failed
-                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
                                 waitingSenders.put(eb.getId(), this);
-                                wait(connection.getSettings().getAckTimeoutMS());
+                                wait(500); //wait 500 ms
                             }
                         }
                         waitingSenders.remove(eb.getId());
@@ -213,9 +213,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
             ((ThroughputCalculatorCallback) callbacks).deferCountUntilAck(batch.getId(), sent);
 
-            if (seqno % 25 == 0) {
+            //if (seqno % 25 == 0) {
                 checkAndLogPerformance(!warmingUp); // assert only if we are not warming up
-            }
+            //}
         }
 
         private EventBatch nextBatch(int seqno) {
