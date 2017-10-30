@@ -82,8 +82,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         super.setProps(settings);
         settings.setToken(createTestToken("__singleline"));
         // we don't want to hit any ack timeouts because it's easier to make our callbacks not expect them
-        settings.setAckTimeoutMS(sendExceptionTimeout
-            + Long.parseLong(PropertyKeys.DEFAULT_ACK_TIMEOUT_MS));
+        settings.setAckTimeoutMS(sendExceptionTimeout + PropertyKeys.DEFAULT_ACK_TIMEOUT_MS);
     }
 
     private void deleteTokenOnServer() {

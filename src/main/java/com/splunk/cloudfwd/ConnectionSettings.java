@@ -74,13 +74,13 @@ public class ConnectionSettings {
     private String hecEndpointType = DEFAULT_HEC_ENDPOINT_TYPE;
     
     @JsonProperty("enable_checkpoints")
-    private Boolean enableCheckpoints = Boolean.parseBoolean(DEFAULT_ENABLE_CHECKPOINTS);
+    private Boolean enableCheckpoints = DEFAULT_ENABLE_CHECKPOINTS;
 
     @JsonProperty("disable_certificate_validation")
     private Boolean disableCertificateValidation = false;
 
     @JsonProperty("channels_per_dest")
-    private int channelsPerDest = Integer.parseInt(DEFAULT_CHANNELS_PER_DESTINATION);
+    private int channelsPerDest = DEFAULT_CHANNELS_PER_DESTINATION;
 
     @JsonProperty("mock_http")
     private Boolean mockHttp = false;
@@ -89,34 +89,34 @@ public class ConnectionSettings {
     private Boolean testPropertiesEnabled;
 
     @JsonProperty("unresponsive_channel_decom_ms")
-    private long unresponsiveChannelDecomMS = Long.parseLong(DEFAULT_UNRESPONSIVE_MS);
+    private long unresponsiveChannelDecomMS = DEFAULT_UNRESPONSIVE_MS;
 
     @JsonProperty("max_total_channels")
-    private int maxTotalChannels = Integer.parseInt(DEFAULT_MAX_TOTAL_CHANNELS);
+    private int maxTotalChannels = DEFAULT_MAX_TOTAL_CHANNELS;
 
     @JsonProperty("max_unacked_per_channel")
-    private int maxUnackedPerChannel = Integer.parseInt(DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL);
+    private int maxUnackedPerChannel = DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL;
 
     @JsonProperty("event_batch_size")
-    private int eventBatchSize = Integer.parseInt(DEFAULT_EVENT_BATCH_SIZE);
+    private int eventBatchSize = DEFAULT_EVENT_BATCH_SIZE;
 
     @JsonProperty("ack_poll_ms")
-    private long ackPollMS = Long.parseLong(DEFAULT_ACK_POLL_MS);
+    private long ackPollMS = DEFAULT_ACK_POLL_MS;
 
     @JsonProperty("health_poll_ms")
-    private long healthPollMS = Long.parseLong(DEFAULT_HEALTH_POLL_MS);
+    private long healthPollMS = DEFAULT_HEALTH_POLL_MS;
 
     @JsonProperty("channel_decom_ms")
-    private long channelDecomMS = Long.parseLong(DEFAULT_DECOM_MS);
+    private long channelDecomMS = DEFAULT_DECOM_MS;
     
     @JsonProperty("channel_quiesce_timeout_ms")
-    private long channelQuiesceTimeoutMS = Long.parseLong(DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS);
+    private long channelQuiesceTimeoutMS = DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS;
 
     @JsonProperty("ack_timeout_ms")
-    private long ackTimeoutMS = Long.parseLong(DEFAULT_ACK_TIMEOUT_MS);
+    private long ackTimeoutMS = DEFAULT_ACK_TIMEOUT_MS;
 
     @JsonProperty("blocking_timeout_ms")
-    private long blockingTimeoutMS = Long.parseLong(DEFAULT_BLOCKING_TIMEOUT_MS);
+    private long blockingTimeoutMS = DEFAULT_BLOCKING_TIMEOUT_MS;
 
     @JsonProperty("mock_http_classname")
     private String mockHttpClassname;
@@ -131,10 +131,10 @@ public class ConnectionSettings {
     private Boolean enableHttpDebug = false;
 
     @JsonProperty("max_retries")
-    private int maxRetries = Integer.parseInt(DEFAULT_RETRIES);
+    private int maxRetries = DEFAULT_RETRIES;
 
     @JsonProperty("max_preflight_retries")
-    private int maxPreflightTries = Integer.parseInt(DEFAULT_PREFLIGHT_RETRIES);
+    private int maxPreflightTries = DEFAULT_PREFLIGHT_RETRIES;
 
     public static PropertiesFileHelper fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
@@ -226,47 +226,47 @@ public class ConnectionSettings {
     }
 
     public int getChannelsPerDestination() {
-        return applyDefaultIfNull(this.channelsPerDest, Integer.parseInt(DEFAULT_CHANNELS_PER_DESTINATION));
+        return applyDefaultIfNull(this.channelsPerDest, DEFAULT_CHANNELS_PER_DESTINATION);
     }
 
     public long getUnresponsiveMS() {
-        return applyDefaultIfNull(this.unresponsiveChannelDecomMS, Long.parseLong(DEFAULT_UNRESPONSIVE_MS)); //TODO: can defaults be non-strings in properties file?
+        return applyDefaultIfNull(this.unresponsiveChannelDecomMS, DEFAULT_UNRESPONSIVE_MS);
     }
 
     public long getAckPollMS() {
-        return applyDefaultIfNull(this.ackPollMS, Long.parseLong(DEFAULT_ACK_POLL_MS));
+        return applyDefaultIfNull(this.ackPollMS, DEFAULT_ACK_POLL_MS);
     }
 
     public long getHealthPollMS() {
-        return applyDefaultIfNull(this.healthPollMS, Long.parseLong(DEFAULT_HEALTH_POLL_MS));
+        return applyDefaultIfNull(this.healthPollMS, DEFAULT_HEALTH_POLL_MS);
     }
 
     public int getMaxTotalChannels() {
-        return applyDefaultIfNull(this.maxTotalChannels, Integer.parseInt(DEFAULT_MAX_TOTAL_CHANNELS));
+        return applyDefaultIfNull(this.maxTotalChannels, DEFAULT_MAX_TOTAL_CHANNELS);
     }
 
     public int getMaxUnackedEventBatchPerChannel() {
-        return applyDefaultIfNull(this.maxUnackedPerChannel, Integer.parseInt(DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL));
+        return applyDefaultIfNull(this.maxUnackedPerChannel, DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL);
     }
 
     public int getEventBatchSize() {
-        return applyDefaultIfNull(this.eventBatchSize, Integer.parseInt(DEFAULT_EVENT_BATCH_SIZE));
+        return applyDefaultIfNull(this.eventBatchSize, DEFAULT_EVENT_BATCH_SIZE);
     }
 
     public long getChannelDecomMS() {
-        return applyDefaultIfNull(this.channelDecomMS, Long.parseLong(DEFAULT_DECOM_MS));
+        return applyDefaultIfNull(this.channelDecomMS, DEFAULT_DECOM_MS);
     }
     
     public long getChannelQuiesceTimeoutMS() {
-        return applyDefaultIfNull(this.channelQuiesceTimeoutMS, Long.parseLong(DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS));
+        return applyDefaultIfNull(this.channelQuiesceTimeoutMS, DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS);
     }
 
     public long getAckTimeoutMS() {
-        return applyDefaultIfNull(this.ackTimeoutMS, Long.parseLong(DEFAULT_ACK_TIMEOUT_MS));
+        return applyDefaultIfNull(this.ackTimeoutMS, DEFAULT_ACK_TIMEOUT_MS);
     }
 
     public long getBlockingTimeoutMS() {
-        return applyDefaultIfNull(this.blockingTimeoutMS, Long.parseLong(DEFAULT_BLOCKING_TIMEOUT_MS));
+        return applyDefaultIfNull(this.blockingTimeoutMS, DEFAULT_BLOCKING_TIMEOUT_MS);
     }
     
     public String getMockHttpClassname() {
@@ -291,7 +291,7 @@ public class ConnectionSettings {
     }
 
     public boolean isCheckpointEnabled() {
-        return applyDefaultIfNull(this.enableCheckpoints, Boolean.parseBoolean(DEFAULT_ENABLE_CHECKPOINTS));
+        return applyDefaultIfNull(this.enableCheckpoints, DEFAULT_ENABLE_CHECKPOINTS);
     }
 
     public String getSSLCertContent() {
@@ -307,11 +307,11 @@ public class ConnectionSettings {
     }
 
     public int getMaxRetries() {
-        return applyDefaultIfNull(this.maxRetries, Integer.parseInt(DEFAULT_RETRIES));
+        return applyDefaultIfNull(this.maxRetries, DEFAULT_RETRIES);
     }
 
     public int getMaxPreflightRetries() {
-        return applyDefaultIfNull(this.maxPreflightTries, Integer.parseInt(DEFAULT_PREFLIGHT_RETRIES));
+        return applyDefaultIfNull(this.maxPreflightTries, DEFAULT_PREFLIGHT_RETRIES);
     }
 
     public ConnectionImpl.HecEndpoint getHecEndpointType() {
@@ -377,14 +377,14 @@ public class ConnectionSettings {
     
     public void setChannelsPerDestination(int numChannels) {
         if (numChannels < 1) {
-            getLog().debug("{}, defaulting {} to {}", numChannels, CHANNELS_PER_DESTINATION, Integer.parseInt(DEFAULT_CHANNELS_PER_DESTINATION));
+            getLog().debug("{}, defaulting {} to {}", numChannels, CHANNELS_PER_DESTINATION, DEFAULT_CHANNELS_PER_DESTINATION);
         }
         this.channelsPerDest = numChannels;
     }
 
     public void setUnresponsiveMS(long decomMS) {
         if (decomMS < 1) {
-            getLog().debug("{}, defaulting {} to {}", decomMS, UNRESPONSIVE_MS, Long.parseLong(DEFAULT_UNRESPONSIVE_MS));
+            getLog().debug("{}, defaulting {} to {}", decomMS, UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS);
         }
         this.unresponsiveChannelDecomMS = decomMS;
     }
