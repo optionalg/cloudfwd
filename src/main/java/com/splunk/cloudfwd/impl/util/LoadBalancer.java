@@ -197,10 +197,11 @@ public class LoadBalancer implements Closeable {
             return false; //bail if this EventBatch has already reached a final state
         }
         preSend(events, resend);
-        if (spinSend(resend, events)) {
-            return false;
-        }
-        return true;
+//        if (spinSend(resend, events)) {
+//            return false;
+//        }
+//        return true;
+        return spinSend(resend, events);
     }
 
     private boolean spinSend(boolean resend, EventBatchImpl events) throws HecNoValidChannelsException {
@@ -209,7 +210,7 @@ public class LoadBalancer implements Closeable {
         while (true) {
             //!closed || resend
             if (closed && !resend) {
-                return true;
+                return false; //return true;
             }
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
@@ -239,7 +240,7 @@ public class LoadBalancer implements Closeable {
             waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             throwExceptionIfTimeout(startTime, events, resend);
         }
-        return false;
+        return true; //return false;
     }
 
     private void preSend(EventBatchImpl events, boolean forced)

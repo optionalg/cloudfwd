@@ -170,28 +170,30 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public class SenderWorker {
         private boolean failed = false;
         public void sendAndWaitForAcks() {
-            try {
                 EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
-                    EventBatch eb = next;
-                    long sent = connection.sendBatch(eb);
-                    logMetrics(eb, sent);
-                    LOG.info("Sent batch with id=" + batchCounter.get());
-                    next = nextBatch(batchCounter.incrementAndGet());
+                    try{
+                        EventBatch eb = next;
+                        long sent = connection.sendBatch(eb);
+                        logMetrics(eb, sent);
+                        LOG.info("Sent batch with id=" + batchCounter.get());
+                        next = nextBatch(batchCounter.incrementAndGet());
 
-                    synchronized (this) {
-                        // wait while the batch hasn't been acknowledged and it hasn't failed
-                        while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
-                            waitingSenders.put(eb.getId(), this);
-                            wait(connection.getSettings().getAckTimeoutMS());
+                        synchronized (this) {
+                            // wait while the batch hasn't been acknowledged and it hasn't failed
+                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+                                waitingSenders.put(eb.getId(), this);
+                                wait(connection.getSettings().getAckTimeoutMS());
+                            }
                         }
+                        waitingSenders.remove(eb.getId());
+                    } catch (InterruptedException ex) {
+                        LOG.debug("SenderWorker thread exiting.");
+                    }catch(Exception e){
+                        LOG.error("Send Exception: {}", e.getMessage(), e);
                     }
-                    waitingSenders.remove(eb.getId());
                 }
                 LOG.debug("SenderWorker thread exiting.");
-            } catch (InterruptedException e) {
-                LOG.debug("SenderWorker thread exiting.");
-            }
         }
 
         private void logMetrics(EventBatch batch, long sent) {
