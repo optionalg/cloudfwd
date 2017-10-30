@@ -1,32 +1,93 @@
 package com.splunk.cloudfwd.test.mock;
 
 
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints;
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
+import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 
 public class SessionCookiesTest extends AbstractConnectionTest {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SessionCookiesTest.class.getName());
+    private Exception sendException;
+    private String sendExceptionMsg;
 
+    private static final Logger LOG = LoggerFactory.getLogger(SessionCookiesTest.class.getName());
 
     @Test
     public void testWithSessionCookies() throws InterruptedException {
-        super.sendEvents();
-        //UpdateableCookieEndpoints.toggleCookie();
-        //super.sendEvents();
-        // need a way to test that hec channels were torn down and replaced
+//        Thread.sleep(10000);
+        List<String> listofChannelIds = getChannelId(this.connection);
+        sendEvents();
+        List<String> listofChannelsAfterCookieChanges = getChannelId(this.connection);
+        for (String i : listofChannelsAfterCookieChanges) {
+            if (listofChannelIds.contains(i)) {
+                Assert.fail("Channel Id never changed.");
+            }
+        }
+    }
+
+    @Override
+    protected BasicCallbacks getCallbacks() {
+        return new BasicCallbacks(getNumEventsToSend());
+    }
+
+    @Override
+    protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
+        int expected = getNumEventsToSend();
+        if(expected <= 0){
+            return;
+        }
+        try {
+            LOG.trace(
+                    "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+                            + "And test method GUID " + testMethodGUID);
+            for (int i = 0; i < expected; i++) {
+                if (i == 0 || (expected/i) == 2) {
+                    // Toggle cookies twice while sending messages
+                    UpdateableCookieEndpoints.toggleCookie();
+                }
+                Event event = nextEvent(i + 1);
+                LOG.trace("Send event {} i={}", event.getId(), i);
+                connection.send(event);
+            }
+        } catch(Exception e) {
+            this.sendException = e;
+            this.sendExceptionMsg = e.getMessage();
+            LOG.warn("In Test caught exception on Connection.send(): {} with message {}", e, e.getMessage());
+        }
+        checkSendExceptions();
+        connection.close(); //will flush
+        this.callbacks.await(10, TimeUnit.MINUTES);
+        this.callbacks.checkFailures();
+        this.callbacks.checkWarnings();
     }
 
     @Override
     protected int getNumEventsToSend() {
-        return 10;
+        return 100000;
+    }
+
+    protected List<String> getChannelId(Connection connection) {
+        ArrayList channels = new ArrayList();
+        for (Object c : connection.getHealth()) {
+            channels.add(((HecHealthImpl) c).getChannelId());
+        }
+        LOG.info("List of channel ids {}", channels);
+        return channels;
     }
 
     @Override
@@ -35,10 +96,7 @@ public class SessionCookiesTest extends AbstractConnectionTest {
         props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
                 "com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints");
         props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
-        props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, "10000");
-        props.put(PropertyKeys.HEALTH_POLL_MS, "1000");
-        props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000");
-        props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
+
         return props;
     }
 }

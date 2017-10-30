@@ -24,16 +24,12 @@ import org.apache.http.concurrent.FutureCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
-*
-* @author meemax - simulate endpoints with session cookies
-*/
 public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
   private static final Logger LOG = LoggerFactory.getLogger(UpdateableCookieEndpoints.class.getName());
-  
+
   private static final String cookie1 = "tasty-cookie=strawberry";
   private static final String cookie2 = "bitter-cookie=crinkles";
-  
+
   private static String currentCookie = cookie1;
 
   public static synchronized void toggleCookie() {
@@ -46,47 +42,77 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
 
   @Override
   public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    LOG.info("Preflight check with cookie: " + currentCookie);
+    LOG.debug("Preflight check with cookie: " + currentCookie);
     httpCallback.completed(
-        new CookiedOKHttpResponse(
-          new CannedEntity("{\\\"acks\\\":[0:false]}"),
-          currentCookie));
+            new CookiedOKHttpResponse(
+                    new CannedEntity("{\\\"acks\\\":[0:false]}"),
+                    currentCookie));
   }
 
   @Override
   public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    LOG.info("Health check with cookie: " + currentCookie);
+    LOG.debug("Health check with cookie: " + currentCookie);
     httpCallback.completed(
-        new CookiedOKHttpResponse(
-            new CannedEntity("Healthy with cookies"),
-            currentCookie));
+            new CookiedOKHttpResponse(
+                    new CannedEntity("Healthy with cookies"),
+                    currentCookie));
+  }
+
+  @Override
+  protected PreFlightAckEndpoint createPreFlightAckEndpoint() {
+    return new CookiedPreFlightEnpoint();
   }
 
   @Override
   protected EventEndpoint createEventEndpoint() {
-      return new CookiedEventpoint();
+    return new CookiedEventpoint();
   }
 
   @Override
   protected AckEndpoint createAckEndpoint() {
-      return new CookiedAckEndpoint();
+    return new CookiedAckEndpoint();
+  }
+
+  class CookiedPreFlightEnpoint extends PreFlightAckEndpoint {
+    @Override
+    public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
+      Runnable respond = () -> {
+        httpCallback.completed(
+                new CookiedOKHttpResponse(
+                        new CannedEntity("{\\\"acks\\\":[0:false]}"),
+                        currentCookie));
+      };
+      delayResponse(respond);
+    }
   }
 
   class CookiedEventpoint extends EventEndpoint {
+
     @Override
     public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
-        Runnable respond = () -> {
-            LOG.info("Event post response with cookie: " + currentCookie);
-            ((HttpCallbacksAbstract) cb).completed(
+      Runnable respond = () -> {
+        LOG.debug("Event post response with cookie: " + currentCookie);
+        ((HttpCallbacksAbstract) cb).completed(
                 new CookiedOKHttpResponse(
-                    new CannedEntity("{\"ackId\":" + nextAckId() + "}"),
-                    currentCookie));
-        };
-        delayResponse(respond);
+                        new CannedEntity("{\"ackId\":" + nextAckId() + "}"),
+                        currentCookie));
+      };
+      delayResponse(respond);
+    }
+
+    protected long nextAckId() {
+      return ackEndpoint.nextAckId();
     }
   }
-  
+
   class CookiedAckEndpoint extends AckEndpoint {
+
+    @Override
+    public synchronized long nextAckId() {
+      long newId = this.ackId.incrementAndGet();
+      this.acksStates.put(newId, true);
+      return newId;
+    }
 
     @Override
     protected HttpResponse getHttpResponse(String entity) {
@@ -95,6 +121,7 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
       return new CookiedOKHttpResponse(e, currentCookie);
     }
   }
-  
-  
+
+
 }
+
