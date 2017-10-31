@@ -140,7 +140,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         float mbps = showThroughput(System.currentTimeMillis(), start);
 
         // failures
-        Integer numFailed = getCallbacks().getFailedCount();
+        Integer numFailed = callbacks.getFailedCount();
         Integer numSent = batchCounter.get();
         float percentFailed = ( (float) numFailed / (float) numSent ) * 100F;
         LOG.info("Failed count: " + numFailed + " / " + numSent + " failed callbacks. (" + percentFailed + "%)");
@@ -170,9 +170,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public class SenderWorker {
         private boolean failed = false;
         public void sendAndWaitForAcks() {
-                EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
                     try{
+                        EventBatch next = nextBatch(batchCounter.incrementAndGet());                        
                         EventBatch eb = next;
                         long sent = connection.sendBatch(eb);
                         logMetrics(eb, sent);

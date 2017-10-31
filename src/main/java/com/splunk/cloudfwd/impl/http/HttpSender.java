@@ -361,7 +361,7 @@ public final class HttpSender implements Endpoints, CookieClient {
         }; // make sure http client or simulator is started
         AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();        
         if (ackReq.isEmpty()) {
-            LOG.trace("no ackIds to poll for");
+            LOG.trace("no ackIds to poll for pn {}", getChannel());
           return;
         } else {        
           hecIoMgr.setAckPollInProgress(true);
