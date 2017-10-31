@@ -181,9 +181,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                     try{
                         failed = false;
                         EventBatch eb = next;
+                        LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
                         long sent = connection.sendBatch(eb);
-                        logMetrics(eb, sent);
                         LOG.info("Sender {} sent batch with id={}", workerNumber,  eb.getId());
+                        logMetrics(eb, sent);
+                        LOG.info("Sender {} about to generate next batch", workerNumber);
                         next = nextBatch(batchCounter.incrementAndGet());
 
                         synchronized (this) {
@@ -239,7 +241,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
         public void tell() {
             synchronized (this) {
-                notify();
+                notifyAll();
             }
         }
 
