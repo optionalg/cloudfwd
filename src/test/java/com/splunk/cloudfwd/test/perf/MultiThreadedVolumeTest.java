@@ -61,7 +61,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         List<Future> futureList = new ArrayList<>();
 
         for (int i = 0; i < numSenderThreads; i++) {
-            futureList.add(senderExecutor.submit(new SenderWorker()::sendAndWaitForAcks));
+            futureList.add(senderExecutor.submit(new SenderWorker(i)::sendAndWaitForAcks));
         }
         
         try {
@@ -167,33 +167,44 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
     }
 
-    public class SenderWorker {
+    public class SenderWorker {      
         private boolean failed = false;
+        private int workerNumber;
+        
+        public SenderWorker(int workerNum){
+            this.workerNumber = workerNum;
+        }
         public void sendAndWaitForAcks() {
+            try{
                 EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
                     try{
+                        failed = false;
                         EventBatch eb = next;
                         long sent = connection.sendBatch(eb);
                         logMetrics(eb, sent);
-                        LOG.info("Sent batch with id=" + batchCounter.get());
+                        LOG.info("Sender {} sent batch with id={}", workerNumber,  eb.getId());
                         next = nextBatch(batchCounter.incrementAndGet());
 
                         synchronized (this) {
                             // wait while the batch hasn't been acknowledged and it hasn't failed
                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+                               LOG.debug("Sender {}, about to wait", workerNumber);
                                 waitingSenders.put(eb.getId(), this);
-                                wait(500); //wait 500 ms
+                                wait(5000); //wait 500 ms //fixme 5 seconds too long
+                                LOG.debug("Sender {}, waited 500ms", workerNumber);
                             }
                         }
                         waitingSenders.remove(eb.getId());
                     } catch (InterruptedException ex) {
-                        LOG.debug("SenderWorker thread exiting.");
-                    }catch(Exception e){
-                        LOG.error("Send Exception: {}", e.getMessage(), e);
+                        LOG.debug("Sender {} exiting.", workerNumber);
+                        return;
                     }
                 }
-                LOG.debug("SenderWorker thread exiting.");
+                LOG.debug("Sender {} exiting.", workerNumber);
+            }catch(Exception e){
+                LOG.error("Worker {} caught exception {}",workerNumber, e .getMessage(), e);
+            }
         }
 
         private void logMetrics(EventBatch batch, long sent) {
