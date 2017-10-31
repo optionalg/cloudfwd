@@ -39,8 +39,7 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
   //AtomicLong batchCount = new AtomicLong(0);
   AtomicLong totLatency = new AtomicLong(0);
   long lastLatency;
-  double meanSquaredLatency = 0;
-
+ 
 
   public long getAcknowledgedSize() {
     return ackedSize.get();
@@ -63,7 +62,7 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
     ackedCount.incrementAndGet();
     lastLatency = System.currentTimeMillis() - ((EventBatchImpl)events).getSendTimestamp();
     totLatency.addAndGet(lastLatency);
-
+  
     Long size = batchSizes.remove(events.getId());
     if (size != null) {
       if (size < 0) {

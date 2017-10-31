@@ -133,7 +133,11 @@ Cloudfwd comes with a set of unit and integration tests. You can run these with 
 * To run all unit tests, run ```mvn test```. The unit tests use a simulated Splunk server.
 * To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```. The integration tests require a Splunk instance to be running, and will send a small amount of data into your Splunk instance using the Cloudfwd client. It will then query the Splunk instance for the data in order to verify it. You must add your instance's username and password to `AbstractReconciliationTest.java`.
 * To build Cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
-
+* To run a test that outputs throughput to your Splunk instance, run ```mvn test -Dtest=MultiThreadedVolumeTest -DargLine="-Durl=<URL> -Dtoken=<TOKEN> -Dmin_tp=<THROUGHPUT> -Dmax_threads=<THREADS> -Dduration_mins=<DURATION> -Dmem_mb=<MEMORY_MB>"```
+	* min_tp = minimum throughput (in mbps) for test to pass
+	* max_threads = maximum number of threads allowed at any given time for test to pass
+	* duration_mins = test duration in minutes
+	* mem_mb = maximum memory (in MB) cloudfwd is allowed to use for the test to pass
 
 ## Troubleshoot Cloudfwd
 

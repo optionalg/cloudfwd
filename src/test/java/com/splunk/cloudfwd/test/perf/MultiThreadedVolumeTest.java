@@ -44,8 +44,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private ByteBuffer buffer;
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
-    private long testStartTime = System.currentTimeMillis();
+    private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
+    private int batchSizeMB;
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
@@ -99,6 +100,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         try {
             URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
             byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+            batchSizeMB = bytes.length / 1000000;
             buffer = ByteBuffer.wrap(bytes);
         } catch (Exception ex) {
             Assert.fail("Problem reading file " + eventsFilename + ": " + ex.getMessage());
@@ -144,6 +146,14 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         Integer numSent = batchCounter.get();
         float percentFailed = ( (float) numFailed / (float) numSent ) * 100F;
         LOG.info("Failed count: " + numFailed + " / " + numSent + " failed callbacks. (" + percentFailed + "%)");
+        
+        // acknowledged throughput
+        int numAckedBatches = callbacks.getAcknowledgedBatches().size();
+        long elapsedSeconds = (System.currentTimeMillis() - testStartTimeMillis) / 1000;
+        LOG.info("Acknowledged batches: " + numAckedBatches);
+        LOG.info("Batch size (MB): " + batchSizeMB);
+        LOG.info("Acknowledged throughput (MBps): " + (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds);
+        LOG.info("Acknowledged throughput (mbps): " + (float) batchSizeMB * 8F * (float) numAckedBatches / (float) elapsedSeconds);
 
         // thread count
         long threadCount = Thread.activeCount() - numSenderThreads;
@@ -213,8 +223,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
         private void logMetrics(EventBatch batch, long sent) {
             Integer seqno = (Integer)batch.getId();
-            long elapsed = System.currentTimeMillis() - testStartTime;
-            boolean warmingUp = System.currentTimeMillis() - testStartTime < warmUpTimeMillis;
+            long elapsed = System.currentTimeMillis() - testStartTimeMillis;
+            boolean warmingUp = System.currentTimeMillis() - testStartTimeMillis < warmUpTimeMillis;
             if (warmingUp) {
                 LOG.info("WARMING UP");
             }
