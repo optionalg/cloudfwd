@@ -20,8 +20,13 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import java.io.IOException;
+
+import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
+import javafx.beans.property.Property;
+import jdk.nashorn.internal.ir.PropertyKey;
 import org.junit.Test;
 import org.junit.Assert;
 
@@ -30,11 +35,6 @@ import org.junit.Assert;
  */
 public class ConnectionSettingsTest extends AbstractConnectionTest{
     
-    @Override
-    protected void setProps(PropertiesFileHelper settings) {
-        settings.setUrl("https://customer.cloud.splunk.com:8088");
-    }
-
     @Test
     public void getSSLCertContentForCloudInstance() throws IOException {
         ConnectionSettings settings = connection.getSettings();
@@ -77,6 +77,64 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
             Assert.fail("Expect: " + expectedSSLCert + "\nbut got: " + sslCert);
         }
     }
+    
+    @Test
+    public void gettersTest() {
+        // Test initial properties set by test.properties and ConnectionSettings defaults (test.properties takes precedence over defaults)
+        ConnectionSettings settings = connection.getSettings();
+        
+        // From test.properties
+        Assert.assertEquals("https://127.0.0.1:8088", settings.getUrlString());
+        Assert.assertEquals(false, settings.isCloudInstance());
+        Assert.assertEquals(4, settings.getChannelsPerDestination());
+        Assert.assertEquals(-1, settings.getUnresponsiveMS());
+        Assert.assertEquals(250, settings.getAckPollMS());
+        Assert.assertEquals(5000, settings.getHealthPollMS());
+        Assert.assertEquals(8, settings.getMaxTotalChannels());
+        Assert.assertEquals(10000, settings.getMaxUnackedEventBatchPerChannel());
+        Assert.assertEquals(0, settings.getEventBatchSize());
+        Assert.assertEquals(60000, settings.getAckTimeoutMS());
+        Assert.assertEquals(true, settings.isCertValidationDisabled());
+        Assert.assertEquals(false, settings.isHttpDebugEnabled());
+        Assert.assertEquals(false, settings.isCheckpointEnabled());
+        Assert.assertEquals(true, settings.getTestPropertiesEnabled());
+
+        // From PropertyKeys
+        Assert.assertEquals(PropertyKeys.DEFAULT_DECOM_MS, settings.getChannelDecomMS());
+        Assert.assertEquals(PropertyKeys.DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS, settings.getChannelQuiesceTimeoutMS());
+        Assert.assertEquals(PropertyKeys.DEFAULT_BLOCKING_TIMEOUT_MS, settings.getBlockingTimeoutMS()); 
+        Assert.assertEquals(PropertyKeys.DEFAULT_RETRIES, settings.getMaxRetries());
+        Assert.assertEquals(PropertyKeys.DEFAULT_PREFLIGHT_RETRIES, settings.getMaxPreflightRetries());
+        Assert.assertEquals(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT, settings.getHecEndpointType());
+        
+        Assert.assertEquals("", settings.getToken());
+        Assert.assertEquals("", settings.getSource());
+        Assert.assertEquals("", settings.getSourcetype());
+        Assert.assertEquals("", settings.getIndex());
+
+        Assert.assertEquals("com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints", settings.getMockHttpClassname()); //default in ConnectionSettings
+        
+        Assert.assertEquals("localhost:8088", settings.getHost()); // Set by PropertiesFileHelper > createSender()
+    }
+    
+    @Test
+    public void settersTest() {
+        ConnectionSettings settings = connection.getSettings(); // Initial values set by test.properties and ConnectionSettings defaults
+
+        settings.setUrl("https://127.0.0.1:8089");
+        Assert.assertEquals("https://127.0.0.1:8089", settings.getUrlString());
+        
+        settings.setChannelsPerDestination(7);
+        Assert.assertEquals(7, settings.getChannelsPerDestination());
+
+        settings.setChannelsPerDestination(0);
+        Assert.assertEquals(PropertyKeys.DEFAULT_CHANNELS_PER_DESTINATION, settings.getChannelsPerDestination());
+        
+    }
+    /*
+    Test:
+    getUrls, urlStringToList, getUrlWithAutoAssignedPorts, getSimulatedEndpoints
+     */
 
     @Override
     protected int getNumEventsToSend() {

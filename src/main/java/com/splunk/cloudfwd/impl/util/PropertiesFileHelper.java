@@ -54,7 +54,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
 
   private HttpSender createSender() {
       // enable http client debugging
-      if (enabledHttpDebug()) {
+      if (isHttpDebugEnabled()) {
           setHttpDebugEnabled(true);
       }
       String sslCert = getSSLCertContent();

@@ -286,7 +286,7 @@ public class ConnectionSettings {
         return applyDefaultIfNull(this.disableCertificateValidation, false);
     }
 
-    public boolean enabledHttpDebug() {
+    public boolean isHttpDebugEnabled() {
         return applyDefaultIfNull(this.enableHttpDebug, false);
     }
 
@@ -329,10 +329,6 @@ public class ConnectionSettings {
         return endpoint;
     }
 
-    public String getHecEndpointTypeString() {
-        return applyDefaultIfNull(this.hecEndpointType, DEFAULT_HEC_ENDPOINT_TYPE);
-    }
-
     public String getToken() {
         if (this.splunkHecToken == null) {
             throw new HecConnectionStateException(
@@ -373,32 +369,40 @@ public class ConnectionSettings {
     // Any setter behavior that should happen on the Connection instance should be defined
     // in ConnectionSettings > setConnection() method (or in Connections > create())
 
-    //TODO: write unit tests for setters
-    
     public void setChannelsPerDestination(int numChannels) {
         if (numChannels < 1) {
-            getLog().debug("{}, defaulting {} to {}", numChannels, CHANNELS_PER_DESTINATION, DEFAULT_CHANNELS_PER_DESTINATION);
+            int was = numChannels;
+            numChannels = DEFAULT_CHANNELS_PER_DESTINATION;
+            getLog().debug("{}, defaulting {} to {}", was, CHANNELS_PER_DESTINATION, numChannels);
+            this.channelsPerDest = DEFAULT_CHANNELS_PER_DESTINATION;
         }
         this.channelsPerDest = numChannels;
     }
 
     public void setUnresponsiveMS(long decomMS) {
         if (decomMS < 1) {
-            getLog().debug("{}, defaulting {} to {}", decomMS, UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS);
+            long was = decomMS;
+            decomMS = DEFAULT_UNRESPONSIVE_MS;
+            getLog().debug("{}, defaulting {} to {}", was, UNRESPONSIVE_MS, decomMS);
+            this.unresponsiveChannelDecomMS = DEFAULT_UNRESPONSIVE_MS;
         }
         this.unresponsiveChannelDecomMS = decomMS;
     }
 
     public void setAckPollMS(long pollMS) {
         if (pollMS <= 0) {
-            getLog().debug("{}, defaulting {} to smallest allowed value of {}", pollMS, ACK_POLL_MS, MIN_ACK_POLL_MS);
+            long was = pollMS;
+            pollMS = MIN_ACK_POLL_MS;
+            getLog().debug("{}, defaulting {} to smallest allowed value of {}", was, ACK_POLL_MS, pollMS);
         }
         this.ackPollMS = pollMS;
     }
 
     public void setHealthPollMS(long pollMS) {
         if (pollMS <= 0) {
-            getLog().debug("{}, defaulting {} to smallest allowed value {}", pollMS, HEALTH_POLL_MS, MIN_HEALTH_POLL_MS);
+            long was = pollMS;
+            pollMS = MIN_HEALTH_POLL_MS;
+            getLog().debug("{}, defaulting {} to smallest allowed value {}", was, HEALTH_POLL_MS, pollMS);
         }
         this.healthPollMS = pollMS;
     }
@@ -427,8 +431,9 @@ public class ConnectionSettings {
      */
     public void setEventBatchSize(int numChars) {
         if (numChars < 1) {
+            int was = numChars;
             numChars = MIN_EVENT_BATCH_SIZE;
-            getLog().debug("{}, defaulting {} to smallest allowed value {}", numChars, EVENT_BATCH_SIZE, MIN_EVENT_BATCH_SIZE);
+            getLog().debug("{}, defaulting {} to smallest allowed value {}", was, EVENT_BATCH_SIZE, numChars);
         }
         this.eventBatchSize = numChars;
     }
