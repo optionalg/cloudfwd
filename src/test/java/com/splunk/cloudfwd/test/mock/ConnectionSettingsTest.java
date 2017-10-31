@@ -34,7 +34,234 @@ import org.junit.Assert;
  * Created by kchen on 9/27/17.
  */
 public class ConnectionSettingsTest extends AbstractConnectionTest{
+
+    /*
+    Test:
+    getUrls, urlStringToList, getUrlWithAutoAssignedPorts, getSimulatedEndpoints
+     */
+    @Test
+    public void urlTest() {
+        // Test initial properties set by test.properties and ConnectionSettings defaults (test.properties takes precedence over defaults)
+        ConnectionSettings settings = connection.getSettings();
+        
+        // From test.properties
+        Assert.assertEquals("https://127.0.0.1:8088", settings.getUrlString());
+
+        settings.setUrl("https://127.0.0.1:8089");
+        Assert.assertEquals("https://127.0.0.1:8089", settings.getUrlString());
+    }
     
+    @Test
+    public void channelsPerDestTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(4, settings.getChannelsPerDestination());
+
+        settings.setChannelsPerDestination(7);
+        Assert.assertEquals(7, settings.getChannelsPerDestination());
+        
+        settings.setChannelsPerDestination(0);
+        Assert.assertEquals(PropertyKeys.DEFAULT_CHANNELS_PER_DESTINATION, settings.getChannelsPerDestination());
+    }
+    
+    @Test
+    public void unresponsiveMSTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(-1, settings.getUnresponsiveMS());
+        
+        settings.setUnresponsiveMS(1000);
+        Assert.assertEquals(1000, settings.getUnresponsiveMS());
+        
+        settings.setUnresponsiveMS(0);
+        Assert.assertEquals(PropertyKeys.DEFAULT_UNRESPONSIVE_MS, settings.getUnresponsiveMS());
+    }
+    
+    @Test
+    public void ackPollMSTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(250, settings.getAckPollMS());
+        
+        settings.setAckPollMS(5000);
+        Assert.assertEquals(5000, settings.getAckPollMS());
+
+        settings.setAckPollMS(0);
+        Assert.assertEquals(PropertyKeys.MIN_ACK_POLL_MS, settings.getAckPollMS());
+    }
+    
+    @Test
+    public void healthPollMSTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(5000, settings.getHealthPollMS());
+
+        settings.setHealthPollMS(1000);
+        Assert.assertEquals(1000, settings.getHealthPollMS());
+        
+        settings.setHealthPollMS(0);
+        Assert.assertEquals(PropertyKeys.MIN_HEALTH_POLL_MS, settings.getHealthPollMS());
+    }
+    
+    @Test
+    public void maxTotalChannelsTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(8, settings.getMaxTotalChannels());
+        
+        settings.setMaxTotalChannels(1);
+        Assert.assertEquals(1, settings.getMaxTotalChannels());
+        
+        settings.setMaxTotalChannels(0);
+        Assert.assertEquals(Integer.MAX_VALUE, settings.getMaxTotalChannels());
+
+    }
+    
+    @Test
+    public void maxUnackedEventBatchPerChannelTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(10000, settings.getMaxUnackedEventBatchPerChannel());
+
+        settings.setMaxUnackedEventBatchPerChannel(20000);
+        Assert.assertEquals(20000, settings.getMaxUnackedEventBatchPerChannel());
+
+        settings.setMaxUnackedEventBatchPerChannel(0);
+        Assert.assertEquals(10000, settings.getMaxUnackedEventBatchPerChannel()); //no limit
+    }
+    
+    @Test
+    public void eventBatchSizeTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(0, settings.getEventBatchSize());
+
+        settings.setEventBatchSize(100);
+        Assert.assertEquals(100, settings.getEventBatchSize());
+        
+        settings.setEventBatchSize(0);
+        Assert.assertEquals(PropertyKeys.MIN_EVENT_BATCH_SIZE, settings.getEventBatchSize());
+    }
+    
+    @Test
+    public void channelDecomMSTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals(PropertyKeys.DEFAULT_DECOM_MS, settings.getChannelDecomMS());
+
+        settings.setChannelDecomMS(80000);
+        Assert.assertEquals(80000, settings.getChannelDecomMS());
+
+        settings.setChannelDecomMS(1);
+        Assert.assertEquals(-1, settings.getChannelDecomMS()); //No limit
+
+        Assert.assertEquals(true, settings.isMockHttp());
+        settings.setChannelDecomMS(100);
+        Assert.assertEquals(100, settings.getChannelDecomMS()); //Mock Http can set low DecomMS
+
+        settings.setMockHttp(false);
+        settings.setChannelDecomMS(10);
+        Assert.assertEquals(PropertyKeys.MIN_DECOM_MS, settings.getChannelDecomMS()); //Non-mock Http cannot set low DecomMS
+    }
+    
+    @Test 
+    public void channelQuiesceTimeoutMSTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals(PropertyKeys.DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS, settings.getChannelQuiesceTimeoutMS());
+        
+        settings.setChannelQuiesceTimeoutMS(200000);
+        Assert.assertEquals(200000, settings.getChannelQuiesceTimeoutMS());
+        
+        Assert.assertEquals(true, settings.isMockHttp());
+        settings.setChannelQuiesceTimeoutMS(100);
+        Assert.assertEquals(100, settings.getChannelQuiesceTimeoutMS());
+        
+        settings.setMockHttp(false);
+        settings.setChannelQuiesceTimeoutMS(10);
+        Assert.assertEquals(PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS, settings.getChannelQuiesceTimeoutMS());
+    }
+    
+    @Test
+    public void ackTimeoutMSTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(60000, settings.getAckTimeoutMS());
+
+        settings.setAckTimeoutMS(100000);
+        Assert.assertEquals(100000, settings.getAckTimeoutMS());
+        
+        settings.setAckTimeoutMS(0);
+        Assert.assertEquals(Long.MAX_VALUE, settings.getAckTimeoutMS()); // no limit
+
+        settings.setAckTimeoutMS(10000);
+        Assert.assertEquals(PropertyKeys.MIN_ACK_TIMEOUT_MS, settings.getAckTimeoutMS());
+    }
+    
+    @Test
+    public void blockingTimeoutMSTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals(PropertyKeys.DEFAULT_BLOCKING_TIMEOUT_MS, settings.getBlockingTimeoutMS());
+
+        settings.setBlockingTimeoutMS(1000);
+        Assert.assertEquals(1000, settings.getBlockingTimeoutMS());
+
+        settings.setBlockingTimeoutMS(1000);
+        Assert.assertEquals(1000, settings.getBlockingTimeoutMS());
+    }
+    
+    @Test
+    public void mockHttpClassnameTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals("com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints", settings.getMockHttpClassname()); //default in ConnectionSettings
+
+        settings.setMockHttpClassname("oh.hai.there");
+        Assert.assertEquals("oh.hai.there", settings.getMockHttpClassname());
+    }
+    
+    @Test
+    public void certValidationEnabledTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(true, settings.isCertValidationDisabled());
+
+        settings.setCertValidationEnabled(false);
+        Assert.assertEquals(false, settings.isCertValidationDisabled());
+    }
+    
+    @Test
+    public void httpDebugEnabledTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(false, settings.isHttpDebugEnabled());
+
+        settings.setHttpDebugEnabled(true);
+        Assert.assertEquals(true, settings.isHttpDebugEnabled());
+    }
+    
+    @Test
+    public void checkpointEnabledTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(false, settings.isCheckpointEnabled());
+
+        settings.setCheckpointEnabled(true);
+        Assert.assertEquals(true, settings.isCheckpointEnabled());
+    }
+
     @Test
     public void getSSLCertContentForCloudInstance() throws IOException {
         ConnectionSettings settings = connection.getSettings();
@@ -77,65 +304,130 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
             Assert.fail("Expect: " + expectedSSLCert + "\nbut got: " + sslCert);
         }
     }
+
+    @Test
+    public void cloudInstanceTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        // From test.properties
+        Assert.assertEquals(false, settings.isCloudInstance());
+
+        settings.setUrl("https://foo.cloud.splunk.com");
+        Assert.assertEquals(true, settings.isCloudInstance());
+    }
+    
+    @Test 
+    public void maxRetriesTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals(PropertyKeys.DEFAULT_RETRIES, settings.getMaxRetries());
+        
+        settings.setMaxRetries(5);
+        Assert.assertEquals(5, settings.getMaxRetries());
+
+        settings.setMaxRetries(0);
+        Assert.assertEquals(Integer.MAX_VALUE, settings.getMaxRetries());
+    }
     
     @Test
-    public void gettersTest() {
-        // Test initial properties set by test.properties and ConnectionSettings defaults (test.properties takes precedence over defaults)
+    public void maxPreflightRetriesTest() {
         ConnectionSettings settings = connection.getSettings();
-        
+
+        Assert.assertEquals(PropertyKeys.DEFAULT_PREFLIGHT_RETRIES, settings.getMaxPreflightRetries());
+
+        settings.setMaxPreflightRetries(5);
+        Assert.assertEquals(5, settings.getMaxPreflightRetries());
+
+        settings.setMaxPreflightRetries(0);
+        Assert.assertEquals(Integer.MAX_VALUE, settings.getMaxPreflightRetries());
+    }
+    
+    @Test
+    public void hecEndpointTypeTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT, settings.getHecEndpointType());
+
+        settings.setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        Assert.assertEquals(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT, settings.getHecEndpointType());
+
+        settings.setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        Assert.assertEquals(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT, settings.getHecEndpointType());
+    }
+    
+    @Test
+    public void tokenTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals("", settings.getToken());
+
+        settings.setToken("woot");
+        Assert.assertEquals("woot", settings.getToken());
+    }
+    
+    @Test
+    public void testPropertiesEnabledTest() {
+        ConnectionSettings settings = connection.getSettings();
+
         // From test.properties
-        Assert.assertEquals("https://127.0.0.1:8088", settings.getUrlString());
-        Assert.assertEquals(false, settings.isCloudInstance());
-        Assert.assertEquals(4, settings.getChannelsPerDestination());
-        Assert.assertEquals(-1, settings.getUnresponsiveMS());
-        Assert.assertEquals(250, settings.getAckPollMS());
-        Assert.assertEquals(5000, settings.getHealthPollMS());
-        Assert.assertEquals(8, settings.getMaxTotalChannels());
-        Assert.assertEquals(10000, settings.getMaxUnackedEventBatchPerChannel());
-        Assert.assertEquals(0, settings.getEventBatchSize());
-        Assert.assertEquals(60000, settings.getAckTimeoutMS());
-        Assert.assertEquals(true, settings.isCertValidationDisabled());
-        Assert.assertEquals(false, settings.isHttpDebugEnabled());
-        Assert.assertEquals(false, settings.isCheckpointEnabled());
         Assert.assertEquals(true, settings.getTestPropertiesEnabled());
 
-        // From PropertyKeys
-        Assert.assertEquals(PropertyKeys.DEFAULT_DECOM_MS, settings.getChannelDecomMS());
-        Assert.assertEquals(PropertyKeys.DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS, settings.getChannelQuiesceTimeoutMS());
-        Assert.assertEquals(PropertyKeys.DEFAULT_BLOCKING_TIMEOUT_MS, settings.getBlockingTimeoutMS()); 
-        Assert.assertEquals(PropertyKeys.DEFAULT_RETRIES, settings.getMaxRetries());
-        Assert.assertEquals(PropertyKeys.DEFAULT_PREFLIGHT_RETRIES, settings.getMaxPreflightRetries());
-        Assert.assertEquals(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT, settings.getHecEndpointType());
-        
-        Assert.assertEquals("", settings.getToken());
-        Assert.assertEquals("", settings.getSource());
-        Assert.assertEquals("", settings.getSourcetype());
-        Assert.assertEquals("", settings.getIndex());
-
-        Assert.assertEquals("com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints", settings.getMockHttpClassname()); //default in ConnectionSettings
-        
-        Assert.assertEquals("localhost:8088", settings.getHost()); // Set by PropertiesFileHelper > createSender()
+        settings.setTestPropertiesEnabled(false);
+        Assert.assertEquals(false, settings.getTestPropertiesEnabled());
     }
     
     @Test
-    public void settersTest() {
-        ConnectionSettings settings = connection.getSettings(); // Initial values set by test.properties and ConnectionSettings defaults
+    public void hostTest() {
+        ConnectionSettings settings = connection.getSettings();
 
-        settings.setUrl("https://127.0.0.1:8089");
-        Assert.assertEquals("https://127.0.0.1:8089", settings.getUrlString());
-        
-        settings.setChannelsPerDestination(7);
-        Assert.assertEquals(7, settings.getChannelsPerDestination());
+        Assert.assertEquals("localhost:8088", settings.getHost()); // Set by PropertiesFileHelper > createSender()
 
-        settings.setChannelsPerDestination(0);
-        Assert.assertEquals(PropertyKeys.DEFAULT_CHANNELS_PER_DESTINATION, settings.getChannelsPerDestination());
-        
+        settings.setHost("woot");
+        Assert.assertEquals("woot", settings.getHost());
+
+        settings.setHost("");
+        Assert.assertEquals("woot", settings.getHost()); //Ignore empty string sets
     }
-    /*
-    Test:
-    getUrls, urlStringToList, getUrlWithAutoAssignedPorts, getSimulatedEndpoints
-     */
+    
+    @Test
+    public void indexTest() {
+        ConnectionSettings settings = connection.getSettings();
 
+        Assert.assertEquals("", settings.getIndex());
+
+        settings.setIndex("woot");
+        Assert.assertEquals("woot", settings.getIndex());
+
+        settings.setIndex("");
+        Assert.assertEquals("woot", settings.getIndex()); //Ignore empty string sets
+    }
+    
+    @Test 
+    public void sourceTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals("", settings.getSource());
+
+        settings.setSource("woot");
+        Assert.assertEquals("woot", settings.getSource());
+
+        settings.setSource("");
+        Assert.assertEquals("woot", settings.getSource()); //Ignore empty string sets
+    }
+    
+    @Test 
+    public void sourcetypeTest() {
+        ConnectionSettings settings = connection.getSettings();
+
+        Assert.assertEquals("", settings.getSourcetype());
+
+        settings.setSourcetype("woot");
+        Assert.assertEquals("woot", settings.getSourcetype());
+
+        settings.setSourcetype("");
+        Assert.assertEquals("woot", settings.getSourcetype()); //Ignore empty string sets
+    }
+    
     @Override
     protected int getNumEventsToSend() {
         return 1;

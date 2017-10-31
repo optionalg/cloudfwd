@@ -338,7 +338,7 @@ public class ConnectionSettings {
         return this.splunkHecToken;
     }
 
-    protected boolean isMockHttp() {
+    public boolean isMockHttp() {
         return applyDefaultIfNull(this.mockHttp, false);
     }
 
@@ -417,11 +417,11 @@ public class ConnectionSettings {
     }
 
     public void setMaxUnackedEventBatchPerChannel(int batchesPerChannel) {
-        int minimum = 10000;
+        int max = 10000;
         if (batchesPerChannel < MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL) {
             int was = batchesPerChannel;
-            batchesPerChannel = minimum;
-            getLog().debug("{}, defaulting {} to smallest allowed value {}", was, MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, batchesPerChannel);
+            batchesPerChannel = max;
+            getLog().debug("{}, defaulting {} to no limit {}", was, MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, batchesPerChannel);
         }
         this.maxUnackedPerChannel = batchesPerChannel;
     }
@@ -443,8 +443,7 @@ public class ConnectionSettings {
             long was = decomMS;
             decomMS = -1;
             getLog().debug("{}, defaulting {} to no-limit {}", was, CHANNEL_DECOM_MS, decomMS);
-        }
-        if (decomMS < MIN_DECOM_MS && !isMockHttp()) {
+        } else if (decomMS < MIN_DECOM_MS && !isMockHttp()) {
             getLog().warn(
                     "Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
             decomMS = MIN_DECOM_MS;
@@ -456,7 +455,7 @@ public class ConnectionSettings {
         if (timeoutMS < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
             LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS +
                     " was set to a potentially too-low value, reset to min value: " + timeoutMS);
-            this.channelQuiesceTimeoutMS = PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
+            this.channelQuiesceTimeoutMS = MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
         } else {
             this.channelQuiesceTimeoutMS = timeoutMS;
         }
@@ -469,7 +468,8 @@ public class ConnectionSettings {
                 timeoutMS = Long.MAX_VALUE;
                 getLog().debug("{}, defaulting {} to maximum allowed value {}", was, ACK_TIMEOUT_MS, timeoutMS);
             } else if (timeoutMS < MIN_ACK_TIMEOUT_MS) {
-                getLog().warn(ACK_TIMEOUT_MS + " was set to a potentially too-low value: " + timeoutMS);
+                getLog().warn(ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeoutMS);
+                timeoutMS = MIN_ACK_TIMEOUT_MS;
             }
             this.ackTimeoutMS = timeoutMS;
             if (connection != null) {
@@ -545,18 +545,6 @@ public class ConnectionSettings {
             endpoint = "event";
         } else if (type == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
             endpoint = "raw";
-        } else {
-            getLog().warn(
-                    "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
-            endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
-        }
-        this.hecEndpointType = endpoint;
-    }
-
-    public void setHecEndpointType(String type) {
-        String endpoint;
-        if (type == "event" || type == "raw") {
-            endpoint = type;
         } else {
             getLog().warn(
                     "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
