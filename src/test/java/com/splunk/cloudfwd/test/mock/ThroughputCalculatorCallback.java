@@ -33,10 +33,10 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
           getName());
 
   Map<Comparable, Long> batchSizes = new ConcurrentHashMap<>();
-  AtomicLong count = new AtomicLong(0);
+  AtomicLong ackedCount = new AtomicLong(0);
   AtomicLong ackedSize = new AtomicLong(0);
   AtomicLong failedCount = new AtomicLong(0);
-  AtomicLong batchCount = new AtomicLong(0);
+  //AtomicLong batchCount = new AtomicLong(0);
   AtomicLong totLatency = new AtomicLong(0);
   long lastLatency;
   double meanSquaredLatency = 0;
@@ -60,6 +60,7 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
   @Override
   public void acknowledged(EventBatch events) {
     super.acknowledged(events);
+    ackedCount.incrementAndGet();
     lastLatency = System.currentTimeMillis() - ((EventBatchImpl)events).getSendTimestamp();
     totLatency.addAndGet(lastLatency);
 
@@ -96,7 +97,7 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
      * @return the avgLatency
      */
     public double getAvgLatency() {
-        return ((double)ackedSize.get())/totLatency.get();
+       return ((double)totLatency.get())/ackdEventCount.get();
     }
     
     public double getLastLatency(){
