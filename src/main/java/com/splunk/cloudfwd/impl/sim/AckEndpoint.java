@@ -19,12 +19,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -45,10 +45,12 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     private static final ObjectMapper serializer = new ObjectMapper();
     
     protected AtomicLong ackId = new AtomicLong(-1); //so post increment, first id returned is 0
-    protected SortedMap<Long, Boolean> acksStates = Collections.synchronizedSortedMap(new TreeMap<>()); //key is ackId
+    protected Collection<Long> acked = new TreeSet<>(); // toggled as acked
+    protected Collection<Long> unacked = new TreeSet<>(); // not yet acked
+    
     Random rand = new Random(System.currentTimeMillis());
     volatile boolean started;
-    private final ScheduledThreadPoolExecutor executor;
+    final ScheduledThreadPoolExecutor executor;
     private final Map resp = new HashMap(); //accessed from synchronized block
     SortedMap<Long, Boolean> acks = new TreeMap<>();    //accessed from synchronized block
     
@@ -66,51 +68,45 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     }
 
     //start periodically flipping ackIds from false to true. This simulated event batches getting indexed.
-    //To mimick the observed behavior of splunk, we flip the lowest unacknowledge ackId before
+    //To mimic the observed behavior of splunk, we flip the lowest unacknowledged ackId before
     //any higher ackId
     @Override
     public void start() {
         if (started) {
             return;
         }
-        synchronized(this){
-            if (started) {
-               return;
-           }    
-            //stateFrobber will set the ack to TRUE
-            Runnable stateFrobber = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        synchronized (AckEndpoint.this) {         
-                            if(acksStates.isEmpty()){
-                               return;
-                            }                                              
-                            Long lowestKey = acksStates.firstKey();
-                            if (null == lowestKey) {
-                                return;
-                            }
-                            acksStates.put(lowestKey, true); //flip it
-                        }//synchronized
-                    } catch (Exception e) {
-                        LOG.error(e.getMessage(), e);
-                    }
+        //stateFrobber will set the ack to TRUE
+        Runnable stateFrobber = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    synchronized (AckEndpoint.this) {
+                      if(unacked.isEmpty()){
+                        return;
+                      }
+                      Long lowestKey = (Long)((TreeSet<Long>)unacked).first();
+                      if (null == lowestKey) {
+                        return;
+                      }
+                      unacked.remove(lowestKey);
+                      acked.add(lowestKey);
+                    }//synchronized
+                } catch (Exception e) {
+                    LOG.error(e.getMessage(), e);
                 }
-            };
-            //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
-            //if the execution time of a task exceeds the period. We don't want that.
-            executor.scheduleWithFixedDelay(stateFrobber, 0, 10,
-                    TimeUnit.MILLISECONDS);
-            started = true;
-        }//end synchronized
+            }
+        };
+        //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
+        //if the execution time of a task exceeds the period. We don't want that.
+        executor.scheduleWithFixedDelay(stateFrobber, 0, (long)rand.nextInt(11),
+                TimeUnit.MICROSECONDS);
+        started = true;
     }
     
     @Override
     public long nextAckId() {
         long newId = this.ackId.incrementAndGet();
-        synchronized(this){
-            this.acksStates.put(newId, true); //mock/pretend the events got indexed
-        }
+        this.unacked.add(newId);
         //System.out.println("ackStates: " + this.acksStates);
         return newId;
     }
@@ -127,12 +123,13 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             //System.out.println("Server side simulation: " + this.acksStates.size() + " acks tracked on server: " + acksStates);
             Collection<Long> unacked = ackMgr.getAcknowledgementTracker().
                     getPostedButUnackedEvents();
-            //System.out.println("Channel  " +AckEndpoint.this.toString()+" recieved these acks to check: " + unacked + " and had this state " + acksStates);      
+            //System.out.println("Channel  " +AckEndpoint.this.toString()+" received these acks to check: " + unacked + " and had this state " + acksStates);      
             acks.clear();
             for (long ackId : unacked) {
-                Boolean was = acksStates.remove(ackId);//check(ackId);
-                if (was != null) {
-                    acks.put(ackId, was);
+                boolean has = acked.contains(ackId);
+                if (has) {
+                    acked.remove(ackId);
+                    acks.put(ackId, Boolean.TRUE);
                 }
             }
             resp.clear();
