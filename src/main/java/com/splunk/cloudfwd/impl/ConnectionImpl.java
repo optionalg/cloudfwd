@@ -320,7 +320,6 @@ public class ConnectionImpl implements Connection {
     public List<HecHealth> getHealth() {
         return lb.getHealth();
     }
-
     
     private void throwExceptionIfNoChannelOK()  {
         List<HecHealth> healths = lb.getHealth(); //returns after every channel either has gotten its health or given up trying
@@ -338,7 +337,8 @@ public class ConnectionImpl implements Connection {
             //throw whatever exception caused the first unhealthy channel to be unhealthy
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
-   }    
+   }  
+
 
     private void logLBHealth() {
         List<HecHealth> channelHealths = lb.getHealthNonBlocking();
