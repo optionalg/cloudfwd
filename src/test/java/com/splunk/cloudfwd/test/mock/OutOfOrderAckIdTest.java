@@ -91,6 +91,7 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
         return n;
     }
 
+    @Override
     protected BasicCallbacks getCallbacks() {
       if (this.checkpoint) 
         return super.getCallbacks();
