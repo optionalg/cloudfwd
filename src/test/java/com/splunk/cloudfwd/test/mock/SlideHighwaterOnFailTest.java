@@ -49,16 +49,12 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
 
     @Test
     public void testShouldCheckpointOnFail() throws InterruptedException {
-<<<<<<< HEAD
       super.sendEvents();
     }
     
     @Override
     protected boolean shouldSendThrowException() {
       return true;
-=======
-      sendEvents();
->>>>>>> always enable checkpoints for this test
     }
     
     @Override
