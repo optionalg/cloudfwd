@@ -338,15 +338,31 @@ public class LoadBalancer implements Closeable {
 
     private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
             EventBatchImpl events) throws HecNoValidChannelsException {
-
-        List<HecHealth> hecHealths = channelsSnapshot.stream().map(HecChannel::getHealth).collect(Collectors.toList());
-        if (hecHealths.stream().allMatch(HecHealth::isMisconfigured)) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
-            String msg = "No valid channels available due to possible misconfiguration.";
+        //First, we run through all the channel's NONBLOCKING get health. This is an optimistic approach wherein if we
+        //do find a single not-misconfigured channel then we are good to go
+        for(HecChannel c:channelsSnapshot){
+            HecHealth health = c.getHealthNonblocking();
+            if(null != health.getStatus() && !health.isMisconfigured()){ //the health *was* updated (status not null), and it's not misconfigured
+                return; //bail, good to go
+            }
+        }
+        //If we are here then we *didn't* find a non-misconfigured channel
+        List<HecHealth> healths = new ArrayList<>();
+        for(HecChannel c:channelsSnapshot){
+            HecHealth health = c.getHealth(); //this blocks until the health status has been set at  least once
+            healths.add(health);
+            if(!health.isMisconfigured()){ //the health *was* updated (status not null), and it's not misconfigured
+                return; //bail, good to go
+            }
+        } 
+        
+        String msg = "No valid channels available due to possible misconfiguration.";
             HecNoValidChannelsException ex = new HecNoValidChannelsException(
-                msg, hecHealths);
+                msg, healths);
             LOG.error(msg, ex);
             throw ex;
-        }
+        
+
     }
 
     private void recoverAndThrowException(EventBatchImpl events, boolean forced,

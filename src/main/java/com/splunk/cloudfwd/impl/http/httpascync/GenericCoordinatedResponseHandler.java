@@ -46,13 +46,25 @@ public class GenericCoordinatedResponseHandler extends HttpCallbacksGeneric impl
     /**
      *Overrides the base behavior which always notifies. We notify only when we have enough information from both 
      * coordinated response handlers to say definitively that the aggregated response is successful or not. Responses that
-     * are not definitive, like an initial OK, or an OK following a failure/NOT OK must be ignored.
+     * are not definitive, like an initial OK, or an OK following a failure/NOT OK must be ignored. This is why the methof
+     * is called 'conditionallyUpdate'. Notify will get called by superclasses for all completed responses and failures, but 
+     * not cancelled (which is why we override cancelled below).
      * @param e
      */
     @Override
     protected void notify(LifecycleEvent e) {
         coordinator.conditionallyUpate(e, getSender().getChannelMetrics());
     }
+    
+    @Override
+    public void cancelled() {
+        try {
+            LOG.trace("cancelled '{}' on channel {}", getOperation(), getChannel());
+            coordinator.cancel(null);
+        } catch (Exception ex) {
+            error(ex);
+        }
+    }  
 
     /**
      * @param coordinator the coordinator to set
