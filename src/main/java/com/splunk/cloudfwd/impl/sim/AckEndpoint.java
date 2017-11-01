@@ -98,7 +98,7 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
         };
         //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
         //if the execution time of a task exceeds the period. We don't want that.
-        executor.scheduleWithFixedDelay(stateFrobber, 0, (long)rand.nextInt(11),
+        executor.scheduleWithFixedDelay(stateFrobber, 0, 10,
                 TimeUnit.MICROSECONDS);
         started = true;
     }
