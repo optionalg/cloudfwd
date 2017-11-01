@@ -20,9 +20,7 @@ import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_NOT_OK;
-import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.io.IOException;
-import java.util.logging.Level;
 import org.slf4j.Logger;
 
 /**
@@ -85,6 +83,17 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
             getManager().setAckPollInProgress(false);
         }
     }
+    
+    @Override
+    public void cancelled() {
+        try {
+            LOG.trace("HTTP post cancelled while polling for '{}' on channel {}", getOperation(), getChannel());
+        } catch (Exception ex) {
+            error(ex);
+        }finally{
+            getManager().setAckPollInProgress(false);
+        }
+    }      
 
 
     private void consumeAckPollResponse(String resp) throws IOException {

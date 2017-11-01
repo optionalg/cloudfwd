@@ -478,7 +478,7 @@ public class ConnectionSettings {
    * @param token
    */
   public void setToken(String token) {
-    if (!getToken().equals(token)) {
+    if (!token.equals(getToken())) {
       putProperty(PropertyKeys.TOKEN, token);
       checkAndRefreshChannels();
     }
@@ -512,7 +512,7 @@ public class ConnectionSettings {
      * @param host Host value for the data feed
      */
     public void setHost(String host) {
-        if (!StringUtils.isEmpty(host) && !getHost().equals(host)) {
+        if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
             putProperty(PropertyKeys.HOST, host);
             checkAndRefreshChannels();
         }
@@ -523,7 +523,7 @@ public class ConnectionSettings {
      * @param index The Splunk index in which the data feed is stored
      */
     public void setIndex(String index) {
-        if (!StringUtils.isEmpty(index) && !getIndex().equals(index)) {
+        if (!StringUtils.isEmpty(index) && !index.equals(getIndex())) {
             putProperty(PropertyKeys.INDEX, index);
             checkAndRefreshChannels();
         }
@@ -534,7 +534,7 @@ public class ConnectionSettings {
      * @param source The source of the data feed
      */
     public void setSource(String source) {
-        if (!StringUtils.isEmpty(source) && !getSource().equals(source)) {
+        if (!StringUtils.isEmpty(source) && !source.equals(getSource())) {
             putProperty(PropertyKeys.SOURCE, source);
             checkAndRefreshChannels();
         }
@@ -545,7 +545,7 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
     public void setSourcetype(String sourcetype) {
-        if (!StringUtils.isEmpty(sourcetype) && !getSourcetype().equals(sourcetype)) {
+        if (!StringUtils.isEmpty(sourcetype) && !sourcetype.equals(getSourcetype())) {
             putProperty(PropertyKeys.SOURCETYPE, sourcetype);
             checkAndRefreshChannels();
         }
