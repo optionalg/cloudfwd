@@ -24,6 +24,7 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,7 +46,6 @@ public class LoadBalancer implements Closeable {
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
-    private final CheckpointManager checkpointManager; //consolidate metrics across all channels
     private final IndexDiscoverer discoverer;
     //private final IndexDiscoveryScheduler discoveryScheduler;
     private int robin; //incremented (mod channels) to perform round robin
@@ -59,7 +59,6 @@ public class LoadBalancer implements Closeable {
         this.channelsPerDestination = c.getSettings().
                 getChannelsPerDestination();
         this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
-        this.checkpointManager = new CheckpointManager(c);
         //this.discoveryScheduler = new IndexDiscoveryScheduler(c);
         createChannels(discoverer.getAddrs());
         //this.discoverer.addObserver(this);
@@ -103,6 +102,9 @@ public class LoadBalancer implements Closeable {
 
     public void closeNow() {
         //this.discoveryScheduler.stop();
+        Collection<EventBatchImpl> unacked = getConnection().getTimeoutChecker().getUnackedEvents();
+        unacked.forEach((e)->getConnection().getCallbacks().failed(e, new HecConnectionStateException(
+            "Connection closed with unacknowleged events remaining.", HecConnectionStateException.Type.CONNECTION_CLOSED)));
         for (HecChannel c : this.channels.values()) {
             c.forceClose();
         }
@@ -110,10 +112,6 @@ public class LoadBalancer implements Closeable {
             c.forceClose();
         }
         this.closed = true;
-    }
-
-    public CheckpointManager getCheckpointManager() {
-        return this.checkpointManager;
     }
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
@@ -155,7 +153,7 @@ public class LoadBalancer implements Closeable {
                 createSender(s);
 
         HecChannel channel = new HecChannel(this, sender, this.connection);
-        channel.getChannelMetrics().addObserver(this.checkpointManager);
+        channel.getChannelMetrics().addObserver(this.connection.getCheckpointManager());
         LOG.debug("Adding channel {}", channel);
         channels.put(channel.getChannelId(), channel);
         return true;
@@ -175,7 +173,7 @@ public class LoadBalancer implements Closeable {
     }
          */
         if (!force && !c.isEmpty()) {
-            LOG.debug(this.checkpointManager.toString());
+            LOG.debug(this.connection.getCheckpointManager().toString());
             throw new HecIllegalStateException(
                     "Attempt to remove non-empty channel: " + channelId + " containing " + c.
                     getUnackedCount() + " unacked payloads",
@@ -199,10 +197,11 @@ public class LoadBalancer implements Closeable {
             return false; //bail if this EventBatch has already reached a final state
         }
         preSend(events, resend);
-        if (spinSend(resend, events)) {
-            return false;
-        }
-        return true;
+//        if (spinSend(resend, events)) {
+//            return false;
+//        }
+//        return true;
+        return spinSend(resend, events);
     }
 
     private boolean spinSend(boolean resend, EventBatchImpl events) throws HecNoValidChannelsException {
@@ -211,7 +210,7 @@ public class LoadBalancer implements Closeable {
         while (true) {
             //!closed || resend
             if (closed && !resend) {
-                return true;
+                return false; //return true;
             }
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
@@ -233,12 +232,15 @@ public class LoadBalancer implements Closeable {
                 continue; //keep going until a channel is added
             }
             if (tryChannelSend(channelsSnapshot, events, resend)) {
+                //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
+                //because everyone stuck in perpetual wait
+                //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
                 break;
             }
             waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             throwExceptionIfTimeout(startTime, events, resend);
         }
-        return false;
+        return true; //return false;
     }
 
     private void preSend(EventBatchImpl events, boolean forced)
@@ -249,7 +251,7 @@ public class LoadBalancer implements Closeable {
                     HecIllegalStateException.Type.LOAD_BALANCER_NO_CHANNELS);
         }
         if (!closed || forced) {
-            this.checkpointManager.registerEventBatch(events, forced);
+            this.connection.getCheckpointManager().registerEventBatch(events, forced);
         }
         if(this.channels.size() > this.connection.getSettings().getMaxTotalChannels()){
             LOG.warn("{} exceeded. There are currently: {}",  PropertyKeys.MAX_TOTAL_CHANNELS, channels.size());
@@ -313,6 +315,26 @@ public class LoadBalancer implements Closeable {
             }
         }
     }
+    
+    private void waitWhileFull(long start, EventBatchImpl events,
+            boolean forced){
+        while(connection.getTimeoutChecker().isFull()){
+            try {
+                LOG.warn("ConnectionBuffers full ({} bytes). Load Balancer will block...", connection.getTimeoutChecker().getSizeInBytes());                
+                latch = new CountDownLatch(1);
+                if (!latch.await(100, TimeUnit.MILLISECONDS)) {
+                    LOG.warn(
+                            "Round-robin load balancer waited 100 ms because connection was full" );
+                }
+                latch = null;
+            } catch (InterruptedException e) {
+                LOG.error(
+                        "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
+                        getMessage());
+            }
+            throwExceptionIfTimeout(start, events, forced);
+        }//while        
+    }
 
     private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
             EventBatchImpl events) throws HecNoValidChannelsException {
@@ -335,7 +357,7 @@ public class LoadBalancer implements Closeable {
             events.cancelEventTrackers();
         }
         events.setState(EVENT_POST_FAILED);
-        checkpointManager.cancel(events.getId());
+        this.connection.getCheckpointManager().cancel(events.getId());
         throw e;
     }
 
@@ -352,7 +374,7 @@ public class LoadBalancer implements Closeable {
         // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
         List<InetSocketAddress> addrs = discoverer.getAddrs();
         for (HecChannel c : this.channels.values()) {
-            c.close();
+            c.closeAndFinish();
         }
         staleChannels.putAll(channels);
         channels.clear();

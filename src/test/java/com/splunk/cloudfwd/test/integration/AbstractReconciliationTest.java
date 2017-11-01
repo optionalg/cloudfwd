@@ -50,10 +50,10 @@ import org.slf4j.LoggerFactory;
  * EG: mvn test -Dtest=AWSSourcetypeIT "-DargLine=-Duser=admin -Dpassword=changeme -DsplunkHost=localhost -DmgmtPort=8089"
  */
 public abstract class AbstractReconciliationTest extends AbstractConnectionTest {
+  protected String SINGLE_LINE_SOURCETYPE = "__singleline"; //SHOULD_LINEMERGE=false  in props.conf
 
   protected static final Logger LOG = LoggerFactory.getLogger(AbstractReconciliationTest.class.getName());
-
-  /* ************ /CONFIGURABLE ************ */
+  
   protected int numToSend = 10;
   private final Boolean ENABLE_TEST_HTTP_DEBUG = false; // Enable HTTP debug in test client
   private String TOKEN_NAME; // per-test generated HEC Token Name
@@ -67,32 +67,39 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   // enable HEC only once per class run. Has to be a class variable, as each
   // junit test instantiate a new instance of the test class
   private static Boolean HEC_ENABLED = false;
+
   /* ************ CLI CONFIGURABLE ************ */
-  private static Map<String, String> cliProperties;
   // Default values
   static {
-    cliProperties = new HashMap<>();
     cliProperties.put("splunkHost", "localhost");
     cliProperties.put("mgmtPort", "8089");
     cliProperties.put("user", "admin");
     cliProperties.put("password", "changeme");
   }
+  /* ************ /CLI CONFIGURABLE ************ */
 
   public AbstractReconciliationTest() {
     super();
     LOG.info("NEXT RECONCILIATION TEST...");
-    // Get any command line arguments
-    cliProperties = getCliTestProperties();
+
     // Build a client to share among tests
     httpClient = buildSplunkClient();
     if (ENABLE_TEST_HTTP_DEBUG) enableTestHttpDebug();
   }
 
+
+    @Override
+    protected int getNumEventsToSend() {
+        return numToSend;
+    }      
+  
   @Before
-  public void init() {
+  public void setUp() {
     if (!HEC_ENABLED) {
       enableHec();
     }
+    LOG.info("Starting setUp");
+    super.setUp();
   }
 
   @After
@@ -112,7 +119,12 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     Properties props = new Properties();
     props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
     props.put(PropertyKeys.EVENT_BATCH_SIZE, "16000");
+    props.put(PropertyKeys.TOKEN, createTestToken(getSourceType()));    
     return props;
+  }
+  
+  protected String getSourceType(){
+    return SINGLE_LINE_SOURCETYPE;      
   }
 
   @Override
@@ -127,7 +139,8 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   /*
   Get command line arguments for Test
    */
-  protected Map<String, String> getCliTestProperties() {
+  @Override
+  protected void extractCliTestProperties() {
     if (System.getProperty("argLine") != null) {
       LOG.warn("Replacing test properties with command line arguments");
       Set<String> keys = cliProperties.keySet();
@@ -137,8 +150,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
         }
       }
     }
-    LOG.warn("Test Arguments:" + cliProperties);
-    return cliProperties;
+    LOG.info("Test Arguments:" + cliProperties);
   }
 
   /*
@@ -233,21 +245,25 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     }
     return EntityUtils.toString(httpResponse.getEntity(), "utf-8");
   }
-
-  protected void deleteTestToken() {
-    if (TOKEN_VALUE != null) {
+  protected void deleteTestToken(String tokenName) {
       try {
         HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
-                "/services/data/inputs/http/" + TOKEN_NAME);
+                "/services/data/inputs/http/" + tokenName);
         HttpResponse httpResponse = httpClient.execute(httpRequest);
         parseHttpResponse(httpResponse);
         LOG.debug("deleteTestToken: httpResponse: " + httpResponse);
         LOG.info("deleteTestToken: Successfully deleted token: TOKEN_NAME=" +
-                TOKEN_NAME + " TOKEN_VALUE=" + TOKEN_VALUE);
-        TOKEN_VALUE = null;
+          tokenName);
       } catch (Exception ex) {
-        Assert.fail("deleteTestToken: failed with ex: " + ex.getMessage());
+        Assert.fail("deleteTestToken: Couldn't delete token_name=" + tokenName 
+          + ". Failed with ex: " + ex.getMessage());
       }
+  }
+
+  protected void deleteTestToken() {
+    if (TOKEN_VALUE != null) {
+      deleteTestToken(TOKEN_NAME);
+      TOKEN_VALUE = null;
     } else {
       LOG.warn("Skipped deleting test token since test didn't create a token.");
     }
@@ -291,6 +307,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   protected void enableHec() {
+    LOG.info("Starting enableHec");
     try {
       HttpPost httpRequest = new HttpPost(mgmtSplunkUrl() +
               "/services/data/inputs/http/http");
@@ -332,7 +349,13 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
 
   // pass sourcetype=null to use the token default sourcetype
   protected String createTestToken(String sourcetype, boolean useACK) {
-    if (TOKEN_VALUE != null) deleteTestToken();
+    String oldToken = null;
+    // delete the existing token AFTER the new one is created so Connection
+    // doesn't get stuck with an invalid token
+    if (TOKEN_VALUE != null) {
+      oldToken = TOKEN_NAME;
+    }
+    
     createTestIndex();
     TOKEN_NAME = java.util.UUID.randomUUID().toString();
     try {
@@ -372,6 +395,11 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       Assert.fail("createTestToken: Failed to create token, ex: " +
               ex.getMessage());
     }
+    
+    if (oldToken != null) {
+      deleteTestToken(oldToken);
+    }
+    
     return TOKEN_VALUE;
   }
 
@@ -488,5 +516,6 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
+  
 
 }

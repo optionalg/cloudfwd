@@ -28,19 +28,39 @@ public class PropertyKeys {
    * The authentication token for the Http Event Collector input on the Splunk
    * destination.
    */
-  public static final String TOKEN = "token";
+  public static final String TOKEN = "splunk_hec_token";
 
   /**
    * The url and port number for the Splunk HEC endpoint or load balancer in
    * front of Splunk cluster. This can also be a comma-separated list of urls.
    * Example: https://127.0.0.1:8088
    */
-  public static final String COLLECTOR_URI = "url";
+  public static final String COLLECTOR_URI = "splunk_hec_url";
 
   /**
-   * TODO: not used, remove this when refactoring PropertiesFileHelper
+   * Host value for the data feed
+   * If none, host field is set to hostname
    */
-  public static final String HOST = "host";
+  public static final String HOST = "splunk_hec_host";
+
+  /**
+   * The Splunk index in which the data feed is stored
+   * New Index must be created/exist on Splunk to store events.
+   * Default: main
+   */
+  public static final String INDEX = "splunk_hec_index";
+
+  /**
+   * The source of the data feed
+   * Default: based on sources EG: filename, network protocol
+   */
+  public static final String SOURCE = "splunk_hec_source";
+
+  /**
+   * The source type of events of data feed
+   * Default: based on pre-defined source types EG:httpevent
+   */
+  public static final String SOURCETYPE = "splunk_hec_sourcetype";
 
   /**
    * Specifies whether to send to Splunk HEC /raw or /event endpoint.
@@ -219,8 +239,15 @@ public class PropertyKeys {
    * The maximum number of attempts to try preflight checks
    * @see DEFAULT_RETRIES
    */
-  public static final String PREFLIGHT_RETRIES = "max_preflight_tries";  
-
+  public static final String PREFLIGHT_RETRIES = "max_preflight_tries";
+  
+  /**
+   * Channel Quiesce Timeout in MS define how much time to wait for a channel to 
+   * drain all events. Channel will be killed if not quiesced in the time.
+   * @see DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS
+   */
+  public static final String CHANNEL_QUIESCE_TIMEOUT_MS = "channel_quiesce_timeout_ms";
+  
 
   /* **************************** REQUIRED KEYS ************************* */
 
@@ -329,6 +356,14 @@ public class PropertyKeys {
    * monotonically increasing IDs.
    */
   public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
+  
+  /**
+   * Channel Quiesce Timeout define how much time to wait for a channel to 
+   * drain all events. Channel will be killed if not quiesced in the time.
+   * @see CHANNEL_QUIESCE_TIMEOUT_MS
+   */
+  public static final String DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS = "180000";
+
 
 
   /* **************************** LIMITS ************************* */
@@ -376,5 +411,13 @@ public class PropertyKeys {
    * @see MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL
    */
   public static final int MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL = 1;
-
+  
+  /**
+   * Minimum allowed value for CHANNEL_QUIESCE_TIMEOUT_MS property. Should be 
+   * bigger than MIN_ACK_TIMEOUT_MS to let ack to be timed out.
+   *
+   * @see ACK_TIMEOUT_MS
+   */
+  public static final long MIN_CHANNEL_QUIESCE_TIMEOUT_MS = MIN_ACK_TIMEOUT_MS + 30000; 
+  
 }

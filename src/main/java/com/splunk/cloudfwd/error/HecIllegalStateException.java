@@ -24,9 +24,9 @@ public class HecIllegalStateException extends IllegalStateException {
 
   public enum Type {
     /**
-     * This type gets thrown after after an unacknowledged EventBatch when
+     * This type gets thrown with EventBatch still on-flight. It hasn't been acknowledged or has not failed
      */
-    EVENT_NOT_ACKNOWLEDGED_BUT_HIGHWATER_RECOMPUTED,
+    EVENT_ON_FLIGHT_BUT_HIGHWATER_RECOMPUTED,
     /**
      * This type gets thrown after an attempt to send RoundRobin occurs, but there is no channel available.
      */

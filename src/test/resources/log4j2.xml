@@ -14,17 +14,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<Configuration status="WARN">
+<Configuration status="info">
   <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
-    </Console>
-    <Console name="ConsoleExpensive" target="SYSTEM_OUT">
-      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1}::%method - %msg%n}"/>
-    </Console>    
-  </Appenders>
+    <!-- Do not enable %methof (performance killer) -->
+    <RandomAccessFile name="VerifyLogFile" fileName="verify.log" immediateFlush="false" append="false">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n"/>
+    </RandomAccessFile>
+  <!-- DO NOT REMOVE Console appender (useful for debugging) -->
+-    <Console name="Console" target="SYSTEM_OUT">
+-      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
+-    </Console>     
+  </Appenders> 
   <Loggers>
-    <Root level="info">
+    <Root level="error">
       <AppenderRef ref="Console"/>
     </Root>
   </Loggers>

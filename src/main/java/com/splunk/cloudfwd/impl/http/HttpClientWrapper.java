@@ -18,12 +18,11 @@ package com.splunk.cloudfwd.impl.http;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 /**
- * This class allows many HttpSender to share a single ClosableHttpAsyncClient.
+ * This class allows many HttpSender to share a single ClosableHttpAsyncClient. It counts references and closes the 
+ * underlying CloseableHttpAsyncClient when the ref count reaches zero.
  *
  * @author ghendrey
  */

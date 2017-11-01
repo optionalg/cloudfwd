@@ -27,6 +27,7 @@ import com.splunk.cloudfwd.HecLoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
+import com.splunk.cloudfwd.impl.util.CheckpointManager;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
@@ -55,6 +56,7 @@ public class ConnectionImpl implements Connection {
   private HecLoggerFactory loggerFactory;
   private final Logger LOG;
   private final LoadBalancer lb;
+  private CheckpointManager checkpointManager; //consolidate metrics across all channels
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
   private boolean closed;
@@ -74,6 +76,7 @@ public class ConnectionImpl implements Connection {
     }   
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.propertiesFileHelper = new PropertiesFileHelper(this,settings);
+    this.checkpointManager = new CheckpointManager(this);
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
     this.events = new EventBatchImpl();
@@ -101,6 +104,9 @@ public class ConnectionImpl implements Connection {
         return getPropertiesFileHelper();
     }
   
+    public CheckpointManager getCheckpointManager() {
+      return this.checkpointManager;
+    }
   
   public long getAckTimeoutMS() {
     return propertiesFileHelper.getAckTimeoutMS();
@@ -151,7 +157,7 @@ public class ConnectionImpl implements Connection {
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.closeNow();
-      timeoutChecker.queisce();
+      timeoutChecker.closeNow();
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -208,7 +214,7 @@ public class ConnectionImpl implements Connection {
       return 0;
     }
     
-    if(LOG.isDebugEnabled()){
+    if(LOG.isInfoEnabled()){
         logLBHealth();
     }
     
@@ -339,13 +345,17 @@ public class ConnectionImpl implements Connection {
         int _closed=0;
         int _quiesced=0;
         int  _healthy = 0;
+        int _full = 0;
         int _misconfigured=0;
         int _dead=0;
-        int _decomissioned=0;
+        int _decomissioned=0;        
         for(HecHealth h:channelHealths){
             if(h.isHealthy()){
                 _healthy++;
             }
+            if(h.isFull()){
+                _full++;
+            }            
             if(h.isMisconfigured()){
                 _misconfigured++;
             }
@@ -363,8 +373,8 @@ public class ConnectionImpl implements Connection {
             }
         }
         
-        LOG.debug("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
-                channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
+        LOG.info("LOAD BALANCER: channels={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}", 
+                channelHealths.size(),_healthy, _full,  _quiesced, _decomissioned, _dead, _closed, _misconfigured);
     }
 
 }

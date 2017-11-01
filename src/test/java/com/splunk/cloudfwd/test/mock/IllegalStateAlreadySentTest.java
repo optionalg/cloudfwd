@@ -59,8 +59,8 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
   }
 
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-    System.out.println(
-            "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
+    LOG.trace(
+            "sendEvents: SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     int expected = getNumEventsToSend();
     if (expected < 2) {

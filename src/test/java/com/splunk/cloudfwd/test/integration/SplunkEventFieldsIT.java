@@ -1,0 +1,96 @@
+package com.splunk.cloudfwd.test.integration;
+
+import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import org.junit.Test;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.TimeoutException;
+
+public class SplunkEventFieldsIT extends AbstractReconciliationTest {
+
+    @Override
+    protected int getNumEventsToSend() {
+        return 10;
+    }
+
+    @Override
+    protected Properties getProps() {
+        Properties p = super.getProps();
+        p.put(PropertyKeys.TOKEN, createTestToken(null));
+        return p;
+    }
+
+    @Override
+    protected String getSearchString() {
+        String searchString = "search";
+        if (!connection.getSettings().getHost().isEmpty()) {
+            searchString = searchString + " host=" +  connection.getSettings().getHost();
+        }
+        if (!connection.getSettings().getIndex().isEmpty()) {
+            searchString = searchString + " index=" + connection.getSettings().getIndex();
+        } else {
+            searchString = searchString + " index=" + INDEX_NAME;
+        }
+        if (!connection.getSettings().getSource().isEmpty()) {
+            searchString = searchString + " source=" +  connection.getSettings().getSource();
+        }
+        if (!connection.getSettings().getSourcetype().isEmpty()) {
+            searchString = searchString + " sourcetype=" +  connection.getSettings().getSourcetype();
+        }
+        return searchString;
+    }
+
+    private String getLocalHost() {
+        String host = null;
+        try {
+            host = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            //e.printStackTrace();
+            LOG.error("{}", e.getMessage());
+        }
+        return host;
+    }
+
+    private String getSource() {
+        return getClass().getName();
+    }
+
+    @Test
+    public void sendEventsWithDefaultFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithDefaultFields");
+        super.sendEvents();
+        LOG.warn("SEARCH STRING: " + getSearchString());
+        Set<String> results = getEventsFromSplunk();
+        verifyResults(getSentEvents(), results);
+    }
+
+    @Test
+    public void sendEventsWithNullValueFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithNullValueFields");
+        connection.getSettings().setHost(null);
+        connection.getSettings().setIndex(null);
+        connection.getSettings().setSource(null);
+        connection.getSettings().setSourcetype(null);
+        super.sendEvents();
+        LOG.warn("SEARCH STRING: " + getSearchString());
+        Set<String> results = getEventsFromSplunk();
+        verifyResults(getSentEvents(), results);
+    }
+
+    @Test
+    public void sendEventsWithCustomFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithCustomFields");
+        connection.getSettings().setIndex(INDEX_NAME);
+        connection.getSettings().setHost(getLocalHost());
+        connection.getSettings().setSource(getSource());
+        connection.getSettings().setSourcetype(getSource());
+        super.sendEvents();
+        LOG.warn("SEARCH STRING: " + getSearchString());
+        Set<String> results = getEventsFromSplunk();
+        verifyResults(getSentEvents(), results);
+    }
+}

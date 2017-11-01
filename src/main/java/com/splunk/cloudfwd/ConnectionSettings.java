@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 
 /**
@@ -185,6 +186,18 @@ public class ConnectionSettings {
         }
         return decomMs;
     }
+    
+    public long getChannelQuiesceTimeoutMS() {
+        long timeout = Long.parseLong(defaultProps.getProperty(
+                PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS,
+                PropertyKeys.DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS).trim());
+        if (timeout < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
+            LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS + 
+                    " was set to a potentially too-low value, reset to min value: " + timeout);
+            timeout = PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
+        }
+        return timeout;
+    }
 
     public long getAckTimeoutMS() {
         long timeout = Long.parseLong(defaultProps.getProperty(
@@ -194,7 +207,7 @@ public class ConnectionSettings {
             timeout = Long.MAX_VALUE;
         } else if (timeout < PropertyKeys.MIN_ACK_TIMEOUT_MS) {
             LOG.warn(
-                    PropertyKeys.ACK_TIMEOUT_MS + " was set to a potentially too-low value: " + timeout);
+                    PropertyKeys.ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeout);
         }
         return timeout;
     }
@@ -334,6 +347,22 @@ public class ConnectionSettings {
         return defaultProps.getProperty(PropertyKeys.TOKEN);
     }
 
+    public String getHost() {
+        return defaultProps.getProperty(PropertyKeys.HOST);
+    }
+
+    public String getSource() {
+        return defaultProps.getProperty(PropertyKeys.SOURCE);
+    }
+
+    public String getSourcetype() {
+        return defaultProps.getProperty(PropertyKeys.SOURCETYPE);
+    }
+
+    public String getIndex() {
+        return defaultProps.getProperty(PropertyKeys.INDEX);
+    }
+
     protected List<URL> urlsStringToList(String urlsListAsString) {
         List<URL> urlList = new ArrayList<>();
         String[] splits = urlsListAsString.split(",");
@@ -400,12 +429,32 @@ public class ConnectionSettings {
                     putProperty(PropertyKeys.HEC_ENDPOINT_TYPE,
                             diffs.getProperty(key));
                     break;
+                case PropertyKeys.HOST:
+                    putProperty(PropertyKeys.HOST,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.INDEX:
+                    putProperty(PropertyKeys.INDEX,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.SOURCE:
+                    putProperty(PropertyKeys.SOURCE,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
+                case PropertyKeys.SOURCETYPE:
+                    putProperty(PropertyKeys.SOURCETYPE,
+                            diffs.getProperty(key));
+                    refreshChannels = true;
+                    break;
                 default:
                     LOG.warn("Attempt to change property not supported: " + key);
             }
         }
         if (refreshChannels) {
-            connection.getLoadBalancer().refreshChannels();
+            checkAndRefreshChannels();
         }
     }
 
@@ -431,7 +480,7 @@ public class ConnectionSettings {
   public void setToken(String token) {
     if (!getToken().equals(token)) {
       putProperty(PropertyKeys.TOKEN, token);
-      connection.getLoadBalancer().refreshChannels();
+      checkAndRefreshChannels();
     }
   }
 
@@ -445,10 +494,62 @@ public class ConnectionSettings {
             getUrls())) {
       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      connection.getLoadBalancer().refreshChannels();
+      checkAndRefreshChannels();
     }
   }
 
+  /**
+   * Checking if LoadBalancer exists before refreshing channels
+   */
+  private void checkAndRefreshChannels() {
+      if (connection.getLoadBalancer() != null) {
+          connection.getLoadBalancer().refreshChannels();
+      }
+  }
+
+    /**
+     * Set Host value for the data feed
+     * @param host Host value for the data feed
+     */
+    public void setHost(String host) {
+        if (!StringUtils.isEmpty(host) && !getHost().equals(host)) {
+            putProperty(PropertyKeys.HOST, host);
+            checkAndRefreshChannels();
+        }
+    }
+
+    /**
+     * Set Splunk index in which the data feed is stored
+     * @param index The Splunk index in which the data feed is stored
+     */
+    public void setIndex(String index) {
+        if (!StringUtils.isEmpty(index) && !getIndex().equals(index)) {
+            putProperty(PropertyKeys.INDEX, index);
+            checkAndRefreshChannels();
+        }
+    }
+
+    /**
+     * Set the source of the data feed
+     * @param source The source of the data feed
+     */
+    public void setSource(String source) {
+        if (!StringUtils.isEmpty(source) && !getSource().equals(source)) {
+            putProperty(PropertyKeys.SOURCE, source);
+            checkAndRefreshChannels();
+        }
+    }
+
+    /**
+     * Set the source type of events of data feed
+     * @param sourcetype The source type of events of data feed
+     */
+    public void setSourcetype(String sourcetype) {
+        if (!StringUtils.isEmpty(sourcetype) && !getSourcetype().equals(sourcetype)) {
+            putProperty(PropertyKeys.SOURCETYPE, sourcetype);
+            checkAndRefreshChannels();
+        }
+    }
   
     // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.
     private void parsePropertiesFile() {
