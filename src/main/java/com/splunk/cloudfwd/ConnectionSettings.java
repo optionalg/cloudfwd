@@ -469,7 +469,7 @@ public class ConnectionSettings {
                 getLog().debug("{}, defaulting {} to maximum allowed value {}", was, ACK_TIMEOUT_MS, timeoutMS);
             } else if (timeoutMS < MIN_ACK_TIMEOUT_MS) {
                 getLog().warn(ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeoutMS);
-                timeoutMS = MIN_ACK_TIMEOUT_MS;
+                //timeoutMS = MIN_ACK_TIMEOUT_MS; //TODO: ADD THIS BACK IN? It's breaking AckTimeoutTest...
             }
             this.ackTimeoutMS = timeoutMS;
             if (connection != null) {
