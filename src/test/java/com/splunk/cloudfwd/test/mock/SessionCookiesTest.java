@@ -9,6 +9,7 @@ import com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints;
 import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -56,7 +57,7 @@ public class SessionCookiesTest extends AbstractConnectionTest {
                             + "And test method GUID " + testMethodGUID);
             for (int i = 0; i < expected; i++) {
                 if (i == 0 || i == expected/2) {
-                    LOG.debug("Toggling cookies twice while sending message: {}", i);
+                    LOG.trace("Toggling cookies twice while sending message: {}", i);
                     UpdateableCookieEndpoints.toggleCookie();
                 }
                 Event event = nextEvent(i + 1);
@@ -69,10 +70,6 @@ public class SessionCookiesTest extends AbstractConnectionTest {
             LOG.warn("In Test caught exception on Connection.send(): {} with message {}", e, e.getMessage());
         }
         checkSendExceptions();
-        connection.close(); //will flush
-        this.callbacks.await(10, TimeUnit.MINUTES);
-        this.callbacks.checkFailures();
-        this.callbacks.checkWarnings();
     }
 
     @Override
@@ -97,5 +94,23 @@ public class SessionCookiesTest extends AbstractConnectionTest {
         props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
 
         return props;
+    }
+
+    @After
+    public void tearDown() {
+        // We want to check if the list of channels have been replaced before terminating connection.
+        // So we want to keep the close separately.
+        if (callbacks.isFailed()) {
+            if(null != connection){
+                connection.close(); //will flush
+                try {
+                    this.callbacks.await(10, TimeUnit.MINUTES);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                this.callbacks.checkFailures();
+                this.callbacks.checkWarnings();
+            }
+        }
     }
 }
