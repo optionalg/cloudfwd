@@ -80,10 +80,10 @@ public class HecIOManager implements Closeable {
             if (null == ackPollTask) {
                 Runnable poller = () -> {
                     if (this.getAcknowledgementTracker().isEmpty()) {
-                        LOG.trace("No acks to poll for");
+                        LOG.trace("No acks to poll for on {}", getSender().getChannel());
                         return;
                     } else if (this.isAckPollInProgress()) {
-                        LOG.trace("skipping ack poll - already have one in flight");
+                        LOG.trace("skipping ack poll - already have one in flight on {}", getSender().getChannel());
                         return;
                     }
                     this.pollAcks();
@@ -208,17 +208,17 @@ public class HecIOManager implements Closeable {
                         }
                     } else {
                         LOG.warn(
-                                "Preflight timed out (5 minutes)  waiting for /raw empty-event check on {}",
+                                "Preflight didn't receive /raw empty-event check on {}",
                                 sender.getChannel());
                     }
                 } else {
                     LOG.warn(
-                            "Preflight timed out (5 minutes)  waiting for /health check on {}",
+                            "Preflight didn't receive /health check on {}",
                             sender.getChannel());
                 }
             } else {
                 LOG.warn(
-                        "Preflight timed out (5 minutes)  waiting for /ack endpoint check on {}",
+                        "Preflight didn't receive /ack endpoint check on {}",
                         sender.getChannel());
             }
         } catch (InterruptedException ex) {

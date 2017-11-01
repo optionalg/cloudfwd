@@ -265,7 +265,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                     //Kill all the others
                     this.sender.abortPreflightAndHealthcheckRequests(); 
 //                    this.sender.getHecIOManager().preflightCheck(); //retry preflight check
-                    preflightCheck();
+                    preflightCheck(); //runs in thread from pool
 //                } catch (InterruptedException ex) {
 //                    LOG.debug("Preflight resend interrupted: {}", ex);
 //                }
