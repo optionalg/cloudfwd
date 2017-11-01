@@ -202,6 +202,7 @@ public class ConnectionSettingsTest extends AbstractConnectionTest{
         settings.setAckTimeoutMS(0);
         Assert.assertEquals(Long.MAX_VALUE, settings.getAckTimeoutMS()); // no limit
 
+        settings.setMockHttp(false);
         settings.setAckTimeoutMS(10000);
         Assert.assertEquals(PropertyKeys.MIN_ACK_TIMEOUT_MS, settings.getAckTimeoutMS());
     }

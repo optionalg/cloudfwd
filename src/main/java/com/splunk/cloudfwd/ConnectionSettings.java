@@ -467,9 +467,9 @@ public class ConnectionSettings {
                 long was = timeoutMS;
                 timeoutMS = Long.MAX_VALUE;
                 getLog().debug("{}, defaulting {} to maximum allowed value {}", was, ACK_TIMEOUT_MS, timeoutMS);
-            } else if (timeoutMS < MIN_ACK_TIMEOUT_MS) {
+            } else if (timeoutMS < MIN_ACK_TIMEOUT_MS && !isMockHttp()) {
                 getLog().warn(ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeoutMS);
-                //timeoutMS = MIN_ACK_TIMEOUT_MS; //TODO: ADD THIS BACK IN? It's breaking AckTimeoutTest...
+                timeoutMS = MIN_ACK_TIMEOUT_MS;
             }
             this.ackTimeoutMS = timeoutMS;
             if (connection != null) {
@@ -560,7 +560,7 @@ public class ConnectionSettings {
      * @param token
      */
     public void setToken(String token) {
-        if (!getToken().equals(token)) {
+        if (!token.equals(getToken())) {
             this.splunkHecToken = token;
             checkAndRefreshChannels();
         }
@@ -593,7 +593,7 @@ public class ConnectionSettings {
      * @param host Host value for the data feed
      */
   public void setHost(String host) {
-      if (!StringUtils.isEmpty(host) && !getHost().equals(host)) {
+      if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
           this.splunkHecHost = host;
           checkAndRefreshChannels();
       }
@@ -604,7 +604,7 @@ public class ConnectionSettings {
      * @param index The Splunk index in which the data feed is stored
      */
   public void setIndex(String index) {
-      if (!StringUtils.isEmpty(index) && !getIndex().equals(index)) {
+      if (!StringUtils.isEmpty(index) && !index.equals(getIndex())) {
           this.splunkHecIndex = index;
           checkAndRefreshChannels();
       }
@@ -615,7 +615,7 @@ public class ConnectionSettings {
      * @param source The source of the data feed
      */
   public void setSource(String source) {
-      if (!StringUtils.isEmpty(source) && !getSource().equals(source)) {
+      if (!StringUtils.isEmpty(source) && !source.equals(getSource())) {
           this.splunkHecSource = source;
           checkAndRefreshChannels();
       }
@@ -626,7 +626,7 @@ public class ConnectionSettings {
      * @param sourcetype The source type of events of data feed
      */
   public void setSourcetype(String sourcetype) {
-      if (!StringUtils.isEmpty(sourcetype) && !getSourcetype().equals(sourcetype)) {
+      if (!StringUtils.isEmpty(sourcetype) && !sourcetype.equals(getSourcetype())) {
           this.splunkHecSourcetype = sourcetype;
           checkAndRefreshChannels(); 
       }
