@@ -52,6 +52,7 @@ public class MaxRetriesTest extends AbstractConnectionTest {
     props.put(PropertyKeys.ACK_POLL_MS, "250");
     props.put(PropertyKeys.RETRIES, "2");
     props.put(PropertyKeys.UNRESPONSIVE_MS, "100"); //for this test, lets QUICKLY determine the channel is dead
+    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
     return props;
   }
   
@@ -72,9 +73,8 @@ public class MaxRetriesTest extends AbstractConnectionTest {
       Assert.fail(
               "The first message should send - but we got an HecConnectionTimeoutException");
     }
-    //Thread.sleep(10000);//this is  a total hack - we have a race condition where ChannelDeathDetector is racing against Connection.close()
-    connection.close();
     this.callbacks.await(1, TimeUnit.MINUTES);
+    connection.close();
     //we set this test up to detect too many retries by DeadChannelDetector
     Assert.assertTrue("Did not get expected HecMaxRetrriesException FAILURE",
             super.callbacks.isFailed());

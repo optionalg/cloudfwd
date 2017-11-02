@@ -220,7 +220,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
       return systemWarning;
   }
 
-  public Integer getFailedCount() {
+  public int getFailedCount() {
       return failedCount.get();
   }
 

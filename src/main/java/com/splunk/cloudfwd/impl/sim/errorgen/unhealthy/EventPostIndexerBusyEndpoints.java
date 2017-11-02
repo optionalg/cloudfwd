@@ -16,7 +16,9 @@ package com.splunk.cloudfwd.impl.sim.errorgen.unhealthy;
  * limitations under the License.
  */
 import com.splunk.cloudfwd.impl.http.HttpPostable;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.sim.EventEndpoint;
+import com.splunk.cloudfwd.impl.sim.HealthEndpoint;
 import com.splunk.cloudfwd.impl.sim.errorgen.HecErrorResponse;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
 import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
@@ -25,12 +27,17 @@ import org.apache.http.ProtocolVersion;
 import org.apache.http.StatusLine;
 import org.apache.http.concurrent.FutureCallback;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Created by eprokop on 9/8/17.
  */
 public class EventPostIndexerBusyEndpoints extends SimulatedHECEndpoints {
     @Override
     protected EventEndpoint createEventEndpoint() { return new IndexerBusyEventEndpoint(); }
+
+    @Override
+    protected HealthEndpoint createHealthEndpoint() { return new IndexerBusyHealthEndpoint(); }
 
     private static class IndexerBusyEventEndpoint extends EventEndpoint {
         @Override
@@ -64,6 +71,23 @@ public class EventPostIndexerBusyEndpoints extends SimulatedHECEndpoints {
         @Override
         public String getReasonPhrase() {
             throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+
+    private class IndexerBusyHealthEndpoint extends HealthEndpoint {
+        private int numSuccesses = 2;
+        private AtomicInteger i = new AtomicInteger(0);
+        public void pollHealth(FutureCallback<HttpResponse> cb) {
+            // preflight check must pass because we want connection instantiation to succeed. But afterwards, 
+            // health polling should not mark the channels as healthy otherwise we get max retries exception on the resends
+            // instead of the expected timeout exception. 
+            if (i.get() < numSuccesses) {
+                ((HttpCallbacksAbstract)cb).completed("N/A preflight OK", 200);
+            } else {
+                cb.completed(new HecErrorResponse(
+                    new IndexerBusyEntity(), new IndexerBusyStatusLine()));
+            }
+            i.incrementAndGet();
         }
     }
 

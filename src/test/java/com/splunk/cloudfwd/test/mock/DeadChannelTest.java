@@ -72,6 +72,6 @@ public class DeadChannelTest extends AbstractConnectionTest {
   
   @Test
   public void testDeadChannel() throws TimeoutException, InterruptedException, HecConnectionTimeoutException{
-    super.sendEvents();
+    super.sendEvents(-1);
   }
 }

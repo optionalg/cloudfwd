@@ -156,8 +156,8 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
             public void systemWarning(Exception ex) {
                 if (tokenRestoredLatch.getCount() == 0) {
                     if (ex instanceof HecServerErrorResponseException
-                        && ((HecServerErrorResponseException)ex).getContext().equals(HttpCallbacksAckPoll.Name)) {
-                        // even after token is restored on server, cloudfwd will continue to poll for acks on the old channels with the invalid tokens, so we will ignore those warnings
+                        && isContextHealthPollOrAckPoll((HecServerErrorResponseException)ex)) {
+                        // even after token is restored on server, cloudfwd will continue to poll for acks and health poll on the old channels with the invalid tokens, so we will ignore those warnings
                         LOG.warn("SYSTEM WARNING {}", ex.getMessage());
                         return;
                     }
@@ -165,6 +165,11 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
                 } else {
                     LOG.warn("SYSTEM WARNING {}", ex.getMessage());
                 }
+            }
+            
+            private boolean isContextHealthPollOrAckPoll(HecServerErrorResponseException e) {
+                return e.getContext().equals(HttpCallbacksAckPoll.Name) || 
+                        e.getContext().matches("^health_poll.*$");
             }
 
             @Override

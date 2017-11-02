@@ -102,9 +102,9 @@ public class AcknowledgementTracker implements EventTracker {
         LOG.warn("Received duplicate ACK id {} for event batch {} on channel {} . Resending event batch.", 
           ackId, evicted, sender.getChannel());
         
-        Runnable r = () -> sender.getConnection().getLoadBalancer().sendRoundRobin(evicted,true);
-        new Thread(r, "acknowledgement tracker resender for channel " + sender.getChannel()).start();
-        // TODO: maybe here we want to go ahead and resend all unacked events > evicted 
+        sender.getConnection().getLoadBalancer().resend(evicted, 
+            "AcknowledgementTracker handleEventPostResponse");
+        // TODO: as an optimization, maybe we can resend all unacked events > evicted 
     }
   }
 
@@ -112,8 +112,10 @@ public class AcknowledgementTracker implements EventTracker {
     EventBatchImpl events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      LOG.info("Channel:{} success acked ids: {}", sender.getChannel(),
-              succeeded);
+      if (!succeeded.isEmpty()) {
+          LOG.info("Channel:{} success acked ids: {}", sender.getChannel(),
+                  succeeded);
+      }
       if (succeeded.isEmpty()) {
         return;
       }

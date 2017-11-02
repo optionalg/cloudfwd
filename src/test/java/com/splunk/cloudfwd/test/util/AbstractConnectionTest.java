@@ -152,11 +152,11 @@ public abstract class AbstractConnectionTest {
     //hang out waiting (infinitely?) for the messages to flush out before gracefully closing. So when we see
     //a failure we must use the closeNow method which closes the channel regardless of whether it has
     //messages in flight.
-    if (callbacks.isFailed()) {
+//    if (callbacks.isFailed()) {
       if(null != connection){
           connection.closeNow();
       }
-    }
+//    }
   }
   
   /**
@@ -166,8 +166,20 @@ public abstract class AbstractConnectionTest {
   protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend());
     }
-
+    
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
+    sendEvents(0);
+  }
+
+    /**
+     * if closeTimeout == 0, call connection.close()
+     * if closeTimeout > 0, call connection.close(closeTimeout)
+     * if closeTimeout == -1, call connection.closeNow()
+     */
+  protected void sendEvents(long closeTimeout) throws InterruptedException, HecConnectionTimeoutException {
+        if (closeTimeout == -1 && connection.getSettings().getEventBatchSize() != 0) {
+            throw new RuntimeException("Event batch size should be zero if not closing immediately after sending events, since flush isn't called");
+        }
         int expected = getNumEventsToSend();
         if(expected <= 0){
             return;
@@ -189,11 +201,18 @@ public abstract class AbstractConnectionTest {
           LOG.warn("In Test caught exception on Connection.send(): {} with message {}", e, e.getMessage());
       }
       checkSendExceptions();
-      connection.close(); //will flush
-
+            Thread.sleep(3000);
+      if (closeTimeout > 0) {
+        connection.close(10000); //will flush
+      } else if (closeTimeout == 0) {
+        connection.close();
+      }
       this.callbacks.await(10, TimeUnit.MINUTES);
       this.callbacks.checkFailures();
       this.callbacks.checkWarnings();
+      if (closeTimeout == -1) {
+          connection.closeNow();
+      }
   }
 
   public void checkSendExceptions() {

@@ -124,21 +124,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
 
     private void resend(Exception ex) {
-        Runnable r = () -> {
-            try {
-                events.addSendException(ex);
-                LOG.warn("resending events through load balancer {} on channel {}",
-                        events, getSender().getChannel());
-                getSender().getConnection().getLoadBalancer().
-                        sendRoundRobin(events, true); //will callback failed if max retries exceeded
-            } catch (Exception e) {
-                invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
-            }
-        };
-        // Need to do this in a new thread: if resending happens in this thread and ends up spinning in the load balancer,
-        // it'll prevent other threads from being able to send on the http client, since this thread holds onto a
-        // lock in the http client until the callback finishes
-        new Thread(r, "event post callbacks resender for channel " + getChannel()).start();
+            events.addSendException(ex);
+            LOG.warn("resending events through load balancer {} on channel {}",
+                events, getSender().getChannel());
+            getSender().getConnection().getLoadBalancer().resend(events, 
+                "HttpCallbacksEventPost due to exception: " + ex.getMessage());
     }
 
     private void notifyFailedAndResend(Exception ex) {

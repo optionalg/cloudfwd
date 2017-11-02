@@ -210,7 +210,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     params.add(new BasicNameValuePair("adhoc_search_level", "smart")); // extracts fields
     httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
     //Execute and get the response.
-    LOG.info("Creating search job with search string " + getSearchString() + " ...");
+    LOG.info("Creating search job with search string " + getSearchString());
     HttpResponse postResponse = httpClient.execute(httpPost);
     String reply = parseHttpResponse(postResponse);
     String sid = json.readTree(reply).path("sid").asText();

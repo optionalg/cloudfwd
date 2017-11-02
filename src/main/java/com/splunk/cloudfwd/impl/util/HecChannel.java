@@ -31,6 +31,7 @@ import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.io.Closeable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -41,8 +42,6 @@ import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import java.util.List;
 
 /**
@@ -71,6 +70,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final String memoizedToString;
   private int preflightCount; //number of times to retry preflight checks due to   
     private boolean closeFinished;
+  private CountDownLatch closedLatch = new CountDownLatch(1);
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -317,34 +317,57 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //never get to add the channel.
     this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
     this.loadBalancer.removeChannel(channelId, true);
-    quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
+    quiesce(getConnetionSettings().getChannelQuiesceTimeoutMS()); //drain in-flight packets, and close+cancelEventTrackers when empty
     //WE MUST NOT REMOVE THE CHANNEL NOW...MUST GIVE IT CHANCE TO DRAIN AND BE GRACEFULLY REMOVED
     //ONCE IT IS DRAINED. Note that quiesce() call above will start a watchdog thread that will force-remove the channel
-    //if it does not gracefully close in 3 minutes.
+    //and resend all events if it does not gracefully close in 3 minutes.
     //this.loadBalancer.removeChannel(channelId, false); //remove from load balancer
 
   }
+
+//    /**
+//     * Prevents new events from getting added to the channel
+//     */
+//  private void purge() {
+//      long channelQuiesceTimeout = getConnection().getSettings().getChannelQuiesceTimeoutMS();
+//      LOG.info("Scheduling channel {} to be purged in {} seconds.", this, channelQuiesceTimeout/1000);
+//      if (!purged) {
+//          reaperScheduler.schedule(() -> {
+//              LOG.info("Purging channel {}", this);
+//              List<EventBatchImpl> unacked = loadBalancer.getConnection().
+//                      getTimeoutChecker().getUnackedEvents(HecChannel.this);
+//              if (!unacked.isEmpty()) {
+//                  LOG.warn("Channel {} could not be purged. Resending " + unacked.size() + " events");
+//                  resendInFlightEvents("HecChannel " + this + " purge unsuccessful");
+//                  interalForceClose();
+//              } else {
+//                  LOG.info("Channel {} successfully purged", this);
+//                  LOG.debug("Channel {} successfully purged", this);
+//              }
+//          }, channelQuiesceTimeout, TimeUnit.MILLISECONDS);
+//      }
+//      purged = true;
+//  }
 
   /**
    * Removes channel from load balancer. Remaining data will be sent.
    *
    */
-  protected synchronized void quiesce() {
+  protected synchronized void quiesce(long timeoutMS) {
     LOG.debug("Quiescing channel: {}", this);
-    long channelQuiesceTimeout = getConnection().getSettings().getChannelQuiesceTimeoutMS();
     
     if(!quiesced){
         this.health.quiesced();
-        LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
+        LOG.debug("Scheduling watchdog to purge and forceClose channel (if needed) in {} MS", timeoutMS);
         reaperScheduler.schedule(()->{
             if(!this.closeFinished){
-                LOG.warn("Channel isn't closed. Watchdog will resend events and force close it now.");
-                resendInFlightEvents();
-                HecChannel.this.interalForceClose();
+                LOG.warn("Channel quiesce timeout {}. Purging and force closing channel.", this);
+                purge();
+                interalForceClose();
             }else{
                 LOG.debug("Channel was closed. Watchdog exiting.");
             }
-        }, channelQuiesceTimeout, TimeUnit.MILLISECONDS);
+        }, timeoutMS, TimeUnit.MILLISECONDS);
     }
     quiesced = true;
 
@@ -353,6 +376,25 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     } else {
       pollAcks(); //so we don't have to wait for the next ack polling interval
     }
+  }
+
+    /**
+     * Either resends or fails all events currently in the channel.
+     */
+  private void purge() {
+      if (!getConnection().isClosed()) {
+          resendInFlightEvents("HecChannel " + this + " quiesce watchdog");
+      } else {
+          // connection is closed, so fail all unacked events
+          List<EventBatchImpl> unacked = loadBalancer.getConnection().getTimeoutChecker()
+              .getUnackedEvents(HecChannel.this);
+          LOG.warn("Failing {} in-flight events on channel {}", unacked.size(), this);
+          unacked.forEach((e)->{
+              loadBalancer.addFailedBatch(e); // must do this BEFORE failed() since CallbackInterceptor removes the reference
+              getConnection().getCallbacks().failed(e, new HecConnectionStateException(
+                  "Channel purged due to Connection closed", HecConnectionStateException.Type.CONNECTION_CLOSED));
+          });
+      }
   }
 
   synchronized void forceClose() { //wraps internalForceClose in a log messages
@@ -372,6 +414,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             this.closeFinished = true;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
+        } finally {
+            closedLatch.countDown();
         }
       };
       //use thread to shutdown sender. Else we have problem with simulted endpoints where the 
@@ -383,21 +427,34 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      //when the thread awaiting its own demise is terminated.. This decouples it.
      new Thread(r, "Hec Channel " + getChannelId() + " internal resource closer").start();
   }
+  
+  public synchronized void close(long timeoutMS) {
+      if (closed) {
+          LOG.debug("LoggingChannel already closed.");
+          return;
+      }
+      LOG.info("CLOSE channel  {}", this);
+      if (!isEmpty()) {
+          LOG.trace("{} not empty. Quiescing. unacked count={}", this, unackedCount.get());
+          quiesce(timeoutMS); //this essentially tells the channel to close after a period and NOT to resend unacked events 
+          return;
+      }
+      LOG.info("regular close");
+
+      interalForceClose();
+  }
 
   @Override
   public synchronized void close() {
-    if (closed) {
-      LOG.debug("LoggingChannel already closed.");
-      return;
-    }
-    LOG.info("CLOSE channel  {}", this);
-    if (!isEmpty()) {
-        LOG.trace("{} not empty. Quiescing. unacked count={}", this, unackedCount.get());
-      quiesce(); //this essentially tells the channel to close after it is empty
-      return;
-    }
-
-    interalForceClose();
+      close(getConnetionSettings().getChannelQuiesceTimeoutMS());
+  }
+  
+  public void awaitClose() {
+      try {
+          this.closedLatch.await();
+      } catch(InterruptedException e) {
+          LOG.warn("Thread interrupted waiting on closedLatch on channel {}", this);
+      }
   }
 
   //do NOT synchronize this method. Since it blocks by awaitTermination it will hold a very long lock on this
@@ -480,30 +537,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   }
 
     //take messages out of the jammed-up/dead channel and resend them to other channels
-    private void resendInFlightEvents() {
-        long timeout = loadBalancer.getConnection().getPropertiesFileHelper().
-                getAckTimeoutMS();
+    private void resendInFlightEvents(String provenance) {
         List<EventBatchImpl> unacked = loadBalancer.getConnection().getTimeoutChecker().getUnackedEvents(HecChannel.this);
         LOG.trace("{} events need resending on dead channel {}", unacked.size(), HecChannel.this);
         AtomicInteger count = new AtomicInteger(0);
         unacked.forEach((e) -> {
-            //we must force messages to be sent because the connection could have been gracefully closed
-            //already, in which case sendRoundRobbin will just ignore the sent messages
-            while (true) {
-                try {
-                    if(!loadBalancer.sendRoundRobin(e, true)){
-                        LOG.trace("LoadBalancer did not accept resend of {} (it was resent max_retries times?)", e);
-                    }else{
-                        LOG.trace("LB ACCEPTED events");//fixme remove
-                        count.incrementAndGet();
-                    }
-                    break;
-                } catch (HecConnectionTimeoutException|HecNoValidChannelsException ex) {
-                    LOG.warn("Caught exception resending {}, exception was {}", ex.getMessage());
-                }
-            }
+            loadBalancer.resend(e, provenance);
+            count.incrementAndGet();
         });
-        LOG.info("Resent {} Events from dead channel {}", count,  HecChannel.this);
+        LOG.info("Added {} events to resend queue from channel {}", count,  HecChannel.this);
     }
 
     /**
@@ -559,7 +601,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                 && lastCountOfUnacked == unackedCount.get()) {
           String msg = HecChannel.this  + " dead. Resending "+unackedCount.get()+" unacked messages and force closing channel";
           LOG.warn(msg);
-          quiesce();
+          synchronized (HecChannel.this) {
+              HecChannel.this.quiesced = true; // don't allow other events to be sent into the channel
+          }
           getCallbacks().systemWarning(new HecChannelDeathException(msg));
           //synchronize on the load balancer so we do not allow the load balancer to be
           //closed before  resendInFlightEvents. If that
@@ -571,7 +615,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             }catch(InterruptedException ex){
                 LOG.warn("Unable to replace dead channel: {}", ex);
             }
-            resendInFlightEvents(); 
+            resendInFlightEvents("Channel " + HecChannel.this + " Dead channel detector"); 
             //don't force close until after events resent. 
             //If you do, you will interrupt this very thread when this DeadChannelDetector is shutdownNow()
             //and the events will never send.

@@ -18,6 +18,7 @@ package com.splunk.cloudfwd;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import java.io.Closeable;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -49,8 +50,31 @@ public interface Connection extends Closeable{
         STRUCTURED_EVENTS_ENDPOINT, RAW_EVENTS_ENDPOINT
     };
 
+    /**
+     * Non-blocking close method that asynchronously waits for PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS 
+     * for event batches to be acknowledged. After the timeout, calls the failed callback for each unacknowledged 
+     * event batch. Cleans up all resources associated with the Connection object. Once a Connection object is closed, 
+     * events cannot be sent through it and the same Connection object cannot be reopened. 
+     * @see com.splunk.cloudfwd.PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS
+     */
     void close();
+    
+    /**
+     * Blocking close method that waits for outstanding event batches to be acknowledged for a specified time. 
+     * After the timeout, calls the failed callback for each unacknowledged event batch and returns them all in a 
+     * Collection. Cleans up all resources associated with the Connection object. Once a Connection object is closed, 
+     * events cannot be sent through it and the same Connection object cannot be reopened. 
+     * @param timeoutMS time to wait, in milliseconds, until failing and returning all unacknowledged messages 
+     * @return a Collection of event batches that were not acknowledged after timeoutMS
+     */
+    Collection<EventBatch> close(long timeoutMS);
 
+    /**
+     * Non-blocking immediate close method that does not wait for event batches to be acknowledged and asynchronously 
+     * calls the failed callback for each unacknowledged event batch. Cleans up all resources associated with the 
+     * Connection object. Once a Connection object is closed, events cannot be sent through it and the same Connection 
+     * object cannot be reopened. 
+     */
     void closeNow();
 
     void flush() throws HecConnectionTimeoutException, HecNoValidChannelsException;

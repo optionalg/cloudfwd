@@ -34,6 +34,7 @@ import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
 import java.net.URL;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -116,11 +117,42 @@ public class ConnectionImpl implements Connection {
     this.propertiesFileHelper.putProperty(BLOCKING_TIMEOUT_MS, String.
             valueOf(ms));
   }
+
+
+  @Override
+  public synchronized Collection<EventBatch> close(long timeoutMS) {
+      LOG.info("Connection close");
+      Collection<EventBatch> failedBatches = new HashSet<>();
+      if (this.closed) {
+          return failedBatches;
+      }
+      try {
+          flush();
+      } catch (HecNoValidChannelsException ex) {
+          LOG.error("Events could not be flushed on connection close: " +
+                  ex.getMessage(), ex);
+      }
+      this.closed = true;
+      CountDownLatch latch = new CountDownLatch(1);
+      new Thread(() -> {
+          Collection<EventBatch> failed = lb.close(timeoutMS); // blocking 
+          failedBatches.addAll(failed);
+          timeoutChecker.queisce();
+          latch.countDown();
+      }, "Connection Closer").start();
+      try {
+          latch.await();
+      } catch (InterruptedException ex) {
+          LOG.error(ex.getMessage(), ex);
+      }
+      return failedBatches;
+  }
   
    //close() is synchronized, as is send and sendBatch, therefore events cannot be sent before close has returned.
   //After close has returned, any events sent would be rejected because the connection is closed.
   @Override  
   public synchronized void close() {
+    LOG.info("Connection close");
     if(this.closed){
         return;
     }
