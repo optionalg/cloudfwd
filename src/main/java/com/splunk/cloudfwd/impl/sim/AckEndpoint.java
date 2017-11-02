@@ -106,7 +106,9 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     @Override
     public long nextAckId() {
         long newId = this.ackId.incrementAndGet();
-        this.unacked.add(newId);
+        synchronized(this) {
+          this.unacked.add(newId);
+        }
         //System.out.println("ackStates: " + this.acksStates);
         return newId;
     }
