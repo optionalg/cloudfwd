@@ -107,20 +107,18 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
 
     private void resend(Exception ex) {
-        try {
-            events.addSendException(ex);
-            LOG.warn("resending events through load balancer {} on channel {}",
-                events, getSender().getChannel());
-            getSender().getConnection().getLoadBalancer().sendRoundRobin(events, true);
-            /*
-            Runnable r = ()-> getSender().getConnection().getLoadBalancer().sendRoundRobin(events, true); //will callback failed if max retries exceeded          
-            //we must run resends through their own thread. Otherwise the apache client thread could wind up blocked in the load balancer
-            ThreadScheduler.getExecutorInstance("event_resender").execute(r);
-            //don't forget to catch if run in thread
-            */
-        } catch (Exception e) {
-            invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
-        }
+        //we must run resends through their own thread. Otherwise the apache client thread could wind up blocked in the load balancer
+        Runnable r = ()-> {
+             try {
+                events.addSendException(ex);
+                LOG.warn("resending events through load balancer {} on channel {}",
+                    events, getSender().getChannel());                
+                getSender().getConnection().getLoadBalancer().sendRoundRobin(events, true); //will callback failed if max retries exceeded   
+            } catch (Exception e) {
+                invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
+            }                
+        };
+        ThreadScheduler.getExecutorInstance("event_resender").execute(r);
     }
 
     private void notifyFailedAndResend(Exception ex) {

@@ -229,15 +229,15 @@ public class LoadBalancer implements Closeable {
                 } catch (InterruptedException ex) {
                     LOG.warn("LoadBalancer Sleep interrupted.");//should rethrow ex
                 }
-                continue; //keep going until a channel is added
+            }else{
+                if (tryChannelSend(channelsSnapshot, events, resend)) {//attempt to send through a channel (ret's fals if channel not available)
+                    //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
+                    //because everyone stuck in perpetual wait
+                    //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
+                    break;
+                }
+                waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             }
-            if (tryChannelSend(channelsSnapshot, events, resend)) {
-                //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
-                //because everyone stuck in perpetual wait
-                //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
-                break;
-            }
-            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             throwExceptionIfTimeout(startTime, events, resend);
         }
         return true; //return false;
