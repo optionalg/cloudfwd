@@ -42,6 +42,9 @@ public class GenericCoordinatedResponseHandler extends HttpCallbacksGeneric impl
             LifecycleEvent.Type failType, LifecycleEvent.Type gatewayTimeoutType,
             LifecycleEvent.Type indexerBusyType, String name) {
         super(m, okType, failType, gatewayTimeoutType, indexerBusyType, name);
+        this.LOG = m.getSender().getConnection().getLogger(
+                HttpCallbacksGeneric.class.
+                        getName());
     }    
 
     /**
