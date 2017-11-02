@@ -482,6 +482,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return closed;
   }
   
+  public boolean isQuiesced(){
+      return quiesced;
+  }  
+  
   public boolean isCloseFinished(){
       return closeFinishedLatched.getCount()==0;
   }
@@ -495,6 +499,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   public boolean isAvailable() {
     return !quiesced && !closed && health.isHealthy() && !isFull();
+  }
+  
+  public boolean isHealthy(){
+      return health.isHealthy();
   }
 
   @Override

@@ -364,7 +364,7 @@ public class ConnectionImpl implements Connection {
             if(h.isMisconfigured()){
                 _misconfigured++;
             }
-            if(!h.getQuiescedDuration().isZero()){
+            if(h.getChannel().isQuiesced()){
                 _quiesced++;
             }
             if(!h.getTimeSinceDeclaredDead().isZero()){
