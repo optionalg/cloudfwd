@@ -342,24 +342,33 @@ public class ConnectionImpl implements Connection {
 
     private void logLBHealth() {
         List<HecHealth> channelHealths = lb.getHealthNonBlocking();
+        int _preflightCompleted=0;
         int _closed=0;
+        int _closedFinished=0;
         int _quiesced=0;
         int  _healthy = 0;
         int _full = 0;
         int _misconfigured=0;
         int _dead=0;
-        int _decomissioned=0;        
+        int _decomissioned=0;   
+        int _available=0;
         for(HecHealth h:channelHealths){
+            if(h.getChannel().isPreflightCompleted()){
+                _preflightCompleted++;
+            }
             if(h.isHealthy()){
                 _healthy++;
             }
+            if(h.getChannel().isAvailable()){
+                _available++;
+            }            
             if(h.isFull()){
                 _full++;
             }            
             if(h.isMisconfigured()){
                 _misconfigured++;
             }
-            if(!h.getQuiescedDuration().isZero()){
+            if(h.getChannel().isQuiesced()){
                 _quiesced++;
             }
             if(!h.getTimeSinceDeclaredDead().isZero()){
@@ -368,13 +377,16 @@ public class ConnectionImpl implements Connection {
             if(!h.getTimeSinceDecomissioned().isZero()){
                 _decomissioned++;
             }
-            if(!h.getTimeSinceCloseFinished().isZero()){
+            if(h.getChannel().isClosed()){
                 _closed++;
             }
+            if(h.getChannel().isCloseFinished()){
+                _closedFinished++;
+            }            
         }
         
-        LOG.info("LOAD BALANCER: channels={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}", 
-                channelHealths.size(),_healthy, _full,  _quiesced, _decomissioned, _dead, _closed, _misconfigured);
+        LOG.info("LOAD BALANCER: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
+                channelHealths.size(), _preflightCompleted ,_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 
 }

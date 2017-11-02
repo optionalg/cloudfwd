@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.impl.http.HecIOManager;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
@@ -85,12 +86,21 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
                         synchronized (AckEndpoint.this) {         
                             if(acksStates.isEmpty()){
                                return;
-                            }                                              
+                            }                 
+                            int flipCount = (int) Math.ceil(Math.random()*1000); //change a random number of acks to true  [1,1000]
+                            for(Iterator<Map.Entry<Long, Boolean>> it = acksStates.entrySet().iterator(); it.hasNext();){
+                                it.next().setValue(true); //consider it as ack'd
+                                if(--flipCount==0){
+                                    return;
+                                }
+                            }
+                            /*
                             Long lowestKey = acksStates.firstKey();
                             if (null == lowestKey) {
                                 return;
                             }
                             acksStates.put(lowestKey, true); //flip it
+                            */
                         }//synchronized
                     } catch (Exception e) {
                         LOG.error(e.getMessage(), e);
@@ -109,7 +119,7 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     public long nextAckId() {
         long newId = this.ackId.incrementAndGet();
         synchronized(this){
-            this.acksStates.put(newId, true); //mock/pretend the events got indexed
+            this.acksStates.put(newId, false); //event stat is initially not indexed
         }
         //System.out.println("ackStates: " + this.acksStates);
         return newId;
@@ -128,10 +138,12 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             Collection<Long> unacked = ackMgr.getAcknowledgementTracker().
                     getPostedButUnackedEvents();
             //System.out.println("Channel  " +AckEndpoint.this.toString()+" recieved these acks to check: " + unacked + " and had this state " + acksStates);      
-            acks.clear();
+            acks.clear(); //reason for using instance field 'acks' instead of local field is profiler was showing surprising amount of time spent creating acks map if local
             for (long ackId : unacked) {
-                Boolean was = acksStates.remove(ackId);//check(ackId);
-                if (was != null) {
+
+                Boolean was = acksStates.get(ackId);//check(ackId);
+                if (was != null && was) { //only take ackIds that are true
+                    acksStates.remove(ackId);
                     acks.put(ackId, was);
                 }
             }
