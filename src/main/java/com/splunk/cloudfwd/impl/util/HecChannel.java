@@ -71,6 +71,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private DeadChannelDetector deadChannelDetector;
   private final String memoizedToString;
   private int preflightCount; //number of times we have sent the preflight checks  
+  private boolean preflightCompleted;
   //private volatile boolean closeFinished;
   private CountDownLatch closeFinishedLatched = new CountDownLatch(1);//used to support closeAndFinish which blocks
 
@@ -104,6 +105,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             this.health.setStatus(new PreflightFailed(ex), false);
         }
         return health;
+    }
+    
+    public boolean isPreflightCompleted(){
+        return preflightCompleted;
     }
     
     public HecHealthImpl getHealthNonblocking() {
@@ -153,7 +158,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
-            long decomTime = (long) (decomMs * Math.random());
+            long decomTime = (long) (decomMs * (1+Math.random())); //[decomMs, 1+dcommMS]
             this.reaperTaskFuture  = ThreadScheduler.getSchedulerInstance("channel_reaper").schedule(() -> {
                 LOG.info("decommissioning channel (channel_decom_ms={}): {}",
                         decomMs, HecChannel.this);
@@ -215,6 +220,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         return; //don't update health since we did not actually get an 'answer' to our pre-flight check     
       case PREFLIGHT_OK:
           LOG.info("Preflight checks OK on {}", this);
+          preflightCompleted = true;
           //Note: we also start polling health if/when we give up on prflight checks due to max retries of preflight failing
           sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
     }
@@ -225,7 +231,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //only health poll  or preflight ok will set health to true
         if(e.getType()==LifecycleEvent.Type.PREFLIGHT_OK || e.getType()==LifecycleEvent.Type.HEALTH_POLL_OK){
             this.health.setStatus(e, true);
-            LOG.info("Channel is healthy {}", this);
         }
         //any other non-200 that we have not excplicitly handled above will set the health false
         if (e instanceof Response) {
@@ -235,8 +240,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             }
         }
         if(e instanceof Failure){
-            this.health.setStatus(e, false);
-            LOG.info("Channel is NOT healthy because '{}' {}",e, this);
+            this.health.setStatus(e, false);           
         }
         //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
         if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
