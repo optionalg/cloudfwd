@@ -27,6 +27,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String MAX_THREADS_KEY = "max_threads";
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
+    private static final String NUM_SENDERS_KEY = "num_senders";    
     
     // defaults for CLI parameters
     static {
@@ -34,11 +35,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "500"); //500MB
+        cliProperties.put(NUM_SENDERS_KEY, "128"); //128 senders
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
     }
     
-    private int numSenderThreads = 64;
+    private int numSenderThreads = 128;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
@@ -53,6 +55,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
     @Test
     public void sendTextToRaw() throws InterruptedException {   
+        numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
         ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
                 (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
@@ -60,7 +63,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
-
+       
         for (int i = 0; i < numSenderThreads; i++) {
             futureList.add(senderExecutor.submit(new SenderWorker(i)::sendAndWaitForAcks));
         }

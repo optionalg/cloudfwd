@@ -49,8 +49,10 @@ public class PreFlightAckEndpoint implements Endpoint {
         delayResponse(respond);
     }
 
-    protected void delayResponse(Runnable r) {
+    protected void delayResponse(Runnable r) {        
         //return a single response with a delay uniformly distributed between  [0,5] ms
-        executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+        if(!executor.isShutdown()){
+            executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+        }
     }
 }

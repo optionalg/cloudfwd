@@ -55,6 +55,8 @@ public class HecHealthImpl implements HecHealth {
     public String toString() {
         return "HecHealthImpl{" 
                 + "channelCreatorThreadName=" + channelCreatorThreadName 
+                + ", preflightComplete="+getChannel().isPreflightCompleted()
+                + ", available="+getChannel().isAvailable()
                 + ", healthy=" + healthy
                 + ", full=" + isFull()
                 + ", status=" + status 
@@ -77,6 +79,7 @@ public class HecHealthImpl implements HecHealth {
         this.status = status;
         this.healthy = healthy;
         this.latch.countDown();
+        LOG.trace("{} health={} due to {}", getChannel(), healthy, status);
     }
 
     @Override
@@ -228,8 +231,5 @@ public class HecHealthImpl implements HecHealth {
     public boolean isFull() {
         return this.channel.isFull();
     }
-
-
-    
-    
+       
 }

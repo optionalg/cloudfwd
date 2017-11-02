@@ -36,8 +36,8 @@ public class ThreadScheduler {
   private static final ConcurrentMap<String, ScheduledThreadPoolExecutor> schedulers = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, ExecutorService> executors = new ConcurrentHashMap<>(); 
   private static final int MAX_THREADS_IN_SCHEDULER_POOL = 1;
-  private static int MAX_THREADS_IN_EXECUTOR_POOL = 4;  
-
+  private static int MAX_THREADS_IN_EXECUTOR_POOL = Integer.MAX_VALUE; //Pools need to be able to grow large because pre-flight check waits on several latches and will tie up a thread for a long time
+  
   public synchronized  static ScheduledThreadPoolExecutor getSchedulerInstance(String name){
       return getFromSchedulerCache(name);
   }
@@ -78,7 +78,7 @@ public class ThreadScheduler {
 
     private static ExecutorService getFromExecutorCache(String name) {
         return executors.computeIfAbsent(name, k->{
-            ThreadFactory f = (Runnable r) -> new Thread(r, name);
+            ThreadFactory f = (Runnable r) -> new Thread(r, name);            
             ThreadPoolExecutor tpe = new ThreadPoolExecutor(2, MAX_THREADS_IN_EXECUTOR_POOL,
                                    30L, TimeUnit.SECONDS,
                                    new LinkedBlockingQueue<Runnable>(), f);
