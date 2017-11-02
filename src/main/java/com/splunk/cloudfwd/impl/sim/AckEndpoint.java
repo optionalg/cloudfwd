@@ -19,12 +19,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -45,12 +46,10 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     private static final ObjectMapper serializer = new ObjectMapper();
     
     protected AtomicLong ackId = new AtomicLong(-1); //so post increment, first id returned is 0
-    protected Collection<Long> acked = new TreeSet<>(); // toggled as acked
-    protected Collection<Long> unacked = new TreeSet<>(); // not yet acked
-    
+    protected SortedMap<Long, Boolean> acksStates = Collections.synchronizedSortedMap(new TreeMap<>()); //key is ackId
     Random rand = new Random(System.currentTimeMillis());
     volatile boolean started;
-    final ScheduledThreadPoolExecutor executor;
+    private final ScheduledThreadPoolExecutor executor;
     private final Map resp = new HashMap(); //accessed from synchronized block
     SortedMap<Long, Boolean> acks = new TreeMap<>();    //accessed from synchronized block
     
@@ -68,46 +67,59 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     }
 
     //start periodically flipping ackIds from false to true. This simulated event batches getting indexed.
-    //To mimic the observed behavior of splunk, we flip the lowest unacknowledged ackId before
+    //To mimick the observed behavior of splunk, we flip the lowest unacknowledge ackId before
     //any higher ackId
     @Override
     public void start() {
         if (started) {
             return;
         }
-        //stateFrobber will set the ack to TRUE
-        Runnable stateFrobber = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    synchronized (AckEndpoint.this) {
-                      if(unacked.isEmpty()){
-                        return;
-                      }
-                      Long lowestKey = (Long)((TreeSet<Long>)unacked).first();
-                      if (null == lowestKey) {
-                        return;
-                      }
-                      unacked.remove(lowestKey);
-                      acked.add(lowestKey);
-                    }//synchronized
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
+        synchronized(this){
+            if (started) {
+               return;
+           }    
+            //stateFrobber will set the ack to TRUE
+            Runnable stateFrobber = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        synchronized (AckEndpoint.this) {         
+                            if(acksStates.isEmpty()){
+                               return;
+                            }                 
+                            int flipCount = (int) Math.ceil(Math.random()*1000); //change a random number of acks to true  [1,1000]
+                            for(Iterator<Map.Entry<Long, Boolean>> it = acksStates.entrySet().iterator(); it.hasNext();){
+                                it.next().setValue(true); //consider it as ack'd
+                                if(--flipCount==0){
+                                    return;
+                                }
+                            }
+                            /*
+                            Long lowestKey = acksStates.firstKey();
+                            if (null == lowestKey) {
+                                return;
+                            }
+                            acksStates.put(lowestKey, true); //flip it
+                            */
+                        }//synchronized
+                    } catch (Exception e) {
+                        LOG.error(e.getMessage(), e);
+                    }
                 }
-            }
-        };
-        //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
-        //if the execution time of a task exceeds the period. We don't want that.
-        executor.scheduleWithFixedDelay(stateFrobber, 0, 1,
-                TimeUnit.MICROSECONDS);
-        started = true;
+            };
+            //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
+            //if the execution time of a task exceeds the period. We don't want that.
+            executor.scheduleWithFixedDelay(stateFrobber, 0, 10,
+                    TimeUnit.MILLISECONDS);
+            started = true;
+        }//end synchronized
     }
     
     @Override
     public long nextAckId() {
         long newId = this.ackId.incrementAndGet();
-        synchronized(this) {
-          this.unacked.add(newId);
+        synchronized(this){
+            this.acksStates.put(newId, false); //event stat is initially not indexed
         }
         //System.out.println("ackStates: " + this.acksStates);
         return newId;
@@ -125,13 +137,14 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             //System.out.println("Server side simulation: " + this.acksStates.size() + " acks tracked on server: " + acksStates);
             Collection<Long> unacked = ackMgr.getAcknowledgementTracker().
                     getPostedButUnackedEvents();
-            //System.out.println("Channel  " +AckEndpoint.this.toString()+" received these acks to check: " + unacked + " and had this state " + acksStates);      
-            acks.clear();
+            //System.out.println("Channel  " +AckEndpoint.this.toString()+" recieved these acks to check: " + unacked + " and had this state " + acksStates);      
+            acks.clear(); //reason for using instance field 'acks' instead of local field is profiler was showing surprising amount of time spent creating acks map if local
             for (long ackId : unacked) {
-                boolean has = acked.contains(ackId);
-                if (has) {
-                    acked.remove(ackId);
-                    acks.put(ackId, Boolean.TRUE);
+
+                Boolean was = acksStates.get(ackId);//check(ackId);
+                if (was != null && was) { //only take ackIds that are true
+                    acksStates.remove(ackId);
+                    acks.put(ackId, was);
                 }
             }
             resp.clear();

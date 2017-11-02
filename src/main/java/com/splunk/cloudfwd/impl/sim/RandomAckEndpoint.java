@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author meemax
  */
-public class RandomAckEndpoint extends AckEndpoint {
+public class RandomAckEndpoint extends ContinuousAckEndpoint {
     
     private static final Logger LOG = LoggerFactory.getLogger(RandomAckEndpoint.class.
             getName());
@@ -40,32 +40,37 @@ public class RandomAckEndpoint extends AckEndpoint {
         if (started) {
             return;
         }
-        //stateFrobber will set the ack to TRUE
-        Runnable stateFrobber = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    synchronized (RandomAckEndpoint.this) {
-                        if(unacked.isEmpty()){
-                            return;
-                        }
-                        int index = (int)(unacked.size() * Math.random());
-                        Long key = (Long)((ArrayList<Long>)unacked).get(index);
-                        if (null == key) {
-                            return;
-                        }
-                        ((ArrayList<Long>)unacked).remove(index);
-                        acked.add(key);
-                    }//synchronized
-                } catch (Exception e) {
-                    LOG.error(e.getMessage(), e);
-                }
-            }
-        };
-        //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
-        //if the execution time of a task exceeds the period. We don't want that.
-        executor.scheduleWithFixedDelay(stateFrobber, 0, 10,
-            TimeUnit.MICROSECONDS);
-        started = true;
+        synchronized(this){
+          if (started) {
+             return;
+           }    
+          //stateFrobber will set the ack to TRUE
+          Runnable stateFrobber = new Runnable() {
+              @Override
+              public void run() {
+                  try {
+                      synchronized (RandomAckEndpoint.this) {
+                          if(unacked.isEmpty()){
+                              return;
+                          }
+                          int index = (int)(unacked.size() * Math.random());
+                          Long key = (Long)((ArrayList<Long>)unacked).get(index);
+                          if (null == key) {
+                              return;
+                          }
+                          ((ArrayList<Long>)unacked).remove(index);
+                          acked.add(key);
+                      }//synchronized
+                  } catch (Exception e) {
+                      LOG.error(e.getMessage(), e);
+                  }
+              }
+          };
+          //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
+          //if the execution time of a task exceeds the period. We don't want that.
+          executor.scheduleWithFixedDelay(stateFrobber, 0, 10,
+              TimeUnit.MICROSECONDS);
+          started = true;
+       }//synchronized
     }
 }
