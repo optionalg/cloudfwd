@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
+import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import org.slf4j.Logger;
 
 /**
@@ -40,7 +41,7 @@ public class GenericCoordinatedResponseHandler extends HttpCallbacksGeneric impl
     public GenericCoordinatedResponseHandler(HecIOManager m, LifecycleEvent.Type okType,
             LifecycleEvent.Type failType, LifecycleEvent.Type gatewayTimeoutType,
             LifecycleEvent.Type indexerBusyType, String name) {
-        this(m, okType, failType, name);
+        super(m, okType, failType, gatewayTimeoutType, indexerBusyType, name);
     }    
 
     /**
