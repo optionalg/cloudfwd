@@ -225,6 +225,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //only health poll  or preflight ok will set health to true
         if(e.getType()==LifecycleEvent.Type.PREFLIGHT_OK || e.getType()==LifecycleEvent.Type.HEALTH_POLL_OK){
             this.health.setStatus(e, true);
+            LOG.info("Channel is healthy {}", this);
         }
         //any other non-200 that we have not excplicitly handled above will set the health false
         if (e instanceof Response) {
@@ -235,6 +236,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         }
         if(e instanceof Failure){
             this.health.setStatus(e, false);
+            LOG.info("Channel is NOT healthy because '{}' {}",e, this);
         }
         //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
         if(EventBatchHelper.isEventBatchFailOrNotOK(e)){

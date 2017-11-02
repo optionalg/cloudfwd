@@ -77,6 +77,7 @@ public class HecHealthImpl implements HecHealth {
         this.status = status;
         this.healthy = healthy;
         this.latch.countDown();
+        LOG.info("{} health={} due to {}", getChannel(), healthy, status);
     }
 
     @Override
