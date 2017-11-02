@@ -477,6 +477,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   int getUnackedCount() {
     return this.unackedCount.get();
   }
+  
+  public boolean isClosed(){
+      return closed;
+  }
+  
+  public boolean isCloseFinished(){
+      return closeFinishedLatched.getCount()==0;
+  }
 
   /**
    * @return the metrics

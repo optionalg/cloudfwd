@@ -343,6 +343,7 @@ public class ConnectionImpl implements Connection {
     private void logLBHealth() {
         List<HecHealth> channelHealths = lb.getHealthNonBlocking();
         int _closed=0;
+        int _closedFinished=0;
         int _quiesced=0;
         int  _healthy = 0;
         int _full = 0;
@@ -368,13 +369,16 @@ public class ConnectionImpl implements Connection {
             if(!h.getTimeSinceDecomissioned().isZero()){
                 _decomissioned++;
             }
-            if(!h.getTimeSinceCloseFinished().isZero()){
+            if(!h.getChannel().isClosed()){
                 _closed++;
             }
+            if(!h.getChannel().isCloseFinished()){
+                _closedFinished++;
+            }            
         }
         
-        LOG.info("LOAD BALANCER: channels={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}", 
-                channelHealths.size(),_healthy, _full,  _quiesced, _decomissioned, _dead, _closed, _misconfigured);
+        LOG.info("LOAD BALANCER: channels={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closed={}, misconfigured={}", 
+                channelHealths.size(),_healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 
 }
