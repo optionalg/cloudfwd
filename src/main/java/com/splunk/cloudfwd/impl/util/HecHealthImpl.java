@@ -55,6 +55,8 @@ public class HecHealthImpl implements HecHealth {
     public String toString() {
         return "HecHealthImpl{" 
                 + "channelCreatorThreadName=" + channelCreatorThreadName 
+                + ", preflightComplete="+getChannel().isPreflightCompleted()
+                + ", available="+getChannel().isAvailable()
                 + ", healthy=" + healthy
                 + ", full=" + isFull()
                 + ", status=" + status 

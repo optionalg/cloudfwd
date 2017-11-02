@@ -353,6 +353,7 @@ public class ConnectionImpl implements Connection {
         int _decomissioned=0;   
         int _available=0;
         for(HecHealth h:channelHealths){
+            LOG.trace("{}", h);
             if(h.getChannel().isPreflightCompleted()){
                 _preflightCompleted++;
             }
