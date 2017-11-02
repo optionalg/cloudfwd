@@ -493,7 +493,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     return this.channelMetrics;
   }
 
-  boolean isAvailable() {
+  public boolean isAvailable() {
     return !quiesced && !closed && health.isHealthy() && !isFull();
   }
 

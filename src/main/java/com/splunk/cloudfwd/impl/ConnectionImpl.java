@@ -349,11 +349,15 @@ public class ConnectionImpl implements Connection {
         int _full = 0;
         int _misconfigured=0;
         int _dead=0;
-        int _decomissioned=0;        
+        int _decomissioned=0;   
+        int _available=0;
         for(HecHealth h:channelHealths){
             if(h.isHealthy()){
                 _healthy++;
             }
+            if(h.getChannel().isAvailable()){
+                _available++;
+            }            
             if(h.isFull()){
                 _full++;
             }            
@@ -369,16 +373,16 @@ public class ConnectionImpl implements Connection {
             if(!h.getTimeSinceDecomissioned().isZero()){
                 _decomissioned++;
             }
-            if(!h.getChannel().isClosed()){
+            if(h.getChannel().isClosed()){
                 _closed++;
             }
-            if(!h.getChannel().isCloseFinished()){
+            if(h.getChannel().isCloseFinished()){
                 _closedFinished++;
             }            
         }
         
-        LOG.info("LOAD BALANCER: channels={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closed={}, misconfigured={}", 
-                channelHealths.size(),_healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
+        LOG.info("LOAD BALANCER: channels={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
+                channelHealths.size(),_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 
 }
