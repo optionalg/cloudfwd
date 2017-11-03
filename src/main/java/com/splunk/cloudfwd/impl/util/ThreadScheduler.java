@@ -35,7 +35,7 @@ public class ThreadScheduler {
   //private Logger LOG = LoggerFactory.getLogger(ThreadScheduler.class.getName());
   private static final ConcurrentMap<String, ScheduledThreadPoolExecutor> schedulers = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, ExecutorService> executors = new ConcurrentHashMap<>(); 
-  private static final int MAX_THREADS_IN_SCHEDULER_POOL = 128;
+  private static final int THREADS_IN_SCHEDULER_POOL = 1;
   private static int MAX_THREADS_IN_EXECUTOR_POOL = Integer.MAX_VALUE; //Pools need to be able to grow large because pre-flight check waits on several latches and will tie up a thread for a long time
   
   public synchronized  static ScheduledThreadPoolExecutor getSchedulerInstance(String name){
@@ -82,7 +82,6 @@ public class ThreadScheduler {
             ThreadPoolExecutor tpe = new ThreadPoolExecutor(2, MAX_THREADS_IN_EXECUTOR_POOL,
                                    30L, TimeUnit.SECONDS,
                                    new LinkedBlockingQueue<Runnable>(), f);
-            tpe.prestartAllCoreThreads();
             return tpe;
       });
     }
@@ -90,7 +89,7 @@ public class ThreadScheduler {
     private static ScheduledThreadPoolExecutor getFromSchedulerCache(String name) {
         return schedulers.computeIfAbsent(name, k->{
             ThreadFactory f = (Runnable r) -> new Thread(r, name);
-             ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(MAX_THREADS_IN_SCHEDULER_POOL, f);
+             ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(THREADS_IN_SCHEDULER_POOL, f);
              scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
              scheduler.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
              scheduler.setRemoveOnCancelPolicy(true); 

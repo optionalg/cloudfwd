@@ -79,17 +79,18 @@ public class HecIOManager implements Closeable {
         synchronized(this){
             if (null == ackPollTask) {
                 Runnable poller = () -> {                    
-                    if (this.getAcknowledgementTracker().isEmpty()) {
-                        LOG.trace("No acks to poll for on {}", getSender().getChannel());
-                        return;
-                    } else if (this.isAckPollInProgress()) {
-                        LOG.trace("skipping ack poll - already have one in flight on {}", getSender().getChannel());
-                        return;
-                    }
+//                    if (this.getAcknowledgementTracker().isEmpty()) {
+//                        LOG.trace("No acks to poll for on {}", getSender().getChannel());
+//                        return;
+//                    } else if (this.isAckPollInProgress()) {
+//                        LOG.trace("skipping ack poll - already have one in flight on {}", getSender().getChannel());
+//                        return;
+//                    }
                     this.pollAcks();
                 };
                 long interval = sender.getConnection().getSettings().getAckPollMS();
-                this.ackPollTask = ThreadScheduler.getSchedulerInstance("ack poller").scheduleWithFixedDelay(poller, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
+                this.ackPollTask = ThreadScheduler.getSchedulerInstance("ack_poll_scheduler").
+                        scheduleWithFixedDelay(poller, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -101,7 +102,8 @@ public class HecIOManager implements Closeable {
             if (null == healthPollTask) {
                 long interval = sender.getConnection().getSettings().
                         getHealthPollMS();
-                this.healthPollTask = ThreadScheduler.getSchedulerInstance("health poller").scheduleWithFixedDelay(this::pollHealth, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
+                this.healthPollTask = ThreadScheduler.getSchedulerInstance("health_poll_scheduler").
+                        scheduleWithFixedDelay(this::pollHealth, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
             }
         }
     }
