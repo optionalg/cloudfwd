@@ -41,6 +41,7 @@ import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 
 /**
  * This class performs the actually HTTP send to HEC
@@ -486,15 +487,24 @@ public final class HttpSender implements Endpoints, CookieClient {
         }
         if(null != this.cookie && !this.cookie.equals(cookie)){
             LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
-            LOG.warn("Closing and replacing {}", getChannel());
-            try {
-                this.getChannel().closeAndReplace();
-            } catch (InterruptedException ex) {
-                LOG.error("Caught InterruptedException trying to close and replace {}", getChannel());
-            }
+            LOG.warn("replacing channel, resending events, and killing {}", getChannel());
+            resendEvents();
         }else{
             this.cookie = cookie;
         }
+    }
+    
+    private void resendEvents(){
+        Runnable r = ()->{
+             try {
+                getConnection().getLoadBalancer().addChannelFromRandomlyChosenHost();
+                getChannel().resendInFlightEvents();
+                getChannel().forceClose();
+            } catch (Exception ex) {
+                LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
+            }            
+        };//end runnable
+        ThreadScheduler.getExecutorInstance("event_resender").execute(r);
     }
   
 }

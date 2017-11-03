@@ -129,7 +129,7 @@ public class LoadBalancer implements Closeable {
         }
     }
 
-    void addChannelFromRandomlyChosenHost() throws InterruptedException {
+    public void addChannelFromRandomlyChosenHost() throws InterruptedException {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
         LOG.debug("Adding channel for socket address  {}", addr);
         addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
