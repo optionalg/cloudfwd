@@ -64,7 +64,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final LoadBalancer loadBalancer;
   private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
-  private final StickySessionEnforcer stickySessionEnforcer = new StickySessionEnforcer();
+  //private final StickySessionEnforcer stickySessionEnforcer = new StickySessionEnforcer();
   private volatile boolean started;
   private final String channelId;
   private final ChannelMetrics channelMetrics;
