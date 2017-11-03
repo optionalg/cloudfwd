@@ -53,8 +53,15 @@ public class HecHealthImpl implements HecHealth {
 
     @Override
     public String toString() {
-        return "HecHealthImpl{" + "channelCreatorThreadName=" + channelCreatorThreadName 
-                + ", healthy=" + healthy + ", status=" + status + ", channel=" + channel + " age="+getChannelAge()
+        return "HecHealthImpl{" 
+                + "channelCreatorThreadName=" + channelCreatorThreadName 
+                + ", preflightComplete="+getChannel().isPreflightCompleted()
+                + ", available="+getChannel().isAvailable()
+                + ", healthy=" + healthy
+                + ", full=" + isFull()
+                + ", status=" + status 
+                + ", channel=" + channel 
+                + ", age="+getChannelAge()
                 + ", timeSinceHealthChanged="+getTimeSinceHealthChanged()
                 + ", timeSinceDecommissioned="+getTimeSinceDecomissioned()
                 + ", timeSinceDeclaredDead="+getTimeSinceDeclaredDead()
@@ -72,6 +79,7 @@ public class HecHealthImpl implements HecHealth {
         this.status = status;
         this.healthy = healthy;
         this.latch.countDown();
+        LOG.trace("{} health={} due to {}", getChannel(), healthy, status);
     }
 
     @Override
@@ -216,6 +224,12 @@ public class HecHealthImpl implements HecHealth {
             return Duration.ofMillis(System.currentTimeMillis() - finishCloseTime);
         }
     }
-    
-    
+
+    /**
+     * @return the full
+     */
+    public boolean isFull() {
+        return this.channel.isFull();
+    }
+       
 }

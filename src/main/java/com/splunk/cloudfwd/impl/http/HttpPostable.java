@@ -18,7 +18,9 @@ package com.splunk.cloudfwd.impl.http;
 import org.apache.http.HttpEntity;
 
 /**
- *
+ * This interface exists mainly to allow us EventBatch to provide an HttpEntity. This allows EventBatch to be responsible for
+ * how it provides bytes to http POST. In particular, it allows EventBatchImpl to provide a customized HttpEventBatchEntity
+ * that can stream data out of individual Events, avoiding copies.
  * @author ghendrey
  */
 public interface HttpPostable {

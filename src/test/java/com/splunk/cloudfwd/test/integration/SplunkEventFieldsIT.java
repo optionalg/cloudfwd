@@ -1,5 +1,6 @@
 package com.splunk.cloudfwd.test.integration;
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
@@ -49,7 +50,8 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         try {
             host = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            LOG.error("{}", e.getMessage());
         }
         return host;
     }
@@ -59,7 +61,8 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
     }
 
     @Test
-    public void sendEventsWithDefaultFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+    public void sendEventsWithDefaultFieldsToRaw() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithDefaultFieldsToRaw");
         super.sendEvents();
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
@@ -67,7 +70,8 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
     }
 
     @Test
-    public void sendEventsWithNullValueFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+    public void sendEventsWithNullValueFieldsToRaw() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithNullValueFieldsToRaw");
         connection.getSettings().setHost(null);
         connection.getSettings().setIndex(null);
         connection.getSettings().setSource(null);
@@ -79,7 +83,46 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
     }
 
     @Test
-    public void sendEventsWithCustomFields() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+    public void sendEventsWithCustomFieldsToRaw() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithCustomFieldsToRaw");
+        connection.getSettings().setIndex(INDEX_NAME);
+        connection.getSettings().setHost(getLocalHost());
+        connection.getSettings().setSource(getSource());
+        connection.getSettings().setSourcetype(getSource());
+        super.sendEvents();
+        LOG.warn("SEARCH STRING: " + getSearchString());
+        Set<String> results = getEventsFromSplunk();
+        verifyResults(getSentEvents(), results);
+    }
+
+    @Test
+    public void sendEventsWithDefaultFieldsToEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithDefaultFieldsToEvent");
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        super.sendEvents();
+        LOG.warn("SEARCH STRING: " + getSearchString());
+        Set<String> results = getEventsFromSplunk();
+        verifyResults(getSentEvents(), results);
+    }
+
+    @Test
+    public void sendEventsWithNullValueFieldsToEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithNullValueFieldsToEvent");
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+        connection.getSettings().setHost(null);
+        connection.getSettings().setIndex(null);
+        connection.getSettings().setSource(null);
+        connection.getSettings().setSourcetype(null);
+        super.sendEvents();
+        LOG.warn("SEARCH STRING: " + getSearchString());
+        Set<String> results = getEventsFromSplunk();
+        verifyResults(getSentEvents(), results);
+    }
+
+    @Test
+    public void sendEventsWithCustomFieldsToEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
+        LOG.info("test: sendEventsWithCustomFieldsToEvent");
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
         connection.getSettings().setIndex(INDEX_NAME);
         connection.getSettings().setHost(getLocalHost());
         connection.getSettings().setSource(getSource());

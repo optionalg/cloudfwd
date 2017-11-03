@@ -26,6 +26,7 @@ import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import org.slf4j.Logger;
 
 /**
@@ -106,15 +107,18 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
 
     private void resend(Exception ex) {
-        try {
-            events.addSendException(ex);
-            LOG.warn("resending events through load balancer {} on channel {}",
-                events, getSender().getChannel());
-            getSender().getConnection().getLoadBalancer().
-                sendRoundRobin(events, true); //will callback failed if max retries exceeded
-        } catch (Exception e) {
-            invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
-        }
+        //we must run resends through their own thread. Otherwise the apache client thread could wind up blocked in the load balancer
+        Runnable r = ()-> {
+             try {
+                events.addSendException(ex);
+                LOG.warn("resending events through load balancer {} on channel {}",
+                    events, getSender().getChannel());                
+                getSender().getConnection().getLoadBalancer().sendRoundRobin(events, true); //will callback failed if max retries exceeded   
+            } catch (Exception e) {
+                invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
+            }                
+        };
+        ThreadScheduler.getExecutorInstance("event_resender").execute(r);
     }
 
     private void notifyFailedAndResend(Exception ex) {

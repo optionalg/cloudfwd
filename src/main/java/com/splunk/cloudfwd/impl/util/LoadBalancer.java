@@ -197,10 +197,11 @@ public class LoadBalancer implements Closeable {
             return false; //bail if this EventBatch has already reached a final state
         }
         preSend(events, resend);
-        if (spinSend(resend, events)) {
-            return false;
-        }
-        return true;
+//        if (spinSend(resend, events)) {
+//            return false;
+//        }
+//        return true;
+        return spinSend(resend, events);
     }
 
     private boolean spinSend(boolean resend, EventBatchImpl events) throws HecNoValidChannelsException {
@@ -209,7 +210,7 @@ public class LoadBalancer implements Closeable {
         while (true) {
             //!closed || resend
             if (closed && !resend) {
-                return true;
+                return false; //return true;
             }
             //note: the channelsSnapshot must be refreshed each time through this loop
             //or newly added channels won't be seen, and eventually you will just have a list
@@ -228,15 +229,18 @@ public class LoadBalancer implements Closeable {
                 } catch (InterruptedException ex) {
                     LOG.warn("LoadBalancer Sleep interrupted.");//should rethrow ex
                 }
-                continue; //keep going until a channel is added
+            }else{
+                if (tryChannelSend(channelsSnapshot, events, resend)) {//attempt to send through a channel (ret's fals if channel not available)
+                    //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
+                    //because everyone stuck in perpetual wait
+                    //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
+                    break;
+                }
+                waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             }
-            if (tryChannelSend(channelsSnapshot, events, resend)) {
-                break;
-            }
-            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
             throwExceptionIfTimeout(startTime, events, resend);
         }
-        return false;
+        return true; //return false;
     }
 
     private void preSend(EventBatchImpl events, boolean forced)
@@ -279,8 +283,8 @@ public class LoadBalancer implements Closeable {
                 LOG.debug("sent EventBatch:{}  on channel: {} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
-                LOG.trace("channel not healthy {}", tryMe);
-                LOG.debug("Skipped channel: {} available={} full={}", tryMe, tryMe.isAvailable(), tryMe.isFull());
+                LOG.trace("channel not available {}", tryMe);
+                LOG.debug("Skipped channel: {} available={} healthy={} full={} quiesced={} closed={}", tryMe, tryMe.isAvailable(), tryMe.isHealthy(), tryMe.isFull(), tryMe.isQuiesced(), tryMe.isClosed());
             }
         } catch (RuntimeException e) {
             recoverAndThrowException(events, forced, e);
@@ -311,18 +315,54 @@ public class LoadBalancer implements Closeable {
             }
         }
     }
+    
+    private void waitWhileFull(long start, EventBatchImpl events,
+            boolean forced){
+        while(connection.getTimeoutChecker().isFull()){
+            try {
+                LOG.warn("ConnectionBuffers full ({} bytes). Load Balancer will block...", connection.getTimeoutChecker().getSizeInBytes());                
+                latch = new CountDownLatch(1);
+                if (!latch.await(100, TimeUnit.MILLISECONDS)) {
+                    LOG.warn(
+                            "Round-robin load balancer waited 100 ms because connection was full" );
+                }
+                latch = null;
+            } catch (InterruptedException e) {
+                LOG.error(
+                        "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
+                        getMessage());
+            }
+            throwExceptionIfTimeout(start, events, forced);
+        }//while        
+    }
 
     private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
             EventBatchImpl events) throws HecNoValidChannelsException {
-
-        List<HecHealth> hecHealths = channelsSnapshot.stream().map(HecChannel::getHealth).collect(Collectors.toList());
-        if (hecHealths.stream().allMatch(HecHealth::isMisconfigured)) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
-            String msg = "No valid channels available due to possible misconfiguration.";
+        //First, we run through all the channel's NONBLOCKING get health. This is an optimistic approach wherein if we
+        //do find a single not-misconfigured channel then we are good to go
+        for(HecChannel c:channelsSnapshot){
+            HecHealth health = c.getHealthNonblocking();
+            if(null != health.getStatus() && !health.isMisconfigured()){ //the health *was* updated (status not null), and it's not misconfigured
+                return; //bail, good to go
+            }
+        }
+        //If we are here then we *didn't* find a non-misconfigured channel
+        List<HecHealth> healths = new ArrayList<>();
+        for(HecChannel c:channelsSnapshot){
+            HecHealth health = c.getHealth(); //this blocks until the health status has been set at  least once
+            healths.add(health);
+            if(!health.isMisconfigured()){ //the health *was* updated (status not null), and it's not misconfigured
+                return; //bail, good to go
+            }
+        } 
+        
+        String msg = "No valid channels available due to possible misconfiguration.";
             HecNoValidChannelsException ex = new HecNoValidChannelsException(
-                msg, hecHealths);
+                msg, healths);
             LOG.error(msg, ex);
             throw ex;
-        }
+        
+
     }
 
     private void recoverAndThrowException(EventBatchImpl events, boolean forced,
@@ -350,7 +390,7 @@ public class LoadBalancer implements Closeable {
         // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
         List<InetSocketAddress> addrs = discoverer.getAddrs();
         for (HecChannel c : this.channels.values()) {
-            c.close();
+            c.closeAndFinish();
         }
         staleChannels.putAll(channels);
         channels.clear();

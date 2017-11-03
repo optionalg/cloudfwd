@@ -13,9 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.PropertyKeys;
 
 /**
  * Created by meemax by 10/24/2017
@@ -42,38 +40,28 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
       settings.setCheckpointEnabled(true);
     }
     
-
-    @Override
-    protected void sendEvents() throws InterruptedException {
-      if (getNumEventsToSend() > 1) {
-        throw new RuntimeException(
-                "This test uses close(), not closeNow(), so don't jam it up with more than one Batch to test on "
-                + "a jammed up channel. It will take too long to be practical.");
-      }
-      LOG.trace(
-              "SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
-              + "And test method GUID " + testMethodGUID);
-      try {
-        connection.send(nextEvent(1));
-      } catch (HecConnectionTimeoutException ex) {
-        Assert.fail(
-                "The first message should send - but we got an HecConnectionTimeoutException");
-      }
-      //Thread.sleep(10000);//this is  a total hack - we have a race condition where ChannelDeathDetector is racing against Connection.close()
-      connection.close();
-      this.callbacks.await(1, TimeUnit.MINUTES);
-    }
-
     @Override
     protected int getNumEventsToSend() {
-      return 1;
+      return 10000;
     }
 
     @Test
     public void testShouldCheckpointOnFail() throws InterruptedException {
-      sendEvents();
+      super.sendEvents();
     }
     
+    @Override
+    protected boolean shouldSendThrowException() {
+      return true;
+    }
+    
+    @Override
+    protected boolean isExpectedSendException(Exception e) {
+      if (e instanceof HecConnectionTimeoutException)
+        return true;
+      return false;
+    }
+
     @Override
     public BasicCallbacks getCallbacks(){
       return new BasicCallbacks(0){
@@ -106,6 +94,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
 
          @Override
          public void failed(EventBatch events, Exception ex) {
+           failed = true;
            exception = ex;
            if(!isExpectedFailureType(ex)){
              ex.printStackTrace(); //print the stack trace if we were not expecting failure
@@ -122,8 +111,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
            // if we got here, failed has been called and triggered release
            failLatch.countDown();
            latch.countDown();
-         }
-         
+         }      
       };
     }
 }

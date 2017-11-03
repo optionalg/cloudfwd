@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
+import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,7 +78,7 @@ h1's response
      */
     public synchronized void conditionallyUpate(LifecycleEvent e,
             ChannelMetrics channelMetrics) {
-        latches[responseCount.get()].countDown(e); //allows someone to await the nth response
+        latches[responseCount.get()].countDown(e); //allows someone to await the nth response 
         responseCount.incrementAndGet();
         if(!e.isOK()){
             alreadyNotOk.set(true); //record fact that we saw a not OK
@@ -86,7 +87,13 @@ h1's response
         if (isOKIgnorable(e)) {
             return; //under the above conditions we ignore OK responses
         }
-        channelMetrics.update(e);
+        channelMetrics.update(e);    
+    }
+    
+    public void cancel(LifecycleEvent e){        
+        for(LifecycleEventLatch latch:latches){
+            latch.countDown(e); //release anyone who might have been waiting
+        }        
     }
 
     private boolean isOKIgnorable(LifecycleEvent e) {

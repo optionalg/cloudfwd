@@ -1,12 +1,8 @@
 package com.splunk.cloudfwd.impl.http;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
-import org.apache.http.client.config.CookieSpecs;
-import org.apache.http.config.Registry;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import javax.net.ssl.SSLContext;
+import org.apache.http.ssl.SSLContexts;
 import java.io.ByteArrayInputStream;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
@@ -15,13 +11,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLContext;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.slf4j.Logger;
 import org.apache.http.conn.ssl.TrustStrategy;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.util.PublicSuffixMatcher;
-import org.apache.http.conn.util.PublicSuffixMatcherLoader;
-import org.apache.http.cookie.CookieSpecProvider;
-import org.apache.http.impl.cookie.RFC6265CookieSpecProvider;
+
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
@@ -185,27 +179,13 @@ public final class HttpClientFactory {
      */
     public final CloseableHttpAsyncClient build_default_client(){
         return builderWithCustomOptions()
-                .setDefaultCookieSpecRegistry(buildRegistry())
+                //.setDefaultCookieSpecRegistry(buildRegistry()) //DO NOT MANAGE COOKIES AT THIS LEVEL
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
                 .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
                 .build();
     }
 
-    /**
-     * build cookie registry to support proxy server with sticky session
-     * @return cookie registry
-      */
-    private final Registry<CookieSpecProvider> buildRegistry() {
-        // configure cookie parsing
-        PublicSuffixMatcher publicSuffixMatcher = PublicSuffixMatcherLoader.
-                getDefault();
-        return RegistryBuilder.
-                <CookieSpecProvider>create()
-                .register(CookieSpecs.DEFAULT,
-                        new RFC6265CookieSpecProvider(publicSuffixMatcher))
-                .build();
-    }
 
     /**
      * build an async http client with a custom ssl certificate 'cert' provided
@@ -217,7 +197,7 @@ public final class HttpClientFactory {
         SSLContext ssl_context  = build_ssl_context(cert);
 
         return builderWithCustomOptions()
-                .setDefaultCookieSpecRegistry(buildRegistry())
+                //.setDefaultCookieSpecRegistry(buildRegistry())
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
                 .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
@@ -235,8 +215,8 @@ public final class HttpClientFactory {
      */
     public final CloseableHttpAsyncClient build_http_client_insecure() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         return builderWithCustomOptions()
-                .setDefaultCookieSpecRegistry(buildRegistry())
                 .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                //.setDefaultCookieSpecRegistry(buildRegistry())
                 .setSSLContext(build_ssl_context_allow_all())
                 .build();
     }

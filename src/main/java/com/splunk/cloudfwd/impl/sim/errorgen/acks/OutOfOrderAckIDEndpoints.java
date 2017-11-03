@@ -13,21 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http.httpascync;
+package com.splunk.cloudfwd.impl.sim.errorgen.acks;
 
-import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.impl.sim.AcknowledgementEndpoint;
+import com.splunk.cloudfwd.impl.sim.RandomAckEndpoint;
+import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- *
- * @author ghendrey
+ * @author meemax
  */
-public interface CoordinatedResponseHandler {
-
-    /**
-     * @param coordinator the coordinator to set
-     */
-    void setCoordinator(ResponseCoordinator coordinator);
-    
-    public ConnectionImpl getConnection();
-    
+public class OutOfOrderAckIDEndpoints extends SimulatedHECEndpoints{
+  private static final Logger LOG = LoggerFactory.getLogger(OutOfOrderAckIDEndpoints.class.getName());
+  
+  @Override
+  protected AcknowledgementEndpoint createAckEndpoint() {
+    return new RandomAckEndpoint();
+  }
 }

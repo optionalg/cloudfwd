@@ -118,6 +118,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
     LOG.info("Chars-per-second: " + nChars / sec);
     float mbps = ((float) nChars * 8) / (sec * 1000000f);
     LOG.info("mbps: " + mbps);
+    LOG.info("last latency: {} sec",((ThroughputCalculatorCallback) super.callbacks).getLastLatency()/1000);    
     LOG.info("avg latency: {} sec", ((ThroughputCalculatorCallback) super.callbacks).getAvgLatency()/1000);
     if (mbps < 0) {
       throw new IllegalStateException("Negative throughput is not allowed");

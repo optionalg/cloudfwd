@@ -29,6 +29,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String MAX_THREADS_KEY = "max_threads";
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
+    private static final String NUM_SENDERS_KEY = "num_senders";    
     
     // defaults for CLI parameters
     static {
@@ -36,24 +37,27 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "500"); //500MB
+        cliProperties.put(NUM_SENDERS_KEY, "128"); //128 senders
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
     }
     
-    private int numSenderThreads = 64;
+    private int numSenderThreads = 128;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
-    private long testStartTime = System.currentTimeMillis();
+    private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
+    private int batchSizeMB;
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
 
     @Test
     public void sendTextToRaw() throws InterruptedException {   
+        numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
         ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
                 (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
@@ -61,9 +65,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
-
+       
         for (int i = 0; i < numSenderThreads; i++) {
-            futureList.add(senderExecutor.submit(new SenderWorker()::sendAndWaitForAcks));
+            futureList.add(senderExecutor.submit(new SenderWorker(i)::sendAndWaitForAcks));
         }
         
         try {
@@ -101,6 +105,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         try {
             URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
             byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+            batchSizeMB = bytes.length / 1000000;
             buffer = ByteBuffer.wrap(bytes);
         } catch (Exception ex) {
             Assert.fail("Problem reading file " + eventsFilename + ": " + ex.getMessage());
@@ -143,10 +148,18 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         float mbps = showThroughput(System.currentTimeMillis(), start);
 
         // failures
-        Integer numFailed = getCallbacks().getFailedCount();
+        Integer numFailed = callbacks.getFailedCount();
         Integer numSent = batchCounter.get();
         float percentFailed = ( (float) numFailed / (float) numSent ) * 100F;
         LOG.info("Failed count: " + numFailed + " / " + numSent + " failed callbacks. (" + percentFailed + "%)");
+        
+        // acknowledged throughput
+        int numAckedBatches = callbacks.getAcknowledgedBatches().size();
+        long elapsedSeconds = (System.currentTimeMillis() - testStartTimeMillis) / 1000;
+        LOG.info("Acknowledged batches: " + numAckedBatches);
+        LOG.info("Batch size (MB): " + batchSizeMB);
+        LOG.info("Acknowledged throughput (MBps): " + (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds);
+        LOG.info("Acknowledged throughput (mbps): " + (float) batchSizeMB * 8F * (float) numAckedBatches / (float) elapsedSeconds);
 
         // thread count
         long threadCount = Thread.activeCount() - numSenderThreads;
@@ -156,6 +169,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
         LOG.info("Memory usage: " + memoryUsed + " MB");
 
+        /*
         // asserts
         if (shouldAssert) {
             if (mbps != Float.NaN) {
@@ -168,39 +182,55 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
                 memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
         }
+        */
     }
 
-    public class SenderWorker {
+    public class SenderWorker {      
         private boolean failed = false;
+        private int workerNumber;
+        
+        public SenderWorker(int workerNum){
+            this.workerNumber = workerNum;
+        }
         public void sendAndWaitForAcks() {
-            try {
+            try{
                 EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
-                    EventBatch eb = next;
-                    long sent = connection.sendBatch(eb);
-                    logMetrics(eb, sent);
-                    LOG.info("Sent batch with id=" + batchCounter.get());
-                    next = nextBatch(batchCounter.incrementAndGet());
-
-                    synchronized (this) {
-                        // wait while the batch hasn't been acknowledged and it hasn't failed
-                        while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
-                            waitingSenders.put(eb.getId(), this);
-                            wait(connection.getSettings().getAckTimeoutMS());
+                    try{
+                        failed = false;
+                        EventBatch eb = next;
+                        LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
+                        logMetrics(eb, eb.getLength());
+                        LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
+                        long sent = connection.sendBatch(eb);
+                        LOG.info("Sender {} sent batch with id={}", workerNumber,  eb.getId());                        
+                        next = nextBatch(batchCounter.incrementAndGet());
+                        LOG.info("Sender {} generated next batch", workerNumber);
+                        synchronized (this) {
+                            // wait while the batch hasn't been acknowledged and it hasn't failed
+                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+                               LOG.debug("Sender {}, about to wait", workerNumber);
+                                waitingSenders.put(eb.getId(), this);
+                                wait(5000); //wait 500 ms //fixme 5 seconds too long
+                                LOG.debug("Sender {}, waited 500ms", workerNumber);
+                            }
                         }
+                        waitingSenders.remove(eb.getId());
+                    } catch (InterruptedException ex) {
+                        LOG.debug("Sender {} exiting.", workerNumber);
+                        return;
                     }
-                    waitingSenders.remove(eb.getId());
                 }
-                LOG.debug("SenderWorker thread exiting.");
-            } catch (InterruptedException e) {
-                LOG.debug("SenderWorker thread exiting.");
+                LOG.debug("Sender {} exiting.", workerNumber);
+            }catch(Exception e){
+                LOG.error("Worker {} caught exception {}",workerNumber, e .getMessage(), e);
             }
         }
 
         private void logMetrics(EventBatch batch, long sent) {
             Integer seqno = (Integer)batch.getId();
-            long elapsed = System.currentTimeMillis() - testStartTime;
-            boolean warmingUp = System.currentTimeMillis() - testStartTime < warmUpTimeMillis;
+            long elapsed = System.currentTimeMillis() - testStartTimeMillis;
+            boolean warmingUp = System.currentTimeMillis() - testStartTimeMillis < warmUpTimeMillis;
             if (warmingUp) {
                 LOG.info("WARMING UP");
             }
@@ -214,9 +244,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
             ((ThroughputCalculatorCallback) callbacks).deferCountUntilAck(batch.getId(), sent);
 
-            if (seqno % 25 == 0) {
+            //if (seqno % 25 == 0) {
                 checkAndLogPerformance(!warmingUp); // assert only if we are not warming up
-            }
+            //}
         }
 
         private EventBatch nextBatch(int seqno) {
@@ -246,7 +276,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         @Override
         public void acknowledged(EventBatch events) {
             super.acknowledged(events);
-            // sometimes events get acknowledged before the SenderWorker starts waiting
+            //sometimes events get acknowledged before the SenderWorker starts waiting
             if (waitingSenders.get(events.getId()) != null) {
                 waitingSenders.get(events.getId()).tell();
             }

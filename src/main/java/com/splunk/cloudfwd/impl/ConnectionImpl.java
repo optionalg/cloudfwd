@@ -160,7 +160,7 @@ public class ConnectionImpl implements Connection {
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
       lb.closeNow();
-      timeoutChecker.queisce();
+      timeoutChecker.closeNow();
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -217,7 +217,9 @@ public class ConnectionImpl implements Connection {
       return 0;
     }
     
-    logLBHealth();
+    if(LOG.isInfoEnabled()){
+        logLBHealth();
+    }
     
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
     //must null the evenbts before lb.sendBatch. If not, event can continue to be added to the 
@@ -321,7 +323,6 @@ public class ConnectionImpl implements Connection {
     public List<HecHealth> getHealth() {
         return lb.getHealth();
     }
-
     
     private void throwExceptionIfNoChannelOK()  {
         List<HecHealth> healths = lb.getHealth(); //returns after every channel either has gotten its health or given up trying
@@ -339,24 +340,39 @@ public class ConnectionImpl implements Connection {
             //throw whatever exception caused the first unhealthy channel to be unhealthy
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
-   }    
+   }  
+
 
     private void logLBHealth() {
         List<HecHealth> channelHealths = lb.getHealthNonBlocking();
+        int _preflightCompleted=0;
         int _closed=0;
+        int _closedFinished=0;
         int _quiesced=0;
         int  _healthy = 0;
+        int _full = 0;
         int _misconfigured=0;
         int _dead=0;
-        int _decomissioned=0;
+        int _decomissioned=0;   
+        int _available=0;
         for(HecHealth h:channelHealths){
+            LOG.trace("{}", h);
+            if(h.getChannel().isPreflightCompleted()){
+                _preflightCompleted++;
+            }
             if(h.isHealthy()){
                 _healthy++;
             }
+            if(h.getChannel().isAvailable()){
+                _available++;
+            }            
+            if(h.isFull()){
+                _full++;
+            }            
             if(h.isMisconfigured()){
                 _misconfigured++;
             }
-            if(!h.getQuiescedDuration().isZero()){
+            if(h.getChannel().isQuiesced()){
                 _quiesced++;
             }
             if(!h.getTimeSinceDeclaredDead().isZero()){
@@ -365,13 +381,16 @@ public class ConnectionImpl implements Connection {
             if(!h.getTimeSinceDecomissioned().isZero()){
                 _decomissioned++;
             }
-            if(!h.getTimeSinceCloseFinished().isZero()){
+            if(h.getChannel().isClosed()){
                 _closed++;
             }
+            if(h.getChannel().isCloseFinished()){
+                _closedFinished++;
+            }            
         }
         
-        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
-                channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
+        LOG.info("LOAD BALANCER: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
+                channelHealths.size(), _preflightCompleted ,_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 
 }

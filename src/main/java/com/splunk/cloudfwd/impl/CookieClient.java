@@ -13,21 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.impl.http.httpascync;
-
-import com.splunk.cloudfwd.impl.ConnectionImpl;
+package com.splunk.cloudfwd.impl;
 
 /**
- *
+ * A CookieClient is responsible for handling a cookie provided by the server (sending it with each subsequent request).
  * @author ghendrey
  */
-public interface CoordinatedResponseHandler {
+public interface CookieClient {
 
     /**
-     * @param coordinator the coordinator to set
+     * Set the session cookies that the client should send with subsequent requests.
+     * @param cookies a semi-colon separated list of cookies.s
      */
-    void setCoordinator(ResponseCoordinator coordinator);
-    
-    public ConnectionImpl getConnection();
-    
+    public void setSessionCookies(String cookies); 
 }

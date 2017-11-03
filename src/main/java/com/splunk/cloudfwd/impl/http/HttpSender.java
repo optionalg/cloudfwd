@@ -21,6 +21,7 @@ import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import org.apache.commons.lang.StringUtils;
@@ -32,7 +33,6 @@ import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Set;
@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * This class performs the actually HTTP send to HEC
  * event collector.
  */
-public final class HttpSender implements Endpoints {
+public final class HttpSender implements Endpoints, CookieClient {
 
   // Default to SLF4J Logger, and set custom LoggerFactory when channel (and therefore Connection instance) is available
   private Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
@@ -70,7 +70,8 @@ public final class HttpSender implements Endpoints {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl; 
-  //the following  posts/gets are used by health checks an preflight checks 
+  private String cookie;
+  //the following  posts/gets are used by health checks and preflight checks. We record them so we can cancel them on close. 
   private HttpPost ackCheck;
   private HttpGet healthEndpointCheck;
   private HttpPost dummyEventPost;
@@ -153,23 +154,7 @@ public final class HttpSender implements Endpoints {
     return simulatedEndpoints != null;
   }
 
-  /**
-   * Close events sender
-   */
-  @Override
-  public void close() {
-//    if (null != eventsBatch) { //can happen if no msgs sent on this sender
-//      eventsBatch.close();
-//    }
-    this.hecIOManager.close();
-    if (null != simulatedEndpoints) {
-      simulatedEndpoints.close();
-    }
-    abortPreflightAndHealthcheckRequests();    
-    stopHttpClient();
-  }
-
-    public void abortPreflightAndHealthcheckRequests() {
+    public synchronized void abortPreflightAndHealthcheckRequests() {
         if(null != this.ackCheck){
             ackCheck.abort();
         }
@@ -205,36 +190,50 @@ public final class HttpSender implements Endpoints {
     }
     
     if (httpClient != null) {
-      // http client is already started
-      return true;
+        synchronized(this){
+            if (httpClient != null) { //double check required once we enter synchronized block
+                // http client is already started
+                return true;
+            }
+        }
     }
     return false;
   }
 
   @Override
-  public void start() {
+  public synchronized void start() {
     // attempt to create and start an http client
     try {
-      httpClient = new HttpClientFactory(disableCertificateValidation,
-              cert, host, this).build();
-      httpClient.start();
+        this.httpClient = HttpClientWrapper.getClient(this, disableCertificateValidation,cert, host);
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
       callbacks.failed(null, ex);
     }
   }
+  
+  /**
+   * Close events sender
+   */
+  @Override
+  public synchronized void close() {
+//    if (null != eventsBatch) { //can happen if no msgs sent on this sender
+//      eventsBatch.close();
+//    }
+    this.hecIOManager.close();
+    if (null != simulatedEndpoints) {
+      simulatedEndpoints.close();
+    }
+    abortPreflightAndHealthcheckRequests();    
+    stopHttpClient();
+  }  
 
   // Currently we never close http client. This method is added for symmetry
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-      try {
-        httpClient.close();
-      } catch (IOException e) {
-          LOG.error("Failed to shutdown HttpSender {}", e.getMessage());
-      }
-      httpClient = null;
+        HttpClientWrapper.releaseClient(this);
+        httpClient = null;
     }
   }
 
@@ -257,6 +256,13 @@ public final class HttpSender implements Endpoints {
   private void setHeaders(HttpRequestBase r){
       setHttpHeadersNoChannel(r);
       setHttpChannelHeaders(r);
+      setCookieHeader(r);
+  }
+  
+  private void setCookieHeader(HttpRequestBase r){
+      if(null != this.cookie && !this.cookie.isEmpty()){
+          r.setHeader("Cookie", this.cookie);
+      }
   }
   
     // set splunk specific http request headers
@@ -278,7 +284,7 @@ public final class HttpSender implements Endpoints {
   }
   
   @Override
-  public void postEvents(final HttpPostable events,
+  public synchronized void postEvents(final HttpPostable events,
           FutureCallback<HttpResponse> httpCallback) {
     // make sure http client or simulator is started
     if (!started()) {
@@ -311,65 +317,72 @@ public final class HttpSender implements Endpoints {
      * @param httpCallback
      */
     @Override
-    public void checkRawEndpoint(FutureCallback<HttpResponse> httpCallback){
-    // make sure http client or simulator is started
-    if (!started()) {
-      start();
-    }
-    EventBatchImpl dummyEvents = new EventBatchImpl();
-    dummyEvents.setAckId(MAX_ACK_ID); //make sure we don't poll for acks with ackId=0 which could actually be in flight
+    public synchronized void checkRawEndpoint(FutureCallback<HttpResponse> httpCallback){
+        try{    
+            // make sure http client or simulator is started
+            if (!started()) {
+              start();
+            }
+            EventBatchImpl dummyEvents = new EventBatchImpl();
+            dummyEvents.setAckId(MAX_ACK_ID); //make sure we don't poll for acks with ackId=0 which could actually be in flight
 
-    if (isSimulated()) {     
-      this.simulatedEndpoints.checkRawEndpoint(httpCallback);
-      return;
-    }
-    final String encoding = "utf-8";
+            if (isSimulated()) {     
+              this.simulatedEndpoints.checkRawEndpoint(httpCallback);
+              return;
+            }
+            final String encoding = "utf-8";
 
-    // create http request
+            // create http request
 
-    this.dummyEventPost = new HttpPost(rawUrl);
-    setHeaders(dummyEventPost);
-    StringEntity empty;
-      try {
-          empty = new StringEntity(Strings.EMPTY);
-          dummyEventPost.setEntity(empty);
-          httpClient.execute(dummyEventPost, httpCallback);
-      } catch (UnsupportedEncodingException ex) {
-          LOG.error(ex.getMessage(),ex);
-      }
-  }  
+            this.dummyEventPost = new HttpPost(rawUrl);
+            setHeaders(dummyEventPost);
+            StringEntity empty;
+              try {
+                  empty = new StringEntity(Strings.EMPTY);
+                  dummyEventPost.setEntity(empty);
+                  httpClient.execute(dummyEventPost, httpCallback);
+              } catch (UnsupportedEncodingException ex) {
+                  LOG.error(ex.getMessage(),ex);
+              }
+          } catch (Exception ex) {
+            LOG.error(ex.getMessage(), ex);
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
+    }  
   
   @Override
-  public void pollAcks(HecIOManager hecIoMgr,
+  public synchronized void pollAcks(HecIOManager hecIoMgr,
           FutureCallback<HttpResponse> httpCallback) {
-    if (!started()) {
-      start();
-    }; // make sure http client or simulator is started
-    AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();
     try {
-      if (ackReq.isEmpty()) {
-          LOG.trace("no ackIds to poll for");
-        return;
-      } else {        
-        hecIoMgr.setAckPollInProgress(true);
-      }
-      if (isSimulated()) {
-        LOG.debug("SIMULATED POLL ACKS");
-        this.simulatedEndpoints.pollAcks(hecIoMgr, httpCallback);
-        return;
-      }
-      final HttpPost httpPost = new HttpPost(ackUrl);
-      setHeaders(httpPost);
-      
-      StringEntity entity;
-      
-      String req = ackReq.toString();
-      LOG.debug("channel=" + getChannel() + " posting: " + req);
-      entity = new StringEntity(req);
-      
-      entity.setContentType(HttpContentType);
-      httpPost.setEntity(entity);
-      httpClient.execute(httpPost, httpCallback);
+        if (!started()) {
+          start();
+        }; // make sure http client or simulator is started
+        AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();        
+        if (ackReq.isEmpty()) {
+            LOG.trace("no ackIds to poll for pn {}", getChannel());
+          return;
+        } else {        
+          hecIoMgr.setAckPollInProgress(true);
+        }
+        if (isSimulated()) {
+          LOG.debug("SIMULATED POLL ACKS");
+          this.simulatedEndpoints.pollAcks(hecIoMgr, httpCallback);
+          return;
+        }
+        final HttpPost httpPost = new HttpPost(ackUrl);
+        setHeaders(httpPost);
+
+        StringEntity entity;
+
+        String req = ackReq.toString();
+        LOG.debug("channel=" + getChannel() + " posting: " + req);
+        entity = new StringEntity(req);
+
+        entity.setContentType(HttpContentType);
+        httpPost.setEntity(entity);
+        if(null != httpClient){ //httpClient can be null if close happened
+            httpClient.execute(httpPost, httpCallback);
+        }
     } catch (Exception ex) {
       hecIoMgr.setAckPollInProgress(false);
       LOG.error(ex.getMessage(), ex);
@@ -379,52 +392,60 @@ public final class HttpSender implements Endpoints {
   
   
   @Override
-  public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    // make sure http client or simulator is started
-    if (!started()) {
-      start();
+  public synchronized void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
+    try{
+        // make sure http client or simulator is started
+        if (!started()) {
+          start();
+        }
+        if (isSimulated()) {
+          LOG.debug("SIMULATED POLL HEALTH");
+          this.simulatedEndpoints.checkHealthEndpoint(httpCallback);
+          return;
+        }
+        // create http request
+        final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
+        healthEndpointCheck= new HttpGet(getUrl);
+        LOG.trace("Polling health {}", healthEndpointCheck);
+        setHeaders(healthEndpointCheck);
+        if(null != httpClient){ //httpClient can be null if close happened
+            httpClient.execute(healthEndpointCheck, httpCallback);
+        }
+    }catch (Exception ex) {
+      LOG.error("{}", ex.getMessage(), ex);
+      throw new RuntimeException(ex.getMessage(), ex);
     }
-    if (isSimulated()) {
-      LOG.debug("SIMULATED POLL HEALTH");
-      this.simulatedEndpoints.checkHealthEndpoint(httpCallback);
-      return;
-    }
-    // create http request
-    final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
-    healthEndpointCheck= new HttpGet(getUrl);
-    LOG.trace("Polling health {}", healthEndpointCheck);
-    setHeaders(healthEndpointCheck);
-    httpClient.execute(healthEndpointCheck, httpCallback);
   }
 
   @Override
-  public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    if (!started()) {
-      start();
-    }
-    if (isSimulated()) {
-      this.simulatedEndpoints.checkAckEndpoint(httpCallback);
-      return;
-    }
-    Set<Long> dummyAckId = new HashSet<>();
-    dummyAckId.add(MAX_ACK_ID);//default max ack Id. TODO we should not let channels send this many event batches
-    AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);
-
+  public synchronized void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
     try {
-      this.ackCheck = new HttpPost(ackUrl);
-      setHeaders(ackCheck); 
+        if (!started()) {
+          start();
+        }
+        if (isSimulated()) {
+          this.simulatedEndpoints.checkAckEndpoint(httpCallback);
+          return;
+        }
+        Set<Long> dummyAckId = new HashSet<>();
+        dummyAckId.add(MAX_ACK_ID);//default max ack Id. TODO we should not let channels send this many event batches
+        AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);        
+        this.ackCheck = new HttpPost(ackUrl);
+        setHeaders(ackCheck); 
 
-      StringEntity entity;
+        StringEntity entity;
 
-      String req = dummyAckReq.toString();
-      LOG.debug(req);
-      entity = new StringEntity(req);
-      LOG.trace("checking health via ack endpoint: {}", req);
-      entity.setContentType(HttpContentType);
-      ackCheck.setEntity(entity);
-      httpClient.execute(ackCheck, httpCallback);
+        String req = dummyAckReq.toString();
+        LOG.debug(req);
+        entity = new StringEntity(req);
+        LOG.trace("checking health via ack endpoint: {}", req);
+        entity.setContentType(HttpContentType);
+        ackCheck.setEntity(entity);
+        if(null != httpClient){ //httpClient can be null if close happened
+          httpClient.execute(ackCheck, httpCallback);
+        }
     } catch (Exception ex) {
-      LOG.error(ex.getMessage());
+      LOG.error("{}", ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -455,5 +476,23 @@ public final class HttpSender implements Endpoints {
   public String getBaseUrl() {
     return baseUrl;
   }
+
+    @Override
+    public void setSessionCookies(String cookie) {
+        if(null == cookie || cookie.isEmpty()){
+            return;
+        }
+        if(null != this.cookie && !this.cookie.equals(cookie)){
+            LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
+            LOG.warn("Closing and replacing {}", getChannel());
+            try {
+                this.getChannel().closeAndReplace();
+            } catch (InterruptedException ex) {
+                LOG.error("Caught InterruptedException trying to close and replace {}", getChannel());
+            }
+        }else{
+            this.cookie = cookie;
+        }
+    }
   
 }

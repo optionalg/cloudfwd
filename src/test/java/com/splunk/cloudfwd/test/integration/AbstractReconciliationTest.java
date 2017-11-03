@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
  * EG: mvn test -Dtest=AWSSourcetypeIT "-DargLine=-Duser=admin -Dpassword=changeme -DsplunkHost=localhost -DmgmtPort=8089"
  */
 public abstract class AbstractReconciliationTest extends AbstractConnectionTest {
+  protected String SINGLE_LINE_SOURCETYPE = "__singleline"; //SHOULD_LINEMERGE=false  in props.conf
 
   protected static final Logger LOG = LoggerFactory.getLogger(AbstractReconciliationTest.class.getName());
   
@@ -85,6 +86,12 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     if (ENABLE_TEST_HTTP_DEBUG) enableTestHttpDebug();
   }
 
+
+    @Override
+    protected int getNumEventsToSend() {
+        return numToSend;
+    }      
+  
   @Before
   public void setUp() {
     if (!HEC_ENABLED) {
@@ -110,6 +117,11 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   protected void setProps(PropertiesFileHelper settings) {
     settings.setMockHttp(false);
     settings.setEventBatchSize(16000);
+    settings.setToken(createTestToken(getSourceType()));
+  }
+  
+  protected String getSourceType(){
+    return SINGLE_LINE_SOURCETYPE;      
   }
 
   @Override
@@ -501,5 +513,6 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
+  
 
 }

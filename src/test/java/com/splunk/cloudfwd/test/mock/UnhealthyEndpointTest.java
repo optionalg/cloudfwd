@@ -96,11 +96,12 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
     @Override
     public void acknowledged(EventBatch events) {
+      super.acknowledged(events);
       count++;
       if (count == 2) {
         Assert.assertTrue("Message Failed to block on unhealthy channel",
                 TriggerableUnhealthyEndpoints.healthy);
-        return; //need one event to return so that we start polling
+        return; 
       }
 
       try {
@@ -127,13 +128,13 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
                   "Message only blocked for " + blockedOnUnhealthyChannelTime + " ms. Expected at least 4000 ms.",
                   blockedOnUnhealthyChannelTime > sleepTime); //we must have blocked longer than the unhealthy time 
         }).start();
+        Thread.sleep(sleepTime); //wait couple seconds to let events spin in load balancer  
         TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll 
-        Thread.sleep(sleepTime); //wait couple seconds to let channel become healthy ...        
+        Thread.sleep(sleepTime); //wait couple seconds for health poll to detect healthy chanel 
         //...which will cause acknowledged to be invoked again, but then count will be 2 so test will end.
          h = connection.getHealth().get(0);
         LOG.info("{}", h);
-        Assert.assertTrue("Expected healty channel but got: " + h, h.isHealthy());
-        LOG.trace("sending event that we expect to block on send");        
+        Assert.assertTrue("Expected healty channel but got: " + h, h.isHealthy());      
 
       } catch (InterruptedException ex) {
         LOG.error(ex.getMessage(), ex);
