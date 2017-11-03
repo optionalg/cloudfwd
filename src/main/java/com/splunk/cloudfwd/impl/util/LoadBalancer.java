@@ -160,7 +160,7 @@ public class LoadBalancer implements Closeable {
     }
 
     //also must not be synchronized
-    void removeChannel(String channelId, boolean force) {
+    public void removeChannel(String channelId, boolean force) {
         HecChannel c = this.channels.remove(channelId);
         if (c == null) {
             c = this.staleChannels.remove(channelId);

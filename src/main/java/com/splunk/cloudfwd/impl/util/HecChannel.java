@@ -209,7 +209,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         break;
       }
       case EVENT_POST_OK: {
-        checkForStickySessionViolation(e);
+        //checkForStickySessionViolation(e);
         break;
       }
       //we don't want to update the health when we get 503/504/fail for preflight; We want to resend preflight
@@ -528,10 +528,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     return this.loadBalancer.getConnection().getCallbacks();
   }
 
-  private void checkForStickySessionViolation(LifecycleEvent s) {
-    //System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
-    this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
-  }
+//  private void checkForStickySessionViolation(LifecycleEvent s) {
+//    //System.out.println("CHECKING ACKID " + s.getEvents().getAckId());
+//    this.stickySessionEnforcer.recordAckId(((EventBatchResponse) s).getEvents());
+//  }
 
     /**
      * @return the sender
@@ -572,27 +572,27 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         LOG.info("Resent {} Events from dead channel {}", count,  HecChannel.this);
     }      
 
-  private class StickySessionEnforcer {
-
-    boolean seenAckIdZero;
-
-    void recordAckId(EventBatchImpl events) {
-      int ackId = events.getAckId().intValue();
-      if (ackId == 0) {
-        LOG.info("{} Got ackId 0 {}", HecChannel.this, events);
-        synchronized(this){
-            if (seenAckIdZero) {
-              Exception e = new HecNonStickySessionException(
-                      "ackId " + ackId + " has already been received on channel " + HecChannel.this);
-              HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
-                      events, e);
-            } else {
-              seenAckIdZero = true;
-            }
-          }
-      }
-    }
-  }
+//  private class StickySessionEnforcer {
+//
+//    boolean seenAckIdZero;
+//
+//    void recordAckId(EventBatchImpl events) {
+//      int ackId = events.getAckId().intValue();
+//      if (ackId == 0) {
+//        LOG.info("{} Got ackId 0 {}", HecChannel.this, events);
+//        synchronized(this){
+//            if (seenAckIdZero) {
+//              Exception e = new HecNonStickySessionException(
+//                      "ackId " + ackId + " has already been received on channel " + HecChannel.this);
+//              HecChannel.this.loadBalancer.getConnection().getCallbacks().failed(
+//                      events, e);
+//            } else {
+//              seenAckIdZero = true;
+//            }
+//          }
+//      }
+//    }
+//  }
  
   private class DeadChannelDetector implements Closeable {
 

@@ -208,11 +208,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
                                LOG.debug("Sender {}, about to wait", workerNumber);
                                 waitingSenders.put(eb.getId(), this);
-                                wait(5000); //wait 500 ms //fixme 5 seconds too long
+                                wait(500); //wait 500 ms //fixme 5 seconds too long
                                 LOG.debug("Sender {}, waited 500ms", workerNumber);
                             }
                         }
-                        waitingSenders.remove(eb.getId());
+                        waitingSenders.remove(eb.getId());                        
                     } catch (InterruptedException ex) {
                         LOG.debug("Sender {} exiting.", workerNumber);
                         return;

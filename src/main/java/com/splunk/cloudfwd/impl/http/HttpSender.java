@@ -41,6 +41,7 @@ import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 
 /**
@@ -497,9 +498,12 @@ public final class HttpSender implements Endpoints, CookieClient {
     private void resendEvents(){
         Runnable r = ()->{
              try {
-                getConnection().getLoadBalancer().addChannelFromRandomlyChosenHost();
-                getChannel().resendInFlightEvents();
-                getChannel().forceClose();
+                HecChannel c = getChannel();
+                LoadBalancer lb = getConnection().getLoadBalancer();
+                lb.addChannelFromRandomlyChosenHost(); //to compensate for the channel we are about to smoke
+                c.resendInFlightEvents();
+                c.forceClose(); //smoke
+                lb.removeChannel(c.getChannelId(), true); //bye bye
             } catch (Exception ex) {
                 LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
             }            
