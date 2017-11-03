@@ -35,7 +35,7 @@ public class ThreadScheduler {
   //private Logger LOG = LoggerFactory.getLogger(ThreadScheduler.class.getName());
   private static final ConcurrentMap<String, ScheduledThreadPoolExecutor> schedulers = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, ExecutorService> executors = new ConcurrentHashMap<>(); 
-  private static final int MAX_THREADS_IN_SCHEDULER_POOL = 1;
+  private static final int MAX_THREADS_IN_SCHEDULER_POOL = 128;
   private static int MAX_THREADS_IN_EXECUTOR_POOL = Integer.MAX_VALUE; //Pools need to be able to grow large because pre-flight check waits on several latches and will tie up a thread for a long time
   
   public synchronized  static ScheduledThreadPoolExecutor getSchedulerInstance(String name){
