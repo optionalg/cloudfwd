@@ -78,7 +78,7 @@ public class HecIOManager implements Closeable {
         }
         synchronized(this){
             if (null == ackPollTask) {
-                Runnable poller = () -> {
+                Runnable poller = () -> {                    
                     if (this.getAcknowledgementTracker().isEmpty()) {
                         LOG.trace("No acks to poll for on {}", getSender().getChannel());
                         return;
@@ -93,7 +93,6 @@ public class HecIOManager implements Closeable {
             }
         }
     }
-
     public void startHealthPolling() {
         if(null != healthPollTask){
             return;
@@ -124,12 +123,12 @@ public class HecIOManager implements Closeable {
 
     //called by the AckPollScheduler
     public void pollAcks() {
-//        ThreadScheduler.getExecutorInstance("ack_poll_executor_thread").execute(
-//                ()->{
+        ThreadScheduler.getExecutorInstance("ack_poll_executor_thread").execute(
+                ()->{
                      LOG.trace("POLLING ACKS on {}", sender.getChannel());
                     FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
                     sender.pollAcks(this, cb);
-             //   });
+                });
     }
 
     /**
@@ -137,101 +136,105 @@ public class HecIOManager implements Closeable {
      * successfully
      */
     public void pollHealth() {
-        //ThreadScheduler.getExecutorInstance("health_poll_executor_thread").execute(
-            //    ()->{
-                    LOG.trace("health checks on {}", sender.getChannel());
+        ThreadScheduler.getExecutorInstance("health_poll_executor_thread").execute(
+                ()->{
+                    try{
+                        LOG.trace("health checks on {}", sender.getChannel());
 
-                    GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
-                            this,
-                            LifecycleEvent.Type.HEALTH_POLL_OK,
-                            LifecycleEvent.Type.HEALTH_POLL_FAILED,
-                            "health_poll_health_endpoint_check");
+                        GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                                this,
+                                LifecycleEvent.Type.HEALTH_POLL_OK,
+                                LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                                "health_poll_health_endpoint_check");
 
-                    GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
-                            this,
-                            LifecycleEvent.Type.HEALTH_POLL_OK,
-                            LifecycleEvent.Type.HEALTH_POLL_FAILED,
-                            "health_poll_ack_endpoint_check");
+                        GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
+                                this,
+                                LifecycleEvent.Type.HEALTH_POLL_OK,
+                                LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                                "health_poll_ack_endpoint_check");
 
-                    GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(
-                            this,
-                            LifecycleEvent.Type.HEALTH_POLL_OK,
-                            LifecycleEvent.Type.HEALTH_POLL_FAILED,
-                            "health_poll_raw_endpoint_check");
+                        GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(
+                                this,
+                                LifecycleEvent.Type.HEALTH_POLL_OK,
+                                LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                                "health_poll_raw_endpoint_check");
 
-                    ResponseCoordinator.create(cb1, cb2, cb3);
-                    sender.checkHealthEndpoint(cb1);
-                    sender.checkAckEndpoint(cb2);
-                    sender.checkAckEndpoint(cb3);
-       // });
+                        ResponseCoordinator.create(cb1, cb2, cb3);
+                        sender.checkHealthEndpoint(cb1);
+                        sender.checkAckEndpoint(cb2);
+                        sender.checkAckEndpoint(cb3);
+                    }catch(Exception e){
+                        LOG.error("{}", e.getMessage(), e);
+                    }
+        });
     }
 
     public void preflightCheck() {
-//        ThreadScheduler.getExecutorInstance("preflight_executor_thread").execute(
-//                ()->{      
+        ThreadScheduler.getExecutorInstance("preflight_executor_thread").execute(
+                ()->{      
         try {
-            LOG.trace("preflight checks on {}", sender.getChannel());
-            GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
-                    this,
-                    LifecycleEvent.Type.PREFLIGHT_OK,
-                    LifecycleEvent.Type.PREFLIGHT_FAILED,
-                    LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                    LifecycleEvent.Type.PREFLIGHT_BUSY,
-                    "preflight_ack_endpoint_check");
-            GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
-                    this,
-                    LifecycleEvent.Type.PREFLIGHT_OK,
-                    LifecycleEvent.Type.PREFLIGHT_FAILED,
-                    LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                    LifecycleEvent.Type.PREFLIGHT_BUSY,
-                    "preflight_health_endpoint_check");
-            GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
-                    this,
-                    LifecycleEvent.Type.PREFLIGHT_OK,
-                    LifecycleEvent.Type.PREFLIGHT_FAILED,
-                    LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                    LifecycleEvent.Type.PREFLIGHT_BUSY,
-                    "preflight_raw_endpoint_check");
-            ResponseCoordinator coordinator = ResponseCoordinator.create(cb1,
-                    cb2,
-                    cb3);
-            sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
+                LOG.trace("preflight checks on {}", sender.getChannel());
+                GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                        this,
+                        LifecycleEvent.Type.PREFLIGHT_OK,
+                        LifecycleEvent.Type.PREFLIGHT_FAILED,
+                        LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                        LifecycleEvent.Type.PREFLIGHT_BUSY,
+                        "preflight_ack_endpoint_check");
+                GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
+                        this,
+                        LifecycleEvent.Type.PREFLIGHT_OK,
+                        LifecycleEvent.Type.PREFLIGHT_FAILED,
+                        LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                        LifecycleEvent.Type.PREFLIGHT_BUSY,
+                        "preflight_health_endpoint_check");
+                GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
+                        this,
+                        LifecycleEvent.Type.PREFLIGHT_OK,
+                        LifecycleEvent.Type.PREFLIGHT_FAILED,
+                        LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                        LifecycleEvent.Type.PREFLIGHT_BUSY,
+                        "preflight_raw_endpoint_check");
+                ResponseCoordinator coordinator = ResponseCoordinator.create(cb1,
+                        cb2,
+                        cb3);
+                sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
 
-            LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
-            if (null != firstResp) {
-                if (firstResp.isOK()) {
-                    sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
-                    LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
-                    if (null != secondResp) {
-                        if (secondResp.isOK()) {
-                            sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
+                LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
+                if (null != firstResp) {
+                    if (firstResp.isOK()) {
+                        sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
+                        LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
+                        if (null != secondResp) {
+                            if (secondResp.isOK()) {
+                                sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
+                            }
+                        } else {
+                            LOG.warn(
+                                    "Preflight didn't receive /raw empty-event check on {}",
+                                    sender.getChannel());
                         }
                     } else {
                         LOG.warn(
-                                "Preflight didn't receive /raw empty-event check on {}",
+                                "Preflight didn't receive /health check on {}",
                                 sender.getChannel());
                     }
                 } else {
                     LOG.warn(
-                            "Preflight didn't receive /health check on {}",
+                            "Preflight didn't receive /ack endpoint check on {}",
                             sender.getChannel());
                 }
-            } else {
+            } catch (InterruptedException ex) {
                 LOG.warn(
-                        "Preflight didn't receive /ack endpoint check on {}",
+                        "Preflight interrupted on channel {} waiting for response from ack endpoint.",
                         sender.getChannel());
+                //throw ex;
+            }catch (Exception ex) {
+                LOG.error("{}", ex.getMessage(), ex);
+                //throw ex;
             }
-        } catch (InterruptedException ex) {
-            LOG.warn(
-                    "Preflight interrupted on channel {} waiting for response from ack endpoint.",
-                    sender.getChannel());
-            //throw ex;
-        }catch (Exception ex) {
-            LOG.error("{}", ex.getMessage(), ex);
-            //throw ex;
-        }
         
-//        });
+        });//end execute
 
     }
 

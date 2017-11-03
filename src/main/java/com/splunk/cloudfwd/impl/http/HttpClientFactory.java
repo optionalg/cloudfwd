@@ -51,7 +51,7 @@ public final class HttpClientFactory {
     public static int MAX_CONN_PER_ROUTE = 0; //unlimited
     public static int MAX_CONN_TOTAL = 0; //unlimited
     public static int CONNECT_TIMEOUT = 30000; //30 sec
-    public static int SOCKET_TIMEOUT = 30000; //30 sec
+    public static int SOCKET_TIMEOUT = 120000; //120 sec
     public static int REACTOR_SELECT_INTERVAL = 1000;   
     
     private final Logger LOG;
@@ -86,6 +86,7 @@ public final class HttpClientFactory {
             .setSelectInterval(REACTOR_SELECT_INTERVAL)
             .setSoTimeout(SOCKET_TIMEOUT)
             .setConnectTimeout(CONNECT_TIMEOUT)
+            .setIoThreadCount(256)
             .build();
         return HttpAsyncClients.custom()                
                 .setMaxConnTotal(MAX_CONN_TOTAL)
