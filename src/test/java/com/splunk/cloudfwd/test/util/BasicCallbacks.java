@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -180,9 +179,9 @@ public class BasicCallbacks implements ConnectionCallbacks {
   @Override
   public void checkpoint(EventBatch events) {
     LOG.info("SUCCESS CHECKPOINT {}", events.getId()); 
-//    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
-//      latch.countDown();
-//    }
+    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
+      latch.countDown();
+    }
   }
 
   public void await(long timeout, TimeUnit u) throws InterruptedException {

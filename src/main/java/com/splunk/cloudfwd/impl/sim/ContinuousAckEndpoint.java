@@ -18,14 +18,16 @@ package com.splunk.cloudfwd.impl.sim;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
+
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -37,23 +39,24 @@ import org.slf4j.LoggerFactory;
 
 /**
  *
- * @author ghendrey
+ * @author meemax
  */
-public class AckEndpoint extends ClosableDelayableResponder implements AcknowledgementEndpoint {
+public class ContinuousAckEndpoint extends ClosableDelayableResponder implements AcknowledgementEndpoint {
     
-    private static final Logger LOG = LoggerFactory.getLogger(AckEndpoint.class.
+    private static final Logger LOG = LoggerFactory.getLogger(ContinuousAckEndpoint.class.
             getName());
     private static final ObjectMapper serializer = new ObjectMapper();
     
     protected AtomicLong ackId = new AtomicLong(-1); //so post increment, first id returned is 0
-    protected SortedMap<Long, Boolean> acksStates = Collections.synchronizedSortedMap(new TreeMap<>()); //key is ackId
-    Random rand = new Random(System.currentTimeMillis());
+    protected Collection<Long> acked = new HashSet<>(); // toggled as acked
+    protected Collection<Long> unacked = new TreeSet<>(); // not yet acked
+    
     volatile boolean started;
-    private final ScheduledThreadPoolExecutor executor;
+    final ScheduledThreadPoolExecutor executor;
     private final Map resp = new HashMap(); //accessed from synchronized block
     SortedMap<Long, Boolean> acks = new TreeMap<>();    //accessed from synchronized block
     
-    public AckEndpoint() {
+    public ContinuousAckEndpoint() {
         ThreadFactory f = new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -67,7 +70,7 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
     }
 
     //start periodically flipping ackIds from false to true. This simulated event batches getting indexed.
-    //To mimick the observed behavior of splunk, we flip the lowest unacknowledge ackId before
+    //To mimic the observed behavior of splunk, we flip the lowest unacknowledged ackId before
     //any higher ackId
     @Override
     public void start() {
@@ -75,51 +78,53 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             return;
         }
         synchronized(this){
-            if (started) {
-               return;
-           }    
-            //stateFrobber will set the ack to TRUE
-            Runnable stateFrobber = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        synchronized (AckEndpoint.this) {         
-                            if(acksStates.isEmpty()){
-                               return;
-                            }                 
-                            int flipCount = (int) Math.ceil(Math.random()*1000); //change a random number of acks to true  [1,1000]
-                            for(Iterator<Map.Entry<Long, Boolean>> it = acksStates.entrySet().iterator(); it.hasNext();){
-                                it.next().setValue(true); //consider it as ack'd
-                                if(--flipCount==0){
-                                    return;
-                                }
-                            }
-                            /*
-                            Long lowestKey = acksStates.firstKey();
-                            if (null == lowestKey) {
+          if (started) {
+             return;
+         }    
+          //stateFrobber will set the ack to TRUE
+          Runnable stateFrobber = new Runnable() {
+              @Override
+              public void run() {
+                  try {
+                      synchronized (ContinuousAckEndpoint.this) {         
+                          if(unacked.isEmpty()){
+                             return;
+                          }                 
+                          int flipCount = (int) Math.ceil(Math.random()*1000); //change a random number of acks to true  [1,1000]
+                          for(Iterator<Long> it = ((TreeSet<Long>)unacked).iterator(); it.hasNext();) {
+                            Long l = it.next();
+                            unacked.remove(l);
+                            acked.add(l);
+                            if(--flipCount==0){
                                 return;
                             }
-                            acksStates.put(lowestKey, true); //flip it
-                            */
-                        }//synchronized
-                    } catch (Exception e) {
-                        LOG.error(e.getMessage(), e);
-                    }
-                }
-            };
-            //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
-            //if the execution time of a task exceeds the period. We don't want that.
-            executor.scheduleWithFixedDelay(stateFrobber, 0, 10,
-                    TimeUnit.MILLISECONDS);
-            started = true;
-        }//end synchronized
+                          }
+                          /*
+                          Long lowestKey = acksStates.firstKey();
+                          if (null == lowestKey) {
+                              return;
+                          }
+                          acksStates.put(lowestKey, true); //flip it
+                          */
+                      }//synchronized
+                  } catch (Exception e) {
+                      LOG.error(e.getMessage(), e);
+                  }
+              }
+          };
+          //NOTE: with fixed *DELAY* NOT scheduleAtFixedRATE. The latter will cause threads to pile up
+          //if the execution time of a task exceeds the period. We don't want that.
+          executor.scheduleWithFixedDelay(stateFrobber, 0, 10,
+                  TimeUnit.MILLISECONDS);
+          started = true;
+      }//end synchronized
     }
     
     @Override
     public long nextAckId() {
         long newId = this.ackId.incrementAndGet();
-        synchronized(this){
-            this.acksStates.put(newId, false); //event stat is initially not indexed
+        synchronized(this) {
+          this.unacked.add(newId);
         }
         //System.out.println("ackStates: " + this.acksStates);
         return newId;
@@ -137,14 +142,13 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             //System.out.println("Server side simulation: " + this.acksStates.size() + " acks tracked on server: " + acksStates);
             Collection<Long> unacked = ackMgr.getAcknowledgementTracker().
                     getPostedButUnackedEvents();
-            //System.out.println("Channel  " +AckEndpoint.this.toString()+" recieved these acks to check: " + unacked + " and had this state " + acksStates);      
-            acks.clear(); //reason for using instance field 'acks' instead of local field is profiler was showing surprising amount of time spent creating acks map if local
+            //System.out.println("Channel  " +AckEndpoint.this.toString()+" received these acks to check: " + unacked + " and had this state " + acksStates);      
+            acks.clear();
             for (long ackId : unacked) {
-
-                Boolean was = acksStates.get(ackId);//check(ackId);
-                if (was != null && was) { //only take ackIds that are true
-                    acksStates.remove(ackId);
-                    acks.put(ackId, was);
+                boolean has = acked.contains(ackId);
+                if (has) {
+                    acked.remove(ackId);
+                    acks.put(ackId, Boolean.TRUE);
                 }
             }
             resp.clear();
@@ -171,11 +175,7 @@ public class AckEndpoint extends ClosableDelayableResponder implements Acknowled
             LOG.error(ex.getMessage(), ex);
             throw new RuntimeException(str, ex);
         }
-        return getHttpResponse(str);
-    }
-
-    protected HttpResponse getHttpResponse(String entity) {
-        AckEndpointResponseEntity e = new AckEndpointResponseEntity(entity);
+        AckEndpointResponseEntity e = new AckEndpointResponseEntity(str);
         return new AckEndpointResponse(e);
     }
     
