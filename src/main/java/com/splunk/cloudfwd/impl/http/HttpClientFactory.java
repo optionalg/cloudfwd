@@ -86,7 +86,7 @@ public final class HttpClientFactory {
             .setSelectInterval(REACTOR_SELECT_INTERVAL)
             .setSoTimeout(SOCKET_TIMEOUT)
             .setConnectTimeout(CONNECT_TIMEOUT)
-            .setIoThreadCount(256)
+            //.setIoThreadCount(256)
             .build();
         return HttpAsyncClients.custom()                
                 .setMaxConnTotal(MAX_CONN_TOTAL)
