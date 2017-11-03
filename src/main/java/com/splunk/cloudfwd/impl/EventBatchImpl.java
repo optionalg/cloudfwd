@@ -280,7 +280,9 @@ public class EventBatchImpl implements EventBatch {
               return;
           }
       }
-      throw new IllegalStateException("No acknowledgement tracker registered with EventBatch " + this);
+      //actually we CANNOT throw this exception. We've seen session-cookie violation before we even post
+      //an event batch
+      //throw new IllegalStateException("No acknowledgement tracker registered with EventBatch " + this);
   }
 
   /**
