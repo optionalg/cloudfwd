@@ -151,7 +151,7 @@ public class TimeoutChecker implements EventTracker {
     public List<EventBatchImpl> getUnackedEvents(HecChannel c) {
         //return only the batches whose channel matches c
         return eventBatches.values().stream().filter(b -> {
-            return b.getHecChannel().getChannelId() == c.getChannelId();
+            return null != b.getHecChannel() &&  b.getHecChannel().getChannelId() == c.getChannelId();
         }).collect(Collectors.toList());
     }
 
