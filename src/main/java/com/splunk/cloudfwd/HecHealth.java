@@ -95,4 +95,6 @@ public interface HecHealth {
     public boolean isMisconfigured();
 
     public Exception getConfigurationException();
+    
+    public boolean passedPreflight();
 }

@@ -87,7 +87,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
     
     sender.setChannel(this);
-    start();
+//    start();
+  }
+  
+  public void preFlightTimeout() {
+      Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
+              HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT);
+      this.health.setStatus(new PreflightFailed(ex), false);
   }
 
     /**
@@ -97,9 +103,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      */
     public HecHealthImpl getHealth() {
         if(!health.await(5, TimeUnit.MINUTES)){
-         Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
-                HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT);
-            this.health.setStatus(new PreflightFailed(ex), false);
+            preFlightTimeout();
         }
         return health;
     }
@@ -124,10 +128,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (started) {
       return;
     }
-    this.sender.getHecIOManager().preflightCheck();
+    // do this setup before the preflight check so they don't get interrupted while executing after a slow preflight 
     setupReaper();
     setupDeadChannelDetector();
     setupAckPoller();
+    this.sender.getHecIOManager().preflightCheck();
     started = true;
   }
 

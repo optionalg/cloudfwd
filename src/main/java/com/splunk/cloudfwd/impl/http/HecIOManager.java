@@ -180,15 +180,19 @@ public class HecIOManager implements Closeable {
                     if(null != secondResp){
                         if(secondResp.isOK()){
                             sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
+                        } else {
+                            LOG.warn(
+                                    "Preflight failure in /health endpoint check on {}",
+                                    sender.getChannel());
                         }
                     }else {
                         LOG.warn(
-                                "Preflight timed out (5 minutes)  waiting for /raw empty-event check on {}",
+                                "Preflight timed out (5 minutes)  waiting for /health endpoint check on {}",
                                 sender.getChannel());
                     }
                 }else {
                     LOG.warn(
-                            "Preflight timed out (5 minutes)  waiting for /health check on {}",
+                            "Preflight failure in /ack endpoint check on {}",
                             sender.getChannel());
                 }
             }else {
@@ -206,9 +210,12 @@ public class HecIOManager implements Closeable {
 //            } 
         } catch (InterruptedException ex) {
             LOG.warn(
-                    "Preflight interrupted on channel {} waiting for response from ack endpoint.",
+                    "Preflight interrupted (possibly due to timeout) on channel {}.",
                     sender.getChannel());
-            throw ex;
+                    sender.getChannel().preFlightTimeout();
+               // don't throw exception here anymore since preflight may very well timeout from invokeAll
+               // let the load balancer handle the case where all preflights have failed
+//            throw ex;
         }
 
     }

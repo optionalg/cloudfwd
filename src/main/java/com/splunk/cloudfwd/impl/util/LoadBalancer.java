@@ -26,8 +26,11 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -121,7 +124,7 @@ public class LoadBalancer implements Closeable {
         for (int i = 0; i < channelsPerDestination; i++) {
             for (InetSocketAddress s : addrs) {
                 try {
-                    if(!addChannel(s, false)){
+                    if(addChannel(s, false) == null){
                         break; //reached MAX_TOTAL_CHANNELS
                     }
                 } catch (InterruptedException ex) {
@@ -129,15 +132,44 @@ public class LoadBalancer implements Closeable {
                 }
             }
         }
+        waitForPreflight();
+    }
+    
+    private void waitForPreflight() {
+        ExecutorService preflightExecutor = Executors.newFixedThreadPool(channels.size());
+        List<Callable<Void>> callables = new ArrayList<>();
+        
+        this.channels.values().forEach((c) -> {
+            Callable<Void> r = () -> {
+                c.start();
+                c.getHealth(); // waits for preflight to complete
+                return null;
+            };
+            callables.add(r);
+        });
+
+        try {
+            // Waits up to "timeout" for ALL channel preflights to either complete or fail. 
+            // if this times out without all preflights completing, load balancer send logic will catch that no 
+            // channels are available and throw an exception
+            preflightExecutor.invokeAll(callables, 15, TimeUnit.SECONDS); // TODO: timeout should be much higher than this but not more than ack timeout to provide a clear idea of what's happening to cloudfwd user. make it configurable probably
+        } catch (InterruptedException e) {
+            LOG.error("Channel preflight checks interrupted");
+            // TODO: something else? 
+        }
+        
     }
 
     void addChannelFromRandomlyChosenHost() throws InterruptedException {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
         LOG.debug("Adding channel for socket address  {}", addr);
-        addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
+        HecChannel channel = addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
+        if (channel != null) {
+            channel.start();
+        }
     }
 
-    private boolean addChannel(InetSocketAddress s, boolean force) throws InterruptedException {
+    private HecChannel addChannel(InetSocketAddress s, boolean force) throws InterruptedException {
         //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
         //we must add a new one, before we cancelEventTrackers the old one. If we did not have the force
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
@@ -149,7 +181,7 @@ public class LoadBalancer implements Closeable {
             LOG.warn(
                     "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
                     getMaxTotalChannels() + ")");
-            return false;
+            return null;
         }
         HttpSender sender = this.connection.getPropertiesFileHelper().
                 createSender(s);
@@ -158,7 +190,7 @@ public class LoadBalancer implements Closeable {
         channel.getChannelMetrics().addObserver(this.checkpointManager);
         LOG.debug("Adding channel {}", channel);
         channels.put(channel.getChannelId(), channel);
-        return true;
+        return channel;
     }
 
     //also must not be synchronized
@@ -235,7 +267,7 @@ public class LoadBalancer implements Closeable {
             if (tryChannelSend(channelsSnapshot, events, resend)) {
                 break;
             }
-            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
+            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events, resend);
             throwExceptionIfTimeout(startTime, events, resend);
         }
         return false;
@@ -291,7 +323,7 @@ public class LoadBalancer implements Closeable {
     }
 
     private void waitIfSpinCountTooHigh(int spinCount,
-            List<HecChannel> channelsSnapshot, EventBatchImpl events) throws HecNoValidChannelsException {
+            List<HecChannel> channelsSnapshot, EventBatchImpl events, boolean forced) throws HecNoValidChannelsException {
         if (spinCount % channelsSnapshot.size() == 0) {
             try {
                 latch = new CountDownLatch(1);
@@ -302,7 +334,7 @@ public class LoadBalancer implements Closeable {
                             //if we had no healthy channels, which is why we are here, it's possible tht we have no
                             //**valid** channels, which means every channel is returning an HecServerErrorResponse
                             //indicating misconfiguration of HEC
-                            checkForNoValidChannels(channelsSnapshot, events);
+                            checkForNoValidChannels(channelsSnapshot, events, forced);
                 }
                 latch = null;
                 //checkForNoValidChannels(channelsSnapshot, events);
@@ -315,15 +347,15 @@ public class LoadBalancer implements Closeable {
     }
 
     private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
-            EventBatchImpl events) throws HecNoValidChannelsException {
+            EventBatchImpl events, boolean forced) throws HecNoValidChannelsException {
 
         List<HecHealth> hecHealths = channelsSnapshot.stream().map(HecChannel::getHealth).collect(Collectors.toList());
-        if (hecHealths.stream().allMatch(HecHealth::isMisconfigured)) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
+        if (hecHealths.stream().allMatch((h) -> h.isMisconfigured() || !h.passedPreflight() )) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
             String msg = "No valid channels available due to possible misconfiguration.";
             HecNoValidChannelsException ex = new HecNoValidChannelsException(
                 msg, hecHealths);
             LOG.error(msg, ex);
-            throw ex;
+            recoverAndThrowException(events, forced, ex); // removes event trackers
         }
     }
 
