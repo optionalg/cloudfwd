@@ -217,5 +217,14 @@ public class HecHealthImpl implements HecHealth {
         }
     }
     
+    @Override
+    public boolean passedPreflight() {
+        return  !(getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING ||
+                getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_BUSY ||
+                getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT ||
+                getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_NOT_OK ||
+                getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_FAILED);
+    }
+    
     
 }
