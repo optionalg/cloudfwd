@@ -109,7 +109,7 @@ public class IndexDiscoverer extends Observable {
         msg, CONFIGURATION_EXCEPTION);
       LOG.error(msg, ex);
       connection.getCallbacks().systemError(ex);
-      throw ex;
+//      throw ex;
     }
     return mappings;
   }
