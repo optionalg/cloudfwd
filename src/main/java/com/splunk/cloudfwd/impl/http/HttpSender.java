@@ -17,10 +17,12 @@ package com.splunk.cloudfwd.impl.http;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
@@ -35,12 +37,10 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
-import java.util.Properties;
 import java.util.Set;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * This class performs the actually HTTP send to HEC
@@ -60,10 +60,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   private final String rawUrl;
   private final String token;
   private final String cert;
-  private final String host;
-  private final String index;
-  private final String source;
-  private final String sourcetype;
+  private final ConnectionSettings connectionSettings;
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
@@ -72,6 +69,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl; 
+  private final String serverHostname;
   private String cookie;
   //the following  posts/gets are used by health checks and preflight checks. We record them so we can cancel them on close. 
   private HttpPost ackCheck;
@@ -80,20 +78,19 @@ public final class HttpSender implements Endpoints, CookieClient {
 
   /**
    * Initialize HttpEventCollectorSender
-   *
+   * @param url the destination URL
+   * @param serverHostname the host name of destination server 
    * @param connectionSettings ConnectionSettings
    * @param disableCertificateValidation disables Certificate Validation
    * @param cert SSL Certificate Authority Public key to verify TLS with
    * Self-Signed SSL Certificate chain
    */
-  public HttpSender(final ConnectionSettings connectionSettings,
+  public HttpSender(final String url, final String serverHostname, final ConnectionSettings connectionSettings,
                     final boolean disableCertificateValidation, final String cert) {
-    this.baseUrl = connectionSettings.getUrls().get(0).toString().trim();
-    this.host = connectionSettings.getHost();
-    this.index = connectionSettings.getIndex();
-    this.sourcetype = connectionSettings.getSourcetype();
-    this.source = connectionSettings.getSource();
+    this.baseUrl = url; // cache url and token so that stale channels/senders can still poll for acks if changed
     this.token = connectionSettings.getToken();
+    this.serverHostname = serverHostname;
+    this.connectionSettings = connectionSettings;
     this.cert = cert;
     this.hecIOManager = new HecIOManager(this);
     this.eventUrl = this.baseUrl.trim() + "/services/collector/event";
@@ -206,7 +203,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   public synchronized void start() {
     // attempt to create and start an http client
     try {
-        this.httpClient = HttpClientWrapper.getClient(this, disableCertificateValidation,cert, host);
+        this.httpClient = HttpClientWrapper.getClient(this, disableCertificateValidation,cert, serverHostname);
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
@@ -239,18 +236,23 @@ public final class HttpSender implements Endpoints, CookieClient {
     }
   }
 
+  // override token defaults on a per request basis for Splunk index time fields
   private String appendUri(String endpoint) {
     String url = endpoint + "?";
-    if (!StringUtils.isEmpty(index)) {
-      url = url + "&index=" + index;
+    if (!StringUtils.isEmpty(connectionSettings.getIndex())) {
+      url = url + "&index=" + connectionSettings.getIndex();
     }
 
-    if (!StringUtils.isEmpty(source)) {
-      url = url + "&source=" + source;
+    if (!StringUtils.isEmpty(connectionSettings.getSource())) {
+      url = url + "&source=" + connectionSettings.getSource();
     }
 
-    if (!StringUtils.isEmpty(sourcetype)) {
-      url = url + "&sourcetype=" + sourcetype;
+    if (!StringUtils.isEmpty(connectionSettings.getSourcetype())) {
+      url = url + "&sourcetype=" + connectionSettings.getSourcetype();
+    }
+
+    if (!StringUtils.isEmpty(connectionSettings.getHost())) {
+      url = url + "&host=" + connectionSettings.getHost();
     }
     return url;
   }
@@ -280,8 +282,8 @@ public final class HttpSender implements Endpoints, CookieClient {
             AuthorizationHeaderTag,
             String.format(AuthorizationHeaderScheme, token));
     
-    if (host != null) {
-      r.setHeader(Host, host);
+    if (serverHostname != null) {
+      r.setHeader(Host, serverHostname);
     }
   }
   
