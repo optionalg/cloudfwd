@@ -152,7 +152,7 @@ public class LoadBalancer implements Closeable {
             // Waits up to "timeout" for ALL channel preflights to either complete or fail. 
             // if this times out without all preflights completing, load balancer send logic will catch that no 
             // channels are available and throw an exception
-            preflightExecutor.invokeAll(callables, 15, TimeUnit.SECONDS); // TODO: timeout should be much higher than this but not more than ack timeout to provide a clear idea of what's happening to cloudfwd user. make it configurable probably
+            preflightExecutor.invokeAll(callables, 120, TimeUnit.SECONDS); // TODO: timeout should be much higher than this but not more than ack timeout to provide a clear idea of what's happening to cloudfwd user. make it configurable probably
         } catch (InterruptedException e) {
             LOG.error("Channel preflight checks interrupted");
             // TODO: something else? 
