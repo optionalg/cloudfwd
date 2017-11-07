@@ -490,7 +490,7 @@ public class ConnectionSettings {
    * @param urls comma-separated list of urls
    */
   public void setUrls(String urls) {
-    if (!urlsStringToList(urls).equals(
+    if (!urlsStringToList(urls).equals( // this use of "equals" is valid because both lists are sorted
             getUrls())) {
       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
@@ -508,8 +508,8 @@ public class ConnectionSettings {
   }
 
     /**
-     * Set Host value for the data feed
-     * @param host Host value for the data feed
+     * Set the Splunk index-time field named "Host" to override the token default on a per-request basis.
+     * @param host Host value 
      */
     public void setHost(String host) {
         if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
@@ -519,7 +519,7 @@ public class ConnectionSettings {
     }
 
     /**
-     * Set Splunk index in which the data feed is stored
+     * Set Splunk index in which the data feed is stored to override the token default on a per-request basis.
      * @param index The Splunk index in which the data feed is stored
      */
     public void setIndex(String index) {
@@ -530,7 +530,7 @@ public class ConnectionSettings {
     }
 
     /**
-     * Set the source of the data feed
+     * Set the Splunk index-time field named "Source" to override the token default on a per-request basis.
      * @param source The source of the data feed
      */
     public void setSource(String source) {
@@ -541,7 +541,7 @@ public class ConnectionSettings {
     }
 
     /**
-     * Set the source type of events of data feed
+     * Set the Splunk index-time field named "sourcetype" to override the token default on a per-request basis.
      * @param sourcetype The source type of events of data feed
      */
     public void setSourcetype(String sourcetype) {

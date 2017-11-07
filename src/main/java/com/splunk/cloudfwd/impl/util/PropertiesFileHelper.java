@@ -68,7 +68,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
       String sslCert = getSSLCertContent();
       HttpSender sender = new HttpSender(url.toString(), sslHost, this, isCertValidationDisabled(), sslCert);
       if(isMockHttp()){
-        sender.setSimulatedEndpoints(getSimulatedEndpoints());
+          sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
       return sender;
   }

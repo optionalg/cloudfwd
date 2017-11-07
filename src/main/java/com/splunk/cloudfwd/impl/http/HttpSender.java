@@ -17,10 +17,12 @@ package com.splunk.cloudfwd.impl.http;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
@@ -35,7 +37,6 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
-import java.util.Properties;
 import java.util.Set;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
@@ -74,6 +75,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl; 
+  private final String serverHostname = null;
   private String cookie;
   //the following  posts/gets are used by health checks and preflight checks. We record them so we can cancel them on close. 
   private HttpPost ackCheck;
@@ -245,6 +247,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     }
   }
 
+  // override token defaults on a per request basis for Splunk index time fields
   private String appendUri(String endpoint) {
     String url = endpoint + "?";
     
@@ -295,8 +298,8 @@ public final class HttpSender implements Endpoints, CookieClient {
             AuthorizationHeaderTag,
             String.format(AuthorizationHeaderScheme, connectionSettings.getToken()));
     
-    if (host != null) {
-      r.setHeader(Host, host);
+    if (serverHostname != null) {
+      r.setHeader(Host, serverHostname);
     }
   }
   

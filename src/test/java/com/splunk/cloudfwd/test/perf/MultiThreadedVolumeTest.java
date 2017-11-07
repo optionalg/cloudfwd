@@ -3,6 +3,9 @@ package com.splunk.cloudfwd.test.perf;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import com.sun.javafx.binding.StringFormatter;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -10,8 +13,10 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,25 +50,38 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
     private final String eventsFilename = "./many_text_events_no_timestamp.sample";
+    private final String eventsFilenameJson = "./many_json_events_no_timestamp.sample";
     private long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
-    private int batchSizeMB;
+    private int batchSizeMB = 5; // 5 MBytes
+    final String cloudwatchTemplate = "{\"version\": \"0\", \"id\": \"%s-%d\", \"detail-type\": \"EC2 Instance State-change Notification\", \"source\": \"aws.ec2\", \"account\": \"111122223333\", \"time\": \"%s\", \"region\": \"us-east-1\", \"resources\": [ \"arn:aws:ec2:us-east-1:123456789012:instance/i-12345678\" ], \"detail\": { \"instance-id\": \"i-12345678\", \"state\": \"terminated\"}}";
+    final private int eventSize = cloudwatchTemplate.length() + UUID.randomUUID().toString().length() + String.valueOf(Integer.MAX_VALUE).length();
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
 
     @Test
     public void sendTextToRaw() throws InterruptedException {   
+        readEventsFile(eventsFilename);
+        eventType = Event.Type.TEXT;
+        sendToRaw();
+    }
+    
+    @Test
+    public void sendJsonToRaw() throws InterruptedException {
+        generateEventByteBuffer();
+        eventType = Event.Type.JSON;
+        sendToRaw();
+    }
+    
+    public void sendToRaw() throws InterruptedException {
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
         ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
                 (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
-        readEventsFile();
-        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-        eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
-       
         for (int i = 0; i < numSenderThreads; i++) {
             futureList.add(senderExecutor.submit(new SenderWorker(i)::sendAndWaitForAcks));
         }
@@ -85,6 +103,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         connection.close();
     }
     
+    
     @Override
     protected void extractCliTestProperties() {
         if (System.getProperty("argLine") != null) {
@@ -99,17 +118,39 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             + " (token and url will be pulled from cloudfwd.properties if null)");
     }
 
-    private void readEventsFile() {
+    private void generateEventByteBuffer() {
+        long generate_start = System.currentTimeMillis();
+        String dateTime = new SimpleDateFormat("yyyy.MM.dd'T'HH:mm:ssz").format(new Date());
+        buffer = ByteBuffer.allocate(batchSizeMB * 1024 * 1024 * 2 + eventSize * 2);
+        int i = 0;
+        String s = "s";
         try {
-            URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
+            while (buffer.position() < (batchSizeMB * 1024 * 1024)) {
+                i++;
+                s = String.format(cloudwatchTemplate, UUID.randomUUID(), i, dateTime);
+                buffer.put(s.getBytes());
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            LOG.info(String.format("Failed to generate eventByteBuffer. " +
+                    "Generated s: %s, length: %d, buffer length: %s\n", s, i, buffer.position()));
+        }
+        LOG.info(String.format("Successfully generated eventByteBuffer in %s seconds. " + 
+                "last event: %s, event length: %s, id: %s, buffer.length: %s\n", 
+                (System.currentTimeMillis() - generate_start)/1000.0 , s, s.length(), i, 
+                buffer.position()));
+    }
+    
+    private void readEventsFile(String fileName) {
+        try {
+            URL resource = getClass().getClassLoader().getResource(fileName); // to use a file on classpath in resources folder.
             byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
-            batchSizeMB = bytes.length / 1000000;
             buffer = ByteBuffer.wrap(bytes);
         } catch (Exception ex) {
             Assert.fail("Problem reading file " + eventsFilename + ": " + ex.getMessage());
         }
     }
-
+    
     @Override
     protected String getTestPropertiesFileName() {
         return "cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
@@ -166,7 +207,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
         LOG.info("Memory usage: " + memoryUsed + " MB");
 
-        /*
         // asserts
         if (shouldAssert) {
             if (mbps != Float.NaN) {
@@ -179,7 +219,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
                 memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
         }
-        */
     }
 
     public class SenderWorker {      
@@ -208,7 +247,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
                                LOG.debug("Sender {}, about to wait", workerNumber);
                                 waitingSenders.put(eb.getId(), this);
-                                wait(500); //wait 500 ms //fixme 5 seconds too long
+                                wait(500); //wait 500 ms //fixme 500ms does not work well
                                 LOG.debug("Sender {}, waited 500ms", workerNumber);
                             }
                         }
