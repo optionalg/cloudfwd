@@ -430,24 +430,16 @@ public class ConnectionSettings {
                             diffs.getProperty(key));
                     break;
                 case PropertyKeys.HOST:
-                    putProperty(PropertyKeys.HOST,
-                            diffs.getProperty(key));
-                    refreshChannels = true;
+                    setHost(diffs.getProperty(key));
                     break;
                 case PropertyKeys.INDEX:
-                    putProperty(PropertyKeys.INDEX,
-                            diffs.getProperty(key));
-                    refreshChannels = true;
+                    setIndex(diffs.getProperty(key));
                     break;
                 case PropertyKeys.SOURCE:
-                    putProperty(PropertyKeys.SOURCE,
-                            diffs.getProperty(key));
-                    refreshChannels = true;
+                    setSource(diffs.getProperty(key));
                     break;
                 case PropertyKeys.SOURCETYPE:
-                    putProperty(PropertyKeys.SOURCETYPE,
-                            diffs.getProperty(key));
-                    refreshChannels = true;
+                    setSourcetype(diffs.getProperty(key));
                     break;
                 default:
                     LOG.warn("Attempt to change property not supported: " + key);
@@ -490,7 +482,7 @@ public class ConnectionSettings {
    * @param urls comma-separated list of urls
    */
   public void setUrls(String urls) {
-    if (!urlsStringToList(urls).equals(
+    if (!urlsStringToList(urls).equals( // this use of "equals" is valid because both lists are sorted
             getUrls())) {
       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
@@ -508,47 +500,35 @@ public class ConnectionSettings {
   }
 
     /**
-     * Set Host value for the data feed
-     * @param host Host value for the data feed
+     * Set the Splunk index-time field named "Host" to override the token default on a per-request basis.
+     * @param host Host value 
      */
     public void setHost(String host) {
-        if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
-            putProperty(PropertyKeys.HOST, host);
-            checkAndRefreshChannels();
-        }
+        putProperty(PropertyKeys.HOST, host);
     }
 
     /**
-     * Set Splunk index in which the data feed is stored
+     * Set Splunk index in which the data feed is stored to override the token default on a per-request basis.
      * @param index The Splunk index in which the data feed is stored
      */
     public void setIndex(String index) {
-        if (!StringUtils.isEmpty(index) && !index.equals(getIndex())) {
-            putProperty(PropertyKeys.INDEX, index);
-            checkAndRefreshChannels();
-        }
+        putProperty(PropertyKeys.INDEX, index);
     }
 
     /**
-     * Set the source of the data feed
+     * Set the Splunk index-time field named "Source" to override the token default on a per-request basis.
      * @param source The source of the data feed
      */
     public void setSource(String source) {
-        if (!StringUtils.isEmpty(source) && !source.equals(getSource())) {
-            putProperty(PropertyKeys.SOURCE, source);
-            checkAndRefreshChannels();
-        }
+        putProperty(PropertyKeys.SOURCE, source);
     }
 
     /**
-     * Set the source type of events of data feed
+     * Set the Splunk index-time field named "sourcetype" to override the token default on a per-request basis.
      * @param sourcetype The source type of events of data feed
      */
     public void setSourcetype(String sourcetype) {
-        if (!StringUtils.isEmpty(sourcetype) && !sourcetype.equals(getSourcetype())) {
-            putProperty(PropertyKeys.SOURCETYPE, sourcetype);
-            checkAndRefreshChannels();
-        }
+        putProperty(PropertyKeys.SOURCETYPE, sourcetype);
     }
   
     // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.

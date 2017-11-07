@@ -70,19 +70,6 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
     }
 
     @Test
-    public void sendEventsWithNullValueFieldsToRaw() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
-        LOG.info("test: sendEventsWithNullValueFieldsToRaw");
-        connection.getSettings().setHost(null);
-        connection.getSettings().setIndex(null);
-        connection.getSettings().setSource(null);
-        connection.getSettings().setSourcetype(null);
-        super.sendEvents();
-        LOG.warn("SEARCH STRING: " + getSearchString());
-        Set<String> results = getEventsFromSplunk();
-        verifyResults(getSentEvents(), results);
-    }
-
-    @Test
     public void sendEventsWithCustomFieldsToRaw() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
         LOG.info("test: sendEventsWithCustomFieldsToRaw");
         connection.getSettings().setIndex(INDEX_NAME);
@@ -99,20 +86,6 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
     public void sendEventsWithDefaultFieldsToEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
         LOG.info("test: sendEventsWithDefaultFieldsToEvent");
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-        super.sendEvents();
-        LOG.warn("SEARCH STRING: " + getSearchString());
-        Set<String> results = getEventsFromSplunk();
-        verifyResults(getSentEvents(), results);
-    }
-
-    @Test
-    public void sendEventsWithNullValueFieldsToEvent() throws InterruptedException, TimeoutException, HecConnectionTimeoutException, UnknownHostException {
-        LOG.info("test: sendEventsWithNullValueFieldsToEvent");
-        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-        connection.getSettings().setHost(null);
-        connection.getSettings().setIndex(null);
-        connection.getSettings().setSource(null);
-        connection.getSettings().setSourcetype(null);
         super.sendEvents();
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();

@@ -50,22 +50,13 @@ public class PropertiesFileHelper extends ConnectionSettings {
   }
 
     //FIXME TODO. THis needs to get OUT of the public API
-  public HttpSender createSender(URL url, String host) {
-    this.connection.getSettings().setUrls(url.toString());
-    // Use splunk_hec_host if set else use the hostname
-    if (StringUtils.isEmpty(this.connection.getSettings().getHost())) {
-      this.connection.getSettings().setHost(host);
-    }
-    return createSender();
-  }
-
-  private HttpSender createSender() {
+  private HttpSender createSender(URL url, String host) {
       // enable http client debugging
       if (enabledHttpDebug()) enableHttpDebug();
       String sslCert = getSSLCertContent();
-      HttpSender sender = new HttpSender(this, isCertValidationDisabled(), sslCert);
+      HttpSender sender = new HttpSender(url.toString(), host, this, isCertValidationDisabled(), sslCert);
       if(isMockHttp()){
-        sender.setSimulatedEndpoints(getSimulatedEndpoints());
+          sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
       return sender;
   }
