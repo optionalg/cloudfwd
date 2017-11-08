@@ -350,7 +350,7 @@ public class ConnectionSettings {
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
                 connection.getCallbacks().systemError(e);
                 LOG.error(e.getMessage(), e);
-                throw e;
+//                throw e;
             }
         }
         urlList.sort(Comparator.comparing(URL::toString));
