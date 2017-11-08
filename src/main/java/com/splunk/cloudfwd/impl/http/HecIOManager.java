@@ -26,6 +26,8 @@ import com.splunk.cloudfwd.impl.http.httpascync.GenericCoordinatedResponseHandle
 import com.splunk.cloudfwd.impl.http.httpascync.NoDataEventPostResponseHandler;
 import com.splunk.cloudfwd.impl.http.httpascync.ResponseCoordinator;
 import java.io.Closeable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -55,10 +57,11 @@ public class HecIOManager implements Closeable {
 //            "ack poller");
 //    private final ThreadScheduler healthPollController = new ThreadScheduler(
 //            "health poller");
-    private volatile ScheduledFuture ackPollTask;
-    private volatile ScheduledFuture healthPollTask;
+    private volatile Future ackPollTask;
+    private volatile Future healthPollTask;
     private final AcknowledgementTracker ackTracker;
     private volatile boolean ackPollInProgress;
+    private volatile ResponseCoordinator coordinator;
 
     HecIOManager(HttpSender sender) {
         this.sender = sender;
@@ -79,18 +82,11 @@ public class HecIOManager implements Closeable {
         synchronized(this){
             if (null == ackPollTask) {
                 Runnable poller = () -> {                    
-//                    if (this.getAcknowledgementTracker().isEmpty()) {
-//                        LOG.trace("No acks to poll for on {}", getSender().getChannel());
-//                        return;
-//                    } else if (this.isAckPollInProgress()) {
-//                        LOG.trace("skipping ack poll - already have one in flight on {}", getSender().getChannel());
-//                        return;
-//                    }
-                    this.pollAcks();
+                    ackPollTask = this.pollAcks();//the actual executor task now replaces the scheduled task
                 };
                 long interval = sender.getConnection().getSettings().getAckPollMS();
-                this.ackPollTask = ThreadScheduler.getSchedulerInstance("ack_poll_scheduler").
-                        scheduleWithFixedDelay(poller, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
+                this.ackPollTask = ThreadScheduler.getSharedSchedulerInstance("ack_poll_scheduler").
+                        scheduleWithFixedDelay(poller, 0, interval, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -102,8 +98,11 @@ public class HecIOManager implements Closeable {
             if (null == healthPollTask) {
                 long interval = sender.getConnection().getSettings().
                         getHealthPollMS();
-                this.healthPollTask = ThreadScheduler.getSchedulerInstance("health_poll_scheduler").
-                        scheduleWithFixedDelay(this::pollHealth, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
+                Runnable poller = () -> {                    
+                    healthPollTask = this.pollHealth(); //the actual executor task now replaces the scheduled task
+                };                
+                this.healthPollTask = ThreadScheduler.getSharedSchedulerInstance("health_poll_scheduler").
+                        scheduleWithFixedDelay(poller, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -124,8 +123,8 @@ public class HecIOManager implements Closeable {
     }
 
     //called by the AckPollScheduler
-    public void pollAcks() {
-        ThreadScheduler.getExecutorInstance("ack_poll_executor_thread").execute(
+    public Future pollAcks() {
+        return ThreadScheduler.getSharedExecutorInstance("ack_poll_executor_thread").submit(
                 ()->{
                      LOG.trace("POLLING ACKS on {}", sender.getChannel());
                     FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
@@ -137,8 +136,8 @@ public class HecIOManager implements Closeable {
      * This will get invoked after the HecChannel completes preflight checks
      * successfully
      */
-    public void pollHealth() {
-        ThreadScheduler.getExecutorInstance("health_poll_executor_thread").execute(
+    public Future  pollHealth() {
+        return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread").submit(
                 ()->{
                     try{
                         LOG.trace("health checks on {}", sender.getChannel());
@@ -171,73 +170,77 @@ public class HecIOManager implements Closeable {
         });
     }
 
-    public void preflightCheck() {
-        ThreadScheduler.getExecutorInstance("preflight_executor_thread").execute(
+    public Future preflightCheck() {
+        ExecutorService x = ThreadScheduler.getSharedExecutorInstance("preflight_executor_thread");
+        LOG.info("thread {} submitting preflight task for {} on executor {}", 
+                sender.getChannel(), Thread.currentThread().getName(), x);        
+        Future f =x.submit(
                 ()->{      
-        try {
-                LOG.trace("preflight checks on {}", sender.getChannel());
-                GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
-                        this,
-                        LifecycleEvent.Type.PREFLIGHT_OK,
-                        LifecycleEvent.Type.PREFLIGHT_FAILED,
-                        LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                        LifecycleEvent.Type.PREFLIGHT_BUSY,
-                        "preflight_ack_endpoint_check");
-                GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
-                        this,
-                        LifecycleEvent.Type.PREFLIGHT_OK,
-                        LifecycleEvent.Type.PREFLIGHT_FAILED,
-                        LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                        LifecycleEvent.Type.PREFLIGHT_BUSY,
-                        "preflight_health_endpoint_check");
-                GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
-                        this,
-                        LifecycleEvent.Type.PREFLIGHT_OK,
-                        LifecycleEvent.Type.PREFLIGHT_FAILED,
-                        LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                        LifecycleEvent.Type.PREFLIGHT_BUSY,
-                        "preflight_raw_endpoint_check");
-                ResponseCoordinator coordinator = ResponseCoordinator.create(cb1,
-                        cb2,
-                        cb3);
-                sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
+                    try {
+                          LOG.info("preflight checks on {}", sender.getChannel());
+                          GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                                  this,
+                                  LifecycleEvent.Type.PREFLIGHT_OK,
+                                  LifecycleEvent.Type.PREFLIGHT_FAILED,
+                                  LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                                  LifecycleEvent.Type.PREFLIGHT_BUSY,
+                                  "preflight_ack_endpoint_check");
+                          GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
+                                  this,
+                                  LifecycleEvent.Type.PREFLIGHT_OK,
+                                  LifecycleEvent.Type.PREFLIGHT_FAILED,
+                                  LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                                  LifecycleEvent.Type.PREFLIGHT_BUSY,
+                                  "preflight_health_endpoint_check");
+                          GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
+                                  this,
+                                  LifecycleEvent.Type.PREFLIGHT_OK,
+                                  LifecycleEvent.Type.PREFLIGHT_FAILED,
+                                  LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                                  LifecycleEvent.Type.PREFLIGHT_BUSY,
+                                  "preflight_raw_endpoint_check");
+                          this.coordinator = ResponseCoordinator.create(cb1,
+                                  cb2,
+                                  cb3);
+                          sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
 
-                LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
-                if (null != firstResp) {
-                    if (firstResp.isOK()) {
-                        sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
-                        LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
-                        if (null != secondResp) {
-                            if (secondResp.isOK()) {
-                                sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
-                            }
-                        } else {
-                            LOG.warn(
-                                    "Preflight didn't receive /raw empty-event check on {}",
-                                    sender.getChannel());
-                        }
-                    } else {
-                        LOG.warn(
-                                "Preflight didn't receive /health check on {}",
-                                sender.getChannel());
-                    }
-                } else {
-                    LOG.warn(
-                            "Preflight didn't receive /ack endpoint check on {}",
-                            sender.getChannel());
-                }
-            } catch (InterruptedException ex) {
-                LOG.warn(
-                        "Preflight interrupted on channel {} waiting for response from ack endpoint.",
-                        sender.getChannel());
-                //throw ex;
-            }catch (Exception ex) {
-                LOG.error("{}", ex.getMessage(), ex);
-                //throw ex;
-            }
+                          LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
+                          if (null != firstResp) {
+                              if (firstResp.isOK()) {
+                                  sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
+                                  LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
+                                  if (null != secondResp) {
+                                      if (secondResp.isOK()) {
+                                          sender.checkRawEndpoint(cb3); //SEND THIRD REQUEST
+                                      }
+                                  } else {
+                                      LOG.warn(
+                                              "Preflight didn't receive /raw empty-event check on {}",
+                                              sender.getChannel());
+                                  }
+                              } else {
+                                  LOG.warn(
+                                          "Preflight didn't receive /health check on {}",
+                                          sender.getChannel());
+                              }
+                          } else {
+                              LOG.warn(
+                                      "Preflight didn't receive /ack endpoint check on {}",
+                                      sender.getChannel());
+                          }
+                      } catch (InterruptedException ex) {
+                          LOG.warn(
+                                  "Preflight interrupted on channel {} waiting for response from ack endpoint.",
+                                  sender.getChannel());
+                          //throw ex;
+                      }catch (Exception ex) {
+                          LOG.error("{}", ex.getMessage(), ex);
+                          //throw ex;
+                      }
         
-        });//end execute
-
+        });//end submit     
+        LOG.info("channel {} executor state {}", sender.getChannel(), x);
+        return f;
     }
 
     /**
@@ -259,7 +262,12 @@ public class HecIOManager implements Closeable {
     }
 
     @Override
-    public void close() {
+    public void close() {        
+        LOG.info("closing io manager for {}", getSender().getChannel());
+        if(null != this.coordinator){
+            this.coordinator.cancel(null); //prevent blocking waiting for Nth task indefinitely
+        }
+        
         if(null != ackPollTask && !ackPollTask.isCancelled()){
             this.ackPollTask.cancel(true);
         }

@@ -49,8 +49,10 @@ public class PropertiesFileHelper extends ConnectionSettings {
             MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
   }
 
+  /*
     //FIXME TODO. THis needs to get OUT of the public API
   public HttpSender createSender(URL url, String host) {
+      
     this.connection.getSettings().setUrls(url.toString());
     // Use splunk_hec_host if set else use the hostname
     if (StringUtils.isEmpty(this.connection.getSettings().getHost())) {
@@ -58,12 +60,13 @@ public class PropertiesFileHelper extends ConnectionSettings {
     }
     return createSender();
   }
+*/
 
-  private HttpSender createSender() {
+  private HttpSender createSender(URL url, String sslHost) {
       // enable http client debugging
       if (enabledHttpDebug()) enableHttpDebug();
       String sslCert = getSSLCertContent();
-      HttpSender sender = new HttpSender(this, isCertValidationDisabled(), sslCert);
+      HttpSender sender = new HttpSender(url.toString(), sslHost, this, isCertValidationDisabled(), sslCert);
       if(isMockHttp()){
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }

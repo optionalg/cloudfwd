@@ -67,12 +67,12 @@ public class EventEndpoint extends ClosableDelayableResponder implements Endpoin
     return ackEndpoint;
   }
 
-  @Override
-  public void close() {      
-    LOG.debug("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
-    executor.shutdownNow();
-    
-  }
+//  @Override
+//  public void close() {      
+//    LOG.debug("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
+//    executor.shutdownNow();
+//    
+//  }
 
   @Override
   public void start() {

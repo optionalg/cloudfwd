@@ -74,6 +74,14 @@ public class HecHealthImpl implements HecHealth {
     public LifecycleEvent getStatus() {
         return this.status;
     }
+    
+    /**
+     * This is necessary so that when a channel is closing, it can insure that nobody will get stuck in await, awaiting a preflight
+     * that will never complete.
+     */
+    public void unlatch(){
+        this.latch.countDown();
+    }
 
     public void setStatus(LifecycleEvent status, boolean healthy) {
         this.status = status;

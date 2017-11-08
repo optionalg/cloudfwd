@@ -16,7 +16,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <argLine>-Xmx128M</argLine>
+        <argLine>-Xmx256m</argLine>
         <skipITs>true</skipITs>
     </properties>
     <dependencies>
@@ -184,6 +184,7 @@
                     <excludes>
                         <exclude>**/perf/*.java</exclude>
                         <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
+                        <exclude>**/NonStickyDetectionTest.java</exclude> <!-- no longer valid since we detect session violation by looking at cookies-->
                     </excludes>
                 </configuration>
             </plugin>

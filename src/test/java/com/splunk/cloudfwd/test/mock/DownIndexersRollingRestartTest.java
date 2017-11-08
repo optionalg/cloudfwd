@@ -15,7 +15,7 @@ import java.util.Properties;
  */
 public class DownIndexersRollingRestartTest extends AbstractConnectionTest {
     protected int getNumEventsToSend() {
-        return 1000;
+        return 100;
     }
 
     @Override

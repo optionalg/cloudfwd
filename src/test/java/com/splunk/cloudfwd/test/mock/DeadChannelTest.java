@@ -11,6 +11,7 @@ import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
+import org.junit.Assert;
 import org.junit.Test;
 
 /*
@@ -51,12 +52,12 @@ public class DeadChannelTest extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(MOCK_HTTP_KEY, "true");
-    props.put(MOCK_HTTP_CLASSNAME,
+    props.setProperty(MOCK_HTTP_KEY, "true");
+    props.setProperty(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.impl.sim.errorgen.ackslost.LossyEndpoints");
-    props.put(UNRESPONSIVE_MS,
-            "1000"); //set dead channel detector to detect at 1 second    
-        props.put(MAX_TOTAL_CHANNELS,
+    props.setProperty(UNRESPONSIVE_MS,
+            "4000"); //set dead channel detector to detect at 1 second    
+        props.setProperty(MAX_TOTAL_CHANNELS,
             "2");
     return props;
   }
@@ -64,6 +65,8 @@ public class DeadChannelTest extends AbstractConnectionTest {
   @Override
   protected void configureConnection(Connection connection) {
     connection.getSettings().setEventBatchSize(0);
+    //must be polling for acks fast enough to have responses before we determine channel is dead or alive.
+    Assert.assertTrue("Test misconfigured: ack poll interval not less than channel_unresponsive_decom_ms", connection.getSettings().getUnresponsiveChannelDecomMS() > connection.getSettings().getAckPollMS());
   }
   @Override
   protected int getNumEventsToSend() {

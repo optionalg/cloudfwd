@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  *
- * @author meemax
+ * @author anush
  */
 public class CookiedOKHttpResponse extends CannedOKHttpResponse {
     protected static final Logger LOG = LoggerFactory.getLogger(CookiedOKHttpResponse.class.getName());

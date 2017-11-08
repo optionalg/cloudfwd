@@ -34,7 +34,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     @Override
     public void tearDown(){
         super.tearDown();
-        //connection.closeNow(); //channels from before
+        connection.closeNow(); //channels from before
     }
 
     // Scenario: 1) Connection is created with valid token and start sending events 2) Token is deleted on server 3) New token is created on server 4) Connection settings updated with new token

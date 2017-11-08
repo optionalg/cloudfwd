@@ -175,7 +175,7 @@ public class EventBatchImpl implements EventBatch {
    * @return the acknowledged
    */
   @Override
-  public boolean isAcknowledged() {
+  public synchronized boolean isAcknowledged() {
     return acknowledged;
   }
 
@@ -183,7 +183,7 @@ public class EventBatchImpl implements EventBatch {
    * @param acknowledged the acknowledged to set
    */
   @Override
-  public void setAcknowledged(boolean acknowledged) {
+  public synchronized void setAcknowledged(boolean acknowledged) {    
     this.acknowledged = acknowledged;
   }
 

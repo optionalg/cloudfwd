@@ -113,26 +113,29 @@ public class AcknowledgementTracker implements EventTracker {
         events = polledAcksByAckId.get(ackId);
         if (null == events) {
           LOG.warn(
-                  "Got acknowledgement on ackId: {} but we're no long tracking that ackId",
-                  ackId);
-          return;
+                  "Got acknowledgement on ackId: {} but we're no long tracking that ackId on {}",
+                  ackId, sender.getChannel());
+          continue;
         }
-        events.setAcknowledged(true);    
+        if(events.isAcknowledged()){
+            LOG.warn("will not ack already acked: {}", events);
+            continue; //can happen when when sticky session violated
+        }
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
         //events.getAckId can be null if the event is being resent by DeadChannel detector 
         //and EventBatchImpl.prepareForResend has been called
         if (events.getAckId() != null && ackId != events.getAckId()) {
-          String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
-                  getAckId();
-          LOG.error(msg);
-          throw new HecIllegalStateException(msg,
-                  HecIllegalStateException.Type.ACK_ID_MISMATCH);
+            String msg = "ackId mismatch key ackID=" + ackId + " existing: " + events + " on "+ sender.getChannel();
+            LOG.warn(msg);
+            continue; //conceivable from sticky session violation
+  //          throw new HecIllegalStateException(msg,
+  //                  HecIllegalStateException.Type.ACK_ID_MISMATCH);
         }
+        events.setAcknowledged(true);    
 
         this.sender.getChannelMetrics().update(new EventBatchResponse(
                 LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
                 events,sender.getBaseUrl()));
-        //eventBatches.remove(events.getId());
         polledAcksByAckId.remove(ackId);
       }
     } catch (Exception e) {

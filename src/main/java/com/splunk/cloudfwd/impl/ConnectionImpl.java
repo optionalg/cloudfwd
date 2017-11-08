@@ -31,6 +31,7 @@ import com.splunk.cloudfwd.impl.util.CheckpointManager;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
 import java.net.URL;
 import java.util.Collection;
@@ -137,8 +138,9 @@ public class ConnectionImpl implements Connection {
     //Exception handler
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
-      lb.close();
-      timeoutChecker.queisce();
+      lb.close(); //this blocks
+      timeoutChecker.queisce();  
+     //ThreadScheduler.shutdownNowAndAwaitTermination();      
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -158,6 +160,7 @@ public class ConnectionImpl implements Connection {
     new Thread(() -> {
       lb.closeNow();
       timeoutChecker.closeNow();
+      ThreadScheduler.shutdownNowAndAwaitTermination();
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -386,7 +389,7 @@ public class ConnectionImpl implements Connection {
             }            
         }
         
-        LOG.info("LOAD BALANCER: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
+        LOG.debug("LOAD BALANCER: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
                 channelHealths.size(), _preflightCompleted ,_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 

@@ -21,7 +21,8 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
     @Override
     protected Properties getProps() {
         Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken(null));
+        p.setProperty(PropertyKeys.TOKEN, createTestToken(null));
+        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
         return p;
     }
 
@@ -67,6 +68,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
         verifyResults(getSentEvents(), results);
+        //connection.closeNow();
     }
 
     @Test
@@ -80,6 +82,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
         verifyResults(getSentEvents(), results);
+        //connection.closeNow();
     }
 
     @Test
@@ -93,6 +96,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
         verifyResults(getSentEvents(), results);
+        //connection.closeNow();
     }
 
     @Test
@@ -103,6 +107,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
         verifyResults(getSentEvents(), results);
+        //connection.closeNow();
     }
 
     @Test
@@ -117,6 +122,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
         verifyResults(getSentEvents(), results);
+        //connection.closeNow();
     }
 
     @Test
@@ -131,5 +137,6 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();
         verifyResults(getSentEvents(), results);
+        //connection.closeNow();
     }
 }

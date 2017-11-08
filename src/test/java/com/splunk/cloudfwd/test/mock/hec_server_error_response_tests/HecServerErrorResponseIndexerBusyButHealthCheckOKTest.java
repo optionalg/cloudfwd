@@ -14,6 +14,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
 import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
 import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
 import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 
 /**
  * Created by mhora on 10/3/17.
@@ -36,8 +37,7 @@ public class HecServerErrorResponseIndexerBusyButHealthCheckOKTest extends Abstr
 
             @Override
             protected boolean isExpectedFailureType(Exception e) {
-                boolean isExpectedType = e instanceof HecConnectionTimeoutException;
-                return isExpectedType;
+                return e instanceof HecConnectionTimeoutException || e instanceof HecMaxRetriesException;
             }
 
             @Override

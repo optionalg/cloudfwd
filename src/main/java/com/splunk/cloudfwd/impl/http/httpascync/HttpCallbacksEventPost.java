@@ -118,7 +118,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                 invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
             }                
         };
-        ThreadScheduler.getExecutorInstance("event_resender").execute(r);
+        ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
     }
 
     private void notifyFailedAndResend(Exception ex) {
@@ -135,7 +135,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
       
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
-        LOG.debug("{} Event post response: {}", getChannel(), resp);
+        LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {

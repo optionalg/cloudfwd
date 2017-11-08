@@ -178,10 +178,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   @Override
   public void checkpoint(EventBatch events) {
-    LOG.info("SUCCESS CHECKPOINT {}", events.getId()); 
-    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
-      latch.countDown();
-    }
+    LOG.info("SUCCESS CHECKPOINT {}", events.getId());     
+//    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
+//      latch.countDown();
+//    }
   }
 
   public void await(long timeout, TimeUnit u) throws InterruptedException {

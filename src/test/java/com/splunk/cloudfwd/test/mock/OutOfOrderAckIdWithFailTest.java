@@ -41,7 +41,7 @@ import org.junit.Test;
  */
 /**
  *
- * @author ghendrey
+ * @author meema 
  */
 public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
 
@@ -52,6 +52,11 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
     @Override
     protected BasicCallbacks getCallbacks() {
       return new BasicCallbacks(n){
+           
+          @Override
+          public boolean shouldFail(){
+              return true;
+          }          
         @Override
         protected boolean isExpectedFailureType(Exception e){
           return (e instanceof HecServerErrorResponseException &&
@@ -78,7 +83,7 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
                         + "And test method GUID " + testMethodGUID);
           for (int i = 0; i < expected; i++) {
               if (i % 25 == 0) {
-                fail = !fail;
+                fail = !fail; //0-25:ok, 26-50: fail, 51-75:fail, 76-100:ok
                 OutOfOrderAckIDFailEndpoints.toggleFail(fail);
               }            
               Event event = nextEvent(i + 1);

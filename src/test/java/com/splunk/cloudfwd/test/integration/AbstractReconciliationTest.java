@@ -103,7 +103,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   @After
+  @Override
   public void tearDown(){
+    LOG.info("tearing down test");
     deleteTestToken();
     deleteTestIndex();
       try {
@@ -111,6 +113,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       } catch (IOException ex) {
           LOG.error("Error closing connection used by tests to setup splunk",ex);
           Assert.fail(ex.getMessage());
+      }
+      if(null != connection){
+          connection.closeNow();
       }
   }
 

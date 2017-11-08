@@ -52,6 +52,7 @@ public class LoadBalancer implements Closeable {
     private final ConnectionImpl connection;
     private boolean closed;
     private volatile CountDownLatch latch;
+    private volatile boolean interrupted;
 
     public LoadBalancer(ConnectionImpl c) {
         this.LOG = c.getLogger(LoadBalancer.class.getName());
@@ -97,6 +98,10 @@ public class LoadBalancer implements Closeable {
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
+//        for (HecChannel c : this.channels.values()) {
+//            c.awaitCloseFinished();
+//        }       
+//        LOG.info("Load balancer closed, all channels quiesced and closed.");
         this.closed = true;
     }
 
@@ -191,7 +196,7 @@ public class LoadBalancer implements Closeable {
 
     public boolean sendRoundRobin(EventBatchImpl events, boolean resend)
             throws HecConnectionTimeoutException, HecNoValidChannelsException {
-        
+        interrupted = false;
         events.incrementNumTries();
         if (resend && !isResendable(events)) {
             LOG.trace("Not resendable {}", events);
@@ -210,7 +215,7 @@ public class LoadBalancer implements Closeable {
         int spinCount = 0;
         while (true) {
             //!closed || resend
-            if (closed && !resend) {
+            if (interrupted || (closed && !resend)) {
                 return false; //return true;
             }
             //note: the channelsSnapshot must be refreshed each time through this loop
@@ -223,15 +228,19 @@ public class LoadBalancer implements Closeable {
                     values());
             if (channelsSnapshot.isEmpty()) {                
                 try {
+                    if(closed){
+                        throw new HecConnectionStateException("No channels", HecConnectionStateException.Type.NO_HEC_CHANNELS);
+                    }
                     //if you don't sleep here, we will be in a hard loop and it locks out threads that are trying to add channels
                     //(This was observed through debugging).
                     LOG.warn("no channels in load balancer");
                     Thread.sleep(100); 
                 } catch (InterruptedException ex) {
-                    LOG.warn("LoadBalancer Sleep interrupted.");//should rethrow ex
+                    interrupted = true;
+                    LOG.warn("LoadBalancer Sleep interrupted.");
                 }
             }else{
-                if (tryChannelSend(channelsSnapshot, events, resend)) {//attempt to send through a channel (ret's fals if channel not available)
+                if (tryChannelSend(channelsSnapshot, events, resend)) {//attempt to send through a channel (ret's false if channel not available)
                     //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
                     //because everyone stuck in perpetual wait
                     //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
@@ -310,9 +319,9 @@ public class LoadBalancer implements Closeable {
                 latch = null;
                 //checkForNoValidChannels(channelsSnapshot, events);
             } catch (InterruptedException e) {
-                LOG.error(
-                        "LoadBalancer latch caught InterruptedException and resumed. Interruption message was: " + e.
-                        getMessage());
+                LOG.warn(
+                        "LoadBalancer interrupted.");       
+                this.interrupted = true;
             }
         }
     }
@@ -391,7 +400,7 @@ public class LoadBalancer implements Closeable {
         // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
         List<InetSocketAddress> addrs = discoverer.getAddrs();
         for (HecChannel c : this.channels.values()) {
-            c.closeAndFinish();
+            c.close(); //AndFinish();
         }
         staleChannels.putAll(channels);
         channels.clear();

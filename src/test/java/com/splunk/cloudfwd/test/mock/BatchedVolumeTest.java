@@ -50,6 +50,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   @Test
   public void sendTextToRawEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+     LOG.info("test: sendTextToRawEndpointWithBuffering");
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.eventType = Event.Type.TEXT;
     super.sendEvents();
@@ -57,6 +58,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
     @Test
   public void sendJsonToRawEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+     LOG.info("test: sendJsonToRawEndpointWithBuffering");      
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
     super.eventType = Event.Type.JSON;
     super.sendEvents();
@@ -65,6 +67,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
   @Test
   public void sendTextToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+    LOG.info("test: sendTextToEventsEndpointWithBuffering");         
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = Event.Type.TEXT;
     super.sendEvents();
@@ -72,6 +75,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
 
     @Test
   public void sendJsonToEventsEndpointWithBuffering() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
+    LOG.info("test: sendJsonToEventsEndpointWithBuffering");            
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.eventType = Event.Type.JSON;
     super.sendEvents();

@@ -60,12 +60,12 @@ public final class HttpSender implements Endpoints, CookieClient {
   private static final String Host = "host";
   private final String eventUrl;
   private final String rawUrl;
-  private final String token;
-  private final String cert;
-  private final String host;
-  private final String index;
-  private final String source;
-  private final String sourcetype;
+//  private final String token;
+    private final String cert;
+    private final String host; //hostname used for SSL certificate validation
+//  private final String index;
+//  private final String source;
+//  private final String sourcetype;
   private CloseableHttpAsyncClient httpClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
@@ -79,23 +79,26 @@ public final class HttpSender implements Endpoints, CookieClient {
   private HttpPost ackCheck;
   private HttpGet healthEndpointCheck;
   private HttpPost dummyEventPost;
+  private final ConnectionSettings connectionSettings;
 
   /**
    * Initialize HttpEventCollectorSender
    *
+     * @param url THe URL for the host portion of the URL must be an IP address NOT a hostname
    * @param connectionSettings ConnectionSettings
    * @param disableCertificateValidation disables Certificate Validation
    * @param cert SSL Certificate Authority Public key to verify TLS with
    * Self-Signed SSL Certificate chain
    */
-  public HttpSender(final ConnectionSettings connectionSettings,
+  public HttpSender(final String url, String ssl_host, final ConnectionSettings connectionSettings,
                     final boolean disableCertificateValidation, final String cert) {
-    this.baseUrl = connectionSettings.getUrls().get(0).toString().trim();
-    this.host = connectionSettings.getHost();
-    this.index = connectionSettings.getIndex();
-    this.sourcetype = connectionSettings.getSourcetype();
-    this.source = connectionSettings.getSource();
-    this.token = connectionSettings.getToken();
+    this.baseUrl = url;
+    this.host = ssl_host;
+    this.connectionSettings = connectionSettings;
+//    this.index = connectionSettings.getIndex();
+//    this.sourcetype = connectionSettings.getSourcetype();
+//    this.source = connectionSettings.getSource();
+//    this.token = connectionSettings.getToken();
     this.cert = cert;
     this.hecIOManager = new HecIOManager(this);
     this.eventUrl = this.baseUrl.trim() + "/services/collector/event";
@@ -243,17 +246,26 @@ public final class HttpSender implements Endpoints, CookieClient {
 
   private String appendUri(String endpoint) {
     String url = endpoint + "?";
+    
+    String index = connectionSettings.getIndex();
     if (!StringUtils.isEmpty(index)) {
       url = url + "&index=" + index;
     }
 
+    String source = connectionSettings.getSource();
     if (!StringUtils.isEmpty(source)) {
       url = url + "&source=" + source;
     }
 
+    String sourcetype =connectionSettings.getSourcetype();
     if (!StringUtils.isEmpty(sourcetype)) {
       url = url + "&sourcetype=" + sourcetype;
     }
+    
+    String hostField = connectionSettings.getHost();
+    if (!StringUtils.isEmpty(hostField)) {
+      url = url + "&host=" + hostField;
+    }    
     return url;
   }
   
@@ -280,7 +292,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   private void setHttpHeadersNoChannel(HttpRequestBase r) {
     r.setHeader(
             AuthorizationHeaderTag,
-            String.format(AuthorizationHeaderScheme, token));
+            String.format(AuthorizationHeaderScheme, connectionSettings.getToken()));
     
     if (host != null) {
       r.setHeader(Host, host);
@@ -363,7 +375,7 @@ public final class HttpSender implements Endpoints, CookieClient {
         }; // make sure http client or simulator is started
         AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();        
         if (ackReq.isEmpty()) {
-            LOG.trace("no ackIds to poll for pn {}", getChannel());
+            LOG.trace("no ackIds to poll for om {}", getChannel());
           return;
         } else {        
           hecIoMgr.setAckPollInProgress(true);
@@ -408,7 +420,7 @@ public final class HttpSender implements Endpoints, CookieClient {
           return;
         }
         // create http request
-        final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
+        final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, connectionSettings.getToken());
         healthEndpointCheck= new HttpGet(getUrl);
         LOG.trace("Polling health {}", healthEndpointCheck);
         setHeaders(healthEndpointCheck);
@@ -447,6 +459,9 @@ public final class HttpSender implements Endpoints, CookieClient {
         ackCheck.setEntity(entity);
         if(null != httpClient){ //httpClient can be null if close happened
           httpClient.execute(ackCheck, httpCallback);
+          LOG.debug("posted ack check");
+        }else{
+            LOG.error("httpClient is null");
         }
     } catch (Exception ex) {
       LOG.error("{}", ex.getMessage(), ex);
@@ -470,9 +485,6 @@ public final class HttpSender implements Endpoints, CookieClient {
     this.simulatedEndpoints = simulatedEndpoints;
   }
 
-  public String getToken() {
-    return token;
-  }
 
   /**
    * @return the baseUrl
@@ -483,14 +495,23 @@ public final class HttpSender implements Endpoints, CookieClient {
 
     @Override
     public void setSessionCookies(String cookie) {
-        if(null == cookie || cookie.isEmpty()){
+        if (null == cookie || cookie.isEmpty()) {
             return;
         }
-        if(null != this.cookie && !this.cookie.equals(cookie)){
-            LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
-            LOG.warn("replacing channel, resending events, and killing {}", getChannel());
-            resendEvents();
-        }else{
+        if (null != this.cookie && !this.cookie.equals(cookie)) {
+            synchronized (this) { //we don't want to make multiple attempts to handle the same detected change
+                if (null != this.cookie && !this.cookie.equals(cookie)) { //must double-check the condition once inside sync'd block
+                    LOG.warn(
+                            "An attempt was made to change the Session-Cookie from {} to {} on {}",
+                            this.cookie, cookie, getChannel());
+                    this.cookie = cookie; //record the new cookie so that subsequent same cookies don't try to resend again                    
+                    LOG.warn("replacing channel, resending events, and killing {}",
+                            getChannel());
+                    getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
+                    resendEvents(); //will ultimately result in this channel getting killed
+                }
+            }//end sync
+        } else {
             this.cookie = cookie;
         }
     }
@@ -501,14 +522,14 @@ public final class HttpSender implements Endpoints, CookieClient {
                 HecChannel c = getChannel();
                 LoadBalancer lb = getConnection().getLoadBalancer();
                 lb.addChannelFromRandomlyChosenHost(); //to compensate for the channel we are about to smoke
-                c.resendInFlightEvents();
-                c.forceClose(); //smoke
                 lb.removeChannel(c.getChannelId(), true); //bye bye
+                c.forceClose(); //smoke
+                c.resendInFlightEvents();
             } catch (Exception ex) {
                 LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
             }            
         };//end runnable
-        ThreadScheduler.getExecutorInstance("event_resender").execute(r);
+        ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
     }
   
 }

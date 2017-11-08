@@ -63,7 +63,7 @@ public class GenericCoordinatedResponseHandler extends HttpCallbacksGeneric impl
     @Override
     public void cancelled() {
         try {
-            LOG.trace("cancelled '{}' on channel {}", getOperation(), getChannel());
+            LOG.warn("cancelled '{}' on channel {}", getOperation(), getChannel());
             coordinator.cancel(null);
         } catch (Exception ex) {
             error(ex);

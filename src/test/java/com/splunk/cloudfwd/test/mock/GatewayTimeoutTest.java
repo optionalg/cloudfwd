@@ -2,6 +2,7 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
@@ -53,7 +54,7 @@ public class GatewayTimeoutTest extends AbstractConnectionTest {
         protected boolean isExpectedFailureType(Exception e) {
             // connection.close() will cause the events to get orphaned in
             // the load balancer and timeout since all channels will be closed
-            return e instanceof HecConnectionTimeoutException;
+            return e instanceof HecMaxRetriesException || e instanceof HecConnectionTimeoutException;
         }
 
         @Override

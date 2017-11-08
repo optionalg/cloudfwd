@@ -15,8 +15,11 @@
  */
 package com.splunk.cloudfwd.impl.sim;
 
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -31,37 +34,52 @@ import org.slf4j.LoggerFactory;
 public class ClosableDelayableResponder {
      private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.getName());
 
-    final ScheduledExecutorService executor;
+    final ExecutorService executor;
     Random rand = new Random(System.currentTimeMillis());
 
     public ClosableDelayableResponder() {
         ThreadFactory f = new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
-                return new Thread(r, "EventEndpoint");
+                Thread t = new Thread(r, "simulator_executors");
+                //t.setPriority(Thread.NORM_PRIORITY + 1);
+                return t;
             }
         };
-        executor = Executors.newScheduledThreadPool(1, f);
+        //executor = ForkJoinPool.commonPool();
+        //executor = ThreadScheduler.getSharedExecutorInstance("simulator_executor");
+        //executor = ThreadScheduler.getSharedExecutorInstance("simulator_executor", 1);
+        executor = Executors.newSingleThreadExecutor(f);
+        //executor = Executors.newScheduledThreadPool(1, f);
+        //executor = ThreadScheduler.getDedicatedSingleThreadExecutor("simulator_executor");
+            
     }
 
     protected void delayResponse(Runnable r) {
-        //return a single response with a delay uniformly distributed between  [0,5] ms
         try{
-            executor.schedule(r, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+            //executor.execute(r);
+            Runnable r2 = ()->{
+              //ThreadScheduler.getSharedExecutorInstance("simulator_executors").execute(r);
+              executor.execute(r);
+            };
+            ThreadScheduler.getSharedSchedulerInstance("simulator_delayed_response_scheduler").schedule(r2, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
+            //executor.schedule(r2, (long) rand.nextInt(2), TimeUnit.MILLISECONDS);
         }catch(RejectedExecutionException e){
             LOG.trace("rejected delayResponse by {}", Thread.currentThread().getName());
         }
     }
     
-  public void close() {
+  public void close() {      
     LOG.debug("SHUTDOWN EVENT ENDPOINT DELAY SIMULATOR");
-    executor.shutdownNow();
+    executor.shutdown(); //do not shutdownNOW. If you 'now' it, we interrupt threads/tasks that are still trying to return acks
       try {
-          if(!executor.isTerminated() && !executor.awaitTermination(10, TimeUnit.SECONDS)){
+          if(!executor.isTerminated() && !executor.awaitTermination(30, TimeUnit.SECONDS)){
               LOG.error("Failed to terminate executor in alloted time.");
-          } } catch (InterruptedException ex) {
+          } 
+      } catch (InterruptedException ex) {
           LOG.error("Interrupted awaiting termination ClosableDelayedResponder executor.");
       }    
+
   }
 
 }

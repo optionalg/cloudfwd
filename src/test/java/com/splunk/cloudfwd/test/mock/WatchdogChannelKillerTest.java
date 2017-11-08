@@ -82,10 +82,10 @@ public class WatchdogChannelKillerTest extends AbstractConnectionTest {
             throws InterruptedException {
         SlowEndpoints.sleep = 1000; //endpoint won't respond for 10 seconds
         LOG.info(connection.getHealth().toString());
-        super.sendEvents();
-        LOG.info(connection.getHealth().toString());
-        LOG.info("Sorry: this test needs to wait 3 minutes... :-(");
-        Thread.sleep(1500);
+        super.sendEvents(); //send the one event, then procede immediately to the next line
+        connection.close(); //channel will never quiesce, so watchdog must kick in (750ms) to close it
+        Thread.sleep(1000); //wait for watchdog
+        LOG.info(connection.getHealth().toString());        
         List<HecHealth> healths = connection.getHealth();    
         LOG.info(healths.toString());
         Assert.assertEquals("Expected no channels, but found " + healths, 0,

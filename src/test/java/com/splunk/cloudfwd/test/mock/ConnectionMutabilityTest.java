@@ -18,18 +18,21 @@ import java.util.concurrent.TimeUnit;
  * Created by eprokop on 9/11/17.
  */
 public class ConnectionMutabilityTest extends AbstractConnectionTest {
-    private int numEvents = 1000000;
+    private int numEvents = 100000;
     private int start = 0;
     private int stop = -1;
     private long ackPollWait = 1000;
 
+    
     @Test
     // Makes sure we are computing diffs as expected
     public void testPropertiesDiffs() throws UnknownHostException {
+        LOG.info("test:  testPropertiesDiffs");
         Properties props1 = new Properties();
         props1.setProperty(PropertyKeys.TOKEN, "a token");
         props1.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "30000");
         props1.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8088");
+        LOG.info("setProperties(props1)");
         connection.getSettings().setProperties(props1);
 
         // Diff for the same properties
@@ -49,6 +52,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         props3.setProperty(PropertyKeys.TOKEN, diffToken);
         props3.setProperty(PropertyKeys.COLLECTOR_URI, diffUrl);
         props3.setProperty(PropertyKeys.CHANNEL_DECOM_MS, diffChannelDecom);
+        LOG.info("setProperties(props3)");
         diff = connection.getSettings().getDiff(props3);
         Assert.assertTrue("Diff should contain token.", diff.getProperty(PropertyKeys.TOKEN).equals(diffToken));
         Assert.assertTrue("Diff should contain urls.", diff.getProperty(PropertyKeys.COLLECTOR_URI).equals(diffUrl));
@@ -60,11 +64,14 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         Assert.assertTrue("Diff for empty properties should be empty.", diff.isEmpty());
     }
 
+
     @Test
     public void setMultipleProperties() throws Throwable {
+        LOG.info("test:  setMultipleProperties");       
         setPropsOnEndpoint();
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
+        LOG.info("sending first batch of events");
         sendSomeEvents(getNumEventsToSend()/4);
 
         // Set some new properties
@@ -74,12 +81,14 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         props1.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8188");
         connection.getSettings().setProperties(props1);
         setPropsOnEndpoint();
+        LOG.info("sending second batch of events");
         sendSomeEvents(getNumEventsToSend()/4);
 
 
         // Set the same properties
         connection.getSettings().setProperties(props1);
         setPropsOnEndpoint();
+        LOG.info("sending third batch of events");
         sendSomeEvents(getNumEventsToSend()/4);
 
 
@@ -90,13 +99,16 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         props2.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8288, https://127.0.0.1:8388");
         connection.getSettings().setProperties(props2);
         setPropsOnEndpoint();
+         LOG.info("sending fourth batch of events");
         sendSomeEvents(getNumEventsToSend()/4);
         close();
         checkAsserts();
     }
 
+    
     @Test
     public void changeEndpointType() throws Throwable {
+        LOG.info("test:  changeEndpointType");
         setPropsOnEndpoint();
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
@@ -123,6 +135,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
 
     @Test
     public void changeToken() throws Throwable {
+        LOG.info("test:  changeToken");
         setPropsOnEndpoint();
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
@@ -138,6 +151,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
 
     @Test
     public void changeUrlsAndAckTimeout() throws Throwable {
+        LOG.info("test:  changeUrlsAndAckTimeout");
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         super.eventType = Event.Type.TEXT;
         setPropsOnEndpoint();

@@ -82,6 +82,7 @@ public abstract class AbstractConnectionTest {
 
   @Before
   public void setUp() {
+    LOG.info("starting test setup()");
     extractCliTestProperties();
     if(connectionInstantiationShouldFail() && getNumEventsToSend() != 0){
         throw new RuntimeException("connectionInstantiationShouldFail returns true, but getNumEventsToSend not returning 0. "
@@ -107,6 +108,7 @@ public abstract class AbstractConnectionTest {
       try{
         conn = Connections.create(callbacks, p);
       }catch(Exception e){
+          e.printStackTrace();
           didThrow = true;
           if(!connectionInstantiationShouldFail()){
               Assert.fail("Connection instantiation should not have failed, but it did: " +e);
@@ -148,15 +150,23 @@ public abstract class AbstractConnectionTest {
 
   @After
   public void tearDown() {
+      LOG.info("tearing down test");
     //in case of failure we probably have events stuck on a channel. Therefore a regular close will just
     //hang out waiting (infinitely?) for the messages to flush out before gracefully closing. So when we see
     //a failure we must use the closeNow method which closes the channel regardless of whether it has
     //messages in flight.
-    if (callbacks.isFailed()) {
-      if(null != connection){
-          connection.closeNow();
-      }
+    if(null == connection){
+        return;
     }
+    if (callbacks.isFailed() || callbacks.shouldFail()) {     
+          connection.closeNow();      
+    }else{
+        connection.close();
+    }
+    LOG.info("teardown complete");
+//    this.callbacks = null; //unregister the callback first
+//    this.connection = null;
+//    System.gc();
   }
   
   /**
@@ -179,7 +189,7 @@ public abstract class AbstractConnectionTest {
           for (int i = 0; i < expected; i++) {
           ///final EventBatch events =nextEventBatch(i+1);
               Event event = nextEvent(i + 1);
-              LOG.trace("Send event {} i={}", event.getId(), i);
+                LOG.trace("Send event {} i={}", event.getId(), i);
 
               connection.send(event);
           }
@@ -317,8 +327,12 @@ public abstract class AbstractConnectionTest {
    * @return
    */
   protected Event nextEvent(int seqno) {
-     if(seqno%100==0){
+     if(getNumEventsToSend() <= 100){
+         LOG.info("sending id={}", seqno); //if less than 100 events in test, print them all
+     } else if(getNumEventsToSend() <= 1000 && seqno%100==0){ //less than 1000, print every 100
          LOG.info("sending id={}", seqno);
+     }else if (seqno%1000==0){ //print every 1000th event
+         LOG.info("sending id={}", seqno);  
      }
     Event event = null;
     switch (this.eventType) {

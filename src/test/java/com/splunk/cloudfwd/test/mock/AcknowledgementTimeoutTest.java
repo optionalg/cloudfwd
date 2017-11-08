@@ -89,9 +89,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
 
     @Override
     protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-        super.sendEvents();
-        Assert.assertTrue("didn't get expected timeout",
-                ((TimeoutCatcher) super.callbacks).gotTimeout);       
+        super.sendEvents();      
     }
 
     @Override
@@ -101,35 +99,35 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
 
     class TimeoutCatcher extends BasicCallbacks {
 
-        public boolean gotTimeout;
-
         public TimeoutCatcher(int expected) {
             super(expected);
         }
-
-        @Override
-        public void failed(EventBatch events, Exception e) {
-            //We expect a timeout
-            Assert.assertTrue(e.getMessage(),
-                    e instanceof HecAcknowledgmentTimeoutException);
-            LOG.trace("Got expected exception: " + e);
-            if (e instanceof HecAcknowledgmentTimeoutException) {
-                gotTimeout = true;
-            }
-            latch.countDown(); //allow the test to finish
+   
+        protected boolean isExpectedFailureType(Exception e){
+          return e instanceof HecAcknowledgmentTimeoutException;
         }
+
+          /**
+           * subclass musts override to return true when their test generates an expected exception
+           * @return
+           */
+          public boolean shouldFail(){
+            return true;
+        }
+        
+        
 
         @Override
         public void checkpoint(EventBatch events) {
             LOG.trace("SUCCESS CHECKPOINT " + events.getId());
             Assert.fail(
-                    "Got an unexpected checkpoint when we were waiting for timeout");
+                    "Got an unexpected checkpoint when we were waiting for timeout: " + events);
         }
 
         @Override
         public void acknowledged(EventBatch events) {
             Assert.fail(
-                    "Got an unexpected acknowledged when we were waiting for timeout");
+                    "Got an unexpected acknowledged when we were waiting for timeout: "+ events);
 
         }
     }
