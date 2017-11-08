@@ -110,7 +110,9 @@ public class LoadBalancer implements Closeable {
         for (HecChannel c : this.staleChannels.values()) {
             c.forceClose();
         }
-        // fail everything in 
+        // fail all unacked events. Must close all channels first. If not, there is a possibility that events not yet 
+        // in the timeout checker make it into a channel between the time we fail everything in the timeout checker and
+        // the time we close the channels
         Collection<EventBatchImpl> unacked = getConnection().getTimeoutChecker().getUnackedEvents();
         unacked.forEach((e)->getConnection().getCallbacks().failed(e, new HecConnectionStateException(
                 "Connection closed with unacknowleged events remaining.", HecConnectionStateException.Type.CONNECTION_CLOSED)));
