@@ -27,14 +27,14 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
  * @author ghendrey
  */
 public class HttpClientWrapper {
-    private static CloseableHttpAsyncClient httpClient;
-    private static Set<HttpSender> requestors = new HashSet<>();
+    private CloseableHttpAsyncClient httpClient;
+    private Set<HttpSender> requestors = new HashSet<>();    
 
-    private HttpClientWrapper() {
+    HttpClientWrapper() {
 
     }
 
-    public static synchronized void releaseClient(HttpSender requestor) {
+    public synchronized void releaseClient(HttpSender requestor) {
            
          if (requestors.size() == 0) {
              throw new IllegalStateException("Illegal attempt to release http client, but http client is already closed.");
@@ -49,13 +49,13 @@ public class HttpClientWrapper {
         }
     }
 
-    public static synchronized CloseableHttpAsyncClient getClient(
+    public synchronized CloseableHttpAsyncClient getClient(
             HttpSender requestor, boolean disableCertificateValidation,
-            String cert, String host) {
+            String cert) {
         if (requestors.isEmpty()) {
             try {
                 httpClient = new HttpClientFactory(disableCertificateValidation,
-                        cert, host, requestor).build();
+                        cert, requestor.getSslHostname(), requestor).build();
                 httpClient.start();              
             } catch (Exception ex) {
                 throw new RuntimeException(ex.getMessage(), ex);

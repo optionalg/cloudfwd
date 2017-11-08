@@ -211,7 +211,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   public synchronized void start() {
     // attempt to create and start an http client
     try {
-        this.httpClient = HttpClientWrapper.getClient(this, disableCertificateValidation,cert, host);
+        this.httpClient = HttpClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation,cert);
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
@@ -239,7 +239,8 @@ public final class HttpSender implements Endpoints, CookieClient {
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-        HttpClientWrapper.releaseClient(this);
+        //HttpClientWrapper.releaseClient(this);
+         HttpClientHostMapper.getClientWrapper(this).releaseClient(this);
         httpClient = null;
     }
   }
@@ -530,6 +531,10 @@ public final class HttpSender implements Endpoints, CookieClient {
             }            
         };//end runnable
         ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
+    }
+    
+    public String getSslHostname(){
+        return this.host;
     }
   
 }
