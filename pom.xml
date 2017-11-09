@@ -193,6 +193,7 @@
                         <exclude>**/CreateConnectionUnknownHostTest.java</exclude>
                         <exclude>**/CreateConnectionNoRouteToHost.java</exclude>
                         <exclude>**/ExceptionConnInstantiationTest.java</exclude>
+                        <exclude>**/NonStickyDetectionTest.java</exclude>
                         <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
                         <exclude>**/WatchdogChannelKillerTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
                     </excludes>
