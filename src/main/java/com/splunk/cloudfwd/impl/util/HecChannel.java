@@ -132,7 +132,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     setupReaper();
     setupDeadChannelDetector();
     setupAckPoller();
-    this.sender.getHecIOManager().preflightCheck();
+    new Thread(()->{
+        try {
+            this.sender.getHecIOManager().preflightCheck();
+        } catch (InterruptedException e){
+            LOG.warn("Preflight check interrupted on channel {}", this);
+        }
+    }, "preflight check on channel " + this).start();
     started = true;
   }
 
