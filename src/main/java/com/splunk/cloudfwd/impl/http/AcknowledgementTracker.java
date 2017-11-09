@@ -67,16 +67,6 @@ public class AcknowledgementTracker implements EventTracker {
       if(null != e.getAckId()){
             polledAcksByAckId.remove(e.getAckId());
       }
-      //hunt for it in the polledAcks
-      /*
-      for (Iterator<Map.Entry<Long, EventBatchImpl>> it = polledAcksByAckId.entrySet().
-              iterator(); it.hasNext();) {
-        Map.Entry<Long, EventBatchImpl> entry = it.next();
-        if (e.getId() == entry.getValue().getId()) {
-          it.remove();         
-        }
-      }
-      */
   }
 
   /**
@@ -95,11 +85,6 @@ public class AcknowledgementTracker implements EventTracker {
 
   public void preEventPost(EventBatchImpl events) {
     events.registerEventTracker(this);
-    /*
-    if (null != this.eventBatches.put(events.getId(), events)) {
-      throwIllegalStateException(events);
-    }  
-    */
   }
 
 

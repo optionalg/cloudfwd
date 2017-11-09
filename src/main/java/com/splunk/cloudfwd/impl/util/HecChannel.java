@@ -440,7 +440,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //may also kick in and try to close the channel. But it can't. Because its blocked if this method is synchronized. But this 
   //method would be blocked on awaitTermination waiting for that *very* ChannelDeathChecker thread to terminate. Deadlock.
   private void cancelTasks() {
-    LOG.trace("closing executors on  {}", this);
+    LOG.trace("cancelling tasks on  {}", this);
+    killAckTracker(); //don't care about any acks that might arrive at this point
     
     sender.getHecIOManager().close(); //shutdown ack and health polling
     sender.abortPreflightAndHealthcheckRequests(); //if any ack and health poll are in flight, abort them
@@ -466,6 +467,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       deadChannelDetector.close(); 
     }
 
+  }
+  
+    /**
+     * When called, the channel will ignore any in-flight ack poll responses that might arrive.
+     */
+    public void killAckTracker(){
+      getSender().getHecIOManager().getAcknowledgementTracker().kill();
   }
 
   /**

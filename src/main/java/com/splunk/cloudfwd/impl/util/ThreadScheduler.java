@@ -36,7 +36,6 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class ThreadScheduler {
 
-  //private Logger LOG = LoggerFactory.getLogger(ThreadScheduler.class.getName());
   private static final ConcurrentMap<String, ScheduledThreadPoolExecutor> schedulers = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, ExecutorService> executors = new ConcurrentHashMap<>(); 
   private static final List<ExecutorService> dedicatedSingleThreadExecutors = new ArrayList<>();
@@ -51,7 +50,6 @@ public class ThreadScheduler {
 public synchronized  static ExecutorService getDedicatedSingleThreadExecutor(String name){
        ThreadFactory f = (Runnable r) -> {
                 Thread t =  new Thread(r, name);  
-                //t.setPriority(Thread.NORM_PRIORITY+1);
                 return t;
             };          
         ExecutorService x = Executors.newSingleThreadExecutor(f);
@@ -95,7 +93,6 @@ public synchronized  static ExecutorService getDedicatedSingleThreadExecutor(Str
         return executors.computeIfAbsent(name, k->{
             ThreadFactory f = (Runnable r) -> {
                 Thread t =  new Thread(r, name);  
-                //t.setPriority(Thread.NORM_PRIORITY+1);
                 return t;
             };          
             //NOTE - the selection of a fair synchronouse queue is intentional. In particulat, the behavior of a LinkedBlockingQueue
