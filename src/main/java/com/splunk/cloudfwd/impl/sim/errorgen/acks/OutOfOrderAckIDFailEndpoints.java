@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.acks;
 
-import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.sim.AcknowledgementEndpoint;
@@ -37,39 +36,12 @@ public class OutOfOrderAckIDFailEndpoints extends SimulatedHECEndpoints {
   public static void toggleFail(boolean forceFail) {
     fail = forceFail;
   }
-/*  
-  @Override
-  public void pollAcks(HecIOManager ackMgr,
-          FutureCallback<HttpResponse> httpCallback) {
-    if (fail) {
-      System.out.println("/health rest endpoint returns 404 on detention");
-      ((HttpCallbacksAbstract)httpCallback).completed(
-              "Not Found",
-              404);
-    }
-    else {
-      this.ackEndpoint.pollAcks(ackMgr, httpCallback);
-    }
-  }
 
-  @Override
-  public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    if (fail) {
-      System.out.println("/health rest endpoint returns 404 on detention");
-      ((HttpCallbacksAbstract) httpCallback).completed(
-              "Not Found",
-              404);
-    }
-    else {
-      this.healthEndpoint.pollHealth(httpCallback);
-    }
-  }
-*/
   @Override
   public void postEvents(HttpPostable events,
           FutureCallback<HttpResponse> httpCallback) {
     if (fail) {
-      System.out.println("/event rest endpoint returns 404 on detention");
+      LOG.debug("/event rest endpoint returns 404 on detention");
       ((HttpCallbacksAbstract) httpCallback).completed(
               "Not Found",
               404);
