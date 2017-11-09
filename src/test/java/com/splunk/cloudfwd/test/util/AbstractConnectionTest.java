@@ -107,6 +107,7 @@ public abstract class AbstractConnectionTest {
       }catch(Exception e){
           didThrow = true;
           if(!connectionInstantiationShouldFail()){
+            e.printStackTrace();
               Assert.fail("Connection instantiation should not have failed, but it did: " +e);
           }else{
               if(! isExpectedConnInstantiationException(e)){

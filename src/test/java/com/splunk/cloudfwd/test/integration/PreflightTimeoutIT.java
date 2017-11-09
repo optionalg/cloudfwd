@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by eprokop on 11/3/17.
  */
-public class CreateConnectionUnresponsiveUrlIT extends AbstractConnectionTest {
+public class PreflightTimeoutIT extends AbstractConnectionTest {
     @Test
     public void unresponsiveUrlTest() throws InterruptedException {
         super.sendEvents();
@@ -26,7 +26,7 @@ public class CreateConnectionUnresponsiveUrlIT extends AbstractConnectionTest {
         p.setProperty(PropertyKeys.MOCK_HTTP_KEY, "false");
         p.setProperty(PropertyKeys.RETRIES, "3");
         p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
-        // TODO: add a preflight timeout property
+        p.setProperty(PropertyKeys.PREFLIGHT_TIMEOUT_MS, "5000");
         return p;
     }
     
@@ -54,7 +54,7 @@ public class CreateConnectionUnresponsiveUrlIT extends AbstractConnectionTest {
         return new BasicCallbacks(getNumEventsToSend()) {
             @Override
             public void await(long timeout, TimeUnit u) throws InterruptedException {
-                // don't need to wait for anything
+                // don't need to wait for anything since we don't get a failed callback
             }
         };
     }

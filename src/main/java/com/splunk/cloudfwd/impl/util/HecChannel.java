@@ -102,7 +102,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      * @return
      */
     public HecHealthImpl getHealth() {
-        if(!health.await(5, TimeUnit.MINUTES)){
+        if(!health.await(getConnetionSettings().getPreFlightTimeout(), TimeUnit.MILLISECONDS)){
             preFlightTimeout();
         }
         return health;
@@ -128,7 +128,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (started) {
       return;
     }
-    // do this setup before the preflight check so they don't get interrupted while executing after a slow preflight 
+    // do this setup before the preflight check so they don't get interrupted while executing after a slow preflight
     setupReaper();
     setupDeadChannelDetector();
     setupAckPoller();
@@ -159,7 +159,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
             reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
-            long decomTime = (long) (decomMs * Math.random());
+            long decomTime = (long) (decomMs * (Math.random() + 1));
             reaperScheduler.schedule(() -> {
                 LOG.info("decommissioning channel (channel_decom_ms={}): {}",
                         decomMs, HecChannel.this);
