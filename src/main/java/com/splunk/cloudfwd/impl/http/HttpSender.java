@@ -508,6 +508,7 @@ public final class HttpSender implements Endpoints, CookieClient {
                     this.cookie = cookie; //record the new cookie so that subsequent same cookies don't try to resend again                    
                     LOG.warn("replacing channel, resending events, and killing {}",
                             getChannel());
+                    getAcknowledgementTracker().kill();
                     getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
                     resendEvents(); //will ultimately result in this channel getting killed
                 }

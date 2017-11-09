@@ -47,12 +47,21 @@ public class AcknowledgementTracker implements EventTracker {
   private final Map<Long, EventBatchImpl> polledAcksByAckId = new ConcurrentHashMap<>(); //key ackID
  // private final Map<Long, EventBatchImpl> polledAcksByEvent = new ConcurrentHashMap<>(); //key ackID
   //private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
-  private final HttpSender sender;
-
+  private final HttpSender sender; 
+  private volatile boolean dead;
+  
   AcknowledgementTracker(HttpSender sender) {
     this.sender = sender;
   }
 
+    /**
+     * When a session cookie violation occurs, the ack tracker needs to be immediately killed
+     */
+    public void kill(){
+        this.polledAcksByAckId.clear();
+        dead = true;
+    }
+    
   @Override
   public void cancel(EventBatchImpl e) {
       if(null != e.getAckId()){
@@ -96,11 +105,17 @@ public class AcknowledgementTracker implements EventTracker {
 
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatchImpl events) {
+      if(dead){
+          return;
+      }
     Long ackId = epr.getAckId();
     polledAcksByAckId.put(ackId, events);
   }
 
   public void handleAckPollResponse(AckPollResponseValueObject apr) {
+    if(dead){
+        return;
+    }
     EventBatchImpl events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();

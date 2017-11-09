@@ -48,9 +48,9 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
             LOG.info("waiting for health poll to become unhealthy due to deleted token");
             try {
                 Thread.sleep(connection.getSettings().getHealthPollMS()*5); // give health poll enough time to update health
-                checkHealth();
+                checkHealthStatusInvalidToken();
                 LOG.info("restoring token");
-                restoreToken();                
+                restoreToken();     
             } catch (Exception e) {
                 this.assertionFailure = e.getMessage();
                 return;
@@ -76,6 +76,10 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         Assert.assertNotNull("Should receive exception on send.", e);
         LOG.info("waiting for token to be restored on server");
         tokenRestoredLatch.await();
+        while(!isTokenRestorationPickedUpByChannelHealthPolling()){
+            LOG.info("waiting for health poll to pickup token restoration");
+            Thread.sleep(500);
+        }        
         LOG.info("Token restored, sending more events...");
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
@@ -114,7 +118,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         }
     }
 
-    private void restoreToken() {
+    private void restoreToken() throws InterruptedException {
         Properties p = new Properties();
         LOG.info("Restoring token on server...");
         p.put(PropertyKeys.TOKEN, createTestToken("__singleline"));
@@ -131,10 +135,11 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
             LOG.error("TEST FAILED DUE TO " + e);
             this.assertionFailure = e.getMessage(); // should never happen in this test
         }
+        Thread.sleep(4000); //wait for channel healths to refresh
         tokenRestoredLatch.countDown();
     }
 
-    private void checkHealth() {
+    private void checkHealthStatusInvalidToken() {
         try {
             List<HecHealth> channelHealths = connection.getHealth();
             Assert.assertTrue(channelHealths.size() > 0);
@@ -147,6 +152,15 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         } catch(AssertionError e) {
             this.assertionFailure = e.getMessage();
         }
+    }
+    
+    private boolean isTokenRestorationPickedUpByChannelHealthPolling() {
+        List<HecHealth> channelHealths = connection.getHealth();
+        boolean allHealthy = true;
+        for (HecHealth h : channelHealths) {
+            allHealthy &= (h.isHealthy() & !h.isMisconfigured() && h.getStatus().getType() == LifecycleEvent.Type.HEALTH_POLL_OK);
+        }
+        return allHealthy;
     }
 
     @Override
