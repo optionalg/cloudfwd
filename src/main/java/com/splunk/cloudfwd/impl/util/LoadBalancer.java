@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -26,11 +27,11 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -136,26 +137,61 @@ public class LoadBalancer implements Closeable {
     }
     
     private void waitForPreflight() {
-        ExecutorService preflightExecutor = Executors.newFixedThreadPool(channels.size());
-        List<Callable<Void>> callables = new ArrayList<>();
+        List<HecChannel> channelsList = new ArrayList<>(channels.values()); // get a "snapshot" since decommissioning may kick in 
+        ExecutorService preflightExecutor = Executors.newFixedThreadPool(channelsList.size());
+        List<HecHealth> healths = new ArrayList<>();
+        List<Future<Void>> futures = new ArrayList<>();
         
-        this.channels.values().forEach((c) -> {
-            Callable<Void> r = () -> {
-                c.start();
-                c.getHealth(); // waits for preflight to complete
-                return null;
-            };
-            callables.add(r);
+        channelsList.forEach((c) -> {
+            futures.add(
+                preflightExecutor.submit(()->{
+                    c.start();
+                    return null;
+                })
+            );
+            healths.add(c.getHealthNonblocking());
         });
+        waitForOnePreflightSuccess(healths, futures, channelsList);
+    }
 
-        try {
-            // Waits up to "timeout" for ALL channel preflights to either complete or fail. 
-            // if this times out without all preflights completing, load balancer send logic will catch that no 
-            // channels are available and throw an exception
-            preflightExecutor.invokeAll(callables, 120, TimeUnit.SECONDS); // TODO: timeout should be much higher than this but not more than ack timeout to provide a clear idea of what's happening to cloudfwd user. make it configurable probably
-        } catch (InterruptedException e) {
-            LOG.error("Channel preflight checks interrupted");
-            // TODO: something else? 
+    /**
+     * Loop until either one preflight check passes, all preflight checks fail, or timeout is reached.
+     * If this times out without all preflights completing, load balancer send logic will catch that no
+     * channels are available and throw an exception on send.
+     */
+    private void waitForOnePreflightSuccess(List<HecHealth> healths, List<Future<Void>> futures, 
+            List<HecChannel> channelsList) {
+        long startMS = System.currentTimeMillis();
+        long timeoutMS = getConnection().getSettings().getPreFlightTimeout();
+        boolean preFlightPassed = false;
+        while (true) {
+            int numFailed = 0;
+            for (int i = 0; i < healths.size(); i++) {
+                HecHealth h = healths.get(i);
+                if (h.passedPreflight()) {
+                    preFlightPassed = true;
+                    break;
+                }
+                if (h.getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_FAILED) {
+                    numFailed++;
+                }
+            }
+            if (preFlightPassed || numFailed >= channelsList.size()) {
+                break; // one preflight passed or they all failed
+            }
+            if (System.currentTimeMillis() - startMS >= timeoutMS) {
+                // timeout reached
+                for (int i = 0; i < channelsList.size(); i++) {
+                    channelsList.get(i).preFlightTimeout();
+                    futures.get(i).cancel(true); // in case
+                }
+                break;
+            }
+            try {
+                Thread.sleep(100); // so we don't hog the cpu
+            } catch (InterruptedException e) {
+                LOG.warn("Sleep interrupted waiting for preflight");
+            }
         }
         
     }

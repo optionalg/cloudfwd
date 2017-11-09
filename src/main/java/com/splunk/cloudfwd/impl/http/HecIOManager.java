@@ -212,10 +212,7 @@ public class HecIOManager implements Closeable {
             LOG.warn(
                     "Preflight interrupted (possibly due to timeout) on channel {}.",
                     sender.getChannel());
-                    sender.getChannel().preFlightTimeout();
-               // don't throw exception here anymore since preflight may very well timeout from invokeAll
-               // let the load balancer handle the case where all preflights have failed
-//            throw ex;
+            // don't throw exception here since preflight may very well timeout 
         }
 
     }
