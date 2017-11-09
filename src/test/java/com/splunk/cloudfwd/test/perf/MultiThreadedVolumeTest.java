@@ -27,7 +27,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String MAX_THREADS_KEY = "max_threads";
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
-    private static final String NUM_SENDERS_KEY = "num_senders";    
+    private static final String NUM_SENDERS_KEY = "num_senders";   
+    private static final String LOGTYPE = "logtype";
     
     // defaults for CLI parameters
     static {
@@ -38,13 +39,13 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(NUM_SENDERS_KEY, "128"); //128 senders
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
+        cliProperties.put(LOGTYPE, null);
     }
     
     private int numSenderThreads = 128;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
-    private final String eventsFilename = "./many_text_events_no_timestamp.sample";
     private long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
@@ -98,15 +99,29 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         LOG.info("Test arguments: " + cliProperties 
             + " (token and url will be pulled from cloudfwd.properties if null)");
     }
+    
+    private String getEventsFilename() {
+        String logtype = cliProperties.get(LOGTYPE);
+        if (logtype.equals("cloudtrail_varied_newlines")) {
+            return "./cloudtrail_without_consistent_newlines.sample";
+        } else if (logtype.equals("cloudtrail")) {
+            return "./cloudtrail.sample";
+        } else if (logtype.equals("cloudwatch")) {
+            return "./cloudwatch.sample";
+        } else if (logtype.equals("vpcflowlog")) {
+            return "./vpcFlowLog.sample";
+        }
+        return "many_text_events_no_timestamp.sample";
+    }
 
     private void readEventsFile() {
         try {
-            URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
+            URL resource = getClass().getClassLoader().getResource(getEventsFilename()); // to use a file on classpath in resources folder.
             byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
             batchSizeMB = bytes.length / 1000000;
             buffer = ByteBuffer.wrap(bytes);
         } catch (Exception ex) {
-            Assert.fail("Problem reading file " + eventsFilename + ": " + ex.getMessage());
+            Assert.fail("Problem reading file " + getEventsFilename() + ": " + ex.getMessage());
         }
     }
 
