@@ -157,8 +157,12 @@ public abstract class AbstractConnectionTest {
   protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend());
     }
+    
+  protected void sendEvents() throws InterruptedException {
+     sendEvents(false);
+  }
 
-  protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
+  protected void sendEvents(boolean closeNow) throws InterruptedException, HecConnectionTimeoutException {
         int expected = getNumEventsToSend();
         if(expected <= 0){
             return;
@@ -180,7 +184,12 @@ public abstract class AbstractConnectionTest {
           LOG.warn("In Test caught exception on Connection.send(): {} with message {}", e, e.getMessage());
       }
       checkSendExceptions();
-      connection.close(); //will flush
+        
+      if (closeNow) {
+        connection.closeNow();
+      } else {
+        connection.close(); //will flush
+      }
 
       this.callbacks.await(10, TimeUnit.MINUTES);
       this.callbacks.checkFailures();
