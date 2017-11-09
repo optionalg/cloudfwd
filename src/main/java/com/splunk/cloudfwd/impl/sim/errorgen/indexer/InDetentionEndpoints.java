@@ -26,13 +26,16 @@ import com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simulate communicating with indexer in manual detention
  * @author meemax
  */
 public class InDetentionEndpoints extends SimulatedHECEndpoints {
-  @Override
+    private static final Logger LOG = LoggerFactory.getLogger(InDetentionEndpoints.class)
+;  @Override
   public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
     ((HttpCallbacksAbstract)httpCallback).completed(
         "Not Found",
@@ -57,7 +60,7 @@ public class InDetentionEndpoints extends SimulatedHECEndpoints {
   static class InDetentionAckEndpoint extends AckEndpoint {
     @Override
     public void pollAcks(HecIOManager ackMgr, FutureCallback<HttpResponse> cb) {
-      System.out.println("/ack rest endpoint returns 404 on detention");
+      LOG.debug("/ack rest endpoint returns 404 on detention");
       ((HttpCallbacksAbstract) cb).completed(
               "Not Found",
               404);
@@ -72,7 +75,7 @@ public class InDetentionEndpoints extends SimulatedHECEndpoints {
   static class InDetentionHealthEndpoint extends HealthEndpoint {
     @Override
     public void pollHealth(FutureCallback<HttpResponse> cb) {
-      System.out.println("/health rest endpoint returns 404 on detention");
+      LOG.debug("/health rest endpoint returns 404 on detention");
       ((HttpCallbacksAbstract) cb).completed(
               "Not Found",
               404);
@@ -82,7 +85,7 @@ public class InDetentionEndpoints extends SimulatedHECEndpoints {
   static class InDetentionEventEndpoint extends EventEndpoint {
     @Override
     public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
-      System.out.println("/event rest endpoint returns 404 on detention");
+      LOG.debug("/event rest endpoint returns 404 on detention");
       Runnable respond = () -> {
         ((HttpCallbacksAbstract) cb).completed(
             "Not Found",
