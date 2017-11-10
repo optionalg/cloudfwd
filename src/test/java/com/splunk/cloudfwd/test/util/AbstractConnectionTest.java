@@ -107,6 +107,7 @@ public abstract class AbstractConnectionTest {
       }catch(Exception e){
           didThrow = true;
           if(!connectionInstantiationShouldFail()){
+            e.printStackTrace();
               Assert.fail("Connection instantiation should not have failed, but it did: " +e);
           }else{
               if(! isExpectedConnInstantiationException(e)){
@@ -158,7 +159,7 @@ public abstract class AbstractConnectionTest {
         return new BasicCallbacks(getNumEventsToSend());
     }
 
-  protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
+  protected void sendEvents(boolean close) throws InterruptedException, HecConnectionTimeoutException {
         int expected = getNumEventsToSend();
         if(expected <= 0){
             return;
@@ -180,11 +181,18 @@ public abstract class AbstractConnectionTest {
           LOG.warn("In Test caught exception on Connection.send(): {} with message {}", e, e.getMessage());
       }
       checkSendExceptions();
-      connection.close(); //will flush
+      // optionally keep connection closed after 
+      if (close) {
+        connection.close(); //will flush
+      }
 
       this.callbacks.await(10, TimeUnit.MINUTES);
       this.callbacks.checkFailures();
       this.callbacks.checkWarnings();
+  }
+  
+  protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
+    sendEvents(true);
   }
 
   public void checkSendExceptions() {

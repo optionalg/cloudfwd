@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
+import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
@@ -43,6 +44,8 @@ import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
+
+import javax.net.ssl.SSLException;
 import java.util.List;
 
 /**
@@ -87,7 +90,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
     
     sender.setChannel(this);
-    start();
+//    start();
+  }
+  
+  public void preFlightTimeout() {
+      Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
+              HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT);
+      this.health.setStatus(new PreflightFailed(ex), false);
   }
 
     /**
@@ -96,10 +105,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      * @return
      */
     public HecHealthImpl getHealth() {
-        if(!health.await(5, TimeUnit.MINUTES)){
-         Exception ex = new HecConnectionStateException(this+ " timed out waiting for preflight check to respond.",
-                HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT);
-            this.health.setStatus(new PreflightFailed(ex), false);
+        if(!health.await(getConnetionSettings().getPreFlightTimeout(), TimeUnit.MILLISECONDS)){
+            preFlightTimeout();
         }
         return health;
     }
@@ -124,10 +131,17 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (started) {
       return;
     }
-    this.sender.getHecIOManager().preflightCheck();
+    // do this setup before the preflight check so they don't get interrupted while executing after a slow preflight
     setupReaper();
     setupDeadChannelDetector();
     setupAckPoller();
+    new Thread(()->{
+        try {
+            this.sender.getHecIOManager().preflightCheck();
+        } catch (InterruptedException e){
+            LOG.warn("Preflight check interrupted on channel {}", this);
+        }
+    }, "preflight check on channel " + this).start();
     started = true;
   }
 
@@ -154,7 +168,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
             reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
-            long decomTime = (long) (decomMs * Math.random());
+            long decomTime = (long) (decomMs * (Math.random() + 1));
             reaperScheduler.schedule(() -> {
                 LOG.info("decommissioning channel (channel_decom_ms={}): {}",
                         decomMs, HecChannel.this);
@@ -256,6 +270,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
+        if (e instanceof RequestFailed && e.getException() instanceof SSLException) {
+          LOG.warn("PreFlight on channel {} detected exception {}" +
+                  ", aborting PreFlight and update health", 
+                  this, e.getException());
+          updateHealth(new PreflightFailed(e.getException()), wasAvailable);
+          this.sender.abortPreflightAndHealthcheckRequests();
+          return;
+        }
         if (++preflightCount <= getSettings().getMaxPreflightRetries() && !closed && !quiesced) {
             //preflight resends must be decoupled
             Runnable r = () -> {

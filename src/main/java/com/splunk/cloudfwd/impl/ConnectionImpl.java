@@ -340,6 +340,7 @@ public class ConnectionImpl implements Connection {
         int _misconfigured=0;
         int _dead=0;
         int _decomissioned=0;
+        int _hasNotPassedPreflight=0;
         for(HecHealth h:channelHealths){
             if(h.isHealthy()){
                 _healthy++;
@@ -359,10 +360,13 @@ public class ConnectionImpl implements Connection {
             if(!h.getTimeSinceCloseFinished().isZero()){
                 _closed++;
             }
+            if(!h.passedPreflight()) {
+                _hasNotPassedPreflight++;
+            }
         }
         
-        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, healthy={}", 
-                channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _healthy);
+        LOG.info("LOAD BALANCER: channels={}, quiesced={}, decommed={}, dead={}, closed={}, misconfigured={}, passedPreflight={}, healthy={}", 
+                channelHealths.size(), _quiesced, _decomissioned, _dead, _closed, _misconfigured, _hasNotPassedPreflight, _healthy);
     }
 
 }
