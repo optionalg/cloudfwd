@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
+import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.ConnectionSettings;
@@ -43,6 +44,8 @@ import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
+
+import javax.net.ssl.SSLException;
 import java.util.List;
 
 /**
@@ -267,6 +270,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
+        if (e instanceof RequestFailed && e.getException() instanceof SSLException) {
+          LOG.warn("PreFlight on channel {} detected exception {}" +
+                  ", aborting PreFlight and update health", 
+                  this, e.getException());
+          updateHealth(new PreflightFailed(e.getException()), wasAvailable);
+          this.sender.abortPreflightAndHealthcheckRequests();
+          return;
+        }
         if (++preflightCount <= getSettings().getMaxPreflightRetries() && !closed && !quiesced) {
             //preflight resends must be decoupled
             Runnable r = () -> {
