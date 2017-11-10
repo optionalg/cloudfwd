@@ -171,7 +171,7 @@ public class LoadBalancer implements Closeable {
         long startMS = System.currentTimeMillis();
         long timeoutMS = getConnection().getSettings().getPreFlightTimeout();
         boolean preFlightPassed = false;
-        while (true) {
+        while (!Thread.interrupted()) {
             int numFailed = 0;
             for (int i = 0; i < healths.size(); i++) {
                 HecHealth h = healths.get(i);
@@ -198,6 +198,7 @@ public class LoadBalancer implements Closeable {
                 Thread.sleep(100); // so we don't hog the cpu
             } catch (InterruptedException e) {
                 LOG.warn("Sleep interrupted waiting for preflight");
+                break;
             }
         }
         
