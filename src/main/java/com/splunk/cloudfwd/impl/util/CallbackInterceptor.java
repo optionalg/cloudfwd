@@ -42,12 +42,11 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     @Override
     public void acknowledged(EventBatch events) {
         try {
+            ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
             callbacks.acknowledged(events);
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.acknowledged: " + e.getMessage());
             LOG.error(e.getMessage(), e);
-        } finally {
-            ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
         }
     }
 
@@ -58,15 +57,12 @@ public class CallbackInterceptor implements ConnectionCallbacks {
                 LOG.debug("Ignoring failed call on already failed events {}", events);
                 return;
             }
+            ((EventBatchImpl)events).setFailed(true);
+            ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
             this.callbacks.failed(events, ex);
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.failed: " + e.getMessage());
             LOG.error(e.getMessage(), e);
-        } finally {
-            if (null != events) {
-                ((EventBatchImpl)events).setFailed(true);
-                ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
-            }
         }
     }
 

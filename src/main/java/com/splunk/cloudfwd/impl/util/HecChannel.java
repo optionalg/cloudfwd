@@ -379,6 +379,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       Runnable r = ()->{
         try {
             loadBalancer.removeChannel(getChannelId(), true);
+            getSender().getAcknowledgementTracker().kill();
             this.channelMetrics.removeObserver(this);
             closeExecutors(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
             this.sender.close();

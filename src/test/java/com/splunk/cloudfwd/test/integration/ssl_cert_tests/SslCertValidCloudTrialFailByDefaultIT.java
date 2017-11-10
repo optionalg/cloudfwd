@@ -45,7 +45,7 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
    * SSLPeerUnverifiedException exception. 
    */
   public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(false);
+    super.sendEvents(false, false);
     List<HecHealth> healths = connection.getHealth();
     Assert.assertTrue(!healths.isEmpty());
     // we expect all channels to fail catching SSLHandshakeException in preflight

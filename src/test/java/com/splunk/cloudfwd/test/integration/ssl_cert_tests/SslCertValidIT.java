@@ -17,6 +17,8 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
+
+import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,7 +45,7 @@ public class SslCertValidIT extends AbstractConnectionTest {
   @Test
   public void getHealthCheckPass() throws InterruptedException, HecConnectionTimeoutException {
     List<HecHealth> healths = super.healthCheck();
-    int healthyCount = (int) healths.stream().filter(e->e.isHealthy()).count();
+    int healthyCount = (int) healths.stream().filter(HecHealth::isHealthy).count();
     String ssl_cert = this.connection.getSettings().getSSLCertContent();
     Assert.assertEquals("SSL cert expected to be empty, but got non-empty one: " + ssl_cert, ssl_cert, "");
     Assert.assertTrue("Expected to get at least one healthy channels, but got " 

@@ -25,6 +25,7 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -113,6 +114,12 @@ public class LoadBalancer implements Closeable {
         for (HecChannel c : this.staleChannels.values()) {
             c.forceClose();
         }
+        // fail all unacked events. Must close all channels first. If not, there is a possibility that events not yet 
+        // in the timeout checker make it into a channel between the time we fail everything in the timeout checker and
+        // the time we close the channels
+        Collection<EventBatchImpl> unacked = getConnection().getTimeoutChecker().getUnackedEvents();
+        unacked.forEach((e)->getConnection().getCallbacks().failed(e, new HecConnectionStateException(
+                "Connection closed with unacknowleged events remaining.", HecConnectionStateException.Type.CONNECTION_CLOSED)));
         this.closed = true;
     }
 
@@ -291,6 +298,9 @@ public class LoadBalancer implements Closeable {
                     values());
             if (channelsSnapshot.isEmpty()) {                
                 try {
+                    if (closed) {
+                        throw new HecConnectionStateException("No channels", HecConnectionStateException.Type.NO_HEC_CHANNELS);
+                    }
                     //if you don't sleep here, we will be in a hard loop and it locks out threads that are trying to add channels
                     //(This was observed through debugging).
                     LOG.warn("no channels in load balancer");

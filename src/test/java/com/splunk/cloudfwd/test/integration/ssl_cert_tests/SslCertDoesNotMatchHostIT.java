@@ -47,7 +47,7 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
    * SSLPeerUnverifiedException exception. 
    */
   public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(false);
+    super.sendEvents(false, false);
     List<HecHealth> healths = connection.getHealth();
     Assert.assertTrue(!healths.isEmpty());
     // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
