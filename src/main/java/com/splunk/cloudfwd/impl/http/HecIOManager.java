@@ -75,10 +75,11 @@ public class HecIOManager implements Closeable {
                 if (this.getAcknowledgementTracker().isEmpty()) {
                     LOG.trace("No acks to poll for");
                     return;
-                } else if (this.isAckPollInProgress()) {
-                    LOG.trace("skipping ack poll - already have one in flight");
-                    return;
-                }
+                } 
+//                else if (this.isAckPollInProgress()) {
+//                    LOG.trace("skipping ack poll - already have one in flight");
+//                    return;
+//                }
                 this.pollAcks();
             };
             ackPollController.start(poller,
