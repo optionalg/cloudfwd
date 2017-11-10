@@ -47,6 +47,8 @@ import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 
 import javax.net.ssl.SSLException;
 import java.util.List;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
  *
@@ -56,7 +58,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final Logger LOG;
   private final HttpSender sender;
   private final int full;
-  private ScheduledExecutorService reaperScheduler; //for scheduling self-removal/shutdown
+  private ScheduledThreadPoolExecutor reaperScheduler; //for scheduling self-removal/shutdown
+  private Future scheduledReap;
   private ScheduledExecutorService ackPollExecutor;
   private volatile boolean closed;
   private volatile boolean quiesced;
@@ -167,9 +170,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         ThreadFactory f = (Runnable r) -> new Thread(r, "Channel Reaper");
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
-            reaperScheduler = Executors.newSingleThreadScheduledExecutor(f);
-            long decomTime = (long) (decomMs * (Math.random() + 1));
-            reaperScheduler.schedule(() -> {
+            reaperScheduler = new ScheduledThreadPoolExecutor(1, f);//Executors.newSingleThreadScheduledExecutor(f);            
+            long decomTime = (long) (decomMs * Math.random());
+            scheduledReap = reaperScheduler.schedule(() -> {
                 LOG.info("decommissioning channel (channel_decom_ms={}): {}",
                         decomMs, HecChannel.this);
                 try {
@@ -368,9 +371,22 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       pollAcks(); //so we don't have to wait for the next ack polling interval
     }
   }
-
-  public synchronized void forceClose() { //wraps internalForceClose in a log messages
-    LOG.info("FORCE CLOSING CHANNEL  {}", getChannelId());
+    
+  synchronized void forceClose() { //wraps internalForceClose in a log messages
+    LOG.info("FORCE CLOSING CHANNEL  {}", getChannelId());    
+    if(null != scheduledReap){
+        scheduledReap.cancel(true);
+    }
+    if(null != reaperScheduler && !reaperScheduler.isTerminated()){
+      reaperScheduler.shutdownNow();
+      try{
+        if(!reaperScheduler.isTerminated() && !reaperScheduler.awaitTermination(10, TimeUnit.SECONDS)){
+            LOG.error("failed to terminate reaperScheduler.");
+        }
+      }catch(InterruptedException e){
+          LOG.error("AwaitTermination ofreaperScheduler interrupted.");
+      }
+    }
     interalForceClose();
   }
 
@@ -383,6 +399,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             this.channelMetrics.removeObserver(this);
             closeExecutors(); //make sure all the Excutors are terminated before closing sender (else get ConnectionClosedException)
             this.sender.close();
+            this.sender.abortPreflightAndHealthcheckRequests();             
             this.closeFinished = true;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);

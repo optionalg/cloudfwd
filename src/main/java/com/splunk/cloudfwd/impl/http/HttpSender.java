@@ -412,7 +412,7 @@ public final class HttpSender implements Endpoints, CookieClient {
       ackCheck.setEntity(entity);
       httpClient.execute(ackCheck, httpCallback);
     } catch (Exception ex) {
-      LOG.error(ex.getMessage());
+      LOG.error("Exception in checkAckEndpoint: {}",ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
