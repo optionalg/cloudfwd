@@ -372,7 +372,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
   }
     
-  synchronized void forceClose() { //wraps internalForceClose in a log messages
+  synchronized public void forceClose() { //wraps internalForceClose in a log messages
     LOG.info("FORCE CLOSING CHANNEL  {}", getChannelId());    
     if(null != scheduledReap){
         scheduledReap.cancel(true);
