@@ -445,15 +445,20 @@ public final class HttpSender implements Endpoints, CookieClient {
   }
 
   @Override
-  public void setSessionCookies(String cookies) {
-    if(null == cookie || cookie.isEmpty()){
+  public void setSessionCookies(String cookie) {
+    if (null == cookie || cookie.isEmpty()) {
       return;
     }
-    if(null != this.cookie && !this.cookie.equals(cookie)){
-      LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
-      LOG.warn("replacing channel, resending events, and killing {}", getChannel());
-      resendEvents();
-    }else{
+    if (null != this.cookie && !this.cookie.equals(cookie)) {
+      synchronized(this) {
+        LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
+        this.cookie = cookie;
+        LOG.warn("replacing channel, resending events, and killing {}", getChannel());
+        getAcknowledgementTracker().kill();
+        getChannel().close();
+        resendEvents();
+      }//end sync
+    } else {
       this.cookie = cookie;
     }
   }
@@ -464,14 +469,13 @@ public final class HttpSender implements Endpoints, CookieClient {
         HecChannel c = getChannel();
         LoadBalancer lb = getConnection().getLoadBalancer();
         lb.addChannelFromRandomlyChosenHost(); //to compensate for the channel we are about to smoke
-        c.resendInFlightEvents();
-        c.forceClose(); //smoke
         lb.removeChannel(c.getChannelId(), true); //bye bye
+        c.forceClose(); //smoke
+        c.resendInFlightEvents();
       } catch (Exception ex) {
         LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
       }
     };//end runnable
-    ExecutorService resender; 
     
     if (this.resenderExecutor == null) {
       ThreadFactory f = new ThreadFactory() {
