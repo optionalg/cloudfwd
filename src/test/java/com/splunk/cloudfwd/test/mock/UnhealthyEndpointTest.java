@@ -134,6 +134,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
                   "Message only blocked for " + blockedOnUnhealthyChannelTime + " ms. Expected at least 4000 ms.",
                   blockedOnUnhealthyChannelTime > sleepTime); //we must have blocked longer than the unhealthy time 
         }).start();
+        Thread.sleep(4000); //wait 4 sec before turning endpoint healthy (will keep message blocked in load balancer)
         TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll 
         Thread.sleep(sleepTime); //wait couple seconds to let channel become healthy ...        
         //...which will cause acknowledged to be invoked again, but then count will be 2 so test will end.
