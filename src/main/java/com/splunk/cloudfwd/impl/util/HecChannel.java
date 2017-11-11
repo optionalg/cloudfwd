@@ -300,8 +300,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
             String msg = this + " could not be started " + PropertyKeys.PREFLIGHT_RETRIES + "="
                     + getSettings().getMaxPreflightRetries() + " exceeded";
             LOG.warn(msg);
-            Exception ex = new HecMaxRetriesException(msg);
-            updateHealth(new PreflightFailed(ex), wasAvailable);
+            updateHealth(new PreflightFailed(e.getException()), wasAvailable);
         }
     }
   
