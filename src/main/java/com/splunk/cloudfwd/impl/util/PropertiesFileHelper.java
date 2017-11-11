@@ -56,6 +56,13 @@ public class PropertiesFileHelper extends ConnectionSettings {
     return createSender(props);
   }
 
+  public HttpSender createSender(String url, String host) {
+    Properties props = new Properties(defaultProps);
+    props.put(COLLECTOR_URI, url);
+    props.put(HOST, host);
+    return createSender(props);
+  }
+  
   private HttpSender createSender(Properties props) {
       // enable http client debugging
       if (enabledHttpDebug()) enableHttpDebug();
@@ -74,6 +81,13 @@ public class PropertiesFileHelper extends ConnectionSettings {
         try {
             //URLS for channel must be based on IP address not hostname since we
             //have many-to-one relationship between IP address and hostname via DNS records
+
+            // this is to support the creation of channels for socket addresses that are not resolvable
+            // so that they can get decomissioned and recreated at a later time, in case DNS recovers
+            if (s.getAddress() == null) {
+                return createSender(s.toString(), s.getHostName() + ":" + s.getPort());
+            }
+            
             String hostAddr = s.getAddress().getHostAddress();
             if (s.getAddress() instanceof Inet6Address) {
                 hostAddr = "[" + hostAddr + "]"; // java.net.URL requires braces for IPv6 host addresses
