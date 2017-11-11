@@ -102,12 +102,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     
     private String getEventsFilename() {
         String logtype = cliProperties.get(LOGTYPE);
-        if (logtype.equals("cloudtrail_varied_newlines")) {
-            return "./cloudtrail_without_consistent_newlines.sample";
-        } else if (logtype.equals("cloudtrail")) {
-            return "./cloudtrail.sample";
-        } else if (logtype.equals("cloudwatch")) {
-            return "./cloudwatch.sample";
+        if (logtype.equals("cloudtrail_unprocessed")) {
+            return "cloudtrail_via_cloudwatchevents_unprocessed.sample";
+        } else if (logtype.equals("cloudtrail_processed")) {
+            return "cloudtrail_modinputprocessed.sample";
+        } else if (logtype.equals("cloudwatch_events")) {
+            return "cloudwatchevents.sample";
         } else if (logtype.equals("vpcflowlog")) {
             return "./vpcFlowLog.sample";
         }
