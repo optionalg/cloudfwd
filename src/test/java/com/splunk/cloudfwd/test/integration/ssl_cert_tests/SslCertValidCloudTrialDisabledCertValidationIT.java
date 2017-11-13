@@ -22,7 +22,7 @@ import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLHandshakeException;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -30,53 +30,33 @@ import java.util.concurrent.TimeUnit;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
- * This test attempts to connect to ELB configured with a splunkcloud.com cert by 
- * AWS generated DNS name in amazonaws.com. Java ssl framework should fail to 
- * validate SSL connection, as provided hostname 
- * (kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com) is not in the same 
- * domain as splunkcloud.com SSL certificate. 
+ * Cloud>Trial is issued by a private Splunk certificate authority. For 
+ * security compliance we should fail it without additional configuration 
+ * provided. 
  * 
  * @author ssergeev
  */
-public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
+public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConnectionTest {
   
   @Test
   /**
-   * This test expects that send HecNoValidChannelsException will be thrown 
-   * during the send and validates that all channels became unhealthy caused by
-   * SSLPeerUnverifiedException exception. 
+   * This test makes sure that send doesn't throw an exception if Cert Validation is disabled 
    */
-  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(false, false);
-    List<HecHealth> healths = connection.getHealth();
-    Assert.assertTrue(!healths.isEmpty());
-    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
-    Assert.assertTrue(healths.stream()
-            .filter(e -> e.getStatus().getException() instanceof SSLPeerUnverifiedException)
-            .count() == healths.size());
+  public void sendEventSuccessfully() throws InterruptedException, HecConnectionTimeoutException {
+    super.sendEvents(true, false);
   }
   
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com:443");
-    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(DISABLE_CERT_VALIDATION, "false");
+    props.put(COLLECTOR_URI, "https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
+    props.put(TOKEN, "19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
+    props.put(DISABLE_CERT_VALIDATION, "true");
     props.put(MOCK_HTTP_KEY, "false");
+    props.put(CLOUD_SSL_CERT_CONTENT, "");
     return props;
   }
   
-  @Override
-  protected boolean shouldSendThrowException() {return true;}
-  
-  @Override
-  protected boolean isExpectedSendException(Exception e) {
-    if(e instanceof HecNoValidChannelsException) {
-      return true;
-    }
-    return false;
-  }
-
   @Override
   protected int getNumEventsToSend() {
     return 1;

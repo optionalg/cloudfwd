@@ -67,6 +67,9 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
   }
   
   @Override
+  protected boolean shouldSendThrowException() {return true;}
+  
+  @Override
   protected boolean isExpectedSendException(Exception e) {
     if(e instanceof HecNoValidChannelsException) {
       return true;
