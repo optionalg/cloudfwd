@@ -224,6 +224,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public class SenderWorker {      
         private boolean failed = false;
         private int workerNumber;
+        private Random random = new Random();
         
         public SenderWorker(int workerNum){
             this.workerNumber = workerNum;
@@ -247,7 +248,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
                                LOG.debug("Sender {}, about to wait", workerNumber);
                                 waitingSenders.put(eb.getId(), this);
-                                wait(500); //wait 500 ms //fixme 500ms does not work well
+                                wait(1000 + random.nextInt(2000)); //fixme find better timeout
                                 LOG.debug("Sender {}, waited 500ms", workerNumber);
                             }
                         }
