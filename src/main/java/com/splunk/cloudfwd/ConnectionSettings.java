@@ -28,6 +28,9 @@ import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_UNRESPONSIVE_MS;
 import static com.splunk.cloudfwd.PropertyKeys.HEALTH_POLL_MS;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
+import static com.splunk.cloudfwd.PropertyKeys.METRICS_ENABLED;
+import static com.splunk.cloudfwd.PropertyKeys.METRICS_TOKEN;
+import static com.splunk.cloudfwd.PropertyKeys.METRICS_URL;
 import static com.splunk.cloudfwd.PropertyKeys.MIN_HEALTH_POLL_MS;
 import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
 import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
@@ -125,6 +128,26 @@ public class ConnectionSettings {
             LOG.debug("{}, defaulting {} to {}", was, ACK_POLL_MS,interval);  
         }
         return interval;
+    }
+    
+    public boolean getMetricsEnabled() {
+        return Boolean.valueOf(defaultProps.getProperty(METRICS_ENABLED, "false")); // TODO: make this a default prop
+    }
+    
+    public String getMetricsUrl() {
+        String url = defaultProps.getProperty(METRICS_URL);
+        if (getMetricsEnabled() && StringUtils.isEmpty(url)) {
+            throw new HecMissingPropertiesException("Missing required key: " + METRICS_URL);
+        }
+        return url;
+    }
+
+    public String getMetricsToken() {
+        String token = defaultProps.getProperty(METRICS_TOKEN);
+        if (getMetricsEnabled() && StringUtils.isEmpty(token)) {
+            throw new HecMissingPropertiesException("Missing required key: " + METRICS_TOKEN);
+        }
+        return token;
     }
 
     public long getHealthPollMS() {

@@ -248,6 +248,12 @@ public class PropertyKeys {
    */
   public static final String CHANNEL_QUIESCE_TIMEOUT_MS = "channel_quiesce_timeout_ms";
   
+  public static final String METRICS_ENABLED = "metrics_enabled";
+    
+  public static final String METRICS_URL = "metrics_url";
+    
+  public static final String METRICS_TOKEN = "metrics_url";
+  
 
   /* **************************** REQUIRED KEYS ************************* */
 
