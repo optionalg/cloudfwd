@@ -44,7 +44,7 @@ public class SessionCookiesTest extends AbstractConnectionTest {
 
     @Override
     protected int getNumEventsToSend() {
-        return 100;
+        return 1000;
     }
 
     protected List<String> getChannelId(Connection connection) {
