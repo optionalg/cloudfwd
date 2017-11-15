@@ -41,6 +41,8 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
+import com.splunk.cloudfwd.metrics.Metric;
+import com.splunk.cloudfwd.metrics.MetricsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +65,7 @@ public class ConnectionImpl implements Connection {
   private boolean closed;
   private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
   private PropertiesFileHelper propertiesFileHelper;
+  private MetricsManager metrics;
   private boolean quiesced;
 
 
@@ -340,9 +343,22 @@ public class ConnectionImpl implements Connection {
             //throw whatever exception caused the first unhealthy channel to be unhealthy
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
-   }  
-
-
+   }
+   
+   public void emitMetric(Metric m) {
+       if (getSettings().getMetricsEnabled()) {
+           if (this.metrics == null) {
+               try {
+                   this.metrics = new MetricsManager(this, System.currentTimeMillis());
+               } catch (Exception ex) {
+                   LOG.warn("Could not instantiate MetricsManager on Connection {}", this);
+                   return;
+               }
+           }
+           this.metrics.emit(m);
+       }
+   }
+    
     private void logLBHealth() {
         List<HecHealth> channelHealths = lb.getHealthNonBlocking();
         int _preflightCompleted=0;
