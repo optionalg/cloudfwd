@@ -4,6 +4,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 import com.splunk.cloudfwd.ConnectionCallbacks;
@@ -40,10 +41,11 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected final CountDownLatch warnLatch;//if warnings are expected, this latch gates the test until it is released
   protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
-  private Comparable lastId;
+  private AtomicInteger failedCount = new AtomicInteger(0);
   protected String failMsg;
   protected Exception exception;
   protected Exception systemWarning;
+  protected AtomicInteger ackdEventCount = new AtomicInteger(0); //not Batch count...EVENT count
   
 
   public BasicCallbacks(int expected) {
@@ -113,31 +115,34 @@ public class BasicCallbacks implements ConnectionCallbacks {
         }
     }    
   
-  @Override
-  public void acknowledged(EventBatch events) {
-    //LOG.info("acked {}", events);
-    if (null != lastId && lastId.compareTo(events.getId()) >= 0) {
-      Assert.fail(
-              "checkpoints received out of order. " + lastId + " before " + events.
-              getId());
-    }
+    @Override
+    public void acknowledged(EventBatch events) {
+        //LOG.info("test saw ack for  {}", events);
 
-    if (!acknowledgedBatches.add(events.getId())) {
-      Assert.fail(
-              "Received duplicate acknowledgement for event batch:" + events.
-              getId());
-    }
+        int c = ackdEventCount.addAndGet(events.getNumEvents());
+        //LOG.info("expected ack count {}, current {}", expectedAckCount, ackdEventCount);
+        if (c == expectedAckCount) {
+            latch.countDown();
+        }
+
+        if (!acknowledgedBatches.add(events.getId())) {
+            Assert.fail(
+                    "Received duplicate acknowledgement for event batch:" + events.
+                    getId());
+        }
 
   }
 
   @Override
   public void failed(EventBatch events, Exception ex) {
-    failed = true;   
+    failed = true;
+    failedCount.incrementAndGet();
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
     exception = ex;
     if(!isExpectedFailureType(ex)){
-      ex.printStackTrace(); //print the stack trace if we were not expecting failure
+      //ex.printStackTrace(); //print the stack trace if we were not expecting failure
+      LOG.error(ex.getMessage());
     } else {
         LOG.info("Got expected failed exception: " + ex);
     }
@@ -154,7 +159,8 @@ public class BasicCallbacks implements ConnectionCallbacks {
                 getMessage();
         exception = ex;
         if(!isExpectedFailureType(ex)){
-          ex.printStackTrace(); //print the stack trace if we were not expecting failure
+          //ex.printStackTrace(); //print the stack trace if we were not expecting failure
+          LOG.error(ex.getMessage());
         }        
        failLatch .countDown();
     }
@@ -164,20 +170,22 @@ public class BasicCallbacks implements ConnectionCallbacks {
         LOG.warn("SYSTEM WARNING {}", ex.getMessage());
         this.systemWarning = ex;
         if(!isExpectedWarningType(ex)){
-            ex.printStackTrace();
+            //ex.printStackTrace();
+            LOG.error(ex.getMessage());
         }
         warnLatch.countDown();
     }  
 
   @Override
   public void checkpoint(EventBatch events) {
-    LOG.info("SUCCESS CHECKPOINT " + events.getId()); 
+    LOG.info("SUCCESS CHECKPOINT {}", events.getId()); 
     if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
       latch.countDown();
     }
   }
 
   public void await(long timeout, TimeUnit u) throws InterruptedException {
+    LOG.info("Started waiting for test latches");
     if(shouldFail() && !this.failLatch.await(timeout, u)){
         throw new RuntimeException("test timed out waiting on failLatch");
     }
@@ -188,6 +196,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
    if(!shouldFail() &&  !this.latch.await(timeout, u)){
         throw new RuntimeException("test timed out waiting on latch");
     }
+    LOG.info("finished waiting for tests latches");
   }
 
   /**
@@ -214,6 +223,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
   
   public Exception getWarning(){
       return systemWarning;
+  }
+
+  public Integer getFailedCount() {
+      return failedCount.get();
   }
 
 
