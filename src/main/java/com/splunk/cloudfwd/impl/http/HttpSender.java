@@ -21,8 +21,10 @@ import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
+import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -35,6 +37,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * This class performs the actually HTTP send to HEC
  * event collector.
  */
-public final class HttpSender implements Endpoints {
+public final class HttpSender implements Endpoints, CookieClient {
 
   // Default to SLF4J Logger, and set custom LoggerFactory when channel (and therefore Connection instance) is available
   private Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
@@ -66,7 +72,9 @@ public final class HttpSender implements Endpoints {
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
-  private final String baseUrl; 
+  private final String baseUrl;
+  private String cookie;
+  private ExecutorService resenderExecutor;
   //the following  posts/gets are used by health checks an preflight checks 
   private HttpPost ackCheck;
   private HttpGet healthEndpointCheck;
@@ -404,7 +412,7 @@ public final class HttpSender implements Endpoints {
       ackCheck.setEntity(entity);
       httpClient.execute(ackCheck, httpCallback);
     } catch (Exception ex) {
-      LOG.error(ex.getMessage());
+      LOG.error("Exception in checkAckEndpoint: {}",ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -435,5 +443,49 @@ public final class HttpSender implements Endpoints {
   public String getBaseUrl() {
     return baseUrl;
   }
-  
+
+  @Override
+  public void setSessionCookies(String cookie) {
+    if (null == cookie || cookie.isEmpty()) {
+      return;
+    }
+    if (null != this.cookie && !this.cookie.equals(cookie)) {
+      synchronized(this) {
+        LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
+        this.cookie = cookie;
+        LOG.warn("replacing channel, resending events, and killing {}", getChannel());
+        getAcknowledgementTracker().kill();
+        getChannel().close();
+        resendEvents();
+      }//end sync
+    } else {
+      this.cookie = cookie;
+    }
+  }
+
+  private void resendEvents(){
+    Runnable r = ()->{
+      try {
+        HecChannel c = getChannel();
+        LoadBalancer lb = getConnection().getLoadBalancer();
+        lb.addChannelFromRandomlyChosenHost(); //to compensate for the channel we are about to smoke
+        lb.removeChannel(c.getChannelId(), true); //bye bye
+        c.forceClose(); //smoke
+        c.resendInFlightEvents();
+      } catch (Exception ex) {
+        LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
+      }
+    };//end runnable
+    
+    if (this.resenderExecutor == null) {
+      ThreadFactory f = new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+          return new Thread(r, "event resender channel " + getChannel());
+        }
+      };
+      this.resenderExecutor = Executors.newSingleThreadExecutor(f);
+    }
+    this.resenderExecutor.execute(r);
+  }
 }

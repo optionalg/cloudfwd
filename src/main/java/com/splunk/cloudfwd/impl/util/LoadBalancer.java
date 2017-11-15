@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -24,10 +25,14 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import java.io.Closeable;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -109,6 +114,12 @@ public class LoadBalancer implements Closeable {
         for (HecChannel c : this.staleChannels.values()) {
             c.forceClose();
         }
+        // fail all unacked events. Must close all channels first. If not, there is a possibility that events not yet 
+        // in the timeout checker make it into a channel between the time we fail everything in the timeout checker and
+        // the time we close the channels
+        Collection<EventBatchImpl> unacked = getConnection().getTimeoutChecker().getUnackedEvents();
+        unacked.forEach((e)->getConnection().getCallbacks().failed(e, new HecConnectionStateException(
+                "Connection closed with unacknowleged events remaining.", HecConnectionStateException.Type.CONNECTION_CLOSED)));
         this.closed = true;
     }
 
@@ -121,7 +132,7 @@ public class LoadBalancer implements Closeable {
         for (int i = 0; i < channelsPerDestination; i++) {
             for (InetSocketAddress s : addrs) {
                 try {
-                    if(!addChannel(s, false)){
+                    if(addChannel(s, false) == null){
                         break; //reached MAX_TOTAL_CHANNELS
                     }
                 } catch (InterruptedException ex) {
@@ -129,15 +140,80 @@ public class LoadBalancer implements Closeable {
                 }
             }
         }
+        waitForPreflight();
+    }
+    
+    private void waitForPreflight() {
+        List<HecChannel> channelsList = new ArrayList<>(channels.values()); // get a "snapshot" since decommissioning may kick in 
+        ExecutorService preflightExecutor = Executors.newFixedThreadPool(channelsList.size());
+        List<HecHealth> healths = new ArrayList<>();
+        List<Future<Void>> futures = new ArrayList<>();
+        
+        channelsList.forEach((c) -> {
+            futures.add(
+                preflightExecutor.submit(()->{
+                    c.start();
+                    return null;
+                })
+            );
+            healths.add(c.getHealthNonblocking());
+        });
+        waitForOnePreflightSuccess(healths, futures, channelsList);
     }
 
-    void addChannelFromRandomlyChosenHost() throws InterruptedException {
+    /**
+     * Loop until either one preflight check passes, all preflight checks fail, or timeout is reached.
+     * If this times out without all preflights completing, load balancer send logic will catch that no
+     * channels are available and throw an exception on send.
+     */
+    private void waitForOnePreflightSuccess(List<HecHealth> healths, List<Future<Void>> futures, 
+            List<HecChannel> channelsList) {
+        long startMS = System.currentTimeMillis();
+        long timeoutMS = getConnection().getSettings().getPreFlightTimeout();
+        boolean preFlightPassed = false;
+        while (!Thread.interrupted()) {
+            int numFailed = 0;
+            for (int i = 0; i < healths.size(); i++) {
+                HecHealth h = healths.get(i);
+                if (h.passedPreflight()) {
+                    preFlightPassed = true;
+                    break;
+                }
+                if (h.getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_FAILED) {
+                    numFailed++;
+                }
+            }
+            if (preFlightPassed || numFailed >= channelsList.size()) {
+                break; // one preflight passed or they all failed
+            }
+            if (System.currentTimeMillis() - startMS >= timeoutMS) {
+                // timeout reached
+                for (int i = 0; i < channelsList.size(); i++) {
+                    channelsList.get(i).preFlightTimeout();
+                    futures.get(i).cancel(true); // in case
+                }
+                break;
+            }
+            try {
+                Thread.sleep(100); // so we don't hog the cpu
+            } catch (InterruptedException e) {
+                LOG.warn("Sleep interrupted waiting for preflight");
+                break;
+            }
+        }
+        
+    }
+
+    public void addChannelFromRandomlyChosenHost() throws InterruptedException {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
         LOG.debug("Adding channel for socket address  {}", addr);
-        addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
+        HecChannel channel = addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
+        if (channel != null) {
+            channel.start();
+        }
     }
 
-    private boolean addChannel(InetSocketAddress s, boolean force) throws InterruptedException {
+    private HecChannel addChannel(InetSocketAddress s, boolean force) throws InterruptedException {
         //sometimes we need to force add a channel. Specifically, when we are replacing a reaped channel
         //we must add a new one, before we cancelEventTrackers the old one. If we did not have the force
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
@@ -149,7 +225,7 @@ public class LoadBalancer implements Closeable {
             LOG.warn(
                     "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
                     getMaxTotalChannels() + ")");
-            return false;
+            return null;
         }
         HttpSender sender = this.connection.getPropertiesFileHelper().
                 createSender(s);
@@ -158,11 +234,11 @@ public class LoadBalancer implements Closeable {
         channel.getChannelMetrics().addObserver(this.checkpointManager);
         LOG.debug("Adding channel {}", channel);
         channels.put(channel.getChannelId(), channel);
-        return true;
+        return channel;
     }
 
     //also must not be synchronized
-    void removeChannel(String channelId, boolean force) {
+    public void removeChannel(String channelId, boolean force) {
         HecChannel c = this.channels.remove(channelId);
         if (c == null) {
             c = this.staleChannels.remove(channelId);
@@ -223,6 +299,9 @@ public class LoadBalancer implements Closeable {
                     values());
             if (channelsSnapshot.isEmpty()) {                
                 try {
+                    if (closed) {
+                        throw new HecConnectionStateException("No channels", HecConnectionStateException.Type.NO_HEC_CHANNELS);
+                    }
                     //if you don't sleep here, we will be in a hard loop and it locks out threads that are trying to add channels
                     //(This was observed through debugging).
                     LOG.warn("no channels in load balancer");
@@ -235,7 +314,7 @@ public class LoadBalancer implements Closeable {
             if (tryChannelSend(channelsSnapshot, events, resend)) {
                 break;
             }
-            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events);
+            waitIfSpinCountTooHigh(++spinCount, channelsSnapshot, events, resend);
             throwExceptionIfTimeout(startTime, events, resend);
         }
         return false;
@@ -291,7 +370,7 @@ public class LoadBalancer implements Closeable {
     }
 
     private void waitIfSpinCountTooHigh(int spinCount,
-            List<HecChannel> channelsSnapshot, EventBatchImpl events) throws HecNoValidChannelsException {
+            List<HecChannel> channelsSnapshot, EventBatchImpl events, boolean forced) throws HecNoValidChannelsException {
         if (spinCount % channelsSnapshot.size() == 0) {
             try {
                 latch = new CountDownLatch(1);
@@ -302,7 +381,7 @@ public class LoadBalancer implements Closeable {
                             //if we had no healthy channels, which is why we are here, it's possible tht we have no
                             //**valid** channels, which means every channel is returning an HecServerErrorResponse
                             //indicating misconfiguration of HEC
-                            checkForNoValidChannels(channelsSnapshot, events);
+                            checkForNoValidChannels(channelsSnapshot, events, forced);
                 }
                 latch = null;
                 //checkForNoValidChannels(channelsSnapshot, events);
@@ -315,15 +394,15 @@ public class LoadBalancer implements Closeable {
     }
 
     private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
-            EventBatchImpl events) throws HecNoValidChannelsException {
+            EventBatchImpl events, boolean forced) throws HecNoValidChannelsException {
 
         List<HecHealth> hecHealths = channelsSnapshot.stream().map(HecChannel::getHealth).collect(Collectors.toList());
-        if (hecHealths.stream().allMatch(HecHealth::isMisconfigured)) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
+        if (hecHealths.stream().allMatch((h) -> h.isMisconfigured() || !h.passedPreflight() )) { // channel is invalid due to bad token, acks disabled, not reachable, bad hostname, etc...)){
             String msg = "No valid channels available due to possible misconfiguration.";
             HecNoValidChannelsException ex = new HecNoValidChannelsException(
                 msg, hecHealths);
             LOG.error(msg, ex);
-            throw ex;
+            recoverAndThrowException(events, forced, ex); // removes event trackers
         }
     }
 

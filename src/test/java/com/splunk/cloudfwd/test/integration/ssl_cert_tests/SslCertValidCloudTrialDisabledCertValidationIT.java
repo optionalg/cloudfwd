@@ -16,35 +16,34 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
 
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
+import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
- * This test enables SSL Verification and attempts to instantiate connection
- * to a splunk>cloud trial single instance with a splunk>cloud issued SSL cert.
- * Cloudfwd should accept these certs in cloud.splunk.com domain with a public 
- * ssl key provided in default cloudfwd.properties file.  
+ * Cloud>Trial is issued by a private Splunk certificate authority. For 
+ * security compliance we should fail it without additional configuration 
+ * provided. 
  * 
  * @author ssergeev
  */
-public class SslCertValidCloudTrialIT extends AbstractConnectionTest {
+public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConnectionTest {
   
-  /* 
-   * setUp method in the base class instantiates connection, which blocks and 
-   * awaits for preflight to complete. Having at least one healthy channel 
-   * confirms that SSL connection was properly set up. 
-   */
   @Test
-  public void getHealthCheckPass() throws InterruptedException, HecConnectionTimeoutException {
-    List<HecHealth> healths = super.healthCheck();
-    int healthyCount = (int) healths.stream().filter(e->e.isHealthy()).count();
-    Assert.assertTrue("Expected to get at least one healthy channels, but got "
-            + healthyCount + ", health checks: " + healths, healthyCount > 0);
+  /**
+   * This test makes sure that send doesn't throw an exception if Cert Validation is disabled 
+   */
+  public void sendEventSuccessfully() throws InterruptedException, HecConnectionTimeoutException {
+    super.sendEvents(true, false);
   }
   
   @Override
@@ -52,14 +51,25 @@ public class SslCertValidCloudTrialIT extends AbstractConnectionTest {
     Properties props = new Properties();
     props.put(COLLECTOR_URI, "https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
     props.put(TOKEN, "19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
-    props.put(DISABLE_CERT_VALIDATION, "false");
+    props.put(DISABLE_CERT_VALIDATION, "true");
     props.put(MOCK_HTTP_KEY, "false");
+    props.put(CLOUD_SSL_CERT_CONTENT, "");
     return props;
   }
   
   @Override
   protected int getNumEventsToSend() {
-    return 0;
+    return 1;
   }
-
+  
+  @Override
+  protected BasicCallbacks getCallbacks() {
+    return new BasicCallbacks(getNumEventsToSend()) {
+      @Override
+      public void await(long timeout, TimeUnit u) throws InterruptedException {
+        // don't need to wait for anything since we don't get a failed callback
+      }
+    };
+  }
+  
 }

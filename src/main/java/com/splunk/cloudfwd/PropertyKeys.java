@@ -219,7 +219,16 @@ public class PropertyKeys {
    * The maximum number of attempts to try preflight checks
    * @see DEFAULT_RETRIES
    */
-  public static final String PREFLIGHT_RETRIES = "max_preflight_tries";  
+  public static final String PREFLIGHT_RETRIES = "max_preflight_tries";
+
+  /**
+   * The time to wait for channel preflight checks to complete. Preflight checks are run when a new channel is 
+   * created to make sure the channel is valid before sending data. 
+   * 
+   * @see DEFAULT_PREFLIGHT_TIMEOUT_MS
+   * @see CHANNELS_PER_DESTINATION
+   */
+  public static final String PREFLIGHT_TIMEOUT_MS = "preflight_timeout";
 
 
   /* **************************** REQUIRED KEYS ************************* */
@@ -329,6 +338,13 @@ public class PropertyKeys {
    * monotonically increasing IDs.
    */
   public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
+
+  /**
+   * Default value for the PREFLIGHT_TIMEOUT_MS property.
+   *
+   * @see PREFLIGHT_TIMEOUT_MS
+   */
+  public static final String DEFAULT_PREFLIGHT_TIMEOUT_MS = "60000"; // 1 minute
 
 
   /* **************************** LIMITS ************************* */
