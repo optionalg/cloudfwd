@@ -211,6 +211,17 @@ public class ConnectionSettings {
         }
         return timeout;
     }
+    
+    public long getPreFlightTimeout() {
+        long timeout = Long.parseLong(defaultProps.getProperty(
+                PropertyKeys.PREFLIGHT_TIMEOUT_MS,
+                PropertyKeys.DEFAULT_PREFLIGHT_TIMEOUT_MS));
+        if (timeout <= 0) {
+            throw new IllegalArgumentException(
+                    PropertyKeys.PREFLIGHT_TIMEOUT_MS + " must be greater than zero.");
+        }
+        return timeout;
+    }
 
     public long getBlockingTimeoutMS() {
         long timeout = Long.parseLong(defaultProps.getProperty(
@@ -379,7 +390,7 @@ public class ConnectionSettings {
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
                 connection.getCallbacks().systemError(e);
                 LOG.error(e.getMessage(), e);
-                throw e;
+//                throw e;
             }
         }
         urlList.sort(Comparator.comparing(URL::toString));

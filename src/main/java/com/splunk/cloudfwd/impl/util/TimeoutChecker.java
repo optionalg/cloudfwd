@@ -107,12 +107,12 @@ public class TimeoutChecker implements EventTracker {
                 events.setState(EVENT_TIMED_OUT);
                 //this is the one case were we cannot call failed() directly, but rather have to go directly (via unwrap)
                 //to the user-supplied callback. Otherwise we just loop back here over and over!
-                ((CallbackInterceptor) connection.getCallbacks()).unwrap().
+                ((CallbackInterceptor) connection.getCallbacks()).//unwrap().
                         failed(events,
                                 new HecAcknowledgmentTimeoutException(
                                         "EventBatch with id " + events.getId() + " timed out."));
-                events.setFailed(true);
-                iter.remove(); //remove it or else we will keep generating repeated timeout failures
+//                events.setFailed(true);
+//                iter.remove(); //remove it or else we will keep generating repeated timeout failures
             }
         }
     }
@@ -144,8 +144,9 @@ public class TimeoutChecker implements EventTracker {
     
     @Override
     public void cancel(EventBatchImpl events) {
-        this.eventBatches.remove(events.getId());
-        this.sizeInBytes.addAndGet(-1*events.getLength());
+        if(null != this.eventBatches.remove(events.getId())){
+            this.sizeInBytes.addAndGet(-1*events.getLength());
+        }
     }
 
     public List<EventBatchImpl> getUnackedEvents(HecChannel c) {

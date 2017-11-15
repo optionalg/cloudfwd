@@ -247,7 +247,16 @@ public class PropertyKeys {
    * @see DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS
    */
   public static final String CHANNEL_QUIESCE_TIMEOUT_MS = "channel_quiesce_timeout_ms";
-  
+
+  /**
+   * The time to wait for channel preflight checks to complete. Preflight checks are run when a new channel is 
+   * created to make sure the channel is valid before sending data. 
+   * 
+   * @see DEFAULT_PREFLIGHT_TIMEOUT_MS
+   * @see CHANNELS_PER_DESTINATION
+   */
+  public static final String PREFLIGHT_TIMEOUT_MS = "preflight_timeout";
+
 
   /* **************************** REQUIRED KEYS ************************* */
 
@@ -364,6 +373,13 @@ public class PropertyKeys {
    */
   public static final String DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS = "180000";
 
+
+  /**
+   * Default value for the PREFLIGHT_TIMEOUT_MS property.
+   *
+   * @see PREFLIGHT_TIMEOUT_MS
+   */
+  public static final String DEFAULT_PREFLIGHT_TIMEOUT_MS = "60000"; // 1 minute
 
 
   /* **************************** LIMITS ************************* */

@@ -32,7 +32,7 @@ import org.junit.Test;
  */
 /**
  *
- * @author ghendrey
+ * @author mescobar
  */
 public class OutOfOrderAckIdTest extends AbstractConnectionTest {
 

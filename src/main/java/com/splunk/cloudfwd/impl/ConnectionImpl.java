@@ -321,7 +321,7 @@ public class ConnectionImpl implements Connection {
 
     @Override
     public List<HecHealth> getHealth() {
-        return lb.getHealth();
+        return lb.getHealthNonBlocking();
     }
     
     private void throwExceptionIfNoChannelOK()  {

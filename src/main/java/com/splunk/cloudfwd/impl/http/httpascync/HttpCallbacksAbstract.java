@@ -73,9 +73,9 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
   }
-  
-  private void handleCookies(HttpResponse response){
-        Header[] headers = response.getHeaders("Set-Cookie");     
+
+    private void handleCookies(HttpResponse response){
+        Header[] headers = response.getHeaders("Set-Cookie");
         if(null == headers ){
             return;
         }
@@ -88,7 +88,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
             }
         }
         ((CookieClient) getSender()).setSessionCookies(buf.toString());
-  }
+    }
   
     /**
      * Cancelled is invoked when we abort HttpRequest in process of closing a channel. It is not indicative a problem.

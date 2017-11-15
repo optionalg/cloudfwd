@@ -81,7 +81,11 @@ public class HecConnectionStateException extends IllegalStateException {
          */
         NO_CALLBACKS_PROVIDED,
         /**
+<<<<<<< HEAD
          * Connection was closed and with unacknowledged events still in flight.
+=======
+         * Connection was closed with unacknowledged events still in flight.
+>>>>>>> ga-patches-merged
          */
         CONNECTION_CLOSED
     }

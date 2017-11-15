@@ -15,18 +15,19 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  */
 
 import com.splunk.cloudfwd.HecHealth;
-import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecMaxRetriesException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
+import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 
 /**
  * Cloud>Trial is issued by a private Splunk certificate authority. For 
@@ -39,11 +40,19 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
   
   @Test
   /**
-   * This method is just to trigger test. The interesting part happens in 
-   * setUp method of the base class. 
+   * This test expects that send HecNoValidChannelsException will be thrown 
+   * during the send and validates that all channels became unhealthy caused by
+   * SSLPeerUnverifiedException exception. 
    */
-  public void testConnectionInstantiationFailure() throws InterruptedException, HecConnectionTimeoutException {
-    return;
+  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
+    super.sendEvents(false, false);
+    List<HecHealth> healths = connection.getHealth();
+    Assert.assertTrue(!healths.isEmpty());
+    // we expect all channels to fail catching SSLHandshakeException in preflight
+    Assert.assertTrue(healths.stream()
+            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
+            .count() == healths.size());
+    connection.close();
   }
   
   @Override
@@ -58,26 +67,26 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
   }
   
   @Override
-  protected int getNumEventsToSend() {
-    return 0;
-  }
-  
-  @Override
-  protected boolean connectionInstantiationShouldFail() {
-    return true;
-  }
-  
-  @Override
-  protected boolean isExpectedConnInstantiationException(Exception e){
-    // Fixme this should be HecConnectionStateException
-    if (e instanceof HecMaxRetriesException) {
+  protected boolean isExpectedSendException(Exception e) {
+    if(e instanceof HecNoValidChannelsException) {
       return true;
     }
-//    LOG.info("Got ((HecConnectionStateException)e).getType(): {}, e.getMessage: {}", ((HecConnectionStateException)e).getType(), e.getMessage());
-//    if (e instanceof HecConnectionStateException) {
-//      return ((HecConnectionStateException)e).getType() == CONFIGURATION_EXCEPTION;
-//    }
     return false;
   }
-
+  
+  @Override
+  protected int getNumEventsToSend() {
+    return 1;
+  }
+  
+  @Override
+  protected BasicCallbacks getCallbacks() {
+    return new BasicCallbacks(getNumEventsToSend()) {
+      @Override
+      public void await(long timeout, TimeUnit u) throws InterruptedException {
+        // don't need to wait for anything since we don't get a failed callback
+      }
+    };
+  }
+  
 }

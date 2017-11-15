@@ -183,8 +183,19 @@
                     <argLine>${argLine}</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
                         <exclude>**/perf/*.java</exclude>
+                        <exclude>**/integration/CreateConnectionAcksDisabledIT.java</exclude>
+                        <exclude>**/integration/CreateConnectionInvalidTokenIT.java</exclude>
+                        <exclude>**/in_detention_tests/InDetentionAllTest.java</exclude>
+                        <!--exclude>**/health_check_tests/*.java</exclude-->
+                        <!--exclude>**/DownIndexersAllDownTest.java</exclude-->
+                        <!--exclude>**/hec_server_error_response_tests/HecServerErrorResponseInvalidTokenTest.java</exclude-->
+                        <!--exclude>**/hec_server_error_response_tests/HecServerErrorResponseAcksDisabledTest.java</exclude-->
+                        <exclude>**/CreateConnectionUnknownHostTest.java</exclude>
+                        <exclude>**/CreateConnectionNoRouteToHost.java</exclude>
+                        <exclude>**/ExceptionConnInstantiationTest.java</exclude>
                         <exclude>**/ConnectionSettingsTest.java</exclude> <!-- Sergey, this test needs to be fixed-->
-                        <exclude>**/NonStickyDetectionTest.java</exclude> <!-- no longer valid since we detect session violation by looking at cookies-->
+                        <!--exclude>**/SlideHighwaterOnFailTest.java</exclude-->       
+                        <!--exclude>**/Down*Test.java</exclude-->                                  
                     </excludes>
                 </configuration>
             </plugin>

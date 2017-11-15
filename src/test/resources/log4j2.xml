@@ -27,7 +27,7 @@ limitations under the License.
   </Appenders> 
   <Loggers>
     <Root level="info">
-      <AppenderRef ref="VerifyLogFile"/>
+      <AppenderRef ref="Console"/>
     </Root>
   </Loggers>
 </Configuration>

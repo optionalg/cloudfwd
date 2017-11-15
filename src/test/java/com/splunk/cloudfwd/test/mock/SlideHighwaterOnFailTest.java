@@ -44,7 +44,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
     
     @Override
     protected int getNumEventsToSend() {
-      return 10000;
+      return 2;
     }
 
     @Test
@@ -59,9 +59,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
     
     @Override
     protected boolean isExpectedSendException(Exception e) {
-      if (e instanceof HecConnectionTimeoutException)
-        return true;
-      return false;
+      return  e instanceof HecConnectionTimeoutException;
     }
 
     @Override

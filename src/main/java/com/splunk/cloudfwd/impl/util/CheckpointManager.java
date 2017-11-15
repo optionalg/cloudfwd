@@ -172,7 +172,7 @@ public class CheckpointManager implements LifecycleEventObserver {
         }
         //since highwater may have removed the key, we cant make any inference about correcteness based on whether the 
         //key was or was not still in the orderedEvents.
-        LOG.info("released checkpoint for id {}", id);
+        LOG.info("cancelled/removed checkpoint for id {}", id);
         this.orderedEvents.remove(id);
 //    
 //    LOG.trace("deregister event batch {} on {}", events.getId(), this.hashCode());
