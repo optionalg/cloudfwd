@@ -138,7 +138,7 @@ public class ConnectionImpl implements Connection {
     //Exception handler
     CountDownLatch latch = new CountDownLatch(1);
     new Thread(() -> {
-      lb.close(); //this blocks
+      lb.close(); 
       timeoutChecker.queisce();  
      //ThreadScheduler.shutdownNowAndAwaitTermination();      
       latch.countDown();
@@ -160,7 +160,7 @@ public class ConnectionImpl implements Connection {
     new Thread(() -> {
       lb.closeNow();
       timeoutChecker.closeNow();
-      ThreadScheduler.shutdownNowAndAwaitTermination();
+      //ThreadScheduler.shutdownNowAndAwaitTermination();
       latch.countDown();
     }, "Connection Closer").start();
     try {
