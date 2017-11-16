@@ -120,20 +120,21 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
     
     private void readEventsFile() {
+        byte[] bytes = new byte[0];
         try {
             URL resource = getClass().getClassLoader().getResource(getEventsFilename()); // to use a file on classpath in resources folder.
-            byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
-            int origByteSize = bytes.length;
-            buffer = ByteBuffer.allocate(batchSizeMB * 1024 * 1024 + 3000);
-            
-            // Make sure we send ~5MB batches, regardless of the size of the sample log file 
-            while (buffer.position() <= batchSizeMB * 1024 * 1024) {
-                System.out.println("******** BATCH SIZE 1.1: going to add " + origByteSize + " bytes");
-                buffer.put(bytes);
-                System.out.println("******** BATCH SIZE 2: current buffer size: " + buffer.position());
-            }
+            bytes = Files.readAllBytes(Paths.get(resource.getFile()));
         } catch (Exception ex) {
             Assert.fail("Problem reading file " + getEventsFilename() + ": " + ex.getMessage());
+        }
+        int origByteSize = bytes.length;
+        buffer = ByteBuffer.allocate(batchSizeMB * 1024 * 1024 + 3000);
+        
+        // Make sure we send ~5MB batches, regardless of the size of the sample log file 
+        while (buffer.position() <= batchSizeMB * 1024 * 1024) {
+            System.out.println("******** BATCH SIZE 1.1: going to add " + origByteSize + " bytes");
+            buffer.put(bytes);
+            System.out.println("******** BATCH SIZE 2: current buffer size: " + buffer.position());
         }
     }
 
