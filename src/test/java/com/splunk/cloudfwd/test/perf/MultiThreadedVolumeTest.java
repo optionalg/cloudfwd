@@ -113,7 +113,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             } else if (logtype.equals("cloudwatch_events")) {
                 return "cloudwatchevents.sample";
             } else if (logtype.equals("vpcflowlog")) {
-                return "./vpcFlowLog.sample";
+                return "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
             }
         }
         return "many_text_events_no_timestamp.sample";
