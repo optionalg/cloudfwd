@@ -6,6 +6,7 @@ import com.splunk.cloudfwd.error.HecConnectionStateException;
 import java.util.Properties;
 
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 
 /**
  * Scenario: Unknown host provided (no "good" URLs)
@@ -18,13 +19,13 @@ public class CreateConnectionUnknownHostTest extends ExceptionConnInstantiationT
     protected Properties getProps() {
         Properties props = new Properties();
         props.put(PropertyKeys.COLLECTOR_URI, "https://foobarunknownhostbaz:8088");
+        props.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.errorgen.unknownhost.UnknownHostEndpoints");
         return props;
     }
 
     protected boolean isExpectedConnInstantiationException(Exception e) {
-        if (e instanceof HecConnectionStateException) {
-            return ((HecConnectionStateException)e).getType() == CONFIGURATION_EXCEPTION
-                && e.getMessage().equals("Could not resolve any host names.");
+        if (e instanceof HecMaxRetriesException) {
+            return  e.getMessage().equals("Simulated UnknownHostException");
         }
         return false;
     }

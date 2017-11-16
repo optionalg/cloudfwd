@@ -26,7 +26,7 @@ limitations under the License.
 -    </Console>     
   </Appenders> 
   <Loggers>
-    <Root level="info">
+    <Root level="trace">
       <AppenderRef ref="Console"/>
     </Root>
   </Loggers>

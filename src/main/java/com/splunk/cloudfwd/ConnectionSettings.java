@@ -52,20 +52,20 @@ import org.slf4j.Logger;
 public class ConnectionSettings {
     protected final Logger LOG;
     protected Properties defaultProps = new Properties();
-    protected Properties overrides;
+    //protected Properties overrides;
     protected ConnectionImpl connection;
 
     public ConnectionSettings(Connection c, Properties overrides) {
-        this.overrides = overrides;
+        //this.overrides = overrides;
         this.connection = (ConnectionImpl)c;
         this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
-        this.parsePropertiesFile();
+        this.parsePropertiesFile(overrides);
     }
 
     public ConnectionSettings(Connection c) {
         this.connection = (ConnectionImpl)c;
         this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
-        this.parsePropertiesFile();
+        this.parsePropertiesFile(new Properties());
     }
 
     public void putProperty(String k, String v) {
@@ -389,8 +389,7 @@ public class ConnectionSettings {
                 HecConnectionStateException e = new HecConnectionStateException(msg,
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
                 connection.getCallbacks().systemError(e);
-                LOG.error(e.getMessage(), e);
-//                throw e;
+                LOG.error(msg);
             }
         }
         urlList.sort(Comparator.comparing(URL::toString));
@@ -501,12 +500,17 @@ public class ConnectionSettings {
    * @param urls comma-separated list of urls
    */
   public void setUrls(String urls) {
-    if (!urlsStringToList(urls).equals(
-            getUrls())) {
-      // a single url or a list of comma separated urls
+    if(!urls.equals(defaultProps.getProperty(PropertyKeys.COLLECTOR_URI))){
+       // a single url or a list of comma separated urls
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
       checkAndRefreshChannels();
     }
+//    if (!urlsStringToList(urls).equals(
+//            getUrls())) {
+//      // a single url or a list of comma separated urls
+//      putProperty(PropertyKeys.COLLECTOR_URI, urls);
+//      checkAndRefreshChannels();
+//    }
   }
 
   /**
@@ -563,7 +567,7 @@ public class ConnectionSettings {
     }
   
     // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.
-    private void parsePropertiesFile() {
+    private void parsePropertiesFile(Properties overrides) {
         try {
             InputStream is = getClass().getResourceAsStream("/cloudfwd.properties");
             if (is != null) {

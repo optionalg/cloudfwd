@@ -143,20 +143,30 @@ public class LoadBalancer implements Closeable {
     
     private void waitForPreflight() {
         List<HecChannel> channelsList = new ArrayList<>(channels.values()); // get a "snapshot" since decommissioning may kick in 
-        ExecutorService preflightExecutor = Executors.newFixedThreadPool(channelsList.size());
-        List<HecHealth> healths = new ArrayList<>();
-        List<Future<Void>> futures = new ArrayList<>();
+         //if urls have say, bad protocol, like "flort://host:port" then we cannot instantiate a channel and there is no point in doing 
+         //do because the channel instantiated with protocol "floort" is never going to recover until someone changes the protocol. 
+        if(channelsList.isEmpty()){
+            return;
+         }
         
-        channelsList.forEach((c) -> {
-            futures.add(
-                preflightExecutor.submit(()->{
-                    c.start();
-                    return null;
-                })
-            );
-            healths.add(c.getHealthNonblocking());
-        });
-        waitForOnePreflightSuccess(healths, futures, channelsList);
+        ExecutorService preflightExecutor = Executors.newFixedThreadPool(channelsList.size());
+        try{
+            List<HecHealth> healths = new ArrayList<>();
+            List<Future<Void>> futures = new ArrayList<>();
+
+            channelsList.forEach((c) -> {
+                futures.add(
+                    preflightExecutor.submit(()->{
+                        c.start();
+                        return null;
+                    })
+                );
+                healths.add(c.getHealthNonblocking());
+            });
+            waitForOnePreflightSuccess(healths, futures, channelsList);
+        }finally{
+            preflightExecutor.shutdownNow();
+        }
     }
 
     /**
@@ -427,7 +437,7 @@ public class LoadBalancer implements Closeable {
         for(HecChannel c:channelsSnapshot){
             HecHealth health = c.getHealth(); //this blocks until the health status has been set at  least once
             healths.add(health);
-            if(!health.isMisconfigured() || !health.passedPreflight()){ //the health *was* updated (status not null), and it's not misconfigured
+            if(!health.isMisconfigured() && health.passedPreflight() ){ //the health *was* updated (status not null), and it's not misconfigured
                 return; //bail, good to go
             }
         } 

@@ -99,8 +99,18 @@ public class IndexDiscoverer extends Observable {
         String msg = "Unknown host. " + url;
         HecConnectionStateException ex = new HecConnectionStateException(
                 msg, CONFIGURATION_EXCEPTION);
-        LOG.error(msg, ex);
+        LOG.error("{}", ex.getMessage());
         connection.getCallbacks().systemError(ex); //maybe should be systemWarning
+
+        // If we couldn't look up the host, create an InetSocketAddress anyway so that
+        // we can at least create a channel that will get decommissioned and recreated at a later time (even though
+        // this particular channel will never pass preflight checks and data will never be sent).
+        // This helps the Connection be more resilient in the face of shaky DNS resolution
+        InetSocketAddress sockAddr = new InetSocketAddress(url.getHost(), url.
+                getPort());
+        mappings.computeIfAbsent(url.toString(), k -> {
+          return new ArrayList<>();
+        }).add(sockAddr);
       }
     }
     if (mappings.isEmpty()) {

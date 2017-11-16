@@ -2,6 +2,8 @@ package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
@@ -32,22 +34,26 @@ public class PreflightTimeoutIT extends AbstractConnectionTest {
     
     @Override
     protected int getNumEventsToSend() {
-        return 1;
+        return 0;
     }
     
-    @Override
-    protected boolean shouldSendThrowException() {
-        return true;
-    }
-
-    @Override
-    protected boolean isExpectedSendException(Exception e) {
-        if (e instanceof HecNoValidChannelsException) {
-            HecNoValidChannelsException ex = (HecNoValidChannelsException) e;
-            return ex.getHecHealthList().stream().allMatch((h)->!h.passedPreflight());
+    protected boolean isExpectedConnInstantiationException(Exception e) {
+           if (e instanceof HecConnectionStateException) {
+            HecConnectionStateException ex = (HecConnectionStateException) e;
+            return ((HecConnectionStateException) e).getType()==CHANNEL_PREFLIGHT_TIMEOUT;
         }
         return false;
     }
+  
+    /**
+     * Override in test if your test wants Connection instantiation to fail
+     * @return
+     */
+    protected boolean connectionInstantiationShouldFail() {
+        return true;
+    }
+
+
     
     @Override
     protected BasicCallbacks getCallbacks() {

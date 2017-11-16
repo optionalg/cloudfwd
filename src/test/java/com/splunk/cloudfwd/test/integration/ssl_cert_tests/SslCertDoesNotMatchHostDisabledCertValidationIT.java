@@ -28,35 +28,24 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.error.HecConnectionStateException;
-import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT;
 
 /**
  * This test attempts to connect to ELB configured with a splunkcloud.com cert by 
  * AWS generated DNS name in amazonaws.com. Java ssl framework should fail to 
  * validate SSL connection, as provided hostname 
  * (kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com) is not in the same 
- * domain as splunkcloud.com SSL certificate. 
+ * domain as splunkcloud.com SSL certificate.
  * 
  * @author ssergeev
  */
-public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
+public class SslCertDoesNotMatchHostDisabledCertValidationIT extends AbstractConnectionTest {
   
   @Test
   /**
-   * This test expects that send HecNoValidChannelsException will be thrown 
-   * during the send and validates that all channels became unhealthy caused by
-   * SSLPeerUnverifiedException exception. 
+   * This test makes sure that send doesn't throw an exception if Cert Validation is disabled
    */
-  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-      //in current behavior, connection instantiation will fail, so there is nothing to do here
-//    super.sendEvents(false, false);
-//    List<HecHealth> healths = connection.getHealth();
-//    Assert.assertTrue(!healths.isEmpty());
-//    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
-//    Assert.assertTrue(healths.stream()
-//            .filter(e -> e.getStatus().getException() instanceof SSLPeerUnverifiedException)
-//            .count() == healths.size());
+  public void sendEventsSuccessfully() throws InterruptedException, HecConnectionTimeoutException {
+    super.sendEvents(true, false);
   }
   
   @Override
@@ -64,30 +53,16 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
     Properties props = new Properties();
     props.put(COLLECTOR_URI, "https://kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com:443");
     props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(DISABLE_CERT_VALIDATION, "false");
+    props.put(DISABLE_CERT_VALIDATION, "true");
     props.put(MOCK_HTTP_KEY, "false");
     return props;
   }
   
+  @Override
+  protected int getNumEventsToSend() {
+    return 1;
+  }
   
-      @Override
-    protected int getNumEventsToSend() {
-        return 0;
-    }
-    
-    protected boolean isExpectedConnInstantiationException(Exception e) {
-        return e.getCause() instanceof SSLPeerUnverifiedException;
-    }
-  
-    /**
-     * Override in test if your test wants Connection instantiation to fail
-     * @return
-     */
-    protected boolean connectionInstantiationShouldFail() {
-        return true;
-    }
-
-
   @Override
   protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumEventsToSend()) {

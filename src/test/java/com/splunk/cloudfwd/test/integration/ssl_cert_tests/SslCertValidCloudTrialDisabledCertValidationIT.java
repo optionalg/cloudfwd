@@ -36,23 +36,14 @@ import static com.splunk.cloudfwd.PropertyKeys.*;
  * 
  * @author ssergeev
  */
-public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTest {
+public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConnectionTest {
   
   @Test
   /**
-   * This test expects that send HecNoValidChannelsException will be thrown 
-   * during the send and validates that all channels became unhealthy caused by
-   * SSLPeerUnverifiedException exception. 
+   * This test makes sure that send doesn't throw an exception if Cert Validation is disabled 
    */
-  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(false, false);
-    List<HecHealth> healths = connection.getHealth();
-    Assert.assertTrue(!healths.isEmpty());
-    // we expect all channels to fail catching SSLHandshakeException in preflight
-    Assert.assertTrue(healths.stream()
-            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
-            .count() == healths.size());
-    connection.close();
+  public void sendEventSuccessfully() throws InterruptedException, HecConnectionTimeoutException {
+    super.sendEvents(true, false);
   }
   
   @Override
@@ -60,21 +51,10 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
     Properties props = new Properties();
     props.put(COLLECTOR_URI, "https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
     props.put(TOKEN, "19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
-    props.put(DISABLE_CERT_VALIDATION, "false");
+    props.put(DISABLE_CERT_VALIDATION, "true");
     props.put(MOCK_HTTP_KEY, "false");
     props.put(CLOUD_SSL_CERT_CONTENT, "");
     return props;
-  }
-  
-  @Override
-  protected boolean shouldSendThrowException() {return true;}
-  
-  @Override
-  protected boolean isExpectedSendException(Exception e) {
-    if(e instanceof HecNoValidChannelsException) {
-      return true;
-    }
-    return false;
   }
   
   @Override

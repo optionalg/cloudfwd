@@ -49,24 +49,12 @@ public class PropertiesFileHelper extends ConnectionSettings {
             MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
   }
 
-  /*
-    //FIXME TODO. THis needs to get OUT of the public API
-  public HttpSender createSender(URL url, String host) {
-      
-    this.connection.getSettings().setUrls(url.toString());
-    // Use splunk_hec_host if set else use the hostname
-    if (StringUtils.isEmpty(this.connection.getSettings().getHost())) {
-      this.connection.getSettings().setHost(host);
-    }
-    return createSender();
-  }
-*/
-
-  private HttpSender createSender(URL url, String sslHost) {
+  
+    private HttpSender createSender(String url, String sslHost) {
       // enable http client debugging
       if (enabledHttpDebug()) enableHttpDebug();
       String sslCert = getSSLCertContent();
-      HttpSender sender = new HttpSender(url.toString(), sslHost, this, isCertValidationDisabled(), sslCert);
+      HttpSender sender = new HttpSender(url, sslHost, this, isCertValidationDisabled(), sslCert);
       if(isMockHttp()){
         sender.setSimulatedEndpoints(getSimulatedEndpoints());
       }
@@ -75,6 +63,11 @@ public class PropertiesFileHelper extends ConnectionSettings {
   
     public HttpSender createSender(InetSocketAddress s) {
         try {
+            // this is to support the creation of channels for socket addresses that are not resolvable
+            // so that they can get decomissioned and recreated at a later time, in case DNS recovers
+            if (s.getAddress() == null) {
+                return createSender(s.toString(), s.getHostName() + ":" + s.getPort());
+            }            
             //URLS for channel must be based on IP address not hostname since we
             //have many-to-one relationship between IP address and hostname via DNS records
             String hostAddr = s.getAddress().getHostAddress();
@@ -89,12 +82,13 @@ public class PropertiesFileHelper extends ConnectionSettings {
             //https://tools.ietf.org/html/rfc7230#section-5.4
             String host = s.getHostName() + ":" + s.getPort();
 
-            return createSender(url, host);
+            return createSender(url.toString(), host);
         } catch (MalformedURLException ex) {
             LOG.error(ex.getMessage(), ex);
             throw new HecConnectionStateException(ex.getMessage(),
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
     }
+
 
 }
