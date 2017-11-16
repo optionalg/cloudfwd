@@ -41,6 +41,8 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
+import com.splunk.cloudfwd.metrics.ChannelDetailMetric;
+import com.splunk.cloudfwd.metrics.ChannelSummaryMetric;
 import com.splunk.cloudfwd.metrics.Metric;
 import com.splunk.cloudfwd.metrics.MetricsManager;
 import org.slf4j.Logger;
@@ -63,9 +65,10 @@ public class ConnectionImpl implements Connection {
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
   private boolean closed;
-  private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
-  private PropertiesFileHelper propertiesFileHelper;
+  protected EventBatchImpl events; //default EventBatchImpl used if send(event) is called
+  protected PropertiesFileHelper propertiesFileHelper;
   private MetricsManager metrics;
+  private long creationTime;
   private boolean quiesced;
 
 
@@ -94,6 +97,7 @@ public class ConnectionImpl implements Connection {
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
     throwExceptionIfNoChannelOK();
+    this.creationTime = System.currentTimeMillis();
   }
   
   /**
@@ -143,7 +147,8 @@ public class ConnectionImpl implements Connection {
     new Thread(() -> {
       lb.close(); 
       timeoutChecker.queisce();  
-     //ThreadScheduler.shutdownNowAndAwaitTermination();      
+     //ThreadScheduler.shutdownNowAndAwaitTermination();
+      metrics.deRegisterConnection();  
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -164,6 +169,7 @@ public class ConnectionImpl implements Connection {
       lb.closeNow();
       timeoutChecker.closeNow();
       //ThreadScheduler.shutdownNowAndAwaitTermination();
+      metrics.deRegisterConnection();
       latch.countDown();
     }, "Connection Closer").start();
     try {
@@ -346,7 +352,7 @@ public class ConnectionImpl implements Connection {
    }
    
    public void emitMetric(Metric m) {
-       if (getSettings().getMetricsEnabled()) {
+       if (getSettings().getMetricsEnabled() && !isClosed()) {
            if (this.metrics == null) {
                try {
                    this.metrics = new MetricsManager(this, System.currentTimeMillis());
@@ -357,6 +363,14 @@ public class ConnectionImpl implements Connection {
            }
            this.metrics.emit(m);
        }
+   }
+   
+   public long getNumChannels() {
+        return lb.getHealthNonBlocking().size();
+   }
+   
+   public long getAgeSeconds() {
+       return (System.currentTimeMillis() - this.creationTime) / 1000;
    }
     
     private void logLBHealth() {
@@ -371,39 +385,59 @@ public class ConnectionImpl implements Connection {
         int _dead=0;
         int _decomissioned=0;   
         int _available=0;
+        ChannelSummaryMetric channelSummary = new ChannelSummaryMetric(this);
+        
         for(HecHealth h:channelHealths){
+            ChannelDetailMetric m = new ChannelDetailMetric(this, h.getChannel());
+            
             LOG.trace("{}", h);
             if(h.getChannel().isPreflightCompleted()){
                 _preflightCompleted++;
+                m.setPreFlightCompleted(true);
             }
             if(h.isHealthy()){
                 _healthy++;
+                m.setHealthy(true);
             }
             if(h.getChannel().isAvailable()){
                 _available++;
+                m.setAvailable(true);
             }            
             if(h.isFull()){
                 _full++;
+                m.setFull(true);
             }            
             if(h.isMisconfigured()){
                 _misconfigured++;
+                m.setMisconfigured(true);
             }
             if(h.getChannel().isQuiesced()){
                 _quiesced++;
+                m.setQuiesced(true);
             }
             if(!h.getTimeSinceDeclaredDead().isZero()){
                 _dead++;
+                m.setDead(true);
             }
             if(!h.getTimeSinceDecomissioned().isZero()){
                 _decomissioned++;
+                m.setDecommissioned(true);
             }
             if(h.getChannel().isClosed()){
                 _closed++;
+                m.setClosed(true);
             }
             if(h.getChannel().isCloseFinished()){
                 _closedFinished++;
-            }            
+                m.setCloseFinished(true);
+            }
+            channelSummary.add(m);
         }
+        emitMetric(channelSummary);
+        
+//        if (getSettings().getMetricsEnabled()) {
+//            reportLBHealth();
+//        }
         
         LOG.debug("LOAD BALANCER: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
                 channelHealths.size(), _preflightCompleted ,_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);

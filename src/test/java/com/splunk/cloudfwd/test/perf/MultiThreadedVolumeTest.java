@@ -137,6 +137,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
         p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
         p.put(KEY_ENABLE_TEST_PROPERTIES, "false");
+        p.setProperty(PropertyKeys.METRICS_ENABLED, "true");
+        p.setProperty(PropertyKeys.METRICS_URL, "https://127.0.0.1:8088");
+        p.setProperty(PropertyKeys.METRICS_TOKEN, "1EDFC320-1368-47C8-A165-6F3846097A6B");
         return p;
     }
 

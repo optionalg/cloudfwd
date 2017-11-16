@@ -308,6 +308,11 @@ public class LoadBalancer implements Closeable {
             try {
                 latch = new CountDownLatch(1);
                 if (!latch.await(1, TimeUnit.SECONDS)) {
+                    if (Thread.currentThread().getName().equals("metric_sender")) {
+                        System.out.println(channelsSnapshot.get(0).isAvailable());
+                        System.out.println(channelsSnapshot.get(0).isFull());
+                        System.out.println("fuck");
+                    }
                     LOG.warn(
                             "Round-robin load balancer waited 1 second at spin count {}, channel idx {}, eventBatch {}",
                             spinCount, this.robin % channelsSnapshot.size(), events.getId());

@@ -19,6 +19,8 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObservable;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
+import com.splunk.cloudfwd.impl.util.HecChannel;
+import com.splunk.cloudfwd.metrics.ChannelEventMetric;
 import org.slf4j.Logger;
 
 /**
@@ -28,6 +30,7 @@ import org.slf4j.Logger;
 public class ChannelMetrics extends LifecycleEventObservable implements LifecycleEventObserver {
 
     private final Logger LOG;
+    private final HecChannel channel;
 
     /*
   private long eventPostCount;
@@ -45,13 +48,33 @@ public class ChannelMetrics extends LifecycleEventObservable implements Lifecycl
     // private long healthPollOKCount;
     // private long healthPollNotOKCount;
     // private long healthPollFailureCount;
-    public ChannelMetrics(ConnectionImpl c) {
+    public ChannelMetrics(ConnectionImpl c, HecChannel channel) {
         super(c);
+        this.channel = channel;
         this.LOG = c.getLogger(ChannelMetrics.class.getName());
     }
     
     @Override
     public void update(LifecycleEvent e) {
+        switch(e.getType()) {
+            // whitelist the types we want to track for metrics
+            case EVENT_POST_OK:
+            case ACK_POLL_OK:
+            case EVENT_POST_INDEXER_BUSY:
+            case INDEXER_BUSY:
+            case EVENT_POST_FAILED:
+            case EVENT_POST_NOT_OK:
+            case EVENT_POST_GATEWAY_TIMEOUT:
+            case GATEWAY_TIMEOUT:
+            case HEC_HTTP_400_ERROR:
+            case PREFLIGHT_OK:
+            case PREFLIGHT_FAILED:
+                connection.emitMetric(
+                    new ChannelEventMetric(connection, channel, e));
+                break;
+            default:
+                break;
+        }
         notifyObservers(e);
     }
 }

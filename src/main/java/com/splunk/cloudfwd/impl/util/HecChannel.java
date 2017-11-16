@@ -81,7 +81,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.loadBalancer = b;
     this.sender = sender;
     this.channelId = newChannelId();
-    this.channelMetrics = new ChannelMetrics(c);
+    this.channelMetrics = new ChannelMetrics(c, this);
     this.channelMetrics.addObserver(this);
     this.maxUnackedEvents = loadBalancer.getPropertiesFileHelper().
             getMaxUnackedEventBatchPerChannel();

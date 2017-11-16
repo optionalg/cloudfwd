@@ -252,7 +252,7 @@ public class PropertyKeys {
     
   public static final String METRICS_URL = "metrics_url";
     
-  public static final String METRICS_TOKEN = "metrics_url";
+  public static final String METRICS_TOKEN = "metrics_token";
   
 
   /* **************************** REQUIRED KEYS ************************* */

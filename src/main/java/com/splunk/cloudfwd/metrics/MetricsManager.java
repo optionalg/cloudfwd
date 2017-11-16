@@ -1,5 +1,6 @@
 package com.splunk.cloudfwd.metrics;
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.Events;
 import com.splunk.cloudfwd.RawEvent;
@@ -17,6 +18,7 @@ public class MetricsManager {
     private Long connectionBirthTime;
     private String url; // destination HEC url for metrics
     private String token;
+    private ConnectionImpl connection;
     
     public MetricsManager(ConnectionImpl c, long birthTime) {
         this.LOG = c.getLogger(MetricsManager.class.getName());
@@ -24,16 +26,22 @@ public class MetricsManager {
         this.connectionBirthTime = birthTime;
         this.url = c.getSettings().getMetricsUrl();
         this.token = c.getSettings().getMetricsToken();
+        this.connection = c;
+        MetricsAggregator.registerConnection(c);
     }
     
     public void emit(Metric metric) {
         metric.setUrl(this.url);
         metric.setToken(this.token);
-        metric.put(MetricKeys.CONNECTION_AGE, connectionBirthTime.toString());
-        metric.put(MetricKeys.CONNECTION_NAME, connectionName); // connection name
+//        metric.put(MetricKeys.CONNECTION_AGE, connectionBirthTime.toString());
+//        metric.put(MetricKeys.CONNECTION_NAME, connectionName); // connection name
         // aggregator will map it to JSON add an ID, and send it
-        if (MetricsAggregator.emit(metric) == 0) {
-            LOG.warn("Problem sending metric: " + metric);
-        }
+        MetricsAggregator.emit(metric);
+//            LOG.warn("Problem sending metric: " + metric);
+//        }
+    }
+    
+    public void deRegisterConnection() {
+        MetricsAggregator.deRegisterConnection(connection);
     }
 }
