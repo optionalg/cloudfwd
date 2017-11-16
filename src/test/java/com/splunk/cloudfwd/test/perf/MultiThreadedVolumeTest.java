@@ -1,8 +1,10 @@
 package com.splunk.cloudfwd.test.perf;
 
+import com.google.common.primitives.Bytes;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import org.apache.http.util.ByteArrayBuffer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -121,8 +123,19 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         try {
             URL resource = getClass().getClassLoader().getResource(getEventsFilename()); // to use a file on classpath in resources folder.
             byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
-            batchSizeMB = bytes.length / 1000000;
-            buffer = ByteBuffer.wrap(bytes);
+            int origByteSize = bytes.length;
+            ByteArrayBuffer mReadBuffer = new ByteArrayBuffer(0);
+            
+            System.out.println("******** BATCH SIZE 1: " + origByteSize);
+            // Make sure we send ~5MB batches, regardless of the size of the sample log file 
+            while (mReadBuffer.buffer().length < 5000000) {
+                System.out.println("******** BATCH SIZE 1.1: " + origByteSize);
+                mReadBuffer.append(bytes, 0, origByteSize);
+//                batchBytes = Bytes.concat(bytes, Files.readAllBytes(Paths.get(resource.getFile())));
+                System.out.println("******** BATCH SIZE 2: " + mReadBuffer.buffer().length);
+            }
+            batchSizeMB = mReadBuffer.buffer().length / 1000000;
+            buffer = ByteBuffer.wrap(mReadBuffer.buffer());
         } catch (Exception ex) {
             Assert.fail("Problem reading file " + getEventsFilename() + ": " + ex.getMessage());
         }
