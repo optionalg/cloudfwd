@@ -49,6 +49,7 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
    * SSLPeerUnverifiedException exception. 
    */
   public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
+      LOG.info("test: sendThrowsAndHealthContainsException");
       //in current behavior, connection instantiation will fail, so there is nothing to do here
 //    super.sendEvents(false, false);
 //    List<HecHealth> healths = connection.getHealth();

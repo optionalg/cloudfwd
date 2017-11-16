@@ -33,7 +33,7 @@ public class OnlyOnePreflightPassesIT extends AbstractReconciliationTest {
     protected Properties getProps() {
         Properties p = super.getProps();
         p.put(PropertyKeys.TOKEN, createTestToken(null));
-        p.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8088,https://kinesis4.splunkcloud.com:8088");  
+        p.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8088,https://kinesis4.splunkcloud.com:8088");  //two endpoints. The kinesis4 endpoint exsits, but isn't HEC endpoint (it's search head)
         p.setProperty(PropertyKeys.MOCK_HTTP_KEY, "false");
         p.setProperty(PropertyKeys.RETRIES, "3");
         p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "2");

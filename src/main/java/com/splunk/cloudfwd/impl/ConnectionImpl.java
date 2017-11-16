@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -324,13 +325,13 @@ public class ConnectionImpl implements Connection {
         return lb.getHealthNonBlocking();
     }
     
-    private void throwExceptionIfNoChannelOK()  {
-        List<HecHealth> healths = lb.getHealth(); //returns after every channel either has gotten its health or given up trying
+    private void throwExceptionIfNoChannelOK()  {      
+         List<HecHealth> healths = lb.getHealthNonBlocking(); 
         if(healths.isEmpty()){            
             throw new HecConnectionStateException("No HEC channels could be instatiated on Connection.",
                     HecConnectionStateException.Type.NO_HEC_CHANNELS);
-        }         
-        if(healths.stream().noneMatch(HecHealth::isHealthy)){   
+        }   
+        if(!lb.anyChannelOK(HecHealth::isHealthy)){   
             //FIXME TODO -- figure out how to close channels without getting ConnectionClosedException when 
             //no data has been sent through the channel yet
             //close all channels since none is healthy

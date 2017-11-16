@@ -16,7 +16,7 @@ limitations under the License.
 -->
 <Configuration status="info">
   <Appenders>
-    <!-- Do not enable %methof (performance killer) -->
+    <!-- Do not enable %method (performance killer) -->
     <RandomAccessFile name="VerifyLogFile" fileName="verify.log" immediateFlush="false" append="false">
       <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n"/>
     </RandomAccessFile>
@@ -26,8 +26,9 @@ limitations under the License.
 -    </Console>     
   </Appenders> 
   <Loggers>
-    <Root level="trace">
-      <AppenderRef ref="Console"/>
+    <Root level="info">
+      <AppenderRef ref="VerifyLogFile
+"/>
     </Root>
   </Loggers>
 </Configuration>

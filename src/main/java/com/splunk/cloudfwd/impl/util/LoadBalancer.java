@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import java.util.stream.Collectors;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
+import java.util.function.Predicate;
 
 /**
  *
@@ -422,25 +423,56 @@ public class LoadBalancer implements Closeable {
         }//while        
     }
 
-    private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
-            EventBatchImpl events, boolean forced) throws HecNoValidChannelsException {
+     /**
+     * Returns true if any channel deemed ok by the 'ok' function
+     * @param ok The function that returns true if the channel's health is OK
+     * @return true if any channels deemed healthy by the 'ok' function
+     */
+    public boolean anyChannelOK(Predicate<HecHealth> ok){
+        List<HecChannel> channelsSnapshot = new ArrayList<>();
+        channelsSnapshot.addAll(this.channels.values());
+        return anyChannelOK(channelsSnapshot, ok);
+    }
+    
+    /**
+     * Pass in a list of channels, and an function which will be used to check the health of a channel
+     * @param channelsSnapshot
+     * @param ok The function that returns true if the channel's health is OK
+     * @return true if all channels deemed healthy by the 'ok' function
+     */
+    private static boolean anyChannelOK(List<HecChannel> channelsSnapshot, Predicate<HecHealth> ok){
         //First, we run through all the channel's NONBLOCKING get health. This is an optimistic approach wherein if we
         //do find a single not-misconfigured channel then we are good to go
         for(HecChannel c:channelsSnapshot){
-            HecHealth health = c.getHealthNonblocking();
-            if(null != health.getStatus() && !health.isMisconfigured() && health.passedPreflight()  ){ //the health *was* updated (status not null), and it's not misconfigured
-                return; //bail, good to go
+            HecHealth health = c.getHealthNonblocking(); 
+            if(null != health.getStatus() && ok.test(health)){ 
+                return true; //bail, good to go
             }
         }
-        //If we are here then we *didn't* find a non-misconfigured channel
+        //If we are here then we *didn't* find any channel that passed the predicate on the optimistically aquired health
         List<HecHealth> healths = new ArrayList<>();
-        for(HecChannel c:channelsSnapshot){
+        for(HecChannel c:channelsSnapshot){ //...so now we need to pessimistically check health
             HecHealth health = c.getHealth(); //this blocks until the health status has been set at  least once
             healths.add(health);
-            if(!health.isMisconfigured() && health.passedPreflight() ){ //the health *was* updated (status not null), and it's not misconfigured
-                return; //bail, good to go
+            if(ok.test(health) ){ 
+                return true; //bail, good to go
             }
         } 
+        return false;
+    }
+    
+    //this method throws HecNoValidChannelsException if *all* the channels are misconfigured (non-200 HEC response)
+    private void checkForNoValidChannels(List<HecChannel> channelsSnapshot,
+            EventBatchImpl events, boolean forced) throws HecNoValidChannelsException {
+        //the 'ok' function determines if the channel health meets certain criterea, in this case 'not misconfigured, and has completedPreflight'
+        Predicate<HecHealth> ok = (h)->{
+            return !h.isMisconfigured() && h.passedPreflight();
+        };
+        if(anyChannelOK(channelsSnapshot, ok)){
+            return;
+        }
+        List<HecHealth> healths = new ArrayList<>();
+        channelsSnapshot.forEach(c->{healths.add(c.getHealthNonblocking());});
         
         String msg = "No valid channels available due to possible misconfiguration.";
         HecNoValidChannelsException ex = new HecNoValidChannelsException(
