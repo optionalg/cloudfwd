@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -143,7 +144,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         // Make sure we send ~5MB batches, regardless of the size of the sample log file 
         while (buffer.position() <= batchSizeMB * 1024 * 1024) {
             System.out.println("******** BATCH SIZE 1.1: going to add " + origByteSize + " bytes");
-            buffer.put(bytes);
+            try {
+                buffer.put(bytes);
+            } catch (BufferOverflowException e ) {
+                System.out.println("buffer overflowed - could not put bytes");
+                return;
+            }
             System.out.println("******** BATCH SIZE 2: current buffer size: " + buffer.position());
         }
     }
