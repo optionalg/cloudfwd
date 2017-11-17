@@ -110,8 +110,18 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 return "cloudtrail_via_cloudwatchevents_unprocessed.sample";
             } else if (logtype.equals("cloudtrail_processed")) {
                 return "cloudtrail_modinputprocessed.sample";
-            } else if (logtype.equals("cloudwatch_events")) {
-                return "cloudwatchevents.sample";
+            } else if (logtype.equals("cloudwatch_events_no_versionid")) {
+                // Events do not contain either version or id 
+                return "cloudwatchevents_awstrustedadvisor.sample";
+            } else if (logtype.equals("cloudwatch_events_versionid_mixed")) {
+                // Some events contain both version and id, while others just contain id
+                return "cloudwatchevents_ec2autoscale.sample";
+            } else if (logtype.equals("cloudwatch_events_versionid_short")) {
+                // Events contain both version and id, and are short in length
+                return "cloudwatchevents_codebuild.sample";
+            } else if (logtype.equals("cloudwatch_events_versionid_long")) {
+                // Events contain both version and id, and are long in length
+                return "cloudwatchevents_macie.sample";
             } else if (logtype.equals("vpcflowlog")) {
                 return "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
             }

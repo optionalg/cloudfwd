@@ -61,7 +61,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
     // filenames
     private String addOnFileName = "./Splunk_TA_aws-kinesis-firehose-0.9.3.spl";
     private String vpcFlowFileName = "cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
-    private String cloudwatchFileName = "cloudwatchevents.sample";
+    private String cloudwatchFileName = "cloudwatchevents_ec2autoscale.sample";
     private String cloudtrailFileName = "cloudtrail_modinputprocessed.sample";
 
     // expected fields
