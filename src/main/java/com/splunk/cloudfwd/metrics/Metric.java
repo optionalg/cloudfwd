@@ -8,9 +8,8 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 
 public abstract class Metric {
     private String type = setType();
-    private String url;
-    private String token;
-    private long time;
+    private String metricSinkUrl;
+    private String metricSinkToken;
     private String connection_name;
     private long connection_age_seconds;
     private String run_id;
@@ -22,7 +21,6 @@ public abstract class Metric {
     public Metric(ConnectionImpl c) {
         this.connection_name = c.toString();
         this.connection_age_seconds = c.getAgeSeconds();
-        this.time = System.currentTimeMillis();
     }
     
     protected abstract String setType();
@@ -31,28 +29,24 @@ public abstract class Metric {
 //        map.put(key, value);
 //    }
 
-    public String getUrl() {
-        return url;
+    public String getMetricSinkUrl() {
+        return metricSinkUrl;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public void setUrl(String metricSinkUrl) {
+        this.metricSinkUrl = metricSinkUrl;
     }
 
-    public String getToken() {
-        return token;
+    public String getMetricSinkToken() {
+        return metricSinkToken;
     }
 
-    public void setToken(String token) {
-        this.token = token;
+    public void setToken(String metricSinkToken) {
+        this.metricSinkToken = metricSinkToken;
     }
 
     public String getType() {
         return type;
-    }
-
-    public long getTime() {
-        return time;
     }
 
     public String getConnectionName() {

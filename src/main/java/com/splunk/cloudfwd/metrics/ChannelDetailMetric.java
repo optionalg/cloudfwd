@@ -1,5 +1,6 @@
 package com.splunk.cloudfwd.metrics;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 
@@ -29,7 +30,7 @@ public class ChannelDetailMetric extends Metric {
         return "channel_detail";
     }
 
-    public String getId() {
+    public String getChannelId() {
         return channel_id;
     }
 
@@ -123,6 +124,25 @@ public class ChannelDetailMetric extends Metric {
 
     public void setAvailable(boolean available) {
         this.available = available;
+    }
+    
+    // Override these so we don't include them when mapping to JSON
+    @Override
+    @JsonIgnore
+    public String getMetricSinkUrl() {
+        return "";
+    }
+
+    @Override
+    @JsonIgnore
+    public String getMetricSinkToken() {
+        return "";
+    }
+
+    @Override
+    @JsonIgnore
+    public String getRunId() {
+        return "";
     }
     
 }

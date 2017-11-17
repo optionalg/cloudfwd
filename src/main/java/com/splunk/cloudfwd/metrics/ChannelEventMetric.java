@@ -26,7 +26,7 @@ public class ChannelEventMetric extends Metric {
         return action;
     }
 
-    public String getId() {
+    public String getChannelId() {
         return channel_id;
     }
 }

@@ -73,7 +73,7 @@ public class MetricsAggregator {
             m.setRunId(run_id);
             sent = metricsConnection.send(RawEvent.fromObject(m, eventIdCounter.incrementAndGet()));
         } catch (IOException e) {
-            // no-op 
+            LOG.error("Couldn't send metric {}", m);
         }
         return sent;
     }
@@ -81,14 +81,14 @@ public class MetricsAggregator {
     private static void start() {
         executor = ThreadScheduler.getSharedSchedulerInstance("metrics_global_reporter");
         Runnable flushAndReportGlobalMetrics = () -> {
-            metricsConnection.flush();
             ConnectionsSummaryMetric csm = new ConnectionsSummaryMetric(startTime);
             connectionSet.forEach((c)-> {
                 csm.add(new ConnectionDetailMetric(c));
             });
             emit(csm);
+            metricsConnection.flush();
         };
-        executor.schedule(flushAndReportGlobalMetrics, 30, TimeUnit.SECONDS);
+        executor.scheduleWithFixedDelay(flushAndReportGlobalMetrics, 5, 30, TimeUnit.SECONDS);
     }
     
     private static void stop() {
@@ -97,8 +97,8 @@ public class MetricsAggregator {
     
     private static void initConnection(Metric m) {
         Properties p = new Properties();
-        p.setProperty(PropertyKeys.COLLECTOR_URI, m.getUrl());
-        p.setProperty(PropertyKeys.TOKEN, m.getToken());
+        p.setProperty(PropertyKeys.COLLECTOR_URI, m.getMetricSinkUrl());
+        p.setProperty(PropertyKeys.TOKEN, m.getMetricSinkToken());
         p.setProperty(PropertyKeys.ENABLE_CHECKPOINTS, "false");
         p.setProperty(PropertyKeys.METRICS_ENABLED, "false"); // we don't want metrics for the metrics
         p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
@@ -114,7 +114,7 @@ public class MetricsAggregator {
     }
 
     synchronized public static void deRegisterConnection(ConnectionImpl c) {
-        connectionSet.remove(c);
+        connectionSet.remove(c); // TODO: java.lang.ClassCastException: com.splunk.cloudfwd.impl.ConnectionImpl cannot be cast to java.lang.Comparable
         if (connectionSet.isEmpty()) {
             metricsConnection.closeNow();
             metricsConnection = null;
