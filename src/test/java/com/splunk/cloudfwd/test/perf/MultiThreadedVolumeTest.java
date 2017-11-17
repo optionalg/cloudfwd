@@ -52,7 +52,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
-    private int batchSizeMB;
+    private int batchSizeMB = 5;
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
@@ -128,26 +128,23 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
         return "many_text_events_no_timestamp.sample";
     }
-
+    
     private void readEventsFile() {
+        byte[] bytes = new byte[0];
         try {
             URL resource = getClass().getClassLoader().getResource(getEventsFilename()); // to use a file on classpath in resources folder.
-            byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
-            int origByteSize = bytes.length;
-            ByteArrayBuffer mReadBuffer = new ByteArrayBuffer(0);
-            
-            System.out.println("******** BATCH SIZE 1: " + origByteSize);
-            // Make sure we send ~5MB batches, regardless of the size of the sample log file 
-            while (mReadBuffer.buffer().length < 5000000) {
-                System.out.println("******** BATCH SIZE 1.1: " + origByteSize);
-                mReadBuffer.append(bytes, 0, origByteSize);
-//                batchBytes = Bytes.concat(bytes, Files.readAllBytes(Paths.get(resource.getFile())));
-                System.out.println("******** BATCH SIZE 2: " + mReadBuffer.buffer().length);
-            }
-            batchSizeMB = mReadBuffer.buffer().length / 1000000;
-            buffer = ByteBuffer.wrap(mReadBuffer.buffer());
+            bytes = Files.readAllBytes(Paths.get(resource.getFile()));
         } catch (Exception ex) {
             Assert.fail("Problem reading file " + getEventsFilename() + ": " + ex.getMessage());
+        }
+        int origByteSize = bytes.length;
+        buffer = ByteBuffer.allocate(batchSizeMB * 1024 * 1024 + 3000);
+        
+        // Make sure we send ~5MB batches, regardless of the size of the sample log file 
+        while (buffer.position() <= batchSizeMB * 1024 * 1024) {
+            System.out.println("******** BATCH SIZE 1.1: going to add " + origByteSize + " bytes");
+            buffer.put(bytes);
+            System.out.println("******** BATCH SIZE 2: current buffer size: " + buffer.position());
         }
     }
 
