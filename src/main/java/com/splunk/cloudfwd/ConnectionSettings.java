@@ -332,6 +332,10 @@ public class ConnectionSettings {
         return endpoint;
     }
 
+    private  void setHecEndpointType(String type) {
+        setHecEndpointType(Connection.HecEndpoint.valueOf(type));
+    }
+    
     public void setHecEndpointType(
             ConnectionImpl.HecEndpoint type) {
         if (type == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
@@ -418,53 +422,36 @@ public class ConnectionSettings {
      */
     public void setProperties(Properties props) throws UnknownHostException {
         Properties diffs = getDiff(props);
-        boolean refreshChannels = false;
-
         for (String key : diffs.stringPropertyNames()) {
+            String val = diffs.getProperty(key);
             switch (key) {
                 case PropertyKeys.ACK_TIMEOUT_MS:
-                    setAckTimeoutMS(Long.parseLong(diffs.getProperty(key)));
+                    setAckTimeoutMS(Long.parseLong(val));
                     break;
                 case PropertyKeys.COLLECTOR_URI:
-                    putProperty(PropertyKeys.COLLECTOR_URI,
-                            diffs.getProperty(key));
-                    refreshChannels = true;
+                    setUrls(val);
                     break;
                 case PropertyKeys.TOKEN:
-                    putProperty(PropertyKeys.TOKEN,
-                            diffs.getProperty(key));
-                    //refreshChannels = true;
+                    setToken(val);
                     break;
                 case PropertyKeys.HEC_ENDPOINT_TYPE:
-                    putProperty(PropertyKeys.HEC_ENDPOINT_TYPE,
-                            diffs.getProperty(key));
+                    setHecEndpointType(val);
                     break;
                 case PropertyKeys.HOST:
-                    putProperty(PropertyKeys.HOST,
-                            diffs.getProperty(key));
-                    //refreshChannels = true;
+                    setHost(val);
                     break;
                 case PropertyKeys.INDEX:
-                    putProperty(PropertyKeys.INDEX,
-                            diffs.getProperty(key));
-                    //refreshChannels = true;
+                    setIndex(val);
                     break;
                 case PropertyKeys.SOURCE:
-                    putProperty(PropertyKeys.SOURCE,
-                            diffs.getProperty(key));
-                    //refreshChannels = true;
+                    setSource(val);
                     break;
                 case PropertyKeys.SOURCETYPE:
-                    putProperty(PropertyKeys.SOURCETYPE,
-                            diffs.getProperty(key));
-                    //refreshChannels = true;
+                    setSourcetype(val);
                     break;
                 default:
-                    LOG.warn("Attempt to change property not supported: " + key);
+                    LOG.error("Attempt to change property not supported: " + key);
             }
-        }
-        if (refreshChannels) {
-            checkAndRefreshChannels();
         }
     }
 
@@ -490,7 +477,7 @@ public class ConnectionSettings {
   public void setToken(String token) {
     if (!token.equals(getToken())) {
       putProperty(PropertyKeys.TOKEN, token);
-      //checkAndRefreshChannels();
+      checkAndRefreshChannels();
     }
   }
 
@@ -505,12 +492,6 @@ public class ConnectionSettings {
       putProperty(PropertyKeys.COLLECTOR_URI, urls);
       checkAndRefreshChannels();
     }
-//    if (!urlsStringToList(urls).equals(
-//            getUrls())) {
-//      // a single url or a list of comma separated urls
-//      putProperty(PropertyKeys.COLLECTOR_URI, urls);
-//      checkAndRefreshChannels();
-//    }
   }
 
   /**
@@ -529,7 +510,6 @@ public class ConnectionSettings {
     public void setHost(String host) {
         if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
             putProperty(PropertyKeys.HOST, host);
-            //checkAndRefreshChannels();
         }
     }
 
@@ -540,7 +520,6 @@ public class ConnectionSettings {
     public void setIndex(String index) {
         if (!StringUtils.isEmpty(index) && !index.equals(getIndex())) {
             putProperty(PropertyKeys.INDEX, index);
-            //checkAndRefreshChannels();
         }
     }
 
@@ -551,7 +530,6 @@ public class ConnectionSettings {
     public void setSource(String source) {
         if (!StringUtils.isEmpty(source) && !source.equals(getSource())) {
             putProperty(PropertyKeys.SOURCE, source);
-            //checkAndRefreshChannels();
         }
     }
 
@@ -562,7 +540,6 @@ public class ConnectionSettings {
     public void setSourcetype(String sourcetype) {
         if (!StringUtils.isEmpty(sourcetype) && !sourcetype.equals(getSourcetype())) {
             putProperty(PropertyKeys.SOURCETYPE, sourcetype);
-            //checkAndRefreshChannels();
         }
     }
   
