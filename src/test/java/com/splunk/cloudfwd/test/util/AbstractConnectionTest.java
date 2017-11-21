@@ -89,17 +89,22 @@ public abstract class AbstractConnectionTest {
                 + "You should override getNumEventsToSend and return zero.");
     }
     this.callbacks = getCallbacks();
-    Properties props = new Properties();
-    props.putAll(getTestProps());
-    props.putAll(getProps());
-    this.connection = createConnection(callbacks, props);
-    if(null == this.connection){
-        return;
-    }
-    this.connection.setLoggerFactory(new HecLoggerFactoryImpl());
-    configureConnection(connection);
+    this.connection = createAndConfigureConnection();
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();
+  }
+  
+  protected Connection createAndConfigureConnection(){
+     Properties props = new Properties();
+    props.putAll(getTestProps());
+    props.putAll(getProps());
+    Connection connection = createConnection(callbacks, props);
+    if(null ==connection){
+        return null;
+    }
+    connection.setLoggerFactory(new HecLoggerFactoryImpl());
+    configureConnection(connection);
+    return connection;
   }
   
   protected Connection createConnection(ConnectionCallbacks c, Properties p){

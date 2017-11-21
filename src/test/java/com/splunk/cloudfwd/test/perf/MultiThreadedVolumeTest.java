@@ -60,12 +60,16 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
                 (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
-        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
        
         for (int i = 0; i < numSenderThreads; i++) {
-            futureList.add(senderExecutor.submit(new SenderWorker(i)::sendAndWaitForAcks));
+            Connection  c = createAndConfigureConnection();
+            if (null ==c){
+                Assert.fail("null connection");
+            }
+            futureList.add(senderExecutor.submit(new SenderWorker(i, c)::sendAndWaitForAcks));
         }
         
         try {
@@ -185,9 +189,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public class SenderWorker {      
         private boolean failed = false;
         private int workerNumber;
+        private Connection connection;
         
-        public SenderWorker(int workerNum){
+        public SenderWorker(int workerNum, Connection c){
             this.workerNumber = workerNum;
+            this.connection = c;
+            //this.connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT)
         }
         public void sendAndWaitForAcks() {
             try{
@@ -199,7 +206,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                         LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
                         logMetrics(eb, eb.getLength());
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
-                        long sent = connection.sendBatch(eb);
+                        long sent = this.connection.sendBatch(eb);
                         LOG.info("Sender {} sent batch with id={}", workerNumber,  eb.getId());                        
                         next = nextBatch(batchCounter.incrementAndGet());
                         LOG.info("Sender {} generated next batch", workerNumber);
