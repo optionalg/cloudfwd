@@ -163,7 +163,7 @@ public class LoadBalancer implements Closeable {
             });
             waitForOnePreflightSuccess(healths, futures, channelsList);
         }finally{
-            preflightExecutor.shutdownNow();
+            preflightExecutor.shutdown(); //not shutdownNow credit Sergey Sergeev. Need to allow all the c.start to complete without interruption
         }
     }
 
