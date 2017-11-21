@@ -45,7 +45,7 @@ public class CheckpointManager implements LifecycleEventObserver {
     public CheckpointManager(ConnectionImpl c) {
         this.LOG = c.getLogger(CheckpointManager.class.getName());
         this.connection = c;
-        this.enabled = c.getPropertiesFileHelper().isCheckpointEnabled();
+        this.enabled = c.getSettings().isCheckpointEnabled();
     }
 
     @Override

@@ -13,27 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.splunk.cloudfwd.test.perf;
+package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.test.integration.AbstractReconciliationTest;
+import com.splunk.cloudfwd.error.HecConnectionStateException;
+import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.Test;
 
 /**
- *
+ * This test starts a thread that switches the connection settings between /raw and /events endpoints 
+ * once every 5 seconds. An exception should be thrown by the batch as soon as the events added to it switch
+ * from one known type to another.
  * @author ghendrey
  */
-public class ChangeSettingsWhileSendingIT extends AbstractConnectionTest{
+public class ChangeEndpointWhileAccumulatingBatch extends AbstractConnectionTest{
     
   protected Properties getProps() {
     Properties p = new Properties(); 
-    p.setProperty(PropertyKeys.COLLECTOR_URI, "https://localhost:8088");
-    p.setProperty(PropertyKeys.TOKEN, "5c93e5e4-42d4-4997-9f60-e4a11e5cae04");
+    p.setProperty(PropertyKeys.DEFAULT_EVENT_BATCH_SIZE,String.valueOf(1024*1024));
     return p;
   }
     
@@ -44,7 +44,7 @@ public class ChangeSettingsWhileSendingIT extends AbstractConnectionTest{
                 connection.getSettings().setHecEndpointType(
                         Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
                 try {
-                    Thread.sleep(10000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     break;
                 }
@@ -55,11 +55,23 @@ public class ChangeSettingsWhileSendingIT extends AbstractConnectionTest{
        t.setDaemon(true);//so jvm will exit despite this thread running
        t.start();
        super.sendEvents();
+       t.interrupt();
     }
+    
+  @Override
+  protected boolean isExpectedSendException(Exception e) {
+    return e instanceof HecConnectionStateException 
+            && ((HecConnectionStateException)e).getType()==WRONG_EVENT_FORMAT_FOR_ENDPOINT;
+  }
+
+  @Override
+  protected boolean shouldSendThrowException() {
+      return true;
+  }
 
     @Override
     protected int getNumEventsToSend() {        
-        return 10000000;
+        return 1000000; //test will fail as expected long before we send this many events
     }
     
 }

@@ -1,5 +1,6 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.PropertyKeys;
@@ -41,6 +42,7 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
     return 100;
   }
   
+  @Override
     protected Properties getProps() {
     Properties props = new Properties(); //default behavior is no "hard coded" test-specific properties
     props.put(PropertyKeys.EVENT_BATCH_SIZE,  "16000");
@@ -49,6 +51,7 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
     return props;
   }  
   
+  @Override
   protected Event nextEvent(int seqno) {
     Event event = null;
     switch (this.eventType) {
@@ -66,9 +69,15 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
     return event;
   }  
 
-  private Event getByteBufferEvent(int seqno) {
+  protected Event getByteBufferEvent(int seqno) {
     Event e  = super.getJsonToEvents(seqno);
     return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(e.getBytes()), seqno);
   }
+  
+  @Override
+  protected void configureConnection(Connection connection) {
+    connection.getSettings().setHecEndpointType(
+              Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+  }  
   
 }

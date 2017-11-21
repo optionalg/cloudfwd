@@ -198,7 +198,7 @@ public abstract class AbstractConnectionTest {
                 LOG.trace("Send event {} i={}", event.getId(), i);
 
               connection.send(event);
-          }
+          }          
       } catch(Exception e) {
           this.sendException = e;
           this.sendExceptionMsg = e.getMessage();
@@ -213,10 +213,11 @@ public abstract class AbstractConnectionTest {
           connection.close();
         }
       }
-      
-      this.callbacks.await(10, TimeUnit.MINUTES);
-      this.callbacks.checkFailures();
-      this.callbacks.checkWarnings();
+      if(null == sendException){      //only await callback-related fails and warns if we did not throw a send exception
+        this.callbacks.await(10, TimeUnit.MINUTES);
+        this.callbacks.checkFailures();
+        this.callbacks.checkWarnings();
+      }
   }
 
   public void checkSendExceptions() {

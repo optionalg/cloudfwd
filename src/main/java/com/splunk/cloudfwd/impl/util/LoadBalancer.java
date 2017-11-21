@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.*;
@@ -38,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
-import java.util.stream.Collectors;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
 import java.util.function.Predicate;
 
@@ -52,7 +52,6 @@ public class LoadBalancer implements Closeable {
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
     private final IndexDiscoverer discoverer;
-    //private final IndexDiscoveryScheduler discoveryScheduler;
     private int robin; //incremented (mod channels) to perform round robin
     private final ConnectionImpl connection;
     private boolean closed;
@@ -64,10 +63,8 @@ public class LoadBalancer implements Closeable {
         this.connection = c;
         this.channelsPerDestination = c.getSettings().
                 getChannelsPerDestination();
-        this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
-        //this.discoveryScheduler = new IndexDiscoveryScheduler(c);
+        this.discoverer = new IndexDiscoverer((PropertiesFileHelper)c.getSettings(), c);
         createChannels(discoverer.getAddrs());
-        //this.discoverer.addObserver(this);
     }
 
 
@@ -228,15 +225,15 @@ public class LoadBalancer implements Closeable {
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
         //and then the to-be-reaped channel would also be removed, leaving no channels, and
         //send will be stuck in a spin loop with no channels to send to
-        PropertiesFileHelper propsHelper = this.connection.
-                getPropertiesFileHelper();
-        if (!force && channels.size() >= propsHelper.getMaxTotalChannels()) {
+        ConnectionSettings settings = this.connection.
+                getSettings();
+        if (!force && channels.size() >= settings.getMaxTotalChannels()) {
             LOG.warn(
-                    "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + propsHelper.
+                    "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + settings.
                     getMaxTotalChannels() + ")");
             return null;
         }
-        HttpSender sender = this.connection.getPropertiesFileHelper().
+        HttpSender sender = ((PropertiesFileHelper)this.connection.getSettings()).
                 createSender(s);
 
         HecChannel channel = new HecChannel(this, sender, this.connection);
@@ -537,12 +534,12 @@ public class LoadBalancer implements Closeable {
     /**
      * @return the propertiesFileHelper
      */
-    public PropertiesFileHelper getPropertiesFileHelper() {
-        return this.connection.getPropertiesFileHelper();
+    public ConnectionSettings getConnectionSettings() {
+        return this.connection.getSettings();
     }
 
     private boolean isResendable(EventBatchImpl events) {
-         final int maxRetries = getPropertiesFileHelper(). getMaxRetries();
+         final int maxRetries = getConnectionSettings(). getMaxRetries();
         if (events.getNumTries() > maxRetries) {
                               String msg = "Tried to send event id=" + events.
                               getId() + " " + events.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
