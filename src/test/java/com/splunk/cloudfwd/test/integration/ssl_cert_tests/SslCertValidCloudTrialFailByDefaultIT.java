@@ -15,6 +15,7 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  */
 
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
@@ -47,12 +48,13 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
   public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
     super.sendEvents(false, false);
     List<HecHealth> healths = connection.getHealth();
-    Assert.assertTrue(!healths.isEmpty());
+//    Assert.assertTrue("Expected healths to be not empty, but got this healths: " + healths, !healths.isEmpty());
     // we expect all channels to fail catching SSLHandshakeException in preflight
-    Assert.assertTrue(healths.stream()
-            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
-            .count() == healths.size());
-    connection.close();
+    assertAllChannelsFailed(SSLHandshakeException.class, "General SSLEngine problem");
+//    Assert.assertTrue("Expected all channel to fail with SSLHandshakeException, but got this healths: " + healths, healths.stream()
+//            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
+//            .count() == healths.size());
+    connection.closeNow();
   }
   
   @Override
@@ -63,11 +65,10 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
     props.put(DISABLE_CERT_VALIDATION, "false");
     props.put(MOCK_HTTP_KEY, "false");
     props.put(CLOUD_SSL_CERT_CONTENT, "");
+    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
+    props.put(CHANNELS_PER_DESTINATION, "1");
     return props;
   }
-  
-  @Override
-  protected boolean shouldSendThrowException() {return true;}
   
   @Override
   protected boolean isExpectedSendException(Exception e) {

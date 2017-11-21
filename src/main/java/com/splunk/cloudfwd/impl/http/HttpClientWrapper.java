@@ -18,7 +18,11 @@ package com.splunk.cloudfwd.impl.http;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
+import org.slf4j.Logger;
 
 /**
  * This class allows many HttpSender to share a single ClosableHttpAsyncClient. It counts references and closes the 
@@ -28,21 +32,28 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
  */
 public class HttpClientWrapper {
     private CloseableHttpAsyncClient httpClient;
-    private Set<HttpSender> requestors = new HashSet<>();    
+    private Set<HttpSender> requestors = new HashSet<>(); 
+    private Logger LOG;
 
-    HttpClientWrapper() {
-
+    HttpClientWrapper(ConnectionImpl c) {
+        LOG = c.getLogger(HttpClientWrapper.class.getName());
+        LOG.trace("constructor called");
     }
 
     public synchronized void releaseClient(HttpSender requestor) {
-           
+         
+        LOG.debug("releaseClient: requestors: " +  
+                requestors.stream().map(r -> r.getSslHostname()).collect(Collectors.toList()) + 
+                ", requestor.getSslHostname(): " + requestor.getSslHostname());
          if (requestors.size() == 0) {
              throw new IllegalStateException("Illegal attempt to release http client, but http client is already closed.");
          }
         requestors.remove(requestor);
         if (requestors.size() == 0) {
             try {
+                LOG.debug("releaseClient: attempting to close httpClient: " + httpClient);
                 httpClient.close();
+                LOG.debug("releaseClient: httpClient.isRunning?: " + httpClient.isRunning());
             } catch (IOException ex) {
                 throw new RuntimeException(ex.getMessage(), ex);
             }
@@ -52,6 +63,10 @@ public class HttpClientWrapper {
     public synchronized CloseableHttpAsyncClient getClient(
             HttpSender requestor, boolean disableCertificateValidation,
             String cert) {
+        LOG.trace("getClient start: requestors: " +  
+                requestors.stream().map(r -> r.getSslHostname()).collect(Collectors.toList()) +
+                ", requestor.getSslHostname(): " + requestor.getSslHostname() +
+                ", httpClient: " + httpClient);
         if (requestors.isEmpty()) {
             try {
                 httpClient = new HttpClientFactory(disableCertificateValidation,
@@ -61,7 +76,11 @@ public class HttpClientWrapper {
                 throw new RuntimeException(ex.getMessage(), ex);
             }
         }
-        requestors.add(requestor);  
+        requestors.add(requestor);
+        LOG.trace("getClient end: requestors: " +  
+                requestors.stream().map(r -> r.getSslHostname()).collect(Collectors.toList()) +
+                ", requestor.getSslHostname(): " + requestor.getSslHostname() +
+                ", httpClient: " + httpClient);
         return httpClient;
 
     }

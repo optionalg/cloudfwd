@@ -42,6 +42,8 @@ import org.junit.Test;
 /**
  *
  * @author meema 
+ * 
+ * This test seems to test that for occasional Indexer In Detention responses and that these events get resent
  */
 public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
 
@@ -107,10 +109,10 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
         Properties props = new Properties();
         props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDFailEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "30000");
+        props.put(BLOCKING_TIMEOUT_MS, "3000");
         props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
         props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
-        props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
+        props.put(PropertyKeys.ACK_TIMEOUT_MS, "6000"); //we don't want the ack timout kicking in
         // checkpointing
         props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true");
 

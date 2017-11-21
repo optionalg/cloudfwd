@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.splunk.cloudfwd.HecLoggerFactory;
+import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -23,6 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.stream.Collectors;
+
+import static com.splunk.cloudfwd.LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -226,7 +230,7 @@ public abstract class AbstractConnectionTest {
         this.callbacks.checkWarnings();
       }
   }
-
+  
   public void checkSendExceptions() {
       if (shouldSendThrowException() && !didSendThrowException()) {
           Assert.fail("Send should have thrown an exception but it didn't");
@@ -485,6 +489,49 @@ public abstract class AbstractConnectionTest {
     //the creation of /event endpoint envelope "by hand"
    // return new UnvalidatedBytesEvent(getJsonToEvents(seqno).getBytes(), seqno);
     return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(getJsonToEvents(seqno).getBytes()), seqno);
+  }
+  
+  /**
+   * assert that health is not empty and all channels failed with 
+   * provided exceptionClass and exceptionMessage.
+   * 
+   * @param exceptionClass
+   * @param exceptionMessage
+   */
+  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessage) throws InterruptedException {
+    List<HecHealth> healths = connection.getHealth();
+    // wait for channels to populate health
+    for (Integer i = 0; i < 10 && healths.isEmpty() ; i++) {
+      TimeUnit.SECONDS.sleep(1);
+      healths = connection.getHealth();
+    } 
+    Assert.assertTrue("Expected health checks to be not empty, but got this healths: \"" + healths + "\"", !healths.isEmpty());
+    
+    // wait for 10 seconds for all channels to fail preflight
+    for (Integer i = 0; 
+         i<10 && healths.stream().map(h -> h.getStatus().getException())
+                 .filter(e -> e instanceof HecServerErrorResponseException)
+                 .filter(e -> ((HecServerErrorResponseException) e).getLifecycleType() 
+                         == PREFLIGHT_HEALTH_CHECK_PENDING).count() > 0; 
+         i ++) {
+      healths = connection.getHealth();
+      TimeUnit.SECONDS.sleep(1);
+    }
+    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
+    if (healths.stream()
+            .map(h -> h.getStatus().getException())
+            .filter(e -> exceptionClass.isInstance(e))
+            .filter(e -> e.getMessage().equals(exceptionMessage))
+            .count() != healths.size()) {
+      List<Exception> exceptions = healths.stream().map(h -> h.getStatus().getException()).collect(Collectors.toList());
+      LOG.debug(String.valueOf(exceptions));
+      Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass + 
+              "\" and message: \"" + exceptionMessage + 
+              "\", but got " + (
+                      exceptions.isEmpty() ? "no exceptions in healths: " + healths : 
+                              "instead the following list of exceptions in healths: " + 
+                                      String.valueOf(exceptions)));
+    }
   }
 
 }

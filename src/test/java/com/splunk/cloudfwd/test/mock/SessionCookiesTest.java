@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 
 public class SessionCookiesTest extends AbstractConnectionTest {
@@ -23,19 +24,26 @@ public class SessionCookiesTest extends AbstractConnectionTest {
 
     @Test
     public void testWithSessionCookies() throws InterruptedException {
-        List<String> listofChannelIds = getChannelId(this.connection);
-        sendEvents();
-        List<String> listofChannelsAfterCookieChanges = getChannelId(this.connection);
-        for (String i : listofChannelsAfterCookieChanges) {
-            if (listofChannelIds.contains(i)) {
+        List<String> listOfChannelIds = getChannelId(this.connection);
+        sendEvents(false, false);
+        List<String> listOfChannelsAfterCookieChanges = getChannelId(this.connection);
+        for (String i : listOfChannelsAfterCookieChanges) {
+            if (listOfChannelIds.contains(i)) {
                 Assert.fail("Channel Id never changed after toggling cookies.");
             }
         }
+        connection.close();
     }
 
     protected Event nextEvent(int i) {
-        if (i == 1 || i == getNumEventsToSend() / 2) {
+        if (i == 1 || i == getNumEventsToSend() / 2.0) {
             LOG.trace("Toggling cookies twice while sending message: {}", i);
+            // we want to make sure that ack from the previous event will be received with the same cookie
+            try {
+                TimeUnit.SECONDS.wait(1);
+            } catch (Exception ex) {
+                LOG.error("nextEvent got interrupted");
+            }
             UpdateableCookieEndpoints.toggleCookie();
         }
         return super.nextEvent(i);
@@ -44,7 +52,7 @@ public class SessionCookiesTest extends AbstractConnectionTest {
 
     @Override
     protected int getNumEventsToSend() {
-        return 1000;
+        return 5;
     }
 
     protected List<String> getChannelId(Connection connection) {
@@ -62,6 +70,7 @@ public class SessionCookiesTest extends AbstractConnectionTest {
         props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
                 "com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints");
         props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
+        props.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
 
         return props;
     }

@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.test.integration;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
 
@@ -24,6 +25,7 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
         super.sendEvents();
         Set<String> searchResults = getEventsFromSplunk();
         verifyResults(getSentEvents(), searchResults);
+        connection.close();
     }
 
     @Override
@@ -35,11 +37,12 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
     protected Properties getProps() {
         Properties p = super.getProps();
         p.setProperty(PropertyKeys.TOKEN, createTestToken("__singleline"));
-        p.setProperty(PropertyKeys.COLLECTOR_URI, unknownHost + ",https://localhost:8088");
+        p.setProperty(PropertyKeys.COLLECTOR_URI, unknownHost + ",https://127.0.0.1:8088");
         p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
+        p.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
         return p;
     }
-
+    
     @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {

@@ -15,6 +15,10 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
+import org.slf4j.Logger;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,13 +31,14 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class HttpClientHostMapper {
         //key in the following Map is ssl hostname
-        private static final ConcurrentMap<String, HttpClientWrapper> clientMap = new ConcurrentHashMap<>(); 
+        private static final ConcurrentMap<String, HttpClientWrapper> clientMap = new ConcurrentHashMap<>();
         
-        public static HttpClientWrapper getClientWrapper(HttpSender sender){
+        public static HttpClientWrapper getClientWrapper(HttpSender sender, ConnectionImpl c){
+            final Logger LOG = c.getLogger(HttpClientHostMapper.class.getName());
+            
             String sslHostname = sender.getSslHostname();
-            return clientMap.computeIfAbsent(sslHostname, (key)->{
-                return new HttpClientWrapper();
-            });
+            LOG.debug("getClientWrapper: sslHostname: " + sslHostname);
+            return clientMap.computeIfAbsent(sslHostname, (key)-> new HttpClientWrapper(c));
         }
     
 }

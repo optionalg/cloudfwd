@@ -211,7 +211,8 @@ public final class HttpSender implements Endpoints, CookieClient {
   public synchronized void start() {
     // attempt to create and start an http client
     try {
-        this.httpClient = HttpClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation,cert);
+        this.httpClient = HttpClientHostMapper.getClientWrapper(this, getConnection())
+                .getClient(this, disableCertificateValidation,cert);
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
@@ -240,7 +241,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
         //HttpClientWrapper.releaseClient(this);
-         HttpClientHostMapper.getClientWrapper(this).releaseClient(this);
+        HttpClientHostMapper.getClientWrapper(this, getConnection()).releaseClient(this);
         httpClient = null;
     }
   }

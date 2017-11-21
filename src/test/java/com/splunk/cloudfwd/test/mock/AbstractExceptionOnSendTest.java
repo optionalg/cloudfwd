@@ -2,10 +2,14 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import java.net.MalformedURLException;
 import java.util.Properties;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+
+import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import org.junit.Assert;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -27,11 +31,11 @@ import org.junit.Test;
  *
  * @author ghendrey
  */
-public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
+public class AbstractExceptionOnSendTest extends AbstractConnectionTest{
 
     @Override
     protected int getNumEventsToSend() {
-        return 0;
+        return 1;
     }
 
     @Override
@@ -40,32 +44,29 @@ public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
        props.put(PropertyKeys.COLLECTOR_URI, "floort");
        return props;
     }
-    
-    @Test
-    public void doIt() throws InterruptedException{
-        super.sendEvents();
-    }
-    
-
+       
     @Override
-    protected boolean isExpectedConnInstantiationException(Exception e) {
-       if(e instanceof HecConnectionStateException){
-           return ((HecConnectionStateException)e).getType()==HecConnectionStateException.Type.NO_HEC_CHANNELS;
-       }
-       return false;
-    }
-  
-    /**
-     * Override in test if your test wants Connection instantiation to fail
-     * @return
-     */
-    @Override
-    protected boolean connectionInstantiationShouldFail() {
+    protected boolean isExpectedSendException(Exception ex) {
+      LOG.info("AbstractExceptionOnSendTest, isExpectedSendException: ex: " + ex);
+      if (ex instanceof HecNoValidChannelsException) {
         return true;
-    }    
+      }
+      return false;
+    }
     
-    
-    
-    
+    protected BasicCallbacks getCallbacks() {
+      return new BasicCallbacks(getNumEventsToSend()) {
+        @Override
+        public void await(long timeout, TimeUnit u) throws InterruptedException {
+          // don't need to wait for anything since we don't get a failed callback
+        }
+        
+        @Override
+        public void systemError(Exception ex) {
+          LOG.info("AbstractExceptionOnSendTest, got systemError callabck: ex: " + ex);
+          Assert.assertTrue(ex instanceof HecConnectionStateException);
+        }
+      };
+    }
     
 }

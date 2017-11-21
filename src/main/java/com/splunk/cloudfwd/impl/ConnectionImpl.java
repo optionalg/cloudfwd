@@ -91,7 +91,7 @@ public class ConnectionImpl implements Connection {
     //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
-    throwExceptionIfNoChannelOK();
+//    throwExceptionIfNoChannelOK();
   }
 //  
 //  /**
