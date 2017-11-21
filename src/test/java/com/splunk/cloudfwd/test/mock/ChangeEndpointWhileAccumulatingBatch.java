@@ -44,7 +44,7 @@ public class ChangeEndpointWhileAccumulatingBatch extends AbstractConnectionTest
                 connection.getSettings().setHecEndpointType(
                         Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(1);
                 } catch (InterruptedException ex) {
                     break;
                 }
@@ -60,6 +60,7 @@ public class ChangeEndpointWhileAccumulatingBatch extends AbstractConnectionTest
     
   @Override
   protected boolean isExpectedSendException(Exception e) {
+    System.out.println(e);
     return e instanceof HecConnectionStateException 
             && ((HecConnectionStateException)e).getType()==WRONG_EVENT_FORMAT_FOR_ENDPOINT;
   }
@@ -71,7 +72,7 @@ public class ChangeEndpointWhileAccumulatingBatch extends AbstractConnectionTest
 
     @Override
     protected int getNumEventsToSend() {        
-        return 1000000; //test will fail as expected long before we send this many events
+        return 10000; //test will fail as expected long before we send this many events
     }
     
 }

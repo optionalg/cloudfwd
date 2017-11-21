@@ -15,6 +15,7 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  */
 
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
@@ -28,8 +29,6 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.error.HecConnectionStateException;
-import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT;
 
 /**
  * This test attempts to connect to ELB configured with a splunkcloud.com cert by 
@@ -49,15 +48,13 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
    * SSLPeerUnverifiedException exception. 
    */
   public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-      LOG.info("test: sendThrowsAndHealthContainsException");
-      //in current behavior, connection instantiation will fail, so there is nothing to do here
-//    super.sendEvents(false, false);
-//    List<HecHealth> healths = connection.getHealth();
-//    Assert.assertTrue(!healths.isEmpty());
-//    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
-//    Assert.assertTrue(healths.stream()
-//            .filter(e -> e.getStatus().getException() instanceof SSLPeerUnverifiedException)
-//            .count() == healths.size());
+    super.sendEvents(false, false);
+    List<HecHealth> healths = connection.getHealth();
+    Assert.assertTrue("Expected healths to be not empty, but got this healths: " + healths, !healths.isEmpty());
+    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
+    Assert.assertTrue("Expected all channel to fail with SSLPeerUnverifiedException, but got this healths: " + healths, healths.stream()
+            .filter(e -> e.getStatus().getException() instanceof SSLPeerUnverifiedException)
+            .count() == healths.size());
   }
   
   @Override
@@ -67,28 +64,23 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
     props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     props.put(DISABLE_CERT_VALIDATION, "false");
     props.put(MOCK_HTTP_KEY, "false");
+    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
     return props;
   }
   
-  
-      @Override
-    protected int getNumEventsToSend() {
-        return 0;
+  @Override
+  protected boolean isExpectedSendException(Exception e) {
+    if(e instanceof HecNoValidChannelsException) {
+      return true;
     }
-    
-    protected boolean isExpectedConnInstantiationException(Exception e) {
-        return e.getCause() instanceof SSLPeerUnverifiedException;
-    }
-  
-    /**
-     * Override in test if your test wants Connection instantiation to fail
-     * @return
-     */
-    protected boolean connectionInstantiationShouldFail() {
-        return true;
-    }
+    return false;
+  }
 
-
+  @Override
+  protected int getNumEventsToSend() {
+    return 1;
+  }
+  
   @Override
   protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumEventsToSend()) {

@@ -5,6 +5,7 @@ import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
@@ -16,17 +17,22 @@ import java.util.Properties;
 
 /**
  * Created by mhora on 10/4/17.
+ * 
+ * This test should attempt to send events to a down indexer endpopoint and send should fail
+ * with HecNoValidChannelsException exception. 
  */
 public class DownIndexersAllDownTest extends AbstractConnectionTest {
-
-    protected int getNumEventsToSend() {
-        return 1000;
+    /**
+     * Send an event and expect send to fail
+     * @throws InterruptedException
+     */
+    @Test
+    public void sendToDownIndexers() throws InterruptedException {
+        super.sendEvents();
     }
 
-    @Override
-    public void setUp() {
-        this.testMethodGUID = java.util.UUID.randomUUID().toString();
-        this.events = new ArrayList<>();
+    protected int getNumEventsToSend() {
+        return 1;
     }
 
     @Override
@@ -43,64 +49,16 @@ public class DownIndexersAllDownTest extends AbstractConnectionTest {
         return props;
     }
 
-    // Need to separate this logic out of setUp() so that each Test
-    // can use different simulated endpoints
-    private void createConnection() {
-        this.callbacks = getCallbacks();
-
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
-        configureConnection(connection);
-    }
-
-    @Override
-    protected BasicCallbacks getCallbacks() {
-        return new BasicCallbacks(getNumEventsToSend()) {
-            @Override
-            public boolean shouldFail() {
-                return true;
-            }
-
-            @Override
-            protected boolean isExpectedFailureType(Exception e) {
-                boolean correctType = false;
-                if (e instanceof ConnectException) { // TODO: make this exception more accurate to expected behavior
-                    correctType = true;
-                }
-                return correctType;
-            }
-        };
-    }
-
     @Override
     protected boolean isExpectedSendException(Exception e) {
-        boolean isExpected = false;
-        if (e instanceof HecConnectionTimeoutException) {
-            isExpected = true;
-        }
-        return isExpected;
+        return (e instanceof HecNoValidChannelsException && 
+                e.getMessage().equals("No valid channels available due to possible misconfiguration."));
+            
     }
 
     @Override
     protected boolean shouldSendThrowException() {
-        boolean shouldThrow = true;
-        //this.callbacks.latch.countDown(); // allow the test to finish
-        return shouldThrow;
+        return true;
     }
 
-    @Test
-    public void sendToDownIndexers() throws InterruptedException {
-        boolean gotException = false;
-        try{
-            createConnection();
-        }catch(Exception e){
-            Assert.assertTrue("Expected HecMaxRetriesException, got " + e, e instanceof HecMaxRetriesException);
-            gotException = true;
-        }
-        if(!gotException){
-            Assert.fail("Expected HecMaxRetriedException associated with Connection instantiation config checks'");
-        }
-    }
 }
