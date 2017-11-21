@@ -2,10 +2,16 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import java.net.MalformedURLException;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
+
+import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -31,41 +37,34 @@ public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
 
     @Override
     protected int getNumEventsToSend() {
-        return 0;
+        return 1;
     }
 
     @Override
     protected Properties getProps() {
        Properties props = new Properties();
        props.put(PropertyKeys.COLLECTOR_URI, "floort");
+       props.put(MOCK_HTTP_KEY, "false");
        return props;
     }
     
-    @Test
-    public void doIt() throws InterruptedException{
-        super.sendEvents();
-    }
+//    @Test
+//    public void doIt() throws InterruptedException{
+//        super.sendEvents();
+//    }
     
-
     @Override
-    protected boolean isExpectedConnInstantiationException(Exception e) {
-       if(e instanceof HecConnectionStateException){
-           return (e.getCause() != null ) && (e.getCause() instanceof MalformedURLException);                          
-       }
-       return false;
+    protected BasicCallbacks getCallbacks() {
+      return new BasicCallbacks(getNumEventsToSend()) {
+        @Override
+        public void await(long timeout, TimeUnit u) throws InterruptedException {
+          // don't need to wait for anything since we don't get a failed callback
+        }
+        
+        @Override
+        public void systemError(Exception ex) {
+        }
+      };
     }
-  
-    /**
-     * Override in test if your test wants Connection instantiation to fail
-     * @return
-     */
-    @Override
-    protected boolean connectionInstantiationShouldFail() {
-        return true;
-    }    
-    
-    
-    
-    
     
 }

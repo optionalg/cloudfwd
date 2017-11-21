@@ -86,7 +86,7 @@ public class IndexDiscoverer extends Observable {
         String host = url.getHost();
 
         List<InetAddress> addrs = new ArrayList<>();
-       addrs.addAll(Arrays.asList(InetAddress.getAllByName(host)));
+        addrs.addAll(Arrays.asList(InetAddress.getAllByName(host)));
 
         for (InetAddress iaddr : addrs) {
           InetSocketAddress sockAddr = new InetSocketAddress(iaddr, url.
@@ -108,9 +108,7 @@ public class IndexDiscoverer extends Observable {
         // This helps the Connection be more resilient in the face of shaky DNS resolution
         InetSocketAddress sockAddr = new InetSocketAddress(url.getHost(), url.
                 getPort());
-        mappings.computeIfAbsent(url.toString(), k -> {
-          return new ArrayList<>();
-        }).add(sockAddr);
+        mappings.computeIfAbsent(url.toString(), k -> new ArrayList<>()).add(sockAddr);
       }
     }
     if (mappings.isEmpty()) {
