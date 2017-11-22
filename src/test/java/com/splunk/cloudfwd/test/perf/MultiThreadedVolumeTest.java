@@ -205,7 +205,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             try{
                 EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
-                    //try{
+                    try{
                         failed = false;
                         EventBatch eb = next;
                         LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
@@ -216,21 +216,21 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                         next = nextBatch(batchCounter.incrementAndGet());
                         LOG.info("Sender {} generated next batch", workerNumber);
                        
-//                        synchronized (this) {
-//                            // wait while the batch hasn't been acknowledged and it hasn't failed
-//                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
-//                               LOG.debug("Sender {}, about to wait", workerNumber);
-//                                waitingSenders.put(eb.getId(), this);
-//                                wait(500); //wait 500 ms //fixme 5 seconds too long
-//                                LOG.debug("Sender {}, waited 500ms", workerNumber);
-//                            }
-//                        }
-//                        waitingSenders.remove(eb.getId());    
-//                    
-//                    } catch (InterruptedException ex) {
-//                        LOG.debug("Sender {} exiting.", workerNumber);
-//                        return;
-//                    }
+                        synchronized (this) {
+                            // wait while the batch hasn't been acknowledged and it hasn't failed
+                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+                               LOG.debug("Sender {}, about to wait", workerNumber);
+                                waitingSenders.put(eb.getId(), this);
+                                wait(500); //wait 500 ms //fixme 5 seconds too long
+                                LOG.debug("Sender {}, waited 500ms", workerNumber);
+                            }
+                        }
+                        waitingSenders.remove(eb.getId());    
+                    
+                    } catch (InterruptedException ex) {
+                        LOG.debug("Sender {} exiting.", workerNumber);
+                        return;
+                    }
                 }
                 LOG.debug("Sender {} exiting.", workerNumber);
             }catch(Exception e){
@@ -269,9 +269,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
 
         public void tell() {
-//            synchronized (this) {
-//                notify();
-//            }
+            synchronized (this) {
+                notify();
+            }
         }
 
         public void failed() {
@@ -288,9 +288,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         public void acknowledged(EventBatch events) {
             super.acknowledged(events);
             //sometimes events get acknowledged before the SenderWorker starts waiting
-//            if (waitingSenders.get(events.getId()) != null) {
-//                waitingSenders.get(events.getId()).tell();
-//            }
+            if (waitingSenders.get(events.getId()) != null) {
+                waitingSenders.get(events.getId()).tell();
+            }
         }
 
         @Override
