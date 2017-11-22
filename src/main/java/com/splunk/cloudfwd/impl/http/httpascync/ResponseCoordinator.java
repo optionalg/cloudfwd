@@ -136,7 +136,7 @@ h1's response
         if (latches[n].await(10, TimeUnit.SECONDS)) {//wait for ackcheck response before hitting ack endpoint  
             return this.latches[n].getLifecycleEvent();
         } else {
-            LOG.warn("ResponseCoordinator timed out waiting 5 minutes for response {}.", n);
+            LOG.warn("ResponseCoordinator timed out waiting 10 seconds for response {}.", n);
             return null;
         }
     }

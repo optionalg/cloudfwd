@@ -188,7 +188,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                             HecChannel.this, e.getMessage());
                 }
       };
-      ThreadScheduler.getSharedExecutorInstance("channel_decom_executor_thread").execute(r);
+      //avoid having a many channel decommissionings happening at once (maxThreads=1)
+      ThreadScheduler.getSharedExecutorInstance("channel_decom_executor_thread",1).execute(r);
   } 
 
   public boolean send(EventBatchImpl events) {
