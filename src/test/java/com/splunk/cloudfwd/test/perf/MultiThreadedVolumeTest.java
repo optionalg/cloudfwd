@@ -58,9 +58,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
-        ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
-//                Executors.newFixedThreadPool(numSenderThreads,
-//                (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
+       // ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
+        ExecutorService senderExecutor =Executors.newFixedThreadPool(numSenderThreads,
+        (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
         //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
@@ -202,6 +202,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             //this.connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT)
         }
         public void sendAndWaitForAcks() {
+            LOG.info("sender {} starting its send loop", workerNumber);
             try{
                 EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
