@@ -124,7 +124,7 @@ public class HecIOManager implements Closeable {
 
     //called by the AckPollScheduler
     public Future pollAcks() {
-        return ThreadScheduler.getSharedExecutorInstance("ack_poll_executor_thread").submit(
+        return ThreadScheduler.getSharedExecutorInstance("ack_poll_executor_thread",4).submit(
                 ()->{
                      LOG.trace("POLLING ACKS on {}", sender.getChannel());
                     FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
@@ -137,7 +137,7 @@ public class HecIOManager implements Closeable {
      * successfully
      */
     public Future  pollHealth() {
-        return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread").submit(
+        return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread",4).submit(
                 ()->{
                     try{
                         LOG.trace("health checks on {}", sender.getChannel());
@@ -171,7 +171,8 @@ public class HecIOManager implements Closeable {
     }
 
     public Future preflightCheck() {
-        ExecutorService x = ThreadScheduler.getSharedExecutorInstance("preflight_executor_thread");
+        //we cannot use a fixed size thread pool because the threads can get jammed up awaiting, below
+        ExecutorService x = ThreadScheduler.getSharedExecutorInstance("preflight_executor_thread"); //no limit on maxThreads
         LOG.info("thread {} submitting preflight task for {} on executor {}", 
                 sender.getChannel(), Thread.currentThread().getName(), x);        
         Future f =x.submit(
@@ -239,7 +240,7 @@ public class HecIOManager implements Closeable {
                       }
         
         });//end submit     
-        LOG.info("channel {} executor state {}", sender.getChannel(), x);
+       // LOG.info("channel {} executor state {}", sender.getChannel(), x);
         return f;
     }
 

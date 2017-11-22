@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -94,14 +97,28 @@ public synchronized  static ExecutorService getDedicatedSingleThreadExecutor(Str
             ThreadFactory f = (Runnable r) -> {
                 Thread t =  new Thread(r, name);  
                 return t;
-            };          
+            };      
+            
             //NOTE - the selection of a fair synchronouse queue is intentional. In particulat, the behavior of a LinkedBlockingQueue
             //is very dangerous, in that, if the core pool threads are somehow stuck (like in awaitNthResponse of ResponseCoordinator)
             //then the pool will simply queue tasks and will NOT expand the number of threads. A synchronous queue, on the other 
-            //hand, always results in the allocation of a new thread to the pool when the existing core pool threads are occupied.
-            ThreadPoolExecutor tpe = new ThreadPoolExecutor(0, MAX_THREADS_IN_EXECUTOR_POOL,
+            //hand, always results in the allocation of a new thread to the pool when the existing core pool threads are occupied.            
+            BlockingQueue q;
+            int corePoolSize;
+            if(maxThreads < Integer.MAX_VALUE){
+                q = new LinkedBlockingQueue(); //causes tasks to be queued when the maxThreads threads in the pool are busy
+                corePoolSize = maxThreads;
+            }else{
+                q = new SynchronousQueue<>(true); //allows threads in pool to expand to handle tasks. Tasks are never queued
+                corePoolSize = 0;
+            }
+
+            ThreadPoolExecutor tpe = new ThreadPoolExecutor(corePoolSize, maxThreads,
                                    30L, TimeUnit.SECONDS,
-                                   new SynchronousQueue<>(true), f);        
+                                   q, f);        
+            if(maxThreads < Integer.MAX_VALUE){
+                tpe.prestartAllCoreThreads();
+            }
             return tpe;
       });
     }

@@ -333,7 +333,10 @@ public class ConnectionSettings {
     }
 
     private  void setHecEndpointType(String type) {
-        setHecEndpointType(Connection.HecEndpoint.valueOf(type));
+        if(!type.equals("raw") && !type.equals("event")){
+            throw new IllegalArgumentException("Unsupported value for "+PropertyKeys.HEC_ENDPOINT_TYPE+". Should be [raw|event].");
+        }
+        defaultProps.put(PropertyKeys.HEC_ENDPOINT_TYPE, type);
     }
     
     public void setHecEndpointType(

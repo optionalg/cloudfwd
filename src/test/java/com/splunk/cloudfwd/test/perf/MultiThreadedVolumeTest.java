@@ -1,6 +1,7 @@
 package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
@@ -57,19 +58,20 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
-        ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
-                (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
+        ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
+//                Executors.newFixedThreadPool(numSenderThreads,
+//                (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
         //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
        
         for (int i = 0; i < numSenderThreads; i++) {
-            Connection  c = createAndConfigureConnection();
-            if (null ==c){
-                Assert.fail("null connection");
-            }
-            futureList.add(senderExecutor.submit(new SenderWorker(i, c)::sendAndWaitForAcks));
+            final int n =1;
+            futureList.add(senderExecutor.submit(()->{
+                SenderWorker s = new SenderWorker(n);
+                s.sendAndWaitForAcks();
+            }));
         }
         
         try {
@@ -191,9 +193,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         private int workerNumber;
         private Connection connection;
         
-        public SenderWorker(int workerNum, Connection c){
+        public SenderWorker(int workerNum){
             this.workerNumber = workerNum;
-            this.connection = c;
+            this.connection = createAndConfigureConnection();
+            if (null ==connection){
+                Assert.fail("null connection");
+            }
             //this.connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT)
         }
         public void sendAndWaitForAcks() {
