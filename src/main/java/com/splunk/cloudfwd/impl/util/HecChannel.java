@@ -167,7 +167,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
-            long randomizedStart = (long) (decomMs * (1+Math.random())); //[decomMs, 1+dcommMS]
+            long randomizedStart = (long) (decomMs * (1+2000*Math.random())); //[decomMs, 1+dcommMS]
             this.reaperTaskFuture  = ThreadScheduler.getSharedSchedulerInstance("channel_decom_scheduler").schedule(() -> {
                 reapChannel(decomMs);
             }, randomizedStart, TimeUnit.MILLISECONDS); //randomize the channel decommission - so that all channels do not decomission simultaneously.
@@ -339,7 +339,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //must add channel *before* quiesce(). 'cause if channel empty, quiesce proceeds directly to close which will kill terminate
     //the reaperScheduler, which will interrupt this very thread which was spawned by the reaper scheduler, and then  we
     //never get to add the channel.
-    this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+    HecChannel newChannel = this.loadBalancer.addChannelFromRandomlyChosenHost(); //add a replacement
+    newChannel.getHealth(); //block until this channel is available, before removing old channel
     this.loadBalancer.removeChannel(channelId, true);
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty
     //WE MUST NOT REMOVE THE CHANNEL NOW...MUST GIVE IT CHANCE TO DRAIN AND BE GRACEFULLY REMOVED

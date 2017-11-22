@@ -210,13 +210,14 @@ public class LoadBalancer implements Closeable {
         
     }
 
-    public void addChannelFromRandomlyChosenHost() throws InterruptedException {
+    public HecChannel addChannelFromRandomlyChosenHost() throws InterruptedException {
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
         LOG.debug("Adding channel for socket address  {}", addr);
         HecChannel channel = addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
         if (channel != null) {
             channel.start();
         }
+        return channel;
     }
 
     private HecChannel addChannel(InetSocketAddress s, boolean force) throws InterruptedException {
