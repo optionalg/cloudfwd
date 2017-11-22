@@ -67,7 +67,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         List<Future> futureList = new ArrayList<>();
        
         for (int i = 0; i < numSenderThreads; i++) {
-            final int n =1;
+            final int n =i;
             futureList.add(senderExecutor.submit(()->{
                 SenderWorker s = new SenderWorker(n);
                 s.sendAndWaitForAcks();
