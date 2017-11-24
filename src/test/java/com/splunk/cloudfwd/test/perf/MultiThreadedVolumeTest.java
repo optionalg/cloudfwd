@@ -1,6 +1,7 @@
 package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
@@ -213,27 +214,28 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                         logMetrics(eb, eb.getLength());
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
                         long sent = this.connection.sendBatch(eb);
-                        LOG.info("Sender {} sent batch with id={}", workerNumber,  eb.getId());                        
-                        next = nextBatch(batchCounter.incrementAndGet());
-                        LOG.info("Sender {} generated next batch", workerNumber);
-                       
+                        LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
                         synchronized (this) {
                             // wait while the batch hasn't been acknowledged and it hasn't failed
                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
                                LOG.debug("Sender {}, about to wait", workerNumber);
                                 waitingSenders.put(eb.getId(), this);
-                                wait(500); //wait 500 ms //fixme 5 seconds too long
+                                wait(1000); //wait1 sec
                                 LOG.debug("Sender {}, waited 500ms", workerNumber);
                             }
                         }
+                        LOG.info("sender {} ackd {} in {} ms", this.workerNumber, eb.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
+                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.toString());
                         waitingSenders.remove(eb.getId());    
+                        next = nextBatch(batchCounter.incrementAndGet());
+                        LOG.info("Sender {} generated next batch", workerNumber);
                     
                     } catch (InterruptedException ex) {
                         LOG.debug("Sender {} exiting.", workerNumber);
                         return;
                     }
                 }
-                LOG.debug("Sender {} exiting.", workerNumber);
+                LOG.warn("Sender {} exiting.", workerNumber);
             }catch(Exception e){
                 LOG.error("Worker {} caught exception {}",workerNumber, e .getMessage(), e);
             }
@@ -290,6 +292,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             super.acknowledged(events);
             //sometimes events get acknowledged before the SenderWorker starts waiting
             if (waitingSenders.get(events.getId()) != null) {
+              
+                LOG.info("ackd {} in {}", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
                 waitingSenders.get(events.getId()).tell();
             }
         }

@@ -237,7 +237,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       case PREFLIGHT_OK:
           LOG.info("Preflight checks OK on {}", this);
           preflightCompleted = true;
-          //Note: we also start polling health if/when we give up on prflight checks due to max retries of preflight failing
           sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
     }
     updateHealth(e, wasAvailable);

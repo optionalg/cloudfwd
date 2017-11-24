@@ -99,6 +99,7 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
      * Override this to provide hndling of Http200/OK. Default behavior does nothing (NoOp)
      * @param reply
      * @param httpCode
+     * @throws java.io.IOException
      * @throws java.lang.Exception
      */
     protected void onOk(String reply, int httpCode) throws IOException {
