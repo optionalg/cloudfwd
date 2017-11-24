@@ -224,7 +224,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                                 LOG.debug("Sender {}, waited 500ms", workerNumber);
                             }
                         }
-                        LOG.info("sender {} ackd {} in {} ms", this.workerNumber, eb.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
+                        LOG.info("sender {} ackd {} in {} ms", this.workerNumber, eb.getLength(), System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());
                         LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.toString());
                         waitingSenders.remove(eb.getId());    
                         next = nextBatch(batchCounter.incrementAndGet());
