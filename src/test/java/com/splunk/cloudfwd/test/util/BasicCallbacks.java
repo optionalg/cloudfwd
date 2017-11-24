@@ -41,7 +41,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected final CountDownLatch warnLatch;//if warnings are expected, this latch gates the test until it is released
   protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
-  private AtomicInteger failedCount = new AtomicInteger(0);
+  protected AtomicInteger failedCount = new AtomicInteger(0);
   protected String failMsg;
   protected Exception exception;
   protected Exception systemWarning;

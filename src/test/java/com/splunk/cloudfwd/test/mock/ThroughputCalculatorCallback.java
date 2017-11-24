@@ -35,7 +35,6 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
   Map<Comparable, Long> batchSizes = new ConcurrentHashMap<>();
   AtomicLong ackedCount = new AtomicLong(0);
   AtomicLong ackedSize = new AtomicLong(0);
-  AtomicLong failedCount = new AtomicLong(0);
   //AtomicLong batchCount = new AtomicLong(0);
   AtomicLong totLatency = new AtomicLong(0);
   long lastLatency;
