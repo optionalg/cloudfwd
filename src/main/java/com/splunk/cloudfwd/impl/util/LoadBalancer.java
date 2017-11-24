@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
+import java.util.Collections;
 import java.util.function.Predicate;
 
 /**
@@ -124,6 +125,7 @@ public class LoadBalancer implements Closeable {
     }
 
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
+        Collections.shuffle(addrs); //we do this so that if more than one connection, and fewer max_total_channels than addrs, that each connection won't choose the same addr
         //add multiple channels for each InetSocketAddress
         for (int i = 0; i < channelsPerDestination; i++) {
             for (InetSocketAddress s : addrs) {
