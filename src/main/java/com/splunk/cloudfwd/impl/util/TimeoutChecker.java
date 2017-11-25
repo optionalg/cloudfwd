@@ -38,9 +38,9 @@ import org.slf4j.Logger;
 public class TimeoutChecker implements EventTracker {
     private final Logger LOG;
    // private ThreadScheduler timeoutCheckScheduler = new ThreadScheduler("Event Timeout Scheduler");
-    private ScheduledThreadPoolExecutor timeoutCheckScheduler = ThreadScheduler.getSharedSchedulerInstance("Event_Timeout_Scheduler");
+    private final ScheduledThreadPoolExecutor timeoutCheckScheduler = ThreadScheduler.getSharedSchedulerInstance("Event_Timeout_Scheduler");
     private ScheduledFuture task;
-    private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
+    private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();//key is EventBatch.getId()
     private ConnectionImpl connection;
     private boolean quiesced;
     private AtomicLong sizeInBytes = new AtomicLong(0); //total amount of event bytes that are buffered in the 'eventBatches' map
@@ -170,5 +170,5 @@ public class TimeoutChecker implements EventTracker {
     boolean isFull() {
         return  getSizeInBytes() >= 1024*1024*256;//256 MB max 'in flight' FIXME TODO this needs to be a config param
     }
-
+    
 }

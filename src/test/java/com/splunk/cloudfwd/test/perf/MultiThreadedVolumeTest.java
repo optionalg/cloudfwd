@@ -234,8 +234,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                         LOG.warn("Sender {} exiting.", workerNumber);
                         return;
                     } catch(Exception e){
-                        //note that if we catch an Exception, then we never got to assign eb to nextBatch. Therefore, we continue to send eb on next pass through loop, which is desired behavior
-                        LOG.warn("Worker {} caught exception {}. Recovering.",workerNumber, e .getMessage(), e);
+                        LOG.warn("Worker {} caught exception {} sending {}.",workerNumber, e .getMessage(), eb, e);
+                        waitingSenders.remove(eb.getId()); 
+                        eb = nextBatch(batchCounter.incrementAndGet());
                     }
                 }
                 LOG.warn("Sender {} exiting.", workerNumber);
