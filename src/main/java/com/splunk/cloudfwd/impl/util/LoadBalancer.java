@@ -360,9 +360,16 @@ public class LoadBalancer implements Closeable {
         }
     }
 
+    //return true if events has been succesfully sent, or ejected because failed.. A known use case for ejection is when the 
+    //EventBatch times out while it is stuck in spin send because there are no available channels. Once the batch times out
+    //it must be ejected so we don't send a batch that is already failed due to timeout.
     private boolean tryChannelSend(List<HecChannel> channelsSnapshot,
             EventBatchImpl events, boolean forced) {
         HecChannel tryMe;
+        if(events.isFailed()){
+            LOG.warn("load balancer ejecting failed event batch {}", events);
+            return true;
+        }
         int channelIdx = this.robin++ % channelsSnapshot.size(); //increment modulo number of channels
         tryMe = channelsSnapshot.get(channelIdx);
         try {
