@@ -51,12 +51,7 @@ import org.apache.http.concurrent.FutureCallback;
 public class HecIOManager implements Closeable {
 
     private Logger LOG = LoggerFactory.getLogger(HecIOManager.class.getName());
-    private static final ObjectMapper mapper = new ObjectMapper();
     private final HttpSender sender;
-//    private final ThreadScheduler ackPollController = new ThreadScheduler(
-//            "ack poller");
-//    private final ThreadScheduler healthPollController = new ThreadScheduler(
-//            "health poller");
     private volatile Future ackPollTask;
     private volatile Future healthPollTask;
     private final AcknowledgementTracker ackTracker;
@@ -124,7 +119,7 @@ public class HecIOManager implements Closeable {
 
     //called by the AckPollScheduler
     public Future pollAcks() {
-        return ThreadScheduler.getSharedExecutorInstance("ack_poll_executor_thread",4).submit(
+        return ThreadScheduler.getSharedExecutorInstance("ack_poll_executor_thread").submit(
                 ()->{
                      LOG.trace("POLLING ACKS on {}", sender.getChannel());
                     FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
@@ -137,7 +132,7 @@ public class HecIOManager implements Closeable {
      * successfully
      */
     public Future  pollHealth() {
-        return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread",4).submit(
+        return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread").submit(
                 ()->{
                     try{
                         LOG.trace("health checks on {}", sender.getChannel());

@@ -106,8 +106,8 @@ public synchronized  static ExecutorService getDedicatedSingleThreadExecutor(Str
             BlockingQueue q;
             int corePoolSize;
             if(maxThreads < Integer.MAX_VALUE){
-                q = new LinkedBlockingQueue(); //causes tasks to be queued when the maxThreads threads in the pool are busy
-                corePoolSize = maxThreads;
+                q = new LinkedBlockingQueue(); //causes tasks to be queued when the maxThreads threads in the pool are busy. 
+                corePoolSize = maxThreads; //for LinkedBlockingQueue, there will never be more than corePoolSize threads.
             }else{
                 q = new SynchronousQueue<>(true); //allows threads in pool to expand to handle tasks. Tasks are never queued
                 corePoolSize = 0;

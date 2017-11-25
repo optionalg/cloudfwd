@@ -200,16 +200,13 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             if (null ==connection){
                 Assert.fail("null connection");
             }
-            //this.connection.setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT)
         }
         public void sendAndWaitForAcks() {
             LOG.info("sender {} starting its send loop", workerNumber);
-            try{
-                EventBatch next = nextBatch(batchCounter.incrementAndGet());
+                EventBatch eb = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
                     try{
                         failed = false;
-                        EventBatch eb = next;
                         LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
                         logMetrics(eb, eb.getLength());
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
@@ -221,7 +218,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                                LOG.debug("Sender {}, about to wait", workerNumber);
                                 waitingSenders.put(eb.getId(), this);
                                 wait(1000); //wait1 sec
-                                LOG.debug("Sender {}, waited 500ms", workerNumber);
+                                LOG.debug("Sender {}, waited 1 sec,", workerNumber);
                             }
                         }
                         if(!failed){
@@ -230,19 +227,18 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                             LOG.info("sender {} failed in {} ms", this.workerNumber, System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());
                         }
                         waitingSenders.remove(eb.getId());    
-                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());                            
-                        next = nextBatch(batchCounter.incrementAndGet());
+                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
                         LOG.info("Sender {} generated next batch", workerNumber);
-                    
-                    } catch (InterruptedException ex) {
-                        LOG.debug("Sender {} exiting.", workerNumber);
+                        eb = nextBatch(batchCounter.incrementAndGet());                   
+                    } catch (InterruptedException ex) {                        
+                        LOG.warn("Sender {} exiting.", workerNumber);
                         return;
+                    } catch(Exception e){
+                        //note that if we catch an Exception, then we never got to assign eb to nextBatch. Therefore, we continue to send eb on next pass through loop, which is desired behavior
+                        LOG.warn("Worker {} caught exception {}. Recovering.",workerNumber, e .getMessage(), e);
                     }
                 }
                 LOG.warn("Sender {} exiting.", workerNumber);
-            }catch(Exception e){
-                LOG.error("Worker {} caught exception {}",workerNumber, e .getMessage(), e);
-            }
         }
 
         private void logMetrics(EventBatch batch, long sent) {
