@@ -229,7 +229,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                         waitingSenders.remove(eb.getId());    
                         LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
                         LOG.info("Sender {} generated next batch", workerNumber);
-                        Thread.sleep((long) (Math.random()*30000)); //avoid lock-step sending
                         eb = nextBatch(batchCounter.incrementAndGet());                   
                     } catch (InterruptedException ex) {                        
                         LOG.warn("Sender {} exiting.", workerNumber);
