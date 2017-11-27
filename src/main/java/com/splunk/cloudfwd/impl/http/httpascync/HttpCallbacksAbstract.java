@@ -82,7 +82,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
         StringBuilder buf = new StringBuilder();
         for(int i=0;i<headers.length;i++){
-            buf.append(headers[i]);
+            buf.append(headers[i].getValue());
             if(i < headers.length-1){
                 buf.append(';'); //cookies are semi-colon separated
             }

@@ -106,6 +106,13 @@ public final class HttpSender implements Endpoints, CookieClient {
     this.ackUrl = this.baseUrl.trim() + "/services/collector/ack";
     this.healthUrl = this.baseUrl.trim() + "/services/collector/health";
     this.disableCertificateValidation = disableCertificateValidation;
+    //The following system properties can be set for debugging HTTP traffic (in code, or as "-D" params JVM, see http://hc.apache.org/httpcomponents-client-ga/logging.html
+    /*
+    System.setProperty("org.apache.commons.logging.Log","org.apache.commons.logging.impl.SimpleLog");
+    System.setProperty("org.apache.commons.logging.simplelog.showdatetime","true");
+    System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "DEBUG");
+    System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http.wire","ERROR");    
+    */
   }
   
     
@@ -528,6 +535,7 @@ public final class HttpSender implements Endpoints, CookieClient {
                 c.forceClose(); //smoke
                 c.resendInFlightEvents();
             } catch (Exception ex) {
+                ex.printStackTrace();
                 LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
             }            
         };//end runnable
