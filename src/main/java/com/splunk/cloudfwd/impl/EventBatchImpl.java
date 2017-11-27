@@ -175,7 +175,7 @@ public class EventBatchImpl implements EventBatch {
    * @return the acknowledged
    */
   @Override
-  public synchronized boolean isAcknowledged() {
+  public boolean isAcknowledged() { //note: must not be synchronized. Can deadlock when an EventBatch post wants to get the momitor on checkpoint manager, but CheckpointManager is in synchronized 'release' method and calls isAcknowledge on this batch
     return acknowledged;
   }
 

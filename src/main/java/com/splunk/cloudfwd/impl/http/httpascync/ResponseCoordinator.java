@@ -131,13 +131,11 @@ h1's response
      * @throws InterruptedException
      */
     public LifecycleEvent awaitNthResponse(int n) throws InterruptedException {
-        //TODO FIXME - for sure we need to also have timeouts at the HTTP layer. If network is down this is going
-        //to block the full five minutes. Furthermore, preflight retries will occur N times and the blocking will stack!
-        if (latches[n].await(3, TimeUnit.MINUTES)) {//wait for ackcheck response before hitting ack endpoint  
+        if (latches[n].await(3, TimeUnit.MINUTES)) {//wait for response
             return this.latches[n].getLifecycleEvent();
         } else {
             LOG.warn("ResponseCoordinator timed out waiting for response {}.", n);
-            return null;
+            return null; //in this case, for preflight checks, there will not be a retry
         }
     }
 

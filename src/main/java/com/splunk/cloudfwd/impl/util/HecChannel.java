@@ -237,12 +237,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       case PREFLIGHT_OK:
           LOG.info("Preflight checks OK on {}", this);
           preflightCompleted = true;
-          sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
+          //sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
     }
     updateHealth(e, wasAvailable);
   }
 
     private void updateHealth(LifecycleEvent e, boolean wasAvailable) {
+        this.health.setStatus(e, e.isOK());
+        /*
         //only health poll  or preflight ok will set health to true
         if(e.getType()==LifecycleEvent.Type.PREFLIGHT_OK || e.getType()==LifecycleEvent.Type.HEALTH_POLL_OK){
             this.health.setStatus(e, true);
@@ -257,6 +259,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         if(e instanceof Failure){
             this.health.setStatus(e, false);           
         }
+        */
         //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
         if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
             LOG.info("FAIL or NOT OK caused  DECREMENT {}", e);

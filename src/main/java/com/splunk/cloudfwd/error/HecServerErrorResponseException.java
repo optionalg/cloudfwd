@@ -30,7 +30,7 @@ import java.util.Set;
 
 public class HecServerErrorResponseException extends RuntimeException {
     private static Set<Integer> nonRecoverableErrors = new HashSet<>(Arrays.asList(3, 10, 11));
-    private static Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 4, 7, 14, 400)); //400 appears to be a splunk bug! Health poll returns http status 400 with code 400 for invalid token
+    private static Set<Integer> recoverableConfigErrors = new HashSet<>(Arrays.asList(1, 2, 4, 7, 14, 400, 404)); //400 appears to be a splunk bug! Health poll returns http status 400 with code 400 for invalid token
     private static Set<Integer> recoverableDataErrors = new HashSet<>(Arrays.asList(5, 6, 12, 13));
     private static Set<Integer> recoverableServerErrors = new HashSet<>(Arrays.asList(8, 9));
     
@@ -59,7 +59,15 @@ public class HecServerErrorResponseException extends RuntimeException {
         this.httpBodyAndStatus = b;
         this.lifecycleType = type;        
         this.url = url;
-        setErrorType(serverRespObject.getCode());
+        if(vo.getCode() != -1){
+            //response was an HEC server response
+            setErrorType(serverRespObject.getCode());
+        }else{
+            //response didn't even come from HEC!
+            if(b.getStatusCode()==404 ){ //page not found
+               this.errorType = Type.RECOVERABLE_CONFIG_ERROR; 
+            }
+        }
     }
 
     @Override
