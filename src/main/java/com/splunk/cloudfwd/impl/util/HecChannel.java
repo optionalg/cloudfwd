@@ -167,7 +167,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //schedule the channel to be automatically quiesced at LIFESPAN, and closed and replaced when empty
         long decomMs = getConnetionSettings().getChannelDecomMS();
         if (decomMs > 0) {
-            long randomizedStart = (long) (decomMs * (1+2000*Math.random())); //[decomMs, 1+dcommMS]
+            long randomizedStart = (long) (decomMs * (1+Math.random())); //[decomMs, 1+dcommMS]
             this.reaperTaskFuture  = ThreadScheduler.getSharedSchedulerInstance("channel_decom_scheduler").schedule(() -> {
                 reapChannel(decomMs);
             }, randomizedStart, TimeUnit.MILLISECONDS); //randomize the channel decommission - so that all channels do not decomission simultaneously.
