@@ -91,7 +91,8 @@ public final class HttpClientFactory {
         return HttpAsyncClients.custom()                
                 .setMaxConnTotal(MAX_CONN_TOTAL)
                 .setDefaultIOReactorConfig(ioReactorConfig)
-               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE);
+                .disableCookieManagement()
+               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE);          
     }    
 
     /**
