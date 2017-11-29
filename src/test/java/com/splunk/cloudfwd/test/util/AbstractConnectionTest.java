@@ -72,6 +72,8 @@ public abstract class AbstractConnectionTest {
   protected List<Event> events;
   private Exception sendException;
   private String sendExceptionMsg;
+  
+
 
   //override to do stuff like set buffering or anything else affecting connection
   protected void configureConnection(Connection connection) {

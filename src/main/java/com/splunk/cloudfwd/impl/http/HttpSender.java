@@ -37,12 +37,16 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
-import org.apache.logging.log4j.util.Strings;
+//import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import java.net.URISyntaxException;
+import java.util.logging.Level;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.utils.URIBuilder;
 
 /**
  * This class performs the actually HTTP send to HEC
@@ -106,13 +110,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     this.ackUrl = this.baseUrl.trim() + "/services/collector/ack";
     this.healthUrl = this.baseUrl.trim() + "/services/collector/health";
     this.disableCertificateValidation = disableCertificateValidation;
-    //The following system properties can be set for debugging HTTP traffic (in code, or as "-D" params JVM, see http://hc.apache.org/httpcomponents-client-ga/logging.html
-    /*
-    System.setProperty("org.apache.commons.logging.Log","org.apache.commons.logging.impl.SimpleLog");
-    System.setProperty("org.apache.commons.logging.simplelog.showdatetime","true");
-    System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "DEBUG");
-    System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http.wire","ERROR");    
-    */
+
   }
   
     
@@ -253,28 +251,33 @@ public final class HttpSender implements Endpoints, CookieClient {
   }
 
   private String appendUri(String endpoint) {
-    String url = endpoint + "?";
-    
-    String index = connectionSettings.getIndex();
-    if (!StringUtils.isEmpty(index)) {
-      url = url + "&index=" + index;
-    }
-
-    String source = connectionSettings.getSource();
-    if (!StringUtils.isEmpty(source)) {
-      url = url + "&source=" + source;
-    }
-
-    String sourcetype =connectionSettings.getSourcetype();
-    if (!StringUtils.isEmpty(sourcetype)) {
-      url = url + "&sourcetype=" + sourcetype;
-    }
-    
-    String hostField = connectionSettings.getHost();
-    if (!StringUtils.isEmpty(hostField)) {
-      url = url + "&host=" + hostField;
-    }    
-    return url;
+      try {
+          URIBuilder builder = new URIBuilder(endpoint);
+          
+          String index = connectionSettings.getIndex();
+          if (!StringUtils.isEmpty(index)) {
+              builder.addParameter("index", index);
+          }
+          
+          String source = connectionSettings.getSource();
+          if (!StringUtils.isEmpty(source)) {
+              builder.addParameter("source", source);
+          }
+          
+          String sourcetype =connectionSettings.getSourcetype();
+          if (!StringUtils.isEmpty(sourcetype)) {
+              builder.addParameter("sourcetype", sourcetype);
+          }
+          
+          String hostField = connectionSettings.getHost();
+          if (!StringUtils.isEmpty(hostField)) {
+              builder.addParameter("host", hostField);
+          }
+          return builder.toString();
+      } catch (URISyntaxException ex) {
+          LOG.warn("problem with HEC endpoint URL: {}", ex.getMessage());
+          return endpoint;
+      }
   }
   
   private void setHeaders(HttpRequestBase r){
@@ -331,8 +334,9 @@ public final class HttpSender implements Endpoints, CookieClient {
     String completeUrl = appendUri(endpointUrl);
     final HttpPost httpPost = new HttpPost(completeUrl);
     setHeaders(httpPost);
-    
-    httpPost.setEntity(events.getEntity());
+    HttpEntity e= events.getEntity();
+    LOG.debug("{}", e.toString());
+    httpPost.setEntity(e);
     httpClient.execute(httpPost, httpCallback);
   }
 
@@ -361,13 +365,9 @@ public final class HttpSender implements Endpoints, CookieClient {
             this.dummyEventPost = new HttpPost(rawUrl);
             setHeaders(dummyEventPost);
             StringEntity empty;
-              try {
-                  empty = new StringEntity(Strings.EMPTY);
-                  dummyEventPost.setEntity(empty);
-                  httpClient.execute(dummyEventPost, httpCallback);
-              } catch (UnsupportedEncodingException ex) {
-                  LOG.error(ex.getMessage(),ex);
-              }
+            empty = new StringEntity("");
+            dummyEventPost.setEntity(empty);
+            httpClient.execute(dummyEventPost, httpCallback);
           } catch (Exception ex) {
             LOG.error(ex.getMessage(), ex);
             throw new RuntimeException(ex.getMessage(), ex);

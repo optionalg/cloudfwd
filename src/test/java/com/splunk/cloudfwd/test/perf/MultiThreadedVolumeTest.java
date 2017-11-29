@@ -32,12 +32,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String NUM_SENDERS_KEY = "num_senders";    
     
     // defaults for CLI parameters
-    static {
+    static {        
         cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "75");
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "500"); //500MB
-        cliProperties.put(NUM_SENDERS_KEY, "128"); //128 senders
+        cliProperties.put(NUM_SENDERS_KEY, "1"); //128 senders
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
     }
