@@ -528,12 +528,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     private void resendEvents(){
         Runnable r = ()->{
              try {
-                HecChannel c = getChannel();
-                LoadBalancer lb = getConnection().getLoadBalancer();
-                lb.addChannelFromRandomlyChosenHost(); //to compensate for the channel we are about to smoke
-                lb.removeChannel(c.getChannelId(), true); //bye bye
-                c.forceClose(); //smoke
-                c.resendInFlightEvents();
+                getChannel().closeAndReplaceAndResend();
             } catch (Exception ex) {
                 ex.printStackTrace();
                 LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);

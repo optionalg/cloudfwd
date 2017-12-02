@@ -20,7 +20,6 @@ import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.httpascync.GenericCoordinatedResponseHandler;
 import com.splunk.cloudfwd.impl.http.httpascync.NoDataEventPostResponseHandler;
@@ -28,7 +27,6 @@ import com.splunk.cloudfwd.impl.http.httpascync.ResponseCoordinator;
 import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;

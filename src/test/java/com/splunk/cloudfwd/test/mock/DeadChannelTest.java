@@ -30,7 +30,7 @@ import org.junit.Test;
  * limitations under the License.
  */
 /**
- *
+ * Uses a simulated endpoint that looses acks to make a channel appear dead. Test passes if it receives HecChannelDeathException.
  * @author ghendrey
  */
 public class DeadChannelTest extends AbstractConnectionTest {

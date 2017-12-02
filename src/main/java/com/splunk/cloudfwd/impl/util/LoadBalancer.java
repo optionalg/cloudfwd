@@ -41,7 +41,9 @@ import org.slf4j.Logger;
 import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
 import java.util.Collections;
+import java.util.concurrent.ScheduledFuture;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 
 /**
  *
@@ -55,9 +57,11 @@ public class LoadBalancer implements Closeable {
     private final IndexDiscoverer discoverer;
     private int robin; //incremented (mod channels) to perform round robin
     private final ConnectionImpl connection;
+    private volatile boolean quiesced;
     private boolean closed;
     private volatile CountDownLatch latch;
     private volatile boolean interrupted;
+    private ScheduledFuture<?> reaperTaskFuture;
 
     public LoadBalancer(ConnectionImpl c) {
         this.LOG = c.getLogger(LoadBalancer.class.getName());
@@ -66,6 +70,9 @@ public class LoadBalancer implements Closeable {
                 getChannelsPerDestination();
         this.discoverer = new IndexDiscoverer((PropertiesFileHelper)c.getSettings(), c);
         createChannels(discoverer.getAddrs());
+        //Reaping will randomly remove a channel and replace it with a fresh one every so often. 
+        //This insures that channels get spread across indexers, even when we are fronted by an ELB
+        setupReaper(); 
     }
 
 
@@ -98,17 +105,18 @@ public class LoadBalancer implements Closeable {
 
     @Override
     public synchronized void close() {
+        quiesced = true;
+        killReaper();
         for (HecChannel c : this.channels.values()) {
             c.close();
         }
-//        for (HecChannel c : this.channels.values()) {
-//            c.awaitCloseFinished();
-//        }       
-//        LOG.info("Load balancer closed, all channels quiesced and closed.");
+        //fixme todo: should we forceClose staleChannels?
         this.closed = true;
     }
 
     public void closeNow() {
+        quiesced = true;
+        killReaper();
         for (HecChannel c : this.channels.values()) {
             c.forceClose();
         }
@@ -139,6 +147,26 @@ public class LoadBalancer implements Closeable {
             }
         }
         waitForPreflight();
+    }
+    
+    private void setupReaper() {
+        //One channel will be decomissioned each time the scheduler, below, fires. And there will be an interval of decomMS
+        //between each channel that is decomissioned. We need to avoid "storm" of decomissioning many channels at once.
+        long decomMs = getConnectionSettings().getChannelDecomMS();
+        if (decomMs > 0) {
+            this.reaperTaskFuture  = ThreadScheduler.getSharedSchedulerInstance("channel_decom_scheduler").scheduleWithFixedDelay(() -> {
+                ArrayList<HecChannel> channels = (ArrayList) this.channels.values();
+                if(!channels.isEmpty()){
+                    channels.get(0).reapChannel(decomMs); //since channels are in unordered map, item "0" is essentially a random member of the values-set
+                }
+            }, decomMs, decomMs, TimeUnit.MILLISECONDS); //randomize the channel decommission - so that all channels do not decomission simultaneously.
+        }
+    }
+    
+    void killReaper() {
+        if (null != reaperTaskFuture && !reaperTaskFuture.isCancelled()) {
+            reaperTaskFuture.cancel(true);
+        }
     }
     
     private void waitForPreflight() {
@@ -212,7 +240,10 @@ public class LoadBalancer implements Closeable {
         
     }
 
-    public HecChannel addChannelFromRandomlyChosenHost() throws InterruptedException {
+    public HecChannel addChannelFromRandomlyChosenHost(boolean forced) throws InterruptedException {   
+        if(!forced && quiesced){
+            return null; //don't bother adding channel if we are shutting down, and we're not forcing it
+        }
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
         LOG.debug("Adding channel for socket address  {}", addr);
         HecChannel channel = addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
@@ -374,10 +405,10 @@ public class LoadBalancer implements Closeable {
         tryMe = channelsSnapshot.get(channelIdx);
         try {
             if (tryMe.send(events)) {
-                LOG.info("sent EventBatch:{}  on channel: {} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
+                LOG.debug("sent EventBatch:{}  on channel: {} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
-                LOG.info("channel not available {}", tryMe);
+                LOG.debug("channel not available {}", tryMe);
                 LOG.debug("Skipped channel: {} available={} healthy={} full={} quiesced={} closed={}", tryMe, tryMe.isAvailable(), tryMe.isHealthy(), tryMe.isFull(), tryMe.isQuiesced(), tryMe.isClosed());
             }
         } catch (RuntimeException e) {
@@ -510,14 +541,15 @@ public class LoadBalancer implements Closeable {
     }
 
     public synchronized void refreshChannels()  {
-        // do DNS lookup BEFORE closing channels, in case we throw an exception due to a bad URL
-        List<InetSocketAddress> addrs = discoverer.getAddrs();
-        for (HecChannel c : this.channels.values()) {
-            c.close(); //AndFinish();
-        }
+        discoverer.getAddrs(); //do this now to try to generate any exceptions related to the URL 
         staleChannels.putAll(channels);
-        channels.clear();
-        createChannels(addrs);
+        for (HecChannel c : this.channels.values()) {
+            try {
+                c.closeAndReplace(); //will block while new channel passes preflight or preflight times out. Do this to avoid "storm" of preflight requests on active connection
+            } catch (InterruptedException ex) {
+                LOG.error("Interrupted trying to close and replace {}", c);
+            }
+        }
     }
 
     /**
