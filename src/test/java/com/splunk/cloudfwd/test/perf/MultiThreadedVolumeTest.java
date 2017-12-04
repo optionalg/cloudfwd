@@ -4,6 +4,7 @@ import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
+import static com.splunk.cloudfwd.test.util.AbstractConnectionTest.KEY_ENABLE_TEST_PROPERTIES;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
 import org.junit.Test;
@@ -11,12 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 
 /**
  * Optionally pass command line parameters "token" and "url" as: 
@@ -70,7 +73,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         for (int i = 0; i < numSenderThreads; i++) {
             final int n =i;
             futureList.add(senderExecutor.submit(()->{
-                SenderWorker s = new SenderWorker(n);
+                SenderWorker s;
+                try {
+                    s = new SenderWorker(n);
+                } catch (UnknownHostException ex) {
+                    throw new RuntimeException(ex.getMessage(), ex);
+                }
                 s.sendAndWaitForAcks();
             }));
         }
@@ -194,12 +202,24 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         private int workerNumber;
         private Connection connection;
         
-        public SenderWorker(int workerNum){
+        public SenderWorker(int workerNum) throws UnknownHostException{
             this.workerNumber = workerNum;
             this.connection = createAndConfigureConnection();
             if (null ==connection){
                 Assert.fail("null connection");
             }
+            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
+            //instantiated
+            Properties p = new Properties();
+            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+                p.put(PropertyKeys.TOKEN, cliProperties.get(PropertyKeys.TOKEN));
+            }
+            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
+                p.put(PropertyKeys.COLLECTOR_URI, cliProperties.get(PropertyKeys.COLLECTOR_URI));
+            }
+            p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
+            p.put(KEY_ENABLE_TEST_PROPERTIES, "false");
+            connection.getSettings().setProperties(p);
         }
         public void sendAndWaitForAcks() {
             LOG.info("sender {} starting its send loop", workerNumber);
