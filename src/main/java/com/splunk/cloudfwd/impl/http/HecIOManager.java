@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -74,12 +75,9 @@ public class HecIOManager implements Closeable {
         }
         synchronized(this){
             if (null == ackPollTask) {
-                Runnable poller = () -> {                    
-                    ackPollTask = this.pollAcks();//the actual executor task now replaces the scheduled task
-                };
                 long interval = sender.getConnection().getSettings().getAckPollMS();
                 this.ackPollTask = ThreadScheduler.getSharedSchedulerInstance("ack_poll_scheduler").
-                        scheduleWithFixedDelay(poller, 0, interval, TimeUnit.MILLISECONDS);
+                        scheduleWithFixedDelay(this::pollAcks, 0, interval, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -90,12 +88,9 @@ public class HecIOManager implements Closeable {
         synchronized(this){
             if (null == healthPollTask) {
                 long interval = sender.getConnection().getSettings().
-                        getHealthPollMS();
-                Runnable poller = () -> {                    
-                    healthPollTask = this.pollHealth(); //the actual executor task now replaces the scheduled task
-                };                
+                        getHealthPollMS();             
                 this.healthPollTask = ThreadScheduler.getSharedSchedulerInstance("health_poll_scheduler").
-                        scheduleWithFixedDelay(poller, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
+                        scheduleWithFixedDelay(this::pollHealth, (long) (interval*Math.random()), interval, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -130,6 +125,11 @@ public class HecIOManager implements Closeable {
      * successfully
      */
     public Future  pollHealth() {
+        //Don't poll for health on a healthy channel. Also note that if a channel is misconfigured, we will not pass preflight checks.
+        //Therefore, we would never enter pollHeath, since we call pollHealth only when PREFLIGHT_OK.
+        if(sender.getChannel().isHealthy()){ 
+            return null; //don't poll, we were healthy
+        }
         return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread").submit(
                 ()->{
                     try{
