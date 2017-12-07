@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 public class EventEndpoint extends ClosableDelayableResponder implements Endpoint {
 
   private static final Logger LOG = LoggerFactory.getLogger(EventEndpoint.class.getName());
-  private AcknowledgementEndpoint ackEndpoint;
+  protected AcknowledgementEndpoint ackEndpoint;
 
     public EventEndpoint() {
     }
@@ -55,7 +55,7 @@ public class EventEndpoint extends ClosableDelayableResponder implements Endpoin
     return ackEndpoint.nextAckId();
   }
 
-  private static HttpEntity nextAckRespEntity(final int ackId) {
+  protected static HttpEntity nextAckRespEntity(final int ackId) {
 
     return new AckIdRespEntity(ackId);
   }
@@ -86,7 +86,7 @@ public class EventEndpoint extends ClosableDelayableResponder implements Endpoin
     }
   }
 
-  private static class AckIdRespEntity extends CannedEntity {
+  protected static class AckIdRespEntity extends CannedEntity {
 
     public AckIdRespEntity(long ackId) {
       super("{\"ackId\":" + ackId + "}");
