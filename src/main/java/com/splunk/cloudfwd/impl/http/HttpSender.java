@@ -33,18 +33,13 @@ import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
-import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
-import java.util.Properties;
 import java.util.Set;
 //import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
-import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.net.URISyntaxException;
-import java.util.logging.Level;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
 
