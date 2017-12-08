@@ -55,6 +55,7 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
     Assert.assertTrue("Expected all channel to fail with SSLPeerUnverifiedException, but got this healths: " + healths, healths.stream()
             .filter(e -> e.getStatus().getException() instanceof SSLPeerUnverifiedException)
             .count() == healths.size());
+    connection.close();
   }
   
   @Override

@@ -22,11 +22,13 @@ public class CreateConnectionAcksDisabledIT extends AbstractReconciliationTest {
 
     @Test
     public void createConnectionWithAcksDisabled() throws InterruptedException {
-        super.sendEvents();
+        super.sendEvents(false, false);
         assertAllChannelsFailed(HecServerErrorResponseException.class,
                 "HecServerErrorResponseException{serverRespObject=HecErrorResponseValueObject{text=ACK is disabled, code=14, invalidEventNumber=-1}, " +
                         "httpBodyAndStatus=HttpBodyAndStatus{statusCode=400, body={\"text\":\"ACK is disabled\",\"code\":14}}, " +
-                        "lifecycleType=ACK_DISABLED, url=https://127.0.0.1:8088, errorType=RECOVERABLE_CONFIG_ERROR, context=null}");}
+                        "lifecycleType=ACK_DISABLED, url=https://127.0.0.1:8088, errorType=RECOVERABLE_CONFIG_ERROR, context=null}");
+        connection.close();
+    }
 
     @Override
     protected Properties getProps() {

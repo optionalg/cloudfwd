@@ -23,11 +23,11 @@ public class SessionCookiesTest extends AbstractConnectionTest {
 
     @Test
     public void testWithSessionCookies() throws InterruptedException {
-        List<String> listofChannelIds = getChannelId(this.connection);
+        List<String> listOfChannelIds = getChannelId(this.connection);
         sendEvents();
-        List<String> listofChannelsAfterCookieChanges = getChannelId(this.connection);
-        for (String i : listofChannelsAfterCookieChanges) {
-            if (listofChannelIds.contains(i)) {
+        List<String> listOfChannelsAfterCookieChanges = getChannelId(this.connection);
+        for (String i : listOfChannelsAfterCookieChanges) {
+            if (listOfChannelIds.contains(i)) {
                 Assert.fail("Channel Id never changed after toggling cookies.");
             }
         }
