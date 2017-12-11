@@ -256,7 +256,8 @@ public class PropertyKeys {
    * @see CHANNELS_PER_DESTINATION
    */
   public static final String PREFLIGHT_TIMEOUT_MS = "preflight_timeout";
-
+    
+  public static final String ENABLE_PREFLIGHT = "enable_preflight";
 
   /* **************************** REQUIRED KEYS ************************* */
 
@@ -365,6 +366,8 @@ public class PropertyKeys {
    * monotonically increasing IDs.
    */
   public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
+  
+  public static final String DEFAULT_ENABLE_PREFLIGHT = "true";
   
   /**
    * Channel Quiesce Timeout define how much time to wait for a channel to 

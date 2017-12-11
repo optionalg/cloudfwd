@@ -140,8 +140,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (started) {
       return;
     }
-
-    preflightCheck();
+    if (getConnection().getSettings().isPreflightEnabled()) {
+        preflightCheck();
+    } else {
+        // skip preflight check and assume channel is healthy
+        health.setStatus(new LifecycleEvent(LifecycleEvent.Type.PRE_EVENT_POST), true);
+    }
     setupDeadChannelDetector();
 
     started = true;

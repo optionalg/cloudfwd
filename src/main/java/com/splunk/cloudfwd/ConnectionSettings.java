@@ -310,6 +310,12 @@ public class ConnectionSettings {
         }
         return max;
     }    
+    
+    public boolean isPreflightEnabled() {
+        return Boolean.parseBoolean(this.defaultProps.getProperty(
+            PropertyKeys.ENABLE_PREFLIGHT,
+            PropertyKeys.DEFAULT_ENABLE_PREFLIGHT).trim());
+    }
 
     public boolean isCheckpointEnabled() {
         return Boolean.parseBoolean(this.defaultProps.getProperty(
