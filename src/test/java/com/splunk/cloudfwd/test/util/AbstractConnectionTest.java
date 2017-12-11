@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.splunk.cloudfwd.HecLoggerFactory;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,7 +22,6 @@ import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 /*
@@ -97,23 +97,22 @@ public abstract class AbstractConnectionTest {
   }
   
   protected Connection createAndConfigureConnection(){
-     Properties props = new Properties();
-    props.putAll(getTestProps());
-    props.putAll(getProps());
-    Connection connection = createConnection(callbacks, props);
-    if(null ==connection){
-        return null;
+    PropertiesFileHelper settings = getTestProps();
+    setProps(settings);
+    connection = createConnection(callbacks, settings);
+    if(null == connection){
+      return null;
     }
     connection.setLoggerFactory(new HecLoggerFactoryImpl());
     configureConnection(connection);
     return connection;
   }
   
-  protected Connection createConnection(ConnectionCallbacks c, Properties p){
+  protected Connection createConnection(ConnectionCallbacks c, PropertiesFileHelper settings){
       boolean didThrow = false;
       Connection conn = null;
       try{
-        conn = Connections.create(callbacks, p);
+        conn = Connections.create(callbacks, settings);
       }catch(Exception e){
           e.printStackTrace();
           didThrow = true;
@@ -300,8 +299,8 @@ public abstract class AbstractConnectionTest {
    *
    * @return
    */
-  protected Properties getProps() {
-    return new Properties(); //default behavior is no "hard coded" test-specific properties
+  protected void setProps(PropertiesFileHelper settings) {
+    //default behavior is no "hard coded" test-specific properties
   }
 
   /**
@@ -310,25 +309,18 @@ public abstract class AbstractConnectionTest {
    *
    * @return
    */
-  protected Properties getTestProps() {
-    Properties props = new Properties();
-    try (InputStream is = getClass().getResourceAsStream(
-            getTestPropertiesFileName())) {
-      if (null != is) {
-        props.load(is);
-      } else {
-        LOG.trace("No test_defaults.properties found on classpath");
-      }
-    } catch (IOException ex) {
-      LOG.error(ex.getMessage(), ex);
-    }
-    if (Boolean.parseBoolean(props.getProperty("enabled", "false"))) {
-      return props;
+  protected PropertiesFileHelper getTestProps() {
+
+    PropertiesFileHelper testSettings = PropertiesFileHelper.fromPropsFile(getTestPropertiesFileName());
+    if (testSettings.getTestPropertiesEnabled()) {
+      return testSettings;
     } else {
       LOG.warn("test.properties disabled, using cloudfwd.properties only");
-      return new Properties(); //ignore test.properties
+      return PropertiesFileHelper.fromPropsFile(getCloudfwdPropertiesFileName()); //ignore test.properties
     }
   }
+
+  private String getCloudfwdPropertiesFileName() { return "/cloudfwd.properties"; }
 
   /**
    * test can override this if a test requires its own .properties file to slap

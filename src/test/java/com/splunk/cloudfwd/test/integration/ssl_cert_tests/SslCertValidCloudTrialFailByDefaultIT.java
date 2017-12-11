@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
@@ -56,14 +57,12 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
   }
   
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
-    props.put(TOKEN, "19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
-    props.put(DISABLE_CERT_VALIDATION, "false");
-    props.put(MOCK_HTTP_KEY, "false");
-    props.put(CLOUD_SSL_CERT_CONTENT, "");
-    return props;
+  protected void setProps(PropertiesFileHelper settings) {
+    settings.setUrls("https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
+    settings.setToken("19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
+    settings.enableCertValidation();
+    settings.setMockHttp(false);
+    settings.setSSLCertContent("");
   }
   
   @Override

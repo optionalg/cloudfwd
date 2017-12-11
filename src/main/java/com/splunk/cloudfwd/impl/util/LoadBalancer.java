@@ -43,7 +43,6 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
 import java.util.Collections;
 import java.util.concurrent.ScheduledFuture;
 import java.util.function.Predicate;
-import java.util.logging.Level;
 
 /**
  *
@@ -66,9 +65,8 @@ public class LoadBalancer implements Closeable {
     public LoadBalancer(ConnectionImpl c) {
         this.LOG = c.getLogger(LoadBalancer.class.getName());
         this.connection = c;
-        this.channelsPerDestination = c.getSettings().
-                getChannelsPerDestination();
-        this.discoverer = new IndexDiscoverer((PropertiesFileHelper)c.getSettings(), c);
+        this.channelsPerDestination = c.getPropertiesFileHelper().getChannelsPerDestination();
+        this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
         createChannels(discoverer.getAddrs());
         //Reaping will randomly remove a channel and replace it with a fresh one every so often. 
         //This insures that channels get spread across indexers, even when we are fronted by an ELB
@@ -152,7 +150,7 @@ public class LoadBalancer implements Closeable {
     private void setupReaper() {
         //One channel will be decomissioned each time the scheduler, below, fires. And there will be an interval of decomMS
         //between each channel that is decomissioned. We need to avoid "storm" of decomissioning many channels at once.
-        long decomMs = getConnectionSettings().getChannelDecomMS();
+        long decomMs = getPropertiesFileHelper().getChannelDecomMS();
         if (decomMs > 0) {
             this.reaperTaskFuture  = ThreadScheduler.getSharedSchedulerInstance("channel_decom_scheduler").scheduleWithFixedDelay(() -> {
                 ArrayList<HecChannel> channels = (ArrayList) this.channels.values();
@@ -205,7 +203,7 @@ public class LoadBalancer implements Closeable {
     private void waitForOnePreflightSuccess(List<HecHealth> healths, List<Future<Void>> futures, 
             List<HecChannel> channelsList) {
         long startMS = System.currentTimeMillis();
-        long timeoutMS = getConnection().getSettings().getPreFlightTimeout();
+        long timeoutMS = getPropertiesFileHelper().getPreFlightTimeoutMS();
         boolean preFlightPassed = false;
         while (!Thread.interrupted()) {
             int numFailed = 0;
@@ -259,16 +257,14 @@ public class LoadBalancer implements Closeable {
         //argument, adding the new channel would get ignored if MAX_TOTAL_CHANNELS was set to 1,
         //and then the to-be-reaped channel would also be removed, leaving no channels, and
         //send will be stuck in a spin loop with no channels to send to
-        ConnectionSettings settings = this.connection.
-                getSettings();
+        ConnectionSettings settings = this.connection.getSettings();
         if (!force && channels.size() >= settings.getMaxTotalChannels()) {
             LOG.warn(
                     "Can't add channel (" + MAX_TOTAL_CHANNELS + " set to " + settings.
                     getMaxTotalChannels() + ")");
             return null;
         }
-        HttpSender sender = ((PropertiesFileHelper)this.connection.getSettings()).
-                createSender(s);
+        HttpSender sender = (getPropertiesFileHelper()).createSender(s);
 
         HecChannel channel = new HecChannel(this, sender, this.connection);
         channel.getChannelMetrics().addObserver(this.connection.getCheckpointManager());
@@ -371,7 +367,7 @@ public class LoadBalancer implements Closeable {
         if (!closed || forced) {
             this.connection.getCheckpointManager().registerEventBatch(events, forced);
         }
-        if(this.channels.size() > this.connection.getSettings().getMaxTotalChannels()){
+        if(this.channels.size() > getPropertiesFileHelper().getMaxTotalChannels()){
             LOG.warn("{} exceeded. There are currently: {}",  PropertyKeys.MAX_TOTAL_CHANNELS, channels.size());
         }
     }
@@ -576,12 +572,12 @@ public class LoadBalancer implements Closeable {
     /**
      * @return the propertiesFileHelper
      */
-    public ConnectionSettings getConnectionSettings() {
-        return this.connection.getSettings();
+    public PropertiesFileHelper getPropertiesFileHelper() {
+        return this.connection.getPropertiesFileHelper();
     }
 
     private boolean isResendable(EventBatchImpl events) {
-         final int maxRetries = getConnectionSettings(). getMaxRetries();
+         final int maxRetries = getPropertiesFileHelper().getMaxRetries();
         if (events.getNumTries() > maxRetries) {
                               String msg = "Tried to send event id=" + events.
                               getId() + " " + events.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;

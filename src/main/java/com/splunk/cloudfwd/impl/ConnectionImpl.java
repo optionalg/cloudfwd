@@ -24,26 +24,26 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecLoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.error.HecMissingPropertiesException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.CheckpointManager;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
-import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.splunk.cloudfwd.PropertyKeys.COLLECTOR_URI;
+import static com.splunk.cloudfwd.PropertyKeys.TOKEN;
 
 /**
  * Internal implementation of Connection. Should be obtained through a Factory method. 
@@ -63,21 +63,27 @@ public class ConnectionImpl implements Connection {
   private TimeoutChecker timeoutChecker;
   private boolean closed;
   private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
-  private ConnectionSettings settings;
+  private PropertiesFileHelper propertiesFileHelper;
   private boolean quiesced;
 
 
   public ConnectionImpl(ConnectionCallbacks callbacks) {
-    this(callbacks, new Properties());
+    this(callbacks, ConnectionSettings.fromPropsFile("/cloudfwd.properties"));
   }
 
-  public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
-    if(null == callbacks){
+  public ConnectionImpl(ConnectionCallbacks callbacks, ConnectionSettings settings) {
+    if (null == callbacks) {
         throw new HecConnectionStateException("ConnectionCallbacks are null",
                 HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
-    }   
+    }
+    if (settings.getToken() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + TOKEN);
+    }
+    if (settings.getUrlString() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + COLLECTOR_URI);
+    }
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
-    this.settings = new PropertiesFileHelper(this,settings);
+    this.propertiesFileHelper = (PropertiesFileHelper)settings;
     this.checkpointManager = new CheckpointManager(this);
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
@@ -93,30 +99,29 @@ public class ConnectionImpl implements Connection {
     //*before* those two functions (failed, or acknowledged) are invoked.
     throwExceptionIfNoChannelOK();
   }
-//  
-//  /**
-//   * @return the propertiesFileHelper
-//   */
-//  public PropertiesFileHelper getConnectionSettings() {
-//    return propertiesFileHelper;
-//  }
-
-    @Override
-    public ConnectionSettings getSettings() {
-        return settings;
-    }
   
-    public CheckpointManager getCheckpointManager() {
-      return this.checkpointManager;
-    }
+  /**
+   * @return the propertiesFileHelper
+   */
+  public PropertiesFileHelper getPropertiesFileHelper() {
+    return propertiesFileHelper;
+  }
+
+  @Override
+  public ConnectionSettings getSettings() {
+    return getPropertiesFileHelper();
+  }
+  
+  public CheckpointManager getCheckpointManager() {
+    return this.checkpointManager;
+  }
   
   public long getAckTimeoutMS() {
-    return settings.getAckTimeoutMS();
+    return propertiesFileHelper.getAckTimeoutMS();
   }
 
   public synchronized void setBlockingTimeoutMS(long ms) {
-    this.settings.putProperty(BLOCKING_TIMEOUT_MS, String.
-            valueOf(ms));
+    propertiesFileHelper.setBlockingTimeoutMS(ms);
   }
   
    //close() is synchronized, as is send and sendBatch, therefore events cannot be sent before close has returned.
@@ -191,7 +196,7 @@ public class ConnectionImpl implements Connection {
       this.events = new EventBatchImpl();
     }
     this.events.add(event);
-    if (this.events.isFlushable(settings.getEventBatchSize())) {
+    if (this.events.isFlushable(propertiesFileHelper.getEventBatchSize())) {
       return sendBatch(events);
     }
     return 0;
@@ -228,7 +233,7 @@ public class ConnectionImpl implements Connection {
     //send the failed batch again
     this.events = null; //batch is in flight, null it out.
     //check to make sure the endpoint can absorb all the event formats in the batch
-    ((EventBatchImpl)events).checkAndSetCompatibility(settings.getHecEndpointType());
+    ((EventBatchImpl)events).checkAndSetCompatibility(propertiesFileHelper.getHecEndpointType());
     timeoutChecker.start();
     timeoutChecker.add((EventBatchImpl)events);
     LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
@@ -264,16 +269,16 @@ public class ConnectionImpl implements Connection {
 
 
   public long getBlockingTimeoutMS() {
-    return settings.getBlockingTimeoutMS();
+    return propertiesFileHelper.getBlockingTimeoutMS();
   }
 
   public String getToken() {
-    return settings.getToken();
+    return propertiesFileHelper.getToken();
   }
 
 
   public List<URL> getUrls() {
-    return settings.getUrls();
+    return propertiesFileHelper.getUrls();
   }
 
   /**
@@ -326,7 +331,7 @@ public class ConnectionImpl implements Connection {
     }
     
     private void throwExceptionIfNoChannelOK()  {      
-         List<HecHealth> healths = lb.getHealthNonBlocking(); 
+        List<HecHealth> healths = lb.getHealthNonBlocking(); 
         if(healths.isEmpty()){            
             throw new HecConnectionStateException("No HEC channels could be instatiated on Connection.",
                     HecConnectionStateException.Type.NO_HEC_CHANNELS);

@@ -2,9 +2,8 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import java.util.Properties;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,21 +34,18 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionTimeoutTest.class.getName());
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
+  protected void setProps(PropertiesFileHelper settings) {
     //A realistic value of BLOCKING_TIMEOUT_MS would be 1 or more MINUTES, but let's not
     //make this test run too slowly. The point is, we want to SEE the HecConnectionTimeout
     //happen repeatedly, until the message goes through
-    props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, "100"); //block for 100 ms before HecConnectionTimeout
+    settings.setBlockingTimeoutMS(100);//block for 100 ms before HecConnectionTimeout
     //install an endpoint that takes 10 seconds to return an ack
-    props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-    props.put(PropertyKeys.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "1"); //firs batch will send, second will block
-    props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
-    props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
-    props.put(PropertyKeys.ACK_POLL_MS, "250");
-    props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-    return props;
+    settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
+    settings.setMaxUnackedEventBatchPerChannel(1);
+    settings.setMaxTotalChannels(1);
+    settings.setAckTimeoutMS(60000);
+    settings.setAckPollMS(250);
+    settings.setUnresponsiveMS(-1);
   }
 
   @Override

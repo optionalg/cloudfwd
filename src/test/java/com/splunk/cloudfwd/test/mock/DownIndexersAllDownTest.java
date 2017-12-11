@@ -2,17 +2,16 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.ConnectException;
 import java.util.ArrayList;
-import java.util.Properties;
 
 /**
  * Created by mhora on 10/4/17.
@@ -30,17 +29,13 @@ public class DownIndexersAllDownTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.indexer.DownIndexerEndpoints");
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
-        props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, "10000");
-        props.put(PropertyKeys.HEALTH_POLL_MS, "1000");
-        props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000");
-        props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-
-        return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.DownIndexerEndpoints");
+        settings.setMaxTotalChannels(4);
+        settings.setBlockingTimeoutMS(10000);
+        settings.setHealthPollMS(1000);
+        settings.setAckTimeoutMS(60000);
+        settings.setUnresponsiveMS(-1); //no dead channel detection
     }
 
     // Need to separate this logic out of setUp() so that each Test
@@ -48,10 +43,9 @@ public class DownIndexersAllDownTest extends AbstractConnectionTest {
     private void createConnection() {
         this.callbacks = getCallbacks();
 
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        PropertiesFileHelper settings = getTestProps();
+        setProps(settings);
+        connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 

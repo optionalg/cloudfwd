@@ -3,16 +3,14 @@ package com.splunk.cloudfwd.test.integration;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 
-import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -97,14 +95,12 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.setProperty(PropertyKeys.TOKEN, createTestToken("__singleline"));
+    protected void setProps(PropertiesFileHelper settings) {
+        super.setProps(settings);
+        settings.setToken(createTestToken("__singleline"));
         // we don't want to hit any ack timeouts because it's easier to make our callbacks not expect them
-        p.setProperty(PropertyKeys.ACK_TIMEOUT_MS, Long.toString(sendExceptionTimeout)
-            + PropertyKeys.DEFAULT_ACK_TIMEOUT_MS);
-        p.setProperty(PropertyKeys.EVENT_BATCH_SIZE, "0"); //batching MUST be disabled for this test. If not, they way that we send some events "outside" the test framework (not using sendEvents) causes acknowledged not to countdown the latch
-        return p;
+        settings.setAckTimeoutMS(sendExceptionTimeout + PropertyKeys.DEFAULT_ACK_TIMEOUT_MS);
+        settings.setEventBatchSize(0);  //batching MUST be disabled for this test. If not, they way that we send some events "outside" the test framework (not using sendEvents) causes acknowledged not to countdown the latch
     }
 
     private void deleteTokenOnServer() {
@@ -118,24 +114,16 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         }
     }
 
-    private void restoreToken() throws InterruptedException {
-        Properties p = new Properties();
+    private void restoreToken() {
         LOG.info("Restoring token on server...");
-        p.put(PropertyKeys.TOKEN, createTestToken("__singleline"));
-        LOG.info("Token restored.");
         // normally if this fails it will causes the test to fail via an assert,
         // but it won't in this case since it's not being called in the main thread so we need to check
         if (getTokenValue() == null) {
             this.assertionFailure = "Failed to create token.";
         }
-        try {
-            connection.getSettings().setProperties(p);
-            LOG.info("Connection object updated with new token.");
-        } catch (UnknownHostException e) {
-            LOG.error("TEST FAILED DUE TO " + e);
-            this.assertionFailure = e.getMessage(); // should never happen in this test
-        }
-        Thread.sleep(4000); //wait for channel healths to refresh
+        connection.getSettings().setToken(createTestToken("__singleline"));
+        LOG.info("Connection object updated with new token.");
+       
         tokenRestoredLatch.countDown();
     }
 

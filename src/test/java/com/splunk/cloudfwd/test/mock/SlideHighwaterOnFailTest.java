@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.test.mock;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 
@@ -13,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.PropertyKeys;
 
 /**
  * Created by meemax by 10/24/2017
@@ -23,23 +23,21 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(SlideHighwaterOnFailTest.class.getName());
 
     @Override
-    protected Properties getProps() {
+    protected void setProps(PropertiesFileHelper settings) {
       Properties props = new Properties();
       //A realistic value of BLOCKING_TIMEOUT_MS would be 1 or more MINUTES, but let's not
       //make this test run too slowly. The point is, we want to SEE the HecConnectionTimeout
       //happen repeatedly, until the message goes through
-      props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, "100"); //block for 100 ms before HecConnectionTimeout
+      settings.setBlockingTimeoutMS(100); //block for 100 ms before HecConnectionTimeout
       //install an endpoint that takes 10 seconds to return an ack
-      props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
-              "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-      props.put(PropertyKeys.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "1");
-      props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
-      props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
-      props.put(PropertyKeys.ACK_POLL_MS, "250");
-      props.put(PropertyKeys.RETRIES, "2");
-      props.put(PropertyKeys.UNRESPONSIVE_MS, "100"); //for this test, lets QUICKLY determine the channel is dead
-      props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true");
-      return props;
+      settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
+      settings.setMaxUnackedEventBatchPerChannel(1);
+      settings.setMaxTotalChannels(1);
+      settings.setAckTimeoutMS(60000); //we don't want the ack timout kicking in
+      settings.setAckPollMS(250);
+      settings.setMaxRetries(2);
+      settings.setUnresponsiveMS(100); //for this test, lets QUICKLY determine the channel is dead
+      settings.setCheckpointEnabled(true);
     }
     
     @Override

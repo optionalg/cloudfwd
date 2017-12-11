@@ -1,10 +1,9 @@
 package com.splunk.cloudfwd.test.mock;
 
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.net.MalformedURLException;
-import java.util.Properties;
 import org.junit.Test;
 
 /*
@@ -35,10 +34,8 @@ public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
     }
 
     @Override
-    protected Properties getProps() {
-       Properties props = new Properties();
-       props.put(PropertyKeys.COLLECTOR_URI, "floort");
-       return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setUrls("floort");
     }
     
     @Test

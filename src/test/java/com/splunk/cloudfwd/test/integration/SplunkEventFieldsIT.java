@@ -1,18 +1,15 @@
 package com.splunk.cloudfwd.test.integration;
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 public class SplunkEventFieldsIT extends AbstractReconciliationTest {
-    
 
     @Override
     protected int getNumEventsToSend() {
@@ -20,11 +17,10 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.setProperty(PropertyKeys.TOKEN, createTestToken(null));
-        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
-        return p;
+    protected void setProps(PropertiesFileHelper settings) {
+        super.setProps(settings);
+        settings.setToken(createTestToken(null));
+        settings.setMaxTotalChannels(1);
     }
 
     @Override
@@ -92,7 +88,7 @@ public class SplunkEventFieldsIT extends AbstractReconciliationTest {
         connection.getSettings().setIndex(INDEX_NAME);
         connection.getSettings().setHost(getLocalHost());
         connection.getSettings().setSource(getSource());
-         connection.getSettings().setSourcetype(getSourceType());
+        connection.getSettings().setSourcetype(getSourceType());
         super.sendEvents();
         LOG.warn("SEARCH STRING: " + getSearchString());
         Set<String> results = getEventsFromSplunk();

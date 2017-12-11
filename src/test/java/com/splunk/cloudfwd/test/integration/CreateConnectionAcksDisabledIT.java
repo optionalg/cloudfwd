@@ -1,12 +1,10 @@
 package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Properties;
 
 /**
  * Created by eprokop on 10/4/17.
@@ -22,11 +20,10 @@ public class CreateConnectionAcksDisabledIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.setProperty(PropertyKeys.TOKEN, createTestToken(null, false));
-        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
-        return p;
+    protected void setProps(PropertiesFileHelper settings) {
+        super.setProps(settings);
+        settings.setToken(createTestToken(null, false));
+        settings.setMaxTotalChannels(1);
     }
 
     @Override

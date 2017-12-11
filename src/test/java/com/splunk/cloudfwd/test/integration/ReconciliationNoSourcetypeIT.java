@@ -17,10 +17,7 @@ package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import static com.splunk.cloudfwd.test.integration.AbstractReconciliationTest.LOG;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;

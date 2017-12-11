@@ -16,9 +16,8 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
 
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import static com.splunk.cloudfwd.PropertyKeys.*;
 
-import com.splunk.cloudfwd.impl.util.HecChannel;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,22 +52,20 @@ public class SslCertValidIT extends AbstractConnectionTest {
   }
   
   @Override
-  protected Properties getTestProps() {
-    return new Properties();
+  protected PropertiesFileHelper getTestProps() {
+    return new PropertiesFileHelper();
   }
   
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://http-inputs-kinesis1.splunkcloud.com:443");
-    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(DISABLE_CERT_VALIDATION, "false");
-    props.put(MOCK_HTTP_KEY, "false");
+  protected void setProps(PropertiesFileHelper settings) {
+    settings.setUrls("https://http-inputs-kinesis1.splunkcloud.com:443");
+    settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
+    settings.enableCertValidation();
+    settings.setMockHttp(false);
     // Despite we overwrite getTestProps here, ConnectionSettings will read
     // cloudfwd.properties file anyway. So we set CLOUD_SSL_CERT_CONTENT to
     // empty string explicitly.
-    props.put(CLOUD_SSL_CERT_CONTENT, "");
-    return props;
+    settings.setSSLCertContent("");
   }
 
   @Override

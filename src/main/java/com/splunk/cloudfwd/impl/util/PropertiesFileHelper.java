@@ -15,44 +15,43 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 
-import java.net.URL;
-import java.util.Properties;
-import static com.splunk.cloudfwd.PropertyKeys.*;
+import java.net.*;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import org.apache.commons.lang.StringUtils;
+
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.util.Properties;
+
 /**
  *
  * @author ghendrey
  */
 public class PropertiesFileHelper extends ConnectionSettings {
 
-  public PropertiesFileHelper(Connection c, Properties overrides) {
-      super(c,overrides);
-  }
+    @JsonProperty("mock_force_url_map_to_one")
+    private Boolean mockForceUrlMapToOne;
 
-  /**
-   * create SenderFactory with default properties read from cloudfwd.properties file
-   */
-  public PropertiesFileHelper(Connection c) {
-      super(c);
-  }
+    public boolean isForcedUrlMapToSingleAddr() {
+      return applyDefaultIfNull(this.mockForceUrlMapToOne, false);
+    }
 
-  public boolean isForcedUrlMapToSingleAddr() {
-    return Boolean.parseBoolean(this.defaultProps.getProperty(
-            MOCK_FORCE_URL_MAP_TO_ONE, "false").trim());
-  }
+    public void setMockForceUrlMapToOne(Boolean force) {
+        this.mockForceUrlMapToOne = force;
+    }
 
   
     private HttpSender createSender(String url, String sslHost) {
       // enable http client debugging
-      if (enabledHttpDebug()) enableHttpDebug();
+      if (isHttpDebugEnabled()){
+          setHttpDebugEnabled(true);
+      }
       String sslCert = getSSLCertContent();
       HttpSender sender = new HttpSender(url, sslHost, this, isCertValidationDisabled(), sslCert);
       if(isMockHttp()){
@@ -76,7 +75,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
             }
 
             URL url = new URL("https://" + hostAddr + ":" + s.getPort());
-            LOG.debug("Trying to add URL: " + url);
+            getLog().debug("Trying to add URL: " + url);
             //We should provide a hostname for http client, so it can properly set Host header
             //this host is required for many proxy server and virtual servers implementations
             //https://tools.ietf.org/html/rfc7230#section-5.4
@@ -84,11 +83,16 @@ public class PropertiesFileHelper extends ConnectionSettings {
 
             return createSender(url.toString(), host);
         } catch (MalformedURLException ex) {
-            LOG.error(ex.getMessage(), ex);
+            getLog().error(ex.getMessage(), ex);
             throw new HecConnectionStateException(ex.getMessage(),
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
     }
 
+    @Override
+    public void setConnection(Connection c) {
+        connection = (ConnectionImpl)c;
+        LOG = connection.getLogger(PropertiesFileHelper.class.getName());
+    }
 
 }

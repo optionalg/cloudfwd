@@ -4,12 +4,12 @@ import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Properties;
 
 /**
  * Created by mhora on 10/3/17.
@@ -65,20 +65,18 @@ public abstract class AbstractHecServerErrorResponseTest extends AbstractConnect
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     protected void createConnection() {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        PropertiesFileHelper settings = this.getTestProps();
+        setProps(settings);
+        connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 
     protected void createConnection(LifecycleEvent.Type problemType) {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
+        PropertiesFileHelper settings = this.getTestProps();
+        this.setProps(settings);
         boolean gotException = false;
         try{
-            this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+            connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         }catch(Exception e){
             Assert.assertTrue("Expected HecServerErrorResponseException",  e instanceof HecServerErrorResponseException);
             HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;

@@ -2,10 +2,8 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,13 +30,11 @@ import java.util.logging.Logger;
 public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
   
     @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(MOCK_HTTP_KEY, "true");
-    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
-    props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
-    props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true"); //checkpoints are required for this to work      
-    return props;
+    protected void setProps(PropertiesFileHelper settings) {
+        settings.setMockHttp(true);
+        settings.setEventBatchSize(0); //make sure no batching
+        settings.setMaxTotalChannels(1); //so we insure we resend on same channel
+        settings.setCheckpointEnabled(true); //checkpoints are required for this to work
   }
     protected HecConnectionStateException.Type getExceptionType(){
     return HecConnectionStateException.Type.ALREADY_HANDLED;
