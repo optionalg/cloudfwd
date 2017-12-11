@@ -342,6 +342,10 @@ public class ConnectionImpl implements Connection {
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
    }  
+   
+   public EventBatchImpl getUnsentBatch() {
+        return this.events;
+   }
 
 
     private void logLBHealth() {

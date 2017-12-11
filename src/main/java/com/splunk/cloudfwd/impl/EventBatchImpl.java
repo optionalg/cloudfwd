@@ -62,6 +62,7 @@ public class EventBatchImpl implements EventBatch {
   protected boolean acknowledged;
   private boolean failed;
   private long sendTimestamp = System.currentTimeMillis();
+  private long firstEventAddedTimestamp;
   protected int numEvents;
   protected int numTries; //events are resent by DeadChannelDetector
   protected int length;
@@ -72,6 +73,7 @@ public class EventBatchImpl implements EventBatch {
   private HecChannel hecChannel;
   private LifecycleEvent.Type state = EVENT_BATCH_BORN; //initial lifecyle state
   private List<Exception> sendExceptions = new ArrayList<>();
+  private long flushAfterTimeMS = 30000; // when the event batch has had at least one event for at least this amount of time, it will be ready to flush
 
   @Override
   public synchronized void prepareToResend() {
@@ -111,10 +113,17 @@ public class EventBatchImpl implements EventBatch {
     }
     this.id = event.getId();
     this.length += event.length();
+    if (this.events.isEmpty()) {
+      this.firstEventAddedTimestamp = System.currentTimeMillis();
+    }
     this.events.add(event);
     return this;
   }
-
+  
+  public boolean hasReachedFlushTimeout() {
+    return System.currentTimeMillis() - this.firstEventAddedTimestamp > this.flushAfterTimeMS;
+  }
+  
   @Override
   public ConnectionImpl.HecEndpoint getTarget() {
     return knownTarget;

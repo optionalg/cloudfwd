@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
+import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -96,6 +98,7 @@ public class TimeoutChecker implements EventTracker {
         }
         LOG.debug("checking timeouts for {} EventBatches", eventBatches.size());
         long now = System.currentTimeMillis();
+        checkFlushTimeout();
         for (Iterator<Map.Entry<Comparable, EventBatchImpl>> iter = eventBatches.
                 entrySet().
                 iterator(); iter.hasNext();) {
@@ -115,6 +118,36 @@ public class TimeoutChecker implements EventTracker {
 //                iter.remove(); //remove it or else we will keep generating repeated timeout failures
             }
         }
+    }
+    
+    private void checkFlushTimeout() {
+        if (shouldFlushUnsentBatch()) {
+            Runnable r = () -> {
+                try {
+                    connection.flush();
+                } catch (HecConnectionStateException e) {
+                    if (e.getType() == HecConnectionStateException.Type.ALREADY_FLUSHED) {
+                        // no-op, since it just means that the event batch was already flushed
+                        LOG.debug("Ignoring exception caught by timeout checker when performing periodic flush: {}", e);
+                    } else {
+                        throw e;
+                    }
+                }
+            };
+            ThreadScheduler.getSharedExecutorInstance("EventBatch periodic flusher").execute(r);
+        }
+    }
+    
+    private boolean shouldFlushUnsentBatch() {
+        boolean shouldFlush = false;
+        try {
+            shouldFlush = connection.getUnsentBatch() != null &&
+                connection.getUnsentBatch().hasReachedFlushTimeout();
+        } catch (NullPointerException e) {
+            // no-op, since it just means that the event batch was set to null and was already flushed
+            LOG.debug("Ignoring exception caught by timeout checker when checking flush timeout: {}", e);
+        }
+        return shouldFlush;
     }
 
     public void queisce() {
