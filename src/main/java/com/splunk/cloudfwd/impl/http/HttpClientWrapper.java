@@ -22,7 +22,8 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 /**
  * This class allows many HttpSender to share a single ClosableHttpAsyncClient. It counts references and closes the 
- * underlying CloseableHttpAsyncClient when the ref count reaches zero.
+ * underlying CloseableHttpAsyncClient when the ref count reaches zero. The HttpClientHostMapper class maintains one
+ * of these reference counted HttpClientWrappers per hostname.
  *
  * @author ghendrey
  */

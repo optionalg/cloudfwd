@@ -42,7 +42,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_MEMORY_MB_KEY, "500"); //500MB
         cliProperties.put(NUM_SENDERS_KEY, "1"); //128 senders
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
-        cliProperties.put(PropertyKeys.COLLECTOR_URI, "https://06a45d10-0e0a-46d1-ae8c-859a87c2aebe.d0cf7026-4c88-465a-8d27-d39169b7a394.com:12345"); // will use token in cloudfwd.properties by default
+        cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
     }
     
     private int numSenderThreads = 128;
