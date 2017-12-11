@@ -200,7 +200,6 @@ public class ConnectionSettings {
                     connection.getCallbacks().systemError(e);
                 }
                 getLog().error(e.getMessage(), e);
-                throw e;
             }
         }
         urlList.sort(Comparator.comparing(URL::toString));
