@@ -53,7 +53,7 @@ public class SslCertValidIT extends AbstractConnectionTest {
   
   @Override
   protected PropertiesFileHelper getTestProps() {
-    return new PropertiesFileHelper();
+    return new PropertiesFileHelper();  
   }
   
   @Override
@@ -65,6 +65,7 @@ public class SslCertValidIT extends AbstractConnectionTest {
     // Despite we overwrite getTestProps here, ConnectionSettings will read
     // cloudfwd.properties file anyway. So we set CLOUD_SSL_CERT_CONTENT to
     // empty string explicitly.
+    //FIXME: This call below should set this.cloudSslCertContent, not this.sslCertContent (fails isCloudInstance()) call
     settings.setSSLCertContent("");
   }
 
