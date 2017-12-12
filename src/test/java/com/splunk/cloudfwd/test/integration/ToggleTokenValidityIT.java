@@ -114,7 +114,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         }
     }
 
-    private void restoreToken() {
+    private void restoreToken() throws InterruptedException {
         LOG.info("Restoring token on server...");
         // normally if this fails it will causes the test to fail via an assert,
         // but it won't in this case since it's not being called in the main thread so we need to check
@@ -123,7 +123,8 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         }
         connection.getSettings().setToken(createTestToken("__singleline"));
         LOG.info("Connection object updated with new token.");
-       
+        
+        Thread.sleep(4000); //wait for channel healths to refresh
         tokenRestoredLatch.countDown();
     }
 
