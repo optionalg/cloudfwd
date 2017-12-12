@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -142,7 +141,8 @@ public class TimeoutChecker implements EventTracker {
         boolean shouldFlush = false;
         try {
             shouldFlush = connection.getUnsentBatch() != null &&
-                connection.getUnsentBatch().hasReachedFlushTimeout();
+                System.currentTimeMillis() - connection.getUnsentBatch().getFirstEventAddedTimestamp() 
+                    > connection.getSettings().getBatchFlushTimeout();
         } catch (NullPointerException e) {
             // no-op, since it just means that the event batch was set to null and was already flushed
             LOG.debug("Ignoring exception caught by timeout checker when checking flush timeout: {}", e);

@@ -191,6 +191,7 @@ public class ConnectionImpl implements Connection {
       this.events = new EventBatchImpl();
     }
     this.events.add(event);
+    this.timeoutChecker.start();
     if (this.events.isFlushable(settings.getEventBatchSize())) {
       return sendBatch(events);
     }

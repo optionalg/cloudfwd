@@ -256,6 +256,8 @@ public class PropertyKeys {
    * @see CHANNELS_PER_DESTINATION
    */
   public static final String PREFLIGHT_TIMEOUT_MS = "preflight_timeout";
+  
+  public static final String EVENT_BATCH_FLUSH_TIMEOUT_MS = "event_batch_flush_timeout_ms";
 
 
   /* **************************** REQUIRED KEYS ************************* */
@@ -380,6 +382,8 @@ public class PropertyKeys {
    * @see PREFLIGHT_TIMEOUT_MS
    */
   public static final String DEFAULT_PREFLIGHT_TIMEOUT_MS = "60000"; // 1 minute
+    
+  public static final String DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT = "30000"; // 30 sec
 
 
   /* **************************** LIMITS ************************* */

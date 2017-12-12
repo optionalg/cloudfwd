@@ -120,8 +120,8 @@ public class EventBatchImpl implements EventBatch {
     return this;
   }
   
-  public boolean hasReachedFlushTimeout() {
-    return System.currentTimeMillis() - this.firstEventAddedTimestamp > this.flushAfterTimeMS;
+  public long getFirstEventAddedTimestamp() {
+    return this.firstEventAddedTimestamp;
   }
   
   @Override
