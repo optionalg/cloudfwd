@@ -17,14 +17,11 @@ package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
-import com.splunk.cloudfwd.test.integration.AbstractReconciliationTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import java.nio.ByteBuffer;
-import java.util.Properties;
 import org.junit.Test;
 
 /**
@@ -34,6 +31,7 @@ import org.junit.Test;
 public class ByteBufferEventsToWrongEndpointTestIT extends AbstractReconciliationTest{
   @Override
   protected void setProps(PropertiesFileHelper settings) {
+      super.setProps(settings);
       //intentionally direct text events to /events endpoint
       settings.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       settings.setEventBatchSize(16000);

@@ -118,10 +118,12 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         LOG.info("Restoring token on server...");
         // normally if this fails it will causes the test to fail via an assert,
         // but it won't in this case since it's not being called in the main thread so we need to check
+        connection.getSettings().setToken(createTestToken("__singleline"));
+
         if (getTokenValue() == null) {
             this.assertionFailure = "Failed to create token.";
         }
-        connection.getSettings().setToken(createTestToken("__singleline"));
+        
         LOG.info("Connection object updated with new token.");
         
         Thread.sleep(4000); //wait for channel healths to refresh
