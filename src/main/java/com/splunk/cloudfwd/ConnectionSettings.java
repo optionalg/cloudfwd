@@ -313,11 +313,11 @@ public class ConnectionSettings {
     public long getBatchFlushTimeout() {
         long timeout = Long.parseLong(this.defaultProps.getProperty(
             PropertyKeys.EVENT_BATCH_FLUSH_TIMEOUT_MS, 
-            PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT).trim());
+            PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS).trim());
         if (timeout <= 0) {
-            timeout = Long.parseLong(PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT);
+            timeout = Long.parseLong(PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
             LOG.warn("Property {} must be greater than 0. Using default value of {}", 
-                PropertyKeys.EVENT_BATCH_FLUSH_TIMEOUT_MS, PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT);
+                PropertyKeys.EVENT_BATCH_FLUSH_TIMEOUT_MS, PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
         }
         return timeout;
     }

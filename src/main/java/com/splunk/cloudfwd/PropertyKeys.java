@@ -154,6 +154,7 @@ public class PropertyKeys {
    *
    * @see DEFAULT_EVENT_BATCH_SIZE
    * @see MIN_EVENT_BATCH_SIZE
+   * @see EVENT_BATCH_FLUSH_TIMEOUT_MS
    */
   public static final String EVENT_BATCH_SIZE = "event_batch_size";
 
@@ -256,7 +257,14 @@ public class PropertyKeys {
    * @see CHANNELS_PER_DESTINATION
    */
   public static final String PREFLIGHT_TIMEOUT_MS = "preflight_timeout";
-  
+
+  /**
+   * The time to wait before flushing the internal buffer and sending the event batch to Splunk, 
+   * even if the buffer isn't full yet.
+   * 
+   * @see DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS
+   * @see EVENT_BATCH_SIZE
+   */
   public static final String EVENT_BATCH_FLUSH_TIMEOUT_MS = "event_batch_flush_timeout_ms";
 
 
@@ -383,7 +391,12 @@ public class PropertyKeys {
    */
   public static final String DEFAULT_PREFLIGHT_TIMEOUT_MS = "60000"; // 1 minute
     
-  public static final String DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT = "30000"; // 30 sec
+  /**
+   * Default value for the EVENT_BATCH_FLUSH_TIMEOUT_MS property.
+   * 
+   * @see EVENT_BATCH_FLUSH_TIMEOUT_MS
+   */
+  public static final String DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS = "30000"; // 30 sec
 
 
   /* **************************** LIMITS ************************* */
