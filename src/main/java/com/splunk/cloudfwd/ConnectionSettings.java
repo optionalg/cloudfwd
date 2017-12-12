@@ -156,8 +156,8 @@ public class ConnectionSettings {
     }
 
     public void setConnection(Connection c) {
-        connection = (ConnectionImpl)c;
-        LOG = connection.getLogger(ConnectionSettings.class.getName());
+        this.connection = (ConnectionImpl)c;
+        this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
     }
 
     /* ***************************** UTIL ******************************* */
@@ -175,11 +175,11 @@ public class ConnectionSettings {
 
 
     public List<URL> getUrls() {
-        return urlsStringToList(url);
+        return urlsStringToList(this.url);
     }
 
     public String getUrlString() {
-        return url;
+        return this.url;
     }
 
     protected List<URL> urlsStringToList(String urlsListAsString) {
@@ -228,51 +228,51 @@ public class ConnectionSettings {
     }
 
     public int getChannelsPerDestination() {
-        return applyDefaultIfNull(channelsPerDest, DEFAULT_CHANNELS_PER_DESTINATION);
+        return applyDefaultIfNull(this.channelsPerDest, DEFAULT_CHANNELS_PER_DESTINATION);
     }
 
     public long getUnresponsiveChannelDecomMS() {
-        return applyDefaultIfNull(unresponsiveChannelDecomMS, DEFAULT_UNRESPONSIVE_MS);
+        return applyDefaultIfNull(this.unresponsiveChannelDecomMS, DEFAULT_UNRESPONSIVE_MS);
     }
 
     public long getAckPollMS() {
-        return applyDefaultIfNull(ackPollMS, DEFAULT_ACK_POLL_MS);
+        return applyDefaultIfNull(this.ackPollMS, DEFAULT_ACK_POLL_MS);
     }
 
     public long getHealthPollMS() {
-        return applyDefaultIfNull(healthPollMS, DEFAULT_HEALTH_POLL_MS);
+        return applyDefaultIfNull(this.healthPollMS, DEFAULT_HEALTH_POLL_MS);
     }
 
     public int getMaxTotalChannels() {
-        return applyDefaultIfNull(maxTotalChannels, DEFAULT_MAX_TOTAL_CHANNELS);
+        return applyDefaultIfNull(this.maxTotalChannels, DEFAULT_MAX_TOTAL_CHANNELS);
     }
 
     public int getMaxUnackedEventBatchPerChannel() {
-        return applyDefaultIfNull(maxUnackedPerChannel, DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL);
+        return applyDefaultIfNull(this.maxUnackedPerChannel, DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL);
     }
 
     public int getEventBatchSize() {
-        return applyDefaultIfNull(eventBatchSize, DEFAULT_EVENT_BATCH_SIZE);
+        return applyDefaultIfNull(this.eventBatchSize, DEFAULT_EVENT_BATCH_SIZE);
     }
 
     public long getChannelDecomMS() {
-        return applyDefaultIfNull(channelDecomMS, DEFAULT_DECOM_MS);
+        return applyDefaultIfNull(this.channelDecomMS, DEFAULT_DECOM_MS);
     }
     
     public long getChannelQuiesceTimeoutMS() {
-        return applyDefaultIfNull(channelQuiesceTimeoutMS, DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS);
+        return applyDefaultIfNull(this.channelQuiesceTimeoutMS, DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS);
     }
 
     public long getAckTimeoutMS() {
-        return applyDefaultIfNull(ackTimeoutMS, DEFAULT_ACK_TIMEOUT_MS);
+        return applyDefaultIfNull(this.ackTimeoutMS, DEFAULT_ACK_TIMEOUT_MS);
     }
 
     public long getBlockingTimeoutMS() {
-        return applyDefaultIfNull(blockingTimeoutMS, DEFAULT_BLOCKING_TIMEOUT_MS);
+        return applyDefaultIfNull(this.blockingTimeoutMS, DEFAULT_BLOCKING_TIMEOUT_MS);
     }
     
     public String getMockHttpClassname() {
-        return applyDefaultIfNull(mockHttpClassname, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
+        return applyDefaultIfNull(this.mockHttpClassname, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
     }
 
     public Endpoints getSimulatedEndpoints() {
@@ -285,25 +285,25 @@ public class ConnectionSettings {
     }
 
     public long getPreFlightTimeoutMS() {
-        return applyDefaultIfNull(preFlightTimeoutMS, DEFAULT_PREFLIGHT_TIMEOUT_MS);
+        return applyDefaultIfNull(this.preFlightTimeoutMS, DEFAULT_PREFLIGHT_TIMEOUT_MS);
     }
 
     public boolean isCertValidationDisabled() {
-        return applyDefaultIfNull(disableCertificateValidation, false);
+        return applyDefaultIfNull(this.disableCertificateValidation, false);
     }
 
     public boolean isHttpDebugEnabled() {
-        return applyDefaultIfNull(enableHttpDebug, false);
+        return applyDefaultIfNull(this.enableHttpDebug, false);
     }
 
     public boolean isCheckpointEnabled() {
-        return applyDefaultIfNull(enableCheckpoints, DEFAULT_ENABLE_CHECKPOINTS);
+        return applyDefaultIfNull(this.enableCheckpoints, DEFAULT_ENABLE_CHECKPOINTS);
     }
 
     public String getSSLCertContent() {
-        String certKey = sslCertContent;
+        String certKey = this.sslCertContent;
         if (isCloudInstance()) {
-            certKey = cloudSslCertContent;
+            certKey = this.cloudSslCertContent;
         }
 
         if (certKey != null) {
@@ -313,16 +313,16 @@ public class ConnectionSettings {
     }
 
     public int getMaxRetries() {
-        return applyDefaultIfNull(maxRetries, DEFAULT_RETRIES);
+        return applyDefaultIfNull(this.maxRetries, DEFAULT_RETRIES);
     }
 
     public int getMaxPreflightRetries() {
-        return applyDefaultIfNull(maxPreflightTries, DEFAULT_PREFLIGHT_RETRIES);
+        return applyDefaultIfNull(this.maxPreflightTries, DEFAULT_PREFLIGHT_RETRIES);
     }
 
     public ConnectionImpl.HecEndpoint getHecEndpointType() {
         ConnectionImpl.HecEndpoint endpoint;
-        String type = applyDefaultIfNull(hecEndpointType, DEFAULT_HEC_ENDPOINT_TYPE);
+        String type = applyDefaultIfNull(this.hecEndpointType, DEFAULT_HEC_ENDPOINT_TYPE);
         if (type.equals("raw")) {
             endpoint = ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT;
         } else if (type.equals("event")) {
@@ -336,37 +336,37 @@ public class ConnectionSettings {
     }
 
     public String getToken() {
-        if (splunkHecToken == null) {
+        if (this.splunkHecToken == null) {
             throw new HecConnectionStateException(
                     "HEC token missing from Connection configuration. " + "See PropertyKeys.TOKEN",
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
-        return splunkHecToken;
+        return this.splunkHecToken;
     }
 
     public boolean isMockHttp() {
-        return applyDefaultIfNull(mockHttp, false);
+        return applyDefaultIfNull(this.mockHttp, false);
     }
 
 
     public Boolean getTestPropertiesEnabled() {
-        return applyDefaultIfNull(testPropertiesEnabled, false);
+        return applyDefaultIfNull(this.testPropertiesEnabled, false);
     }
 
     public String getHost() {
-        return splunkHecHost;
+        return this.splunkHecHost;
     }
 
     public String getSource() {
-        return splunkHecSource;
+        return this.splunkHecSource;
     }
 
     public String getSourcetype() {
-        return splunkHecSourcetype;
+        return this.splunkHecSourcetype;
     }
 
     public String getIndex() {
-        return splunkHecIndex;
+        return this.splunkHecIndex;
     }
 
     /* ***************************** SETTERS ******************************* */
@@ -380,9 +380,9 @@ public class ConnectionSettings {
             int was = numChannels;
             numChannels = DEFAULT_CHANNELS_PER_DESTINATION;
             getLog().debug("{}, defaulting {} to {}", was, CHANNELS_PER_DESTINATION, numChannels);
-            channelsPerDest = DEFAULT_CHANNELS_PER_DESTINATION;
+            this.channelsPerDest = DEFAULT_CHANNELS_PER_DESTINATION;
         }
-        channelsPerDest = numChannels;
+        this.channelsPerDest = numChannels;
     }
 
     public void setUnresponsiveMS(long decomMS) {
@@ -390,9 +390,9 @@ public class ConnectionSettings {
             long was = decomMS;
             decomMS = DEFAULT_UNRESPONSIVE_MS;
             getLog().debug("{}, defaulting {} to {}", was, UNRESPONSIVE_MS, decomMS);
-            unresponsiveChannelDecomMS = DEFAULT_UNRESPONSIVE_MS;
+            this.unresponsiveChannelDecomMS = DEFAULT_UNRESPONSIVE_MS;
         }
-        unresponsiveChannelDecomMS = decomMS;
+        this.unresponsiveChannelDecomMS = decomMS;
     }
 
     public void setAckPollMS(long pollMS) {
@@ -401,7 +401,7 @@ public class ConnectionSettings {
             pollMS = MIN_ACK_POLL_MS;
             getLog().debug("{}, defaulting {} to smallest allowed value of {}", was, ACK_POLL_MS, pollMS);
         }
-        ackPollMS = pollMS;
+        this.ackPollMS = pollMS;
     }
 
     public void setHealthPollMS(long pollMS) {
@@ -410,7 +410,7 @@ public class ConnectionSettings {
             pollMS = MIN_HEALTH_POLL_MS;
             getLog().debug("{}, defaulting {} to smallest allowed value {}", was, HEALTH_POLL_MS, pollMS);
         }
-        healthPollMS = pollMS;
+        this.healthPollMS = pollMS;
     }
 
     public void setMaxTotalChannels(int totalChannels) {
@@ -419,7 +419,7 @@ public class ConnectionSettings {
             totalChannels = Integer.MAX_VALUE; //effectively no limit by default
             getLog().debug("{}, defaulting {} to no-limit {}", was, MAX_TOTAL_CHANNELS, totalChannels);
         }
-        maxTotalChannels = totalChannels;
+        this.maxTotalChannels = totalChannels;
     }
 
     public void setMaxUnackedEventBatchPerChannel(int batchesPerChannel) {
@@ -429,7 +429,7 @@ public class ConnectionSettings {
             batchesPerChannel = max;
             getLog().debug("{}, defaulting {} to no limit {}", was, MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, batchesPerChannel);
         }
-        maxUnackedPerChannel = batchesPerChannel;
+        this.maxUnackedPerChannel = batchesPerChannel;
     }
 
     /**
@@ -441,7 +441,7 @@ public class ConnectionSettings {
             numChars = MIN_EVENT_BATCH_SIZE;
             getLog().debug("{}, defaulting {} to smallest allowed value {}", was, EVENT_BATCH_SIZE, numChars);
         }
-        eventBatchSize = numChars;
+        this.eventBatchSize = numChars;
     }
 
     public void setChannelDecomMS(long decomMS) {
@@ -454,16 +454,16 @@ public class ConnectionSettings {
                     "Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
             decomMS = MIN_DECOM_MS;
         }
-        channelDecomMS = decomMS;
+        this.channelDecomMS = decomMS;
     }
     
     public void setChannelQuiesceTimeoutMS(long timeoutMS) {
         if (timeoutMS < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
             LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS +
                     " was set to a potentially too-low value, reset to min value: " + timeoutMS);
-            channelQuiesceTimeoutMS = MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
+            this.channelQuiesceTimeoutMS = MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
         } else {
-            channelQuiesceTimeoutMS = timeoutMS;
+            this.channelQuiesceTimeoutMS = timeoutMS;
         }
     }
 
@@ -477,7 +477,7 @@ public class ConnectionSettings {
                 getLog().warn(ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeoutMS);
                 timeoutMS = MIN_ACK_TIMEOUT_MS;
             }
-            ackTimeoutMS = timeoutMS;
+            this.ackTimeoutMS = timeoutMS;
             if (connection != null) {
                 connection.getTimeoutChecker().setTimeout();
             }
@@ -488,11 +488,11 @@ public class ConnectionSettings {
         if (timeoutMS < 0) {
             throw new IllegalArgumentException(BLOCKING_TIMEOUT_MS + " must be positive.");
         }
-        blockingTimeoutMS = timeoutMS;
+        this.blockingTimeoutMS = timeoutMS;
     }
 
     public void setMockHttpClassname(String endpoints) {
-        mockHttpClassname = endpoints;
+        this.mockHttpClassname = endpoints;
     }
     
     public void setPreFlightTimeoutMS(long timeoutMS) {
@@ -500,15 +500,15 @@ public class ConnectionSettings {
             throw new IllegalArgumentException(
                     PropertyKeys.PREFLIGHT_TIMEOUT_MS + " must be greater than zero.");
         }
-        preFlightTimeoutMS = timeoutMS;
+        this.preFlightTimeoutMS = timeoutMS;
     }
 
     public void disableCertValidation() {
-        disableCertificateValidation = true;
+        this.disableCertificateValidation = true;
     }
     
     public void enableCertValidation() {
-        disableCertificateValidation = false;
+        this.disableCertificateValidation = false;
     }
 
     public void setHttpDebugEnabled(Boolean mode) {
@@ -528,14 +528,14 @@ public class ConnectionSettings {
     }
 
     public void setCheckpointEnabled(Boolean mode) {
-        enableCheckpoints = mode;
+        this.enableCheckpoints = mode;
     }
 
     public void setSSLCertContent(String cert) {
         if (isCloudInstance()) {
-            cloudSslCertContent = cert;
+            this.cloudSslCertContent = cert;
         } else {
-            sslCertContent = cert;
+            this.sslCertContent = cert;
         }
     }
 
@@ -545,7 +545,7 @@ public class ConnectionSettings {
             retries = Integer.MAX_VALUE;
             getLog().debug("{}, defaulting {} to maximum allowed value {}", was, RETRIES, retries);
         }
-        maxRetries = retries;
+        this.maxRetries = retries;
     }
 
     public void setMaxPreflightRetries(int retries) {
@@ -554,7 +554,7 @@ public class ConnectionSettings {
             retries = Integer.MAX_VALUE;
             getLog().debug("{}, defaulting {} to maximum allowed value {}", was, PREFLIGHT_RETRIES, retries);
         }
-        maxPreflightTries = retries;
+        this.maxPreflightTries = retries;
     }
 
     public void setHecEndpointType(ConnectionImpl.HecEndpoint type) {
@@ -568,7 +568,7 @@ public class ConnectionSettings {
                     "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
             endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
         }
-        hecEndpointType = endpoint;
+        this.hecEndpointType = endpoint;
     }
 
     /**
@@ -578,14 +578,14 @@ public class ConnectionSettings {
      * @param token
      */
     public void setToken(String token) {
-        if (!token.equals(getToken())) {
-            splunkHecToken = token;
+        if (!token.equals(this.splunkHecToken)) {
+            this.splunkHecToken = token;
             checkAndRefreshChannels();
         }
     }
 
     public void setMockHttp(Boolean mode) {
-        mockHttp = mode;
+        this.mockHttp = mode;
     }
 
   /**
@@ -595,15 +595,15 @@ public class ConnectionSettings {
    */
   public void setUrls(String urls) {
       if (connection != null && !urlsStringToList(urls).equals(getUrls())) {
-          url = urls;
+          this.url = urls;
           checkAndRefreshChannels();
       } else {
-          url = urls;
+          this.url = urls;
       }
   }
 
   public void setTestPropertiesEnabled(Boolean enabled) {
-      testPropertiesEnabled = enabled;
+      this.testPropertiesEnabled = enabled;
   }
   
     /**
@@ -612,7 +612,7 @@ public class ConnectionSettings {
      */
   public void setHost(String host) {
       if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
-          splunkHecHost = host;
+          this.splunkHecHost = host;
           checkAndRefreshChannels();
       }
   }
@@ -623,7 +623,7 @@ public class ConnectionSettings {
      */
   public void setIndex(String index) {
       if (!StringUtils.isEmpty(index) && !index.equals(getIndex())) {
-          splunkHecIndex = index;
+          this.splunkHecIndex = index;
           checkAndRefreshChannels();
       }
   }
@@ -634,7 +634,7 @@ public class ConnectionSettings {
      */
   public void setSource(String source) {
       if (!StringUtils.isEmpty(source) && !source.equals(getSource())) {
-          splunkHecSource = source;
+          this.splunkHecSource = source;
           checkAndRefreshChannels();
       }
   }
@@ -645,7 +645,7 @@ public class ConnectionSettings {
      */
   public void setSourcetype(String sourcetype) {
       if (!StringUtils.isEmpty(sourcetype) && !sourcetype.equals(getSourcetype())) {
-          splunkHecSourcetype = sourcetype;
+          this.splunkHecSourcetype = sourcetype;
           checkAndRefreshChannels(); 
       }
   }
