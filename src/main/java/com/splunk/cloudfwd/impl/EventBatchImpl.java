@@ -73,7 +73,6 @@ public class EventBatchImpl implements EventBatch {
   private HecChannel hecChannel;
   private LifecycleEvent.Type state = EVENT_BATCH_BORN; //initial lifecyle state
   private List<Exception> sendExceptions = new ArrayList<>();
-  private long flushAfterTimeMS = 30000; // when the event batch has had at least one event for at least this amount of time, it will be ready to flush
 
   @Override
   public synchronized void prepareToResend() {
