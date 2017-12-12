@@ -14,17 +14,14 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.junit.Assert;
 import org.junit.Test;
 
 import javax.net.ssl.SSLHandshakeException;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -47,13 +44,7 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
    */
   public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
     super.sendEvents(false, false);
-    List<HecHealth> healths = connection.getHealth();
-//    Assert.assertTrue("Expected healths to be not empty, but got this healths: " + healths, !healths.isEmpty());
-    // we expect all channels to fail catching SSLHandshakeException in preflight
     assertAllChannelsFailed(SSLHandshakeException.class, "General SSLEngine problem");
-//    Assert.assertTrue("Expected all channel to fail with SSLHandshakeException, but got this healths: " + healths, healths.stream()
-//            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
-//            .count() == healths.size());
     connection.closeNow();
   }
   

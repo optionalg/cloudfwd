@@ -1,18 +1,10 @@
 package com.splunk.cloudfwd.test.mock;
 
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.junit.Assert;
 import org.junit.Test;
 
-import java.net.ConnectException;
-import java.util.ArrayList;
 import java.util.Properties;
 
 /**

@@ -15,17 +15,12 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  */
 
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -74,7 +69,7 @@ public class SslCertDoesNotMatchHostDisabledCertValidationIT extends AbstractCon
       public void failed(EventBatch events, Exception ex) {
         // Expected to get a failed exception on connection.closeNow(), 
         // as we do not wait for the event to ack
-        LOG.debug("failed callback: events: " + events + ", ex: " + ex);
+        LOG.debug("expected failed callback: events: " + events + ", ex: " + ex);
       }
       @Override
       public void await(long timeout, TimeUnit u) throws InterruptedException {

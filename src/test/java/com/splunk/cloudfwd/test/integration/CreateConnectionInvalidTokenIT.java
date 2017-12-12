@@ -1,16 +1,11 @@
 package com.splunk.cloudfwd.test.integration;
 
-import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Properties;
-
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
 
 /**
  * Created by eprokop on 10/5/17.
@@ -40,8 +35,8 @@ public class CreateConnectionInvalidTokenIT extends AbstractReconciliationTest {
         Properties p = super.getProps();
         p.put(PropertyKeys.TOKEN, "invalid_token");
         p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
-        p.put(BLOCKING_TIMEOUT_MS, "3000");
-        p.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
+        p.setProperty(PropertyKeys.BLOCKING_TIMEOUT_MS, "3000");
+        p.setProperty(PropertyKeys.EVENT_BATCH_SIZE, "0");
         return p;
     }
     

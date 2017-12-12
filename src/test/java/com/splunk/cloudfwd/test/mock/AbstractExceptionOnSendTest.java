@@ -2,14 +2,13 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
+
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -47,11 +46,10 @@ public class AbstractExceptionOnSendTest extends AbstractConnectionTest{
        
     @Override
     protected boolean isExpectedSendException(Exception ex) {
-      LOG.info("AbstractExceptionOnSendTest, isExpectedSendException: ex: " + ex);
-      if (ex instanceof HecNoValidChannelsException) {
-        return true;
-      }
-      return false;
+      LOG.debug("AbstractExceptionOnSendTest: " +
+              "isExpectedSendException: " + (ex instanceof HecNoValidChannelsException) + 
+              ", ex: " + ex);
+      return ex instanceof HecNoValidChannelsException;
     }
     
     protected BasicCallbacks getCallbacks() {
@@ -63,7 +61,7 @@ public class AbstractExceptionOnSendTest extends AbstractConnectionTest{
         
         @Override
         public void systemError(Exception ex) {
-          LOG.info("AbstractExceptionOnSendTest, got systemError callabck: ex: " + ex);
+          LOG.info("AbstractExceptionOnSendTest, got expected systemError: ex: " + ex);
           Assert.assertTrue(ex instanceof HecConnectionStateException);
         }
       };

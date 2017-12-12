@@ -491,14 +491,22 @@ public abstract class AbstractConnectionTest {
     return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(getJsonToEvents(seqno).getBytes()), seqno);
   }
   
+  public void assertAllChannelsFailed(Class exceptionClass) throws InterruptedException {
+    assertAllChannelsFailed(exceptionClass, null, false);
+  }
+  
+  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessage) throws InterruptedException {
+    assertAllChannelsFailed(exceptionClass, exceptionMessage, true);
+  }
+  
   /**
-   * assert that health is not empty and all channels failed with 
+   * assert that healths is not empty and all channels failed with 
    * provided exceptionClass and exceptionMessage.
    * 
    * @param exceptionClass
    * @param exceptionMessage
    */
-  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessage) throws InterruptedException {
+  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessage, Boolean checkMessage) throws InterruptedException {
     List<HecHealth> healths = connection.getHealth();
     // wait for channels to populate health
     for (Integer i = 0; i < 10 && healths.isEmpty() ; i++) {
@@ -507,7 +515,7 @@ public abstract class AbstractConnectionTest {
     } 
     Assert.assertTrue("Expected health checks to be not empty, but got this healths: \"" + healths + "\"", !healths.isEmpty());
     
-    // wait for 10 seconds for all channels to fail preflight
+    // wait for 10 seconds for all channels to fail preflight and populate health checks
     for (Integer i = 0; 
          i<10 && healths.stream().map(h -> h.getStatus().getException())
                  .filter(e -> e instanceof HecServerErrorResponseException)
@@ -517,15 +525,25 @@ public abstract class AbstractConnectionTest {
       healths = connection.getHealth();
       TimeUnit.SECONDS.sleep(1);
     }
-    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
-    if (healths.stream()
-            .map(h -> h.getStatus().getException())
-            .filter(e -> exceptionClass.isInstance(e))
+    // we expect all channels to fail with exceptionClass and exceptionMessage
+    List<Exception> exceptions = healths.stream().map(h -> h.getStatus().getException()).collect(Collectors.toList());
+    exceptions.stream().forEach(e -> LOG.trace("excetpion: \"" + e + "\", message: \"" + e.getMessage() +"\""));
+    
+    // check each channel got an exception of expected class 
+    if (exceptions.stream().filter(e -> exceptionClass.isInstance(e))
+            .count() != healths.size()) { 
+      Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass + "\", but got " + (
+              exceptions.isEmpty() ? "no exceptions in healths: " + healths :
+                      "instead the following list of exceptions in healths: " +
+                              String.valueOf(exceptions)));
+  
+    }
+    
+    // check each exception message if requested 
+    if (checkMessage && exceptions.stream()
             .filter(e -> e.getMessage().equals(exceptionMessage))
             .count() != healths.size()) {
-      List<Exception> exceptions = healths.stream().map(h -> h.getStatus().getException()).collect(Collectors.toList());
-      LOG.debug(String.valueOf(exceptions));
-      Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass + 
+      Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass +   
               "\" and message: \"" + exceptionMessage + 
               "\", but got " + (
                       exceptions.isEmpty() ? "no exceptions in healths: " + healths : 

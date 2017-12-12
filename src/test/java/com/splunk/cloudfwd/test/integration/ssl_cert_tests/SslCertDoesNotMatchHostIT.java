@@ -14,17 +14,14 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.junit.Assert;
 import org.junit.Test;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -49,12 +46,7 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
    */
   public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
     super.sendEvents(false, false);
-    List<HecHealth> healths = connection.getHealth();
-    Assert.assertTrue("Expected healths to be not empty, but got this healths: " + healths, !healths.isEmpty());
-    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
-    Assert.assertTrue("Expected all channel to fail with SSLPeerUnverifiedException, but got this healths: " + healths, healths.stream()
-            .filter(e -> e.getStatus().getException() instanceof SSLPeerUnverifiedException)
-            .count() == healths.size());
+    assertAllChannelsFailed(SSLPeerUnverifiedException.class);
     connection.close();
   }
   
@@ -70,12 +62,7 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
   }
   
   @Override
-  protected boolean isExpectedSendException(Exception e) {
-    if(e instanceof HecNoValidChannelsException) {
-      return true;
-    }
-    return false;
-  }
+  protected boolean isExpectedSendException(Exception e) { return e instanceof HecNoValidChannelsException; } 
 
   @Override
   protected int getNumEventsToSend() {
