@@ -140,15 +140,20 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {
             events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
+            getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
+
+            // start polling for acks
+            getManager().startAckPolling();
         } else if (epr.isAckDisabled()) {
-            throwConfigurationException(getSender(), httpCode, resp);
+            if (getConnection().getSettings().isAckRequired()) { 
+                throwConfigurationException(getSender(), httpCode, resp); 
+            } else {
+                // TODO: make it configurable to suppress these warnings
+                LOG.warn("Acks are disabled on Splunk server for channel {}", getChannel());
+                LOG.warn("Acks are disabled - no ack will be received for event batch {}", events);
+                getCallbacks().acknowledged(events);
+            }
         }
-
-        getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
-
-        // start polling for acks
-        getManager().startAckPolling();
-
         notify(EVENT_POST_OK, 200, resp, events);
     }
 

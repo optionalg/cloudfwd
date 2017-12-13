@@ -226,6 +226,11 @@ public class PropertyKeys {
   public static final String ENABLE_HTTP_DEBUG = "enable_http_debug";
 
   /**
+   * 
+   */
+  public static final String REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER = "require_acks_enabled_on_splunk_server";
+
+  /**
    * The maximum number of attempts to resend EventBatch when a channel is
    * suspected of being unresponsive. Note: Retries always occur on newly
    * created channels that replace the dead channel.
@@ -368,6 +373,8 @@ public class PropertyKeys {
   public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
   
   public static final String DEFAULT_ENABLE_PREFLIGHT = "true";
+  
+  public static final String DEFAULT_REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER = "false";
   
   /**
    * Channel Quiesce Timeout define how much time to wait for a channel to 

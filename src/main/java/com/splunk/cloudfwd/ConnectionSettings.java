@@ -322,6 +322,12 @@ public class ConnectionSettings {
                 PropertyKeys.ENABLE_CHECKPOINTS,
                 PropertyKeys.DEFAULT_ENABLE_CHECKPOINTS).trim());
     }
+    
+    public boolean isAckRequired() {
+        return Boolean.parseBoolean(this.defaultProps.getProperty(
+                PropertyKeys.REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER,
+                PropertyKeys.DEFAULT_REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER));
+    }
 
     public ConnectionImpl.HecEndpoint getHecEndpointType() {
         ConnectionImpl.HecEndpoint endpoint;

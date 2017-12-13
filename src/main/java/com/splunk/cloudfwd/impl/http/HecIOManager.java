@@ -147,16 +147,22 @@ public class HecIOManager implements Closeable {
                                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
                                 "health_poll_ack_endpoint_check");
 
-                        GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(
+                        GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
                                 this,
-                                LifecycleEvent.Type.HEALTH_POLL_OK,
-                                LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                                LifecycleEvent.Type.PREFLIGHT_OK,
+                                LifecycleEvent.Type.PREFLIGHT_FAILED,
+                                LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                                LifecycleEvent.Type.PREFLIGHT_BUSY,
                                 "health_poll_raw_endpoint_check");
 
-                        ResponseCoordinator.create(cb1, cb2, cb3);
+                        if (sender.getConnection().getSettings().isAckRequired()) {
+                            ResponseCoordinator.create(cb1, cb2, cb3);
+                            sender.checkAckEndpoint(cb2);
+                        } else {
+                            ResponseCoordinator.create(cb1, cb3);
+                        }
                         sender.checkHealthEndpoint(cb1);
-                        sender.checkAckEndpoint(cb2);
-                        sender.checkAckEndpoint(cb3);
+                        sender.checkRawEndpoint(cb3);
                     }catch(Exception e){
                         LOG.error("{}", e.getMessage(), e);
                     }
@@ -172,13 +178,6 @@ public class HecIOManager implements Closeable {
                 ()->{      
                     try {
                           LOG.info("preflight checks on {}", sender.getChannel());
-                          GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
-                                  this,
-                                  LifecycleEvent.Type.PREFLIGHT_OK,
-                                  LifecycleEvent.Type.PREFLIGHT_FAILED,
-                                  LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
-                                  LifecycleEvent.Type.PREFLIGHT_BUSY,
-                                  "preflight_ack_endpoint_check");
                           GenericCoordinatedResponseHandler cb2 = new GenericCoordinatedResponseHandler(
                                   this,
                                   LifecycleEvent.Type.PREFLIGHT_OK,
@@ -193,15 +192,30 @@ public class HecIOManager implements Closeable {
                                   LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
                                   LifecycleEvent.Type.PREFLIGHT_BUSY,
                                   "preflight_raw_endpoint_check");
-                          this.coordinator = ResponseCoordinator.create(cb1,
-                                  cb2,
-                                  cb3);
-                          sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
+
+                        if (sender.getConnection().getSettings().isAckRequired()) {
+                            GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                                    this,
+                                    LifecycleEvent.Type.PREFLIGHT_OK,
+                                    LifecycleEvent.Type.PREFLIGHT_FAILED,
+                                    LifecycleEvent.Type.PREFLIGHT_GATEWAY_TIMEOUT,
+                                    LifecycleEvent.Type.PREFLIGHT_BUSY,
+                                    "preflight_ack_endpoint_check");
+                            this.coordinator = ResponseCoordinator.create(cb1, cb2, cb3);
+                            sender.checkAckEndpoint(cb1);//SEND FIRST REQUEST
+                        } else {
+                            this.coordinator = ResponseCoordinator.create(cb2, cb3);
+                            sender.checkHealthEndpoint(cb2);//SEND FIRST REQUEST
+                        }
 
                           LifecycleEvent firstResp = coordinator.awaitNthResponse(0); //WAIT FIRST RESPONSE
                           if (null != firstResp) {
                               if (firstResp.isOK()) {
-                                  sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST 
+                                  if (!sender.getConnection().getSettings().isAckRequired()) {
+                                      sender.checkRawEndpoint(cb3);
+                                      return;
+                                  }
+                                  sender.checkHealthEndpoint(cb2); //SEND SECOND REQUEST
                                   LifecycleEvent secondResp = coordinator.awaitNthResponse(1); //WAIT SECOND RESPONSE
                                   if (null != secondResp) {
                                       if (secondResp.isOK()) {
