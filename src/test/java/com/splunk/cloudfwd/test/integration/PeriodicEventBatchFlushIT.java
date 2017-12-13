@@ -40,6 +40,7 @@ public class PeriodicEventBatchFlushIT extends AbstractReconciliationTest {
 
     @Override
     protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
         settings.setEventBatchFlushTimeout(2000);
         settings.setEventBatchSize(100000000); // big enough that we don't fill the batch
         settings.setToken(createTestToken(SINGLE_LINE_SOURCETYPE));
