@@ -53,14 +53,14 @@ public class TimeoutChecker implements EventTracker {
         this.connection = c;
     }
 
-    public void setTimeout(long ms) {
+    public void setTimeout() {
         //queisce();
         start();
     }
 
     private long getTimeoutMs() {
         //check for timeouts with a minimum frequency of 1 second
-        return connection.getSettings().getAckTimeoutMS();
+        return connection.getPropertiesFileHelper().getAckTimeoutMS();
     }
 
     //how often we should rip through the list and check for timeouts
@@ -142,7 +142,7 @@ public class TimeoutChecker implements EventTracker {
         try {
             shouldFlush = connection.getUnsentBatch() != null &&
                 System.currentTimeMillis() - connection.getUnsentBatch().getFirstEventAddedTimestamp() 
-                    > connection.getSettings().getBatchFlushTimeout();
+                    > connection.getSettings().getEventBatchFlushTimeout();
         } catch (NullPointerException e) {
             // no-op, since it just means that the event batch was set to null and was already flushed
             LOG.debug("Ignoring exception caught by timeout checker when checking flush timeout: {}", e);

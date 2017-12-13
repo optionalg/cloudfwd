@@ -2,12 +2,9 @@ package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 import com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import java.util.Properties;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,16 +31,13 @@ import org.junit.Test;
 public class ResendOnCatchingRuntimExceptionTest extends AbstractConnectionTest {
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(MOCK_HTTP_KEY, "true");
-    props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint");
-    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
-    props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel   
+  protected void configureProps(PropertiesFileHelper settings) {
+    settings.setMockHttp(true);
+    settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint");
+    settings.setEventBatchSize(0); //make sure no batching
+    settings.setMaxTotalChannels(1); //so we insure we resend on same channel
     //in the ExceptionsEndpoint, error prob is 0.5. So 20 gives us 1/2^20  chance of never getting the message through
-    props.put(PropertyKeys.RETRIES, "20");
-    return props;
+    settings.setMaxRetries(20);
   }
 
   @Override

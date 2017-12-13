@@ -35,7 +35,6 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 import java.util.HashSet;
 import java.util.Set;
-//import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
@@ -378,7 +377,7 @@ public final class HttpSender implements Endpoints, CookieClient {
         }; // make sure http client or simulator is started
         AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();        
         if (ackReq.isEmpty()) {
-            LOG.trace("no ackIds to poll for om {}", getChannel());
+            LOG.trace("no ackIds to poll for on {}", getChannel());
           return;
         } else {        
           hecIoMgr.setAckPollInProgress(true);

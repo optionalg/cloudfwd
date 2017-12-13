@@ -18,12 +18,10 @@ import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
-import java.util.Properties;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,8 +38,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(
             AcknowledgementTimeoutTest.class.getName());
 
-    public AcknowledgementTimeoutTest() {
-    }
+    public AcknowledgementTimeoutTest() {}
 
     @Override
     @Before
@@ -49,12 +46,12 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
         super.setUp();
     }
     
-  @After
-  @Override
-  public void tearDown() {
+    @After
+    @Override
+    public void tearDown() {
         super.tearDown();
         connection.closeNow();
-  }    
+    }    
 
     @Test
     public void testTimeout() throws InterruptedException, HecConnectionTimeoutException {
@@ -63,23 +60,17 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
+    protected void configureProps(PropertiesFileHelper settings) {
         // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
-        props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
         if (SlowEndpoints.sleep > 10000) {
             throw new RuntimeException("Let's not get carried away here");
         }
-
-        props.put(ACK_TIMEOUT_MS, Long.toString(1000));
-        props.put(UNRESPONSIVE_MS,
-                "-1");//disable dead channel detection
-        props.put(PropertyKeys.EVENT_BATCH_SIZE, 0);
+        settings.setAckTimeoutMS(1000);
+        settings.setUnresponsiveMS(-1); //disable dead channel detection
+        settings.setEventBatchSize(0);
         //props.put(PropertyKeys.MAX_TOTAL_CHANNELS, 1);
-        return props;
     }
 
     @Override

@@ -3,9 +3,8 @@ package com.splunk.cloudfwd.test.mock;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import java.util.Properties;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 
 /*
@@ -45,14 +44,12 @@ public class UnvalidatedBytesTest extends AbstractConnectionTest {
   public void testUnvalidatedBytesToEvents() throws InterruptedException, HecConnectionTimeoutException{
     super.connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     sendEvents();
-  }  
-  
-    protected Properties getProps() {
-    Properties props = new Properties(); //default behavior is no "hard coded" test-specific properties
-    props.put(PropertyKeys.EVENT_BATCH_SIZE,  "16000");
-    //props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
+  }
+
+  protected void configureProps(PropertiesFileHelper settings) {
+    settings.setEventBatchSize(16000);
+    //settings.setMockHttp(false);
     super.eventType = Event.Type.UNKNOWN;
-    return props;
   }
   
   

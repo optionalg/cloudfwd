@@ -1,13 +1,10 @@
 package com.splunk.cloudfwd.test.integration;
 
-import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Properties;
 
 /**
  * Created by eprokop on 10/5/17.
@@ -21,10 +18,9 @@ public class CreateConnectionInvalidTokenIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, "invalid_token");
-        return p;
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
+        settings.setToken("invalid_token");
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.test.integration;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class PeriodicEventBatchFlushIT extends AbstractReconciliationTest {
         }
         
         // wait for flush
-        sleep(connection.getSettings().getBatchFlushTimeout() * 3);
+        sleep(connection.getSettings().getEventBatchFlushTimeout() * 3);
         
         // verify
         Set<String> searchResults = getEventsFromSplunk();
@@ -38,11 +39,10 @@ public class PeriodicEventBatchFlushIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.setProperty(PropertyKeys.EVENT_BATCH_FLUSH_TIMEOUT_MS, "2000");
-        p.setProperty(PropertyKeys.EVENT_BATCH_SIZE, "100000000"); // big enough that we don't fill the batch
-        p.setProperty(PropertyKeys.TOKEN, createTestToken(SINGLE_LINE_SOURCETYPE));
-        return p;
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
+        settings.setEventBatchFlushTimeout(2000);
+        settings.setEventBatchSize(100000000); // big enough that we don't fill the batch
+        settings.setToken(createTestToken(SINGLE_LINE_SOURCETYPE));
     }
 }

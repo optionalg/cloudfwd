@@ -1,24 +1,13 @@
 package com.splunk.cloudfwd.test.mock;
 
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.error.HecChannelDeathException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDFailEndpoints;
-
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
-
-import java.util.ArrayList;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
@@ -41,7 +30,7 @@ import org.junit.Test;
  */
 /**
  *
- * @author meema 
+ * @author ghendrey
  */
 public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
 
@@ -53,10 +42,10 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
       return new BasicCallbacks(n){
            
-          @Override
+        @Override
           public boolean shouldFail(){
-              return true;
-          }          
+          return true;
+        }          
         @Override
         protected boolean isExpectedFailureType(Exception e){
           return (e instanceof HecServerErrorResponseException &&
@@ -103,18 +92,14 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDFailEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "30000");
-        props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
-        props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
+    protected void configureProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDFailEndpoints");
+        settings.setBlockingTimeoutMS(30000);
+        settings.setUnresponsiveMS(-1); //no dead channel detection
+        settings.setMaxTotalChannels(4);
+        settings.setAckTimeoutMS(60000); //we don't want the ack timout kicking in
         // checkpointing
-        props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true");
-
-        return props;
+        settings.setCheckpointEnabled(true);
     }
 
     @Override

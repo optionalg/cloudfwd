@@ -27,6 +27,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -42,14 +44,14 @@ public class CloseNowInALoopTest {
     @Test
     public void loop() throws InterruptedException, ExecutionException{
         int numConnections = 100;
-        Properties props = new Properties();
-        props.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8088");
-        props.setProperty(PropertyKeys.TOKEN, "7263336d-ac05-4db9-92c3-9536922d11b1");
+        PropertiesFileHelper settings = new PropertiesFileHelper();
+        settings.setUrls("https://127.0.0.1:8088");
+        settings.setToken("7263336d-ac05-4db9-92c3-9536922d11b1");
         List<Connection> connections = Collections.synchronizedList(new ArrayList<>());
         Callable<Connection> callable =()->{
             try{
                 LOG.info("CREATING CONNECTION");
-                Connection c = Connections.create(props);
+                Connection c = Connections.create(settings);
                 connections.add(c);
                 LOG.info("Connections size = " + connections.size());
                 return c;

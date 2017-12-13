@@ -1,15 +1,10 @@
 package com.splunk.cloudfwd.test.mock.in_detention_tests;
 
-import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.test.mock.in_detention_tests.AbstractInDetentionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.junit.Test;
-import java.util.Properties;
-
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 
 /**
  * Created by mhora on 10/4/17.
@@ -35,15 +30,11 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.indexer.SomeInDetentionEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "30000");
-        props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
-
-        return props;
+    protected void configureProps(PropertiesFileHelper settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.SomeInDetentionEndpoints");
+        settings.setBlockingTimeoutMS(30000);
+        settings.setUnresponsiveMS(-1); //no dead channel detection
+        settings.setMaxTotalChannels(2);
     }
 
     @Override
@@ -54,10 +45,9 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     protected void createConnection() {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        PropertiesFileHelper settings = this.getTestProps();
+        this.configureProps(settings);
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 

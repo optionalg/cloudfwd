@@ -2,9 +2,8 @@ package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
-import static com.splunk.cloudfwd.test.util.AbstractConnectionTest.KEY_ENABLE_TEST_PROPERTIES;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
 import org.junit.Test;
@@ -63,7 +62,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
        // ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
-        ExecutorService senderExecutor =Executors.newFixedThreadPool(numSenderThreads,
+        ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
         (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
         //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
@@ -127,7 +126,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
     @Override
     protected String getTestPropertiesFileName() {
-        return "cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
+        return "/cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
     }
 
     // not used
@@ -142,17 +141,18 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = new Properties();
-        if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-            p.put(PropertyKeys.TOKEN, cliProperties.get(PropertyKeys.TOKEN));
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
+        String token = System.getProperty(PropertyKeys.TOKEN);
+        String url = System.getProperty(PropertyKeys.COLLECTOR_URI);
+        if (System.getProperty(PropertyKeys.TOKEN) != null) {
+            settings.setToken(token);
         }
-        if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
-            p.put(PropertyKeys.COLLECTOR_URI, cliProperties.get(PropertyKeys.COLLECTOR_URI));
+        if (System.getProperty(PropertyKeys.COLLECTOR_URI) != null) {
+            settings.setUrls(url);
         }
-        p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-        p.put(KEY_ENABLE_TEST_PROPERTIES, "false");
-        return p;
+        settings.setMockHttp(false);
+        settings.setTestPropertiesEnabled(false);
     }
 
     private void checkAndLogPerformance(boolean shouldAssert) {
@@ -201,25 +201,25 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         private boolean failed = false;
         private int workerNumber;
         private Connection connection;
+        private ConnectionSettings connectionSettings;
         
         public SenderWorker(int workerNum) throws UnknownHostException{
             this.workerNumber = workerNum;
             this.connection = createAndConfigureConnection();
+            this.connectionSettings = connection.getSettings();
             if (null ==connection){
                 Assert.fail("null connection");
             }
             //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
             //instantiated
-            Properties p = new Properties();
             if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-                p.put(PropertyKeys.TOKEN, cliProperties.get(PropertyKeys.TOKEN));
+                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
             }
             if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
-                p.put(PropertyKeys.COLLECTOR_URI, cliProperties.get(PropertyKeys.COLLECTOR_URI));
+                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
             }
-            p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-            p.put(KEY_ENABLE_TEST_PROPERTIES, "false");
-            connection.getSettings().setProperties(p);
+            connectionSettings.setMockHttp(false);
+            connectionSettings.setTestPropertiesEnabled(false);
         }
         public void sendAndWaitForAcks() {
             LOG.info("sender {} starting its send loop", workerNumber);

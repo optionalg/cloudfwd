@@ -17,13 +17,11 @@ package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.test.integration.AbstractReconciliationTest;
+import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import java.nio.ByteBuffer;
-import java.util.Properties;
 import org.junit.Test;
 
 /**
@@ -32,14 +30,13 @@ import org.junit.Test;
  */
 public class ByteBufferEventsToWrongEndpointTestIT extends AbstractReconciliationTest{
   @Override
-    protected Properties getProps() {
-    Properties props = super.getProps(); //inherit the propertues from ByteBufferEventTest
-    //intentionally direct text events to /events endpoint
-    props.put(PropertyKeys.HEC_ENDPOINT_TYPE, Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
-    props.put(PropertyKeys.EVENT_BATCH_SIZE,  "16000");
-    super.eventType = Event.Type.UNKNOWN; //meeans its a Unvalidated* event (we can't tell what content is in it)
-    return props;
-  }    
+  protected void configureProps(PropertiesFileHelper settings) {
+      super.configureProps(settings);
+      //intentionally direct text events to /events endpoint
+      settings.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+      settings.setEventBatchSize(16000);
+      super.eventType = Event.Type.UNKNOWN; //meeans its a Unvalidated* event (we can't tell what content is in it)
+  }
     
   @Override
  protected BasicCallbacks getCallbacks() {
