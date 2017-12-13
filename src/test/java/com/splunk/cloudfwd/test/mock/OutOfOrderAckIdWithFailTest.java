@@ -55,10 +55,11 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
       return new BasicCallbacks(n){
            
-          @Override
-          public boolean shouldFail(){
+        @Override
+        public boolean shouldFail(){
               return true;
-          }          
+          }
+          
         @Override
         protected boolean isExpectedFailureType(Exception e){
           return (e instanceof HecServerErrorResponseException &&

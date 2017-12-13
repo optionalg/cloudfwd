@@ -26,8 +26,8 @@ limitations under the License.
 -    </Console>     
   </Appenders> 
   <Loggers>
-    <Root level="trace">
-      <AppenderRef ref="Console"/>
+    <Root level="info">
+      <AppenderRef ref="VerifyLogFile"/>
     </Root>
     <Logger name="org.apache.http" level="error">
       <AppenderRef ref="VerifyLogFile"/>

@@ -41,26 +41,21 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
     
     @Test
     public void testWithCheckpointDisabled() throws InterruptedException{
-        this.checkpoint = false;
-        createConnection();
+        checkpoint = false;
+        setUp();
         super.sendEvents();
     }
     
     @Test
     public void testWithCheckpointEnabled() throws InterruptedException {
-      this.checkpoint = true;
-      createConnection();
+      checkpoint = true;
+      setUp();
       super.sendEvents();
     }
 
     @Override
-    public void setUp() {
-        this.testMethodGUID = java.util.UUID.randomUUID().toString();
-        this.events = new ArrayList<>();
-    }
-
-    @Override
     protected Properties getProps() {
+        LOG.trace("Running tests with ENABLE_CHECKPOINTS: " + Boolean.toString(this.checkpoint));
         Properties props = new Properties();
         props.put(MOCK_HTTP_CLASSNAME,
             "com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDEndpoints");
@@ -70,20 +65,7 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
         props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
         // checkpointing
         props.put(PropertyKeys.ENABLE_CHECKPOINTS, Boolean.toString(this.checkpoint));
-
         return props;
-    }
-
-    // Need to separate this logic out of setUp() so that each Test
-    // can use different simulated endpoints
-    protected void createConnection() {
-        this.callbacks = getCallbacks();
-
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
-        configureConnection(connection);
     }
 
     @Override
