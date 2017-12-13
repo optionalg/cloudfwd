@@ -22,7 +22,9 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * This class allows us to keep track of one HttpClientWrapper per ssl hostname. This is needed because our simple
- * implementation of ssl hostname verification can accept only one ssl hostname. 
+ * implementation of ssl hostname verification can accept only one ssl hostname. Because SSL certificate validation is 
+ * managed by the underlying http client, and because it is not easily mutable, we allow there two be two http clients
+ * per hostname: One that performs SSL cert validation for the given hostname, and one that does not. 
  * @author ghendrey
  */
 public class HttpClientHostMapper {
@@ -30,8 +32,9 @@ public class HttpClientHostMapper {
         private static final ConcurrentMap<String, HttpClientWrapper> clientMap = new ConcurrentHashMap<>(); 
         
         public static HttpClientWrapper getClientWrapper(HttpSender sender){
-            String sslHostname = sender.getSslHostname();
-            return clientMap.computeIfAbsent(sslHostname, (key)->{
+            //key in map combines the hostname and whether or not SSL cert validation is disabled
+            String hostKey = sender.getSslHostname() +":sslCertValidationDisabled="+ sender.isDisableCertificateValidation();
+            return clientMap.computeIfAbsent(hostKey, (k)->{
                 return new HttpClientWrapper();
             });
         }

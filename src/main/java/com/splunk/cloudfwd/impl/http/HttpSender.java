@@ -172,14 +172,6 @@ public final class HttpSender implements Endpoints, CookieClient {
             dummyEventPost.abort();
         }
     }
-
-  /**
-   * Disable https certificate validation of the splunk server. This
-   * functionality is for development purpose only.
-   */
-  public void disableCertificateValidation() {
-    disableCertificateValidation = true;
-  }
   
   public ChannelMetrics getChannelMetrics() {
     return this.channel.getChannelMetrics();
@@ -534,6 +526,13 @@ public final class HttpSender implements Endpoints, CookieClient {
     
     public String getSslHostname(){
         return this.host;
+    }
+
+    /**
+     * @return the disableCertificateValidation
+     */
+    public boolean isDisableCertificateValidation() {
+        return disableCertificateValidation;
     }
   
 }
