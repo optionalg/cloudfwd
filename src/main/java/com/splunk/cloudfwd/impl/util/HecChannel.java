@@ -329,7 +329,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     //must add channel *before* quiesce(). 'cause if channel empty, quiesce proceeds directly to close which will kill terminate
     //the reaperScheduler, which will interrupt this very thread which was spawned by the reaper scheduler, and then  we
     //never get to add the channel.
-    HecChannel newChannel = this.loadBalancer.addChannelFromRandomlyChosenHost(force); //add a replacement
+        HecChannel newChannel = this.loadBalancer.addChannelFromRandomlyChosenHost(force); //add a replacement
     newChannel.getHealth(); //block until this channel is available, before removing old channel
     this.loadBalancer.removeChannel(channelId, true);
     quiesce(); //drain in-flight packets, and close+cancelEventTrackers when empty

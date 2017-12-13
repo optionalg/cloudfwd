@@ -79,7 +79,7 @@ public class ConnectionImpl implements Connection {
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
     this.settings = new PropertiesFileHelper(this,settings);
     this.checkpointManager = new CheckpointManager(this);
-    this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
+    this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer
     this.lb = new LoadBalancer(this);
     this.events = new EventBatchImpl();
     //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers

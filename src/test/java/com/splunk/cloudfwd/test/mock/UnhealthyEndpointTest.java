@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author ghendrey
  */
-public final class UnhealthyEndpointTest extends AbstractConnectionTest {
+public final class  UnhealthyEndpointTest extends AbstractConnectionTest {
   private static final int MAX_TEST_WAIT_MINUTES = 10;
 
   private static final Logger LOG = LoggerFactory.getLogger(UnhealthyEndpointTest.class.getName());

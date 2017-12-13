@@ -78,7 +78,7 @@ public class LoadBalancer implements Closeable {
 
     /**
      * Gets the current HecHealth of each channel. This method does not initiate any HTTP traffic.  It just
-     * returns whatever each HecChannel's health is at the current instant.
+     * returns whatever each HecChannel's health is at the current instant
      * @return
      */
     public List<HecHealth> getHealth() {
