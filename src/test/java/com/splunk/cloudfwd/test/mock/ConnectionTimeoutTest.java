@@ -34,7 +34,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionTimeoutTest.class.getName());
 
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     //A realistic value of BLOCKING_TIMEOUT_MS would be 1 or more MINUTES, but let's not
     //make this test run too slowly. The point is, we want to SEE the HecConnectionTimeout
     //happen repeatedly, until the message goes through

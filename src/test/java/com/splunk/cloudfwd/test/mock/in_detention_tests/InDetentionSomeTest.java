@@ -30,7 +30,7 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.SomeInDetentionEndpoints");
         settings.setBlockingTimeoutMS(30000);
         settings.setUnresponsiveMS(-1); //no dead channel detection
@@ -46,7 +46,7 @@ public class InDetentionSomeTest extends AbstractInDetentionTest {
     // can use different simulated endpoints
     protected void createConnection() {
         PropertiesFileHelper settings = this.getTestProps();
-        this.setProps(settings);
+        this.configureProps(settings);
         this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }

@@ -33,7 +33,7 @@ import org.junit.Test;
  */
 public class ChangeEndpointWhileAccumulatingBatch extends AbstractConnectionTest{
 
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setEventBatchSize(1024*1024);
   }
     

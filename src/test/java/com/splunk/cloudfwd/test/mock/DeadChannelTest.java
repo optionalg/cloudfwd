@@ -46,7 +46,7 @@ public class DeadChannelTest extends AbstractConnectionTest {
     }
 
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setMockHttp(true);
     settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.ackslost.LossyEndpoints");
     settings.setUnresponsiveMS(4000);

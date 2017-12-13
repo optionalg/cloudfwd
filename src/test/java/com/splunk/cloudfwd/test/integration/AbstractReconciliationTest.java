@@ -119,7 +119,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setMockHttp(false);
     settings.setEventBatchSize(16000);
     settings.setToken(createTestToken(getSourceType()));

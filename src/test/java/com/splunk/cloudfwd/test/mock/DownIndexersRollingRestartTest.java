@@ -25,7 +25,7 @@ public class DownIndexersRollingRestartTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.RollingRestartEndpoints");
 
         // mocking 4 indexers with 1 channel each
@@ -49,7 +49,7 @@ public class DownIndexersRollingRestartTest extends AbstractConnectionTest {
         this.callbacks = getCallbacks();
 
         PropertiesFileHelper settings = this.getTestProps();
-        this.setProps(settings);
+        this.configureProps(settings);
         this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }

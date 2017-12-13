@@ -39,7 +39,7 @@ public class HecServerErrorResponseInvalidTokenTest extends AbstractHecServerErr
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.InvalidTokenEndpoints");
         settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException
         settings.setBlockingTimeoutMS(5000);

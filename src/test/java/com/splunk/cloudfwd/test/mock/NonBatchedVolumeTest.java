@@ -38,7 +38,7 @@ public class NonBatchedVolumeTest extends AbstractConnectionTest {
 
 
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     //settings.setMockHttp(true);
   }
 

@@ -98,7 +98,7 @@ public abstract class AbstractConnectionTest {
   
   protected Connection createAndConfigureConnection(){
     PropertiesFileHelper settings = getTestProps();
-    setProps(settings);
+    configureProps(settings);
     connection = createConnection(callbacks, settings);
     if(null == connection){
       return null;
@@ -299,7 +299,7 @@ public abstract class AbstractConnectionTest {
    *
    * @return
    */
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     //default behavior is no "hard coded" test-specific properties
   }
 

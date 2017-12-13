@@ -36,7 +36,7 @@ public class HecEndpointEventTypeTest extends AbstractConnectionTest {
 
  
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setMockHttp(true);
   }
 

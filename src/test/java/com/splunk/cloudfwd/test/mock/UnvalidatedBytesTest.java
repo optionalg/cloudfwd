@@ -46,7 +46,7 @@ public class UnvalidatedBytesTest extends AbstractConnectionTest {
     sendEvents();
   }
 
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setEventBatchSize(16000);
     //settings.setMockHttp(false);
     super.eventType = Event.Type.UNKNOWN;

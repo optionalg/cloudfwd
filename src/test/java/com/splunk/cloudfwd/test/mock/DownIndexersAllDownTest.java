@@ -29,7 +29,7 @@ public class DownIndexersAllDownTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.DownIndexerEndpoints");
         settings.setMaxTotalChannels(4);
         settings.setBlockingTimeoutMS(10000);
@@ -44,7 +44,7 @@ public class DownIndexersAllDownTest extends AbstractConnectionTest {
         this.callbacks = getCallbacks();
 
         PropertiesFileHelper settings = getTestProps();
-        setProps(settings);
+        configureProps(settings);
         connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }

@@ -55,7 +55,7 @@ public class SessionCookiesTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints");
         settings.setMaxTotalChannels(1);
     }

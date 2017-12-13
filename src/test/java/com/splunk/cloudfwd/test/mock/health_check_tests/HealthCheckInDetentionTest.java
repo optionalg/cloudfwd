@@ -16,7 +16,7 @@ public class HealthCheckInDetentionTest extends AbstractHealthCheckTest {
     private static final Logger LOG = LoggerFactory.getLogger(HealthCheckInDetentionTest.class.getName());
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.InDetentionEndpoints");
         settings.setBlockingTimeoutMS(3000);
     }

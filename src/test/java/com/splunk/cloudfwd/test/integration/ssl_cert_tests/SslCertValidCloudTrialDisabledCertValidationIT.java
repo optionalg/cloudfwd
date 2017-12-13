@@ -42,7 +42,7 @@ public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConn
   }
   
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setUrls("https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
     settings.setToken("19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
     settings.disableCertValidation();

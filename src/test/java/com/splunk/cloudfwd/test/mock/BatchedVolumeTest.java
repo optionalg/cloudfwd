@@ -34,7 +34,7 @@ public class BatchedVolumeTest extends AbstractConnectionTest {
   }
   
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
       settings.setAckTimeoutMS(1000000);
       settings.setUnresponsiveMS(-1); //no dead channel detection
   }

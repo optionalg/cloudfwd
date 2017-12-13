@@ -51,7 +51,7 @@ public class HecServerErrorResponseIndexerBusyButHealthCheckOKTest extends Abstr
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
         settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException
         settings.setBlockingTimeoutMS(5000);

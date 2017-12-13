@@ -42,7 +42,7 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     //default behavior is no "hard coded" test-specific properties
     settings.setEventBatchSize(16000);
     settings.setMockHttp(true); //no dead channel detection

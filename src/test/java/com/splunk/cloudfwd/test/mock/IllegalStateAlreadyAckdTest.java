@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
   
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttp(true);
         settings.setEventBatchSize(0); //make sure no batching
         settings.setMaxTotalChannels(1); //so we insure we resend on same channel

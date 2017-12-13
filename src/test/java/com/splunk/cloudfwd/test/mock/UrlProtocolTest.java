@@ -24,7 +24,7 @@ import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGU
 
 public class UrlProtocolTest extends ExceptionConnInstantiationTest {
      @Override
-     protected void setProps(PropertiesFileHelper settings) {
+     protected void configureProps(PropertiesFileHelper settings) {
          settings.setUrls("http://foo.com"); //http is not supported protocol. Must be https
     }
     

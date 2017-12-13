@@ -31,7 +31,7 @@ public class AbstractHealthCheckTest extends AbstractConnectionTest {
     // can use different simulated endpoints
     protected void createConnection(LifecycleEvent.Type problemType) {
         PropertiesFileHelper settings = this.getTestProps();
-        setProps(settings);
+        configureProps(settings);
         boolean gotException = false;
         try{
             connection = Connections.create((ConnectionCallbacks) callbacks, settings);

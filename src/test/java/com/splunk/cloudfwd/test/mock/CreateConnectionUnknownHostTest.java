@@ -11,7 +11,7 @@ import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
  */
 public class CreateConnectionUnknownHostTest extends ExceptionConnInstantiationTest {
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setUrls("https://foobarunknownhostbaz:8088");
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unknownhost.UnknownHostEndpoints");
     }

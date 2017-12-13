@@ -18,8 +18,8 @@ public class CreateConnectionInvalidTokenIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
-        super.setProps(settings);
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
         settings.setToken("invalid_token");
     }
 

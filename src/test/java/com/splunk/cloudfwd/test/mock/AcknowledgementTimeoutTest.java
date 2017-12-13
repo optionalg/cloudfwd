@@ -60,7 +60,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");

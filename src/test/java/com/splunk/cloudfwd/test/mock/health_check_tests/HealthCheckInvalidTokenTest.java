@@ -14,7 +14,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_TOKEN;
 public class HealthCheckInvalidTokenTest extends AbstractHealthCheckTest {
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.InvalidTokenEndpoints");
         settings.setBlockingTimeoutMS(3000);
     }

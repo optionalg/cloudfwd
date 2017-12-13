@@ -30,8 +30,8 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
-        super.setProps(settings);
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
         settings.setToken(createTestToken("__singleline"));
         settings.setUrls(unknownHost + ",https://localhost:8088");
         settings.setMaxTotalChannels(2);

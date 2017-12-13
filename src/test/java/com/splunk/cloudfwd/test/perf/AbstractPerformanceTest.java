@@ -44,7 +44,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
   }
   
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     //default behavior is no "hard coded" test-specific properties
     //the assumption here is that we are doing performance testing using cloudfwd.properties not test.properties
     settings.setTestPropertiesEnabled(false);

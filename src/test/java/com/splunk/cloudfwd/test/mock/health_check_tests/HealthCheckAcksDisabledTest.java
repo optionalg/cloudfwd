@@ -17,7 +17,7 @@ public class HealthCheckAcksDisabledTest extends AbstractHealthCheckTest {
     private static final Logger LOG = LoggerFactory.getLogger(HealthCheckAcksDisabledTest.class.getName());
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.AckDisabledEndpoints");
         settings.setBlockingTimeoutMS(3000);
     }

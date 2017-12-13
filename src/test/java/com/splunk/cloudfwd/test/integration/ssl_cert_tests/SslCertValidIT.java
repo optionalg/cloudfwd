@@ -57,7 +57,7 @@ public class SslCertValidIT extends AbstractConnectionTest {
   }
   
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setUrls("https://http-inputs-kinesis1.splunkcloud.com:443");
     settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     settings.enableCertValidation();

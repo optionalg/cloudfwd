@@ -66,14 +66,14 @@ public abstract class AbstractHecServerErrorResponseTest extends AbstractConnect
     // can use different simulated endpoints
     protected void createConnection() {
         PropertiesFileHelper settings = this.getTestProps();
-        setProps(settings);
+        configureProps(settings);
         connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 
     protected void createConnection(LifecycleEvent.Type problemType) {
         PropertiesFileHelper settings = this.getTestProps();
-        this.setProps(settings);
+        this.configureProps(settings);
         boolean gotException = false;
         try{
             connection = Connections.create((ConnectionCallbacks) callbacks, settings);

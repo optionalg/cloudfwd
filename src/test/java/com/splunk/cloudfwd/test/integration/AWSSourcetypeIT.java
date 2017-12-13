@@ -194,8 +194,8 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
-        super.setProps(settings);
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
         settings.setToken(createTestToken(null));
     }
 

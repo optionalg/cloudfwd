@@ -50,8 +50,8 @@ public class OncePerSecondLongevityTest extends AbstractPerformanceTest {
     }
     
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
-      super.setProps(settings);
+  protected void configureProps(PropertiesFileHelper settings) {
+      super.configureProps(settings);
     //simulate a non-sticky endpoint
       settings.setMockHttp(false);
       settings.setEventBatchSize(0); //send immediately

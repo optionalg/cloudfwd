@@ -40,7 +40,7 @@ public class OutOfOrderIdTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setCheckpointEnabled(false);
     }
 

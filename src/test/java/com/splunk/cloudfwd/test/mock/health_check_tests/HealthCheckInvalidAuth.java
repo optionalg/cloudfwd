@@ -14,7 +14,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.INVALID_AUTH;
 public class HealthCheckInvalidAuth extends AbstractHealthCheckTest {
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.InvalidAuthEndpoints");
         settings.setBlockingTimeoutMS(3000);
     }

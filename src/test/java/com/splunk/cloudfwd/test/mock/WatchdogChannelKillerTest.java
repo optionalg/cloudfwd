@@ -38,7 +38,7 @@ import org.junit.Test;
 public class WatchdogChannelKillerTest extends AbstractConnectionTest {
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttp(true);
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
         settings.setEventBatchSize(0); //make sure no batching

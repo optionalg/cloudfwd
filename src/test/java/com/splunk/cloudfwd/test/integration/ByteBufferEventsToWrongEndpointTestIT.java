@@ -30,8 +30,8 @@ import org.junit.Test;
  */
 public class ByteBufferEventsToWrongEndpointTestIT extends AbstractReconciliationTest{
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
-      super.setProps(settings);
+  protected void configureProps(PropertiesFileHelper settings) {
+      super.configureProps(settings);
       //intentionally direct text events to /events endpoint
       settings.setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
       settings.setEventBatchSize(16000);

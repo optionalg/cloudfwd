@@ -20,8 +20,8 @@ public class CreateConnectionAcksDisabledIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
-        super.setProps(settings);
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
         settings.setToken(createTestToken(null, false));
         settings.setMaxTotalChannels(1);
     }

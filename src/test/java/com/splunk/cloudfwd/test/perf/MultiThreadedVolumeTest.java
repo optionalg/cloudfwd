@@ -141,8 +141,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
-        super.setProps(settings);
+    protected void configureProps(PropertiesFileHelper settings) {
+        super.configureProps(settings);
         String token = System.getProperty(PropertyKeys.TOKEN);
         String url = System.getProperty(PropertyKeys.COLLECTOR_URI);
         if (System.getProperty(PropertyKeys.TOKEN) != null) {

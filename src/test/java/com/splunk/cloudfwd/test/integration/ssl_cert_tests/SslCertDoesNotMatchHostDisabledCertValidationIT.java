@@ -44,7 +44,7 @@ public class SslCertDoesNotMatchHostDisabledCertValidationIT extends AbstractCon
   }
   
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setUrls("https://kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com:443");
     settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     settings.disableCertValidation();

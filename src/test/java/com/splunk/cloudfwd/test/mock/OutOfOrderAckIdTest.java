@@ -56,7 +56,7 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDEndpoints");
         settings.setBlockingTimeoutMS(30000);
         settings.setUnresponsiveMS(-1); //no dead channel detection
@@ -72,7 +72,7 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
         this.callbacks = getCallbacks();
 
         PropertiesFileHelper settings = getTestProps();
-        setProps(settings);
+        configureProps(settings);
         this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }

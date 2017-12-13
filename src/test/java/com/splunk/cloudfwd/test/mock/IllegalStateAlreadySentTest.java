@@ -33,7 +33,7 @@ public class IllegalStateAlreadySentTest extends AbstractConnectionTest {
   private HecConnectionStateException.Type expectedExType;
 
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setMockHttp(true);
     settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
     settings.setEventBatchSize(0);

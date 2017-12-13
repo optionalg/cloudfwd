@@ -23,7 +23,7 @@ public class PreflightTimeoutIT extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setUrls("https://kinesis4.splunkcloud.com:8088"); // URL with HEC not enabled
         settings.setMockHttp(false);
         settings.setMaxRetries(3);

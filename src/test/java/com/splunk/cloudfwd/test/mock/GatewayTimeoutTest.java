@@ -19,7 +19,7 @@ public class GatewayTimeoutTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostGatewayTimeoutEndpoints");
         settings.setBlockingTimeoutMS(5000);
         settings.setAckTimeoutMS(500000);

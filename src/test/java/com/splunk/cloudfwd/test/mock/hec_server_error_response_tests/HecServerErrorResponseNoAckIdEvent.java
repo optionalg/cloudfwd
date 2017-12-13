@@ -50,7 +50,7 @@ public class HecServerErrorResponseNoAckIdEvent extends AbstractHecServerErrorRe
     }
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
         //in this case, the pre-flight check will pass, and we are simulating were we detect acks disabled on event post
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
         settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException

@@ -23,7 +23,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(SlideHighwaterOnFailTest.class.getName());
 
     @Override
-    protected void setProps(PropertiesFileHelper settings) {
+    protected void configureProps(PropertiesFileHelper settings) {
       Properties props = new Properties();
       //A realistic value of BLOCKING_TIMEOUT_MS would be 1 or more MINUTES, but let's not
       //make this test run too slowly. The point is, we want to SEE the HecConnectionTimeout

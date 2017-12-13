@@ -31,7 +31,7 @@ import org.junit.Test;
 public class ResendOnCatchingRuntimExceptionTest extends AbstractConnectionTest {
 
   @Override
-  protected void setProps(PropertiesFileHelper settings) {
+  protected void configureProps(PropertiesFileHelper settings) {
     settings.setMockHttp(true);
     settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint");
     settings.setEventBatchSize(0); //make sure no batching

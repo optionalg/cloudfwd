@@ -24,7 +24,7 @@ public abstract class AbstractMutabilityTest extends AbstractConnectionTest {
     }
 
     @Override
-    abstract protected void setProps(PropertiesFileHelper settings);
+    abstract protected void configureProps(PropertiesFileHelper settings);
 
     protected void sendSomeEvents(int numEvents) throws InterruptedException, HecConnectionTimeoutException {
         LOG.trace(
