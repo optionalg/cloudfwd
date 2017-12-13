@@ -74,8 +74,8 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         Assert.assertNotNull("Should receive exception on send.", e);
         LOG.info("waiting for token to be restored on server");
         tokenRestoredLatch.await();
-        while(!isTokenRestorationPickedUpByChannelHealthPolling()){
-            LOG.info("waiting for health poll to pickup token restoration");
+        while(!isTokenRestorationPickedUpByPreflight()){
+            LOG.info("waiting for preflight check on new channels to pickup token restoration");
             Thread.sleep(500);
         }        
         LOG.info("Token restored, sending more events...");
@@ -145,11 +145,12 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
         }
     }
     
-    private boolean isTokenRestorationPickedUpByChannelHealthPolling() {
+    // When token is changed on the connection, channels will be refreshed and preflight should pass
+    private boolean isTokenRestorationPickedUpByPreflight() {
         List<HecHealth> channelHealths = connection.getHealth();
         boolean allHealthy = true;
         for (HecHealth h : channelHealths) {
-            allHealthy &= (h.isHealthy() & !h.isMisconfigured() && h.getStatus().getType() == LifecycleEvent.Type.HEALTH_POLL_OK);
+            allHealthy &= (h.isHealthy() & !h.isMisconfigured() && h.getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_OK);
         }
         return allHealthy;
     }
