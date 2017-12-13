@@ -62,6 +62,7 @@ public class EventBatchImpl implements EventBatch {
   protected boolean acknowledged;
   private boolean failed;
   private long sendTimestamp = System.currentTimeMillis();
+  private long firstEventAddedTimestamp;
   protected int numEvents;
   protected int numTries; //events are resent by DeadChannelDetector
   protected int length;
@@ -111,10 +112,17 @@ public class EventBatchImpl implements EventBatch {
     }
     this.id = event.getId();
     this.length += event.length();
+    if (this.events.isEmpty()) {
+      this.firstEventAddedTimestamp = System.currentTimeMillis();
+    }
     this.events.add(event);
     return this;
   }
-
+  
+  public long getFirstEventAddedTimestamp() {
+    return this.firstEventAddedTimestamp;
+  }
+  
   @Override
   public ConnectionImpl.HecEndpoint getTarget() {
     return knownTarget;

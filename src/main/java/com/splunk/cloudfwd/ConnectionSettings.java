@@ -138,6 +138,9 @@ public class ConnectionSettings {
 
     @JsonProperty("max_preflight_retries")
     private int maxPreflightTries = DEFAULT_PREFLIGHT_RETRIES;
+    
+    @JsonProperty("event_batch_flush_timeout_ms")
+    private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
 
     public static PropertiesFileHelper fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
@@ -318,6 +321,10 @@ public class ConnectionSettings {
 
     public int getMaxPreflightRetries() {
         return applyDefaultIfNull(this.maxPreflightTries, DEFAULT_PREFLIGHT_RETRIES);
+    }
+    
+    public long getEventBatchFlushTimeout() {
+        return applyDefaultIfNull(this.eventBatchFlushTimeout, DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
     }
 
     public ConnectionImpl.HecEndpoint getHecEndpointType() {
@@ -552,9 +559,18 @@ public class ConnectionSettings {
         if (retries < 1) {
             int was = retries;
             retries = Integer.MAX_VALUE;
-            getLog().debug("{}, defaulting {} to maximum allowed value {}", was, PREFLIGHT_RETRIES, retries);
+            getLog().debug("{}, defaulting {} to maximum allowed value (unlimited) {}", was, PREFLIGHT_RETRIES, retries);
         }
         this.maxPreflightTries = retries;
+    }
+    
+    public void setEventBatchFlushTimeout(long timeoutMS) {
+        if (timeoutMS <= 0) {
+            timeoutMS = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
+            getLog().warn("Property {} must be greater than 0. Using default value of {}",
+                    EVENT_BATCH_FLUSH_TIMEOUT_MS, DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
+        }
+        this.eventBatchFlushTimeout = timeoutMS;
     }
 
     public void setHecEndpointType(ConnectionImpl.HecEndpoint type) {
