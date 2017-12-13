@@ -191,6 +191,7 @@ public class ConnectionImpl implements Connection {
       this.events = new EventBatchImpl();
     }
     this.events.add(event);
+    this.timeoutChecker.start();
     if (this.events.isFlushable(settings.getEventBatchSize())) {
       return sendBatch(events);
     }
@@ -342,6 +343,10 @@ public class ConnectionImpl implements Connection {
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
    }  
+   
+   public EventBatchImpl getUnsentBatch() {
+        return this.events;
+   }
 
 
     private void logLBHealth() {

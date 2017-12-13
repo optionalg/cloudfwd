@@ -35,7 +35,6 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.Endpoints;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -309,7 +308,19 @@ public class ConnectionSettings {
             max = Integer.MAX_VALUE;
         }
         return max;
-    }    
+    }
+    
+    public long getBatchFlushTimeout() {
+        long timeout = Long.parseLong(this.defaultProps.getProperty(
+            PropertyKeys.EVENT_BATCH_FLUSH_TIMEOUT_MS, 
+            PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS).trim());
+        if (timeout <= 0) {
+            timeout = Long.parseLong(PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
+            LOG.warn("Property {} must be greater than 0. Using default value of {}", 
+                PropertyKeys.EVENT_BATCH_FLUSH_TIMEOUT_MS, PropertyKeys.DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
+        }
+        return timeout;
+    }
 
     public boolean isCheckpointEnabled() {
         return Boolean.parseBoolean(this.defaultProps.getProperty(
