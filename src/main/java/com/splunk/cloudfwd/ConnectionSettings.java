@@ -141,6 +141,9 @@ public class ConnectionSettings {
     
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
+    
+    @JsonProperty("idle_channel_ack_poll_delay_ms")
+    private long idleChannelAckPollDelayMS = DEFAULT_IDLE_CHANNEL_ACK_POLL_DELAY_MS;
 
     public static PropertiesFileHelper fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
@@ -325,6 +328,10 @@ public class ConnectionSettings {
     
     public long getEventBatchFlushTimeout() {
         return applyDefaultIfNull(this.eventBatchFlushTimeout, DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
+    }
+    
+    public long getIdleChannelAckPollDelayMS() {
+        return applyDefaultIfNull(this.idleChannelAckPollDelayMS, DEFAULT_IDLE_CHANNEL_ACK_POLL_DELAY_MS);
     }
 
     public ConnectionImpl.HecEndpoint getHecEndpointType() {
@@ -571,6 +578,15 @@ public class ConnectionSettings {
                     EVENT_BATCH_FLUSH_TIMEOUT_MS, DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
         }
         this.eventBatchFlushTimeout = timeoutMS;
+    }
+    
+    public void setIdleChannelAckPollDelayMS(long delayMS) {
+        if (delayMS <= 0) {
+            delayMS = DEFAULT_IDLE_CHANNEL_ACK_POLL_DELAY_MS;
+            getLog().warn("Property {} must be greater than 0. Using default value of {}",
+                    IDLE_CHANNEL_ACK_POLL_DELAY_MS, DEFAULT_IDLE_CHANNEL_ACK_POLL_DELAY_MS);
+        }
+        this.idleChannelAckPollDelayMS = delayMS;
     }
 
     public void setHecEndpointType(ConnectionImpl.HecEndpoint type) {

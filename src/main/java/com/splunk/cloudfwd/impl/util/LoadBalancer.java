@@ -561,6 +561,10 @@ public class LoadBalancer implements Closeable {
     public void setChannelsPerDestination(int channelsPerDestination) {
         this.channelsPerDestination = channelsPerDestination;
     }
+    
+    public Map<String, HecChannel> getChannels() {
+        return channels;
+    }
 
     /**
      * @return the connection

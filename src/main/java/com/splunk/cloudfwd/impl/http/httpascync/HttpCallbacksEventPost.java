@@ -146,8 +146,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
         getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
 
-        // start polling for acks
-        getManager().startAckPolling();
+        // send a single ack poll request
+        getSender().getHecIOManager().pollAcks();
 
         notify(EVENT_POST_OK, 200, resp, events);
     }

@@ -72,6 +72,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private boolean preflightCompleted;
   //private volatile boolean closeFinished;
   private CountDownLatch closeFinishedLatched = new CountDownLatch(1);//used to support closeAndFinish which blocks
+    
+  private long idleChannelAckPollDelay;
+  private long timeLastBatchSent;
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -86,7 +89,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     LOG.info("constructing channel: {}", memoizedToString);
             
-    this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
+    this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));
+    this.idleChannelAckPollDelay = getConnection().getSettings().getIdleChannelAckPollDelayMS();
     
     sender.setChannel(this);
 //    start();
@@ -195,7 +199,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (unackedCount.get() == maxUnackedEvents) {
       pollAcks();
     }
+    timeLastBatchSent = System.currentTimeMillis(); // reset timer
     return true;
+  }
+  
+  public boolean isIdle() {
+     return System.currentTimeMillis() - timeLastBatchSent >= idleChannelAckPollDelay;
   }
 
   @Override

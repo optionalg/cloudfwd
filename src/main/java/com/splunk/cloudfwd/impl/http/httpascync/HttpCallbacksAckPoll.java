@@ -101,6 +101,9 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
                 readValue(resp, AckPollResponseValueObject.class);
         getManager().getAcknowledgementTracker().handleAckPollResponse(
                 ackPollResp);
+        if (getSender().getChannel().isIdle()) {
+            getSender().getHecIOManager().pollAcks();
+        }
     }       
 
 }
