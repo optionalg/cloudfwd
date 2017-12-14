@@ -404,6 +404,9 @@ public class LoadBalancer implements Closeable {
                 LOG.debug("sent EventBatch:{}  on channel={} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
+                if(tryMe.isFull()){
+                    tryMe.pollAcks();
+                }
                 LOG.debug("channel not available, channel={}", tryMe);
                 LOG.debug("Skipped channel={} available={} healthy={} full={} quiesced={} closed={}", tryMe, tryMe.isAvailable(), tryMe.isHealthy(), tryMe.isFull(), tryMe.isQuiesced(), tryMe.isClosed());
             }
@@ -420,12 +423,14 @@ public class LoadBalancer implements Closeable {
                 latch = new CountDownLatch(1);
                 if (!latch.await(1, TimeUnit.SECONDS)) {
                     LOG.warn(
-                            "Round-robin load balancer waited 1 second at spin count {}, channel idx {}, eventBatch {}",
+                            "Round-robin load balancer waited 1 sec at spin count {}, channel idx {}, eventBatch {}",
                             spinCount, this.robin % channelsSnapshot.size(), events.getId());
                             //if we had no healthy channels, which is why we are here, it's possible tht we have no
                             //**valid** channels, which means every channel is returning an HecServerErrorResponse
                             //indicating misconfiguration of HEC
                             checkForNoValidChannels(channelsSnapshot, events, forced);
+                    connection.logLBHealth();
+                    //channels.values().forEach(HecChannel::pollAcks);
                 }
                 latch = null;
                 //checkForNoValidChannels(channelsSnapshot, events);
@@ -560,6 +565,10 @@ public class LoadBalancer implements Closeable {
      */
     public void setChannelsPerDestination(int channelsPerDestination) {
         this.channelsPerDestination = channelsPerDestination;
+    }
+    
+    public Map<String, HecChannel> getChannels() {
+        return channels;
     }
 
     /**

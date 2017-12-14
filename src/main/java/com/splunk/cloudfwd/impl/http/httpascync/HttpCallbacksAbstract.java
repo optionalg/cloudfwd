@@ -67,9 +67,9 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
-//        if(code != 200){
-//            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
-//        }
+        if(code != 200){
+            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
+        }
         completed(reply, code);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);

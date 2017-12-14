@@ -136,7 +136,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
       
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
-        LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
+        LOG.debug("channel={} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {
@@ -147,8 +147,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
         getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
 
-        // start polling for acks
-        getManager().startAckPolling();
+        // send a single ack poll request
+        getSender().getHecIOManager().pollAcks();
 
         notify(EVENT_POST_OK, 200, resp, events);
     }

@@ -98,6 +98,7 @@ public class TimeoutChecker implements EventTracker {
         LOG.debug("checking timeouts for {} EventBatches", eventBatches.size());
         long now = System.currentTimeMillis();
         checkFlushTimeout();
+        checkIdleChannelsForAckPoll();
         for (Iterator<Map.Entry<Comparable, EventBatchImpl>> iter = eventBatches.
                 entrySet().
                 iterator(); iter.hasNext();) {
@@ -117,6 +118,14 @@ public class TimeoutChecker implements EventTracker {
 //                iter.remove(); //remove it or else we will keep generating repeated timeout failures
             }
         }
+    }
+    
+    private void checkIdleChannelsForAckPoll() {
+        connection.getLoadBalancer().getChannels().values().forEach((c)->{
+            if (c.isIdle()) {
+                c.getSender().getHecIOManager().pollAcks();
+            }
+        });
     }
     
     private void checkFlushTimeout() {

@@ -266,6 +266,8 @@ public class PropertyKeys {
    * @see EVENT_BATCH_SIZE
    */
   public static final String EVENT_BATCH_FLUSH_TIMEOUT_MS = "event_batch_flush_timeout_ms";
+  
+  public static final String IDLE_CHANNEL_ACK_POLL_DELAY_MS = "idle_channel_ack_poll_delay_ms";
 
 
   /* **************************** DEFAULTS ************************* */
@@ -391,6 +393,8 @@ public class PropertyKeys {
    * @see EVENT_BATCH_FLUSH_TIMEOUT_MS
    */
   public static final long DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS = 30000; // 30 sec
+    
+  public static final long DEFAULT_IDLE_CHANNEL_ACK_POLL_DELAY_MS = 60000; // 60 sec
 
   /* **************************** LIMITS ************************* */
   /**

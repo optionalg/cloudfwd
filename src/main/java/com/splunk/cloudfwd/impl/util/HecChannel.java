@@ -42,6 +42,7 @@ import java.util.concurrent.ScheduledFuture;
 
 import javax.net.ssl.SSLException;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Future;
 
 
@@ -72,6 +73,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private boolean preflightCompleted;
   //private volatile boolean closeFinished;
   private CountDownLatch closeFinishedLatched = new CountDownLatch(1);//used to support closeAndFinish which blocks
+    
+  private long idleChannelAckPollDelay;
+  private long timeLastBatchSent;
 
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
@@ -85,7 +89,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     LOG.info("constructing channel: {}", memoizedToString);
             
-    this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));  
+    this.health = new HecHealthImpl(this, new LifecycleEvent(LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING));
+    this.idleChannelAckPollDelay = getConnection().getSettings().getIdleChannelAckPollDelayMS();
     
     sender.setChannel(this);
 //    start();
@@ -178,7 +183,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   public boolean send(EventBatchImpl events) {
     if (!isAvailable()) {
-      return false;
+            return false;
     }
     
     //must increment only *after* we exit the blocking condition above
@@ -191,10 +196,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     events.setHecChannel(this);
     sender.sendBatch(events);
-    if (unackedCount.get() == maxUnackedEvents) {
-      pollAcks();
-    }
+//    if (unackedCount.get() == maxUnackedEvents) {
+//      pollAcks();
+//    }
+    timeLastBatchSent = System.currentTimeMillis(); // reset timer
     return true;
+  }
+  
+  public boolean isIdle() {
+     return System.currentTimeMillis() - timeLastBatchSent >= idleChannelAckPollDelay;
   }
 
   @Override
