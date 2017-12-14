@@ -418,9 +418,9 @@ public class LoadBalancer implements Closeable {
         if (spinCount % channelsSnapshot.size() == 0) {
             try {
                 latch = new CountDownLatch(1);
-                if (!latch.await(1, TimeUnit.SECONDS)) {
+                if (!latch.await(100, TimeUnit.MILLISECONDS)) {
                     LOG.warn(
-                            "Round-robin load balancer waited 1 second at spin count {}, channel idx {}, eventBatch {}",
+                            "Round-robin load balancer waited 100 ms at spin count {}, channel idx {}, eventBatch {}",
                             spinCount, this.robin % channelsSnapshot.size(), events.getId());
                             //if we had no healthy channels, which is why we are here, it's possible tht we have no
                             //**valid** channels, which means every channel is returning an HecServerErrorResponse
