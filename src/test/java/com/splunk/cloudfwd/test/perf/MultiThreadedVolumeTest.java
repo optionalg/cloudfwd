@@ -153,6 +153,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
         settings.setMockHttp(false);
         settings.setTestPropertiesEnabled(false);
+        settings.setIdleChannelAckPollDelayMS(60000);
     }
 
     private void checkAndLogPerformance(boolean shouldAssert) {
