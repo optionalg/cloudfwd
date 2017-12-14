@@ -329,7 +329,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     final HttpPost httpPost = new HttpPost(completeUrl);
     setHeaders(httpPost);
     HttpEntity e= events.getEntity();
-    LOG.debug("{}", e.toString());
+    LOG.debug("executing event batch post on channel={}, eventBatch={}", getChannel(), e.toString());
     httpPost.setEntity(e);
     httpClient.execute(httpPost, httpCallback);
   }
@@ -361,6 +361,7 @@ public final class HttpSender implements Endpoints, CookieClient {
             StringEntity empty;
             empty = new StringEntity("");
             dummyEventPost.setEntity(empty);
+            LOG.debug("executing empty event post to raw on channel={}. Request: {}", getChannel(), dummyEventPost);
             httpClient.execute(dummyEventPost, httpCallback);
           } catch (Exception ex) {
             LOG.error(ex.getMessage(), ex);
@@ -393,7 +394,7 @@ public final class HttpSender implements Endpoints, CookieClient {
         StringEntity entity;
 
         String req = ackReq.toString();
-        LOG.debug("channel=" + getChannel() + " posting: " + req);
+        LOG.debug("executing ack poll request on channel={} posting: {}", getChannel(), req);
         entity = new StringEntity(req);
 
         entity.setContentType(HttpContentType);
@@ -424,7 +425,7 @@ public final class HttpSender implements Endpoints, CookieClient {
         // create http request
         final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, connectionSettings.getToken());
         healthEndpointCheck= new HttpGet(getUrl);
-        LOG.trace("Polling health {}", healthEndpointCheck);
+        LOG.debug("executing poll on health endpoint, channel={}. Request: {}", getChannel(), healthEndpointCheck);
         setHeaders(healthEndpointCheck);
         if(null != httpClient){ //httpClient can be null if close happened
             httpClient.execute(healthEndpointCheck, httpCallback);
@@ -460,8 +461,8 @@ public final class HttpSender implements Endpoints, CookieClient {
         entity.setContentType(HttpContentType);
         ackCheck.setEntity(entity);
         if(null != httpClient){ //httpClient can be null if close happened
+          LOG.debug("executing ack check on channel={}", getChannel());
           httpClient.execute(ackCheck, httpCallback);
-          LOG.debug("posted ack check");
         }else{
             LOG.error("httpClient is null");
         }
@@ -525,7 +526,7 @@ public final class HttpSender implements Endpoints, CookieClient {
                 getChannel().closeAndReplaceAndResend();
             } catch (Exception ex) {
                 ex.printStackTrace();
-                LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
+                LOG.error("Exception '{}' trying to handle sticky session-cookie violation on channel={}", ex.getMessage(), getChannel(), ex);
             }            
         };//end runnable
         ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
