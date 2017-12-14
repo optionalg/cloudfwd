@@ -124,7 +124,7 @@ public class HecIOManager implements Closeable {
      * This will get invoked after the HecChannel completes preflight checks
      * successfully
      */
-    public Future  pollHealth() {
+    public Future pollHealth() {
         //Don't poll for health on a healthy channel. Also note that if a channel is misconfigured, we will not pass preflight checks.
         //Therefore, we would never enter pollHeath, since we call pollHealth only when PREFLIGHT_OK.
         if(sender.getChannel().isHealthy()){ 
@@ -158,8 +158,9 @@ public class HecIOManager implements Closeable {
                         sender.checkHealthEndpoint(cb1);
                         sender.checkAckEndpoint(cb2);
                         sender.checkAckEndpoint(cb3);
+                        LOG.trace("health checks on {} has submitted all checkpoints", sender.getChannel());
                     }catch(Exception e){
-                        LOG.error("{}", e.getMessage(), e);
+                        LOG.error("Health check caught exception: {}", e.getMessage(), e);
                     }
         });
     }

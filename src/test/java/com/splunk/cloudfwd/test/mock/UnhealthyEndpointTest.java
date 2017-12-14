@@ -58,6 +58,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
     settings.setAckPollMS(250);
     settings.setHealthPollMS(250);
     settings.setUnresponsiveMS(-1); //disable dead channel removal
+    settings.setEventBatchSize(0); //disable pre-batching 
   }
 
   @Override
@@ -67,7 +68,6 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
   @Override
   protected void sendEvents() throws HecConnectionTimeoutException, InterruptedException {
-    int expected = getNumEventsToSend();
     TriggerableUnhealthyEndpoints.healthy = true;
     try {
       connection.send(getTimestampedRawEvent(1)); //should acknowledge
@@ -93,7 +93,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
       super(expected);
       TriggerableUnhealthyEndpoints.healthy = true;
     }
-
+  
     @Override
     public void acknowledged(EventBatch events) {
       super.acknowledged(events);
@@ -117,7 +117,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
         Assert.assertTrue("Expected unhealty channel but got: " + h, !h.isHealthy());
         LOG.trace("sending event that we expect to block on send");
         //must send from another thread
-        new Thread(() -> {
+        new Thread(() -> {  
           long start = System.currentTimeMillis();
           try {
             connection.send(getTimestampedRawEvent(3));

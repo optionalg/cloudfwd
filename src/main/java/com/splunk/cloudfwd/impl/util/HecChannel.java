@@ -55,6 +55,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private final int maxUnackedEvents;
   private ScheduledFuture closeWatchDogTaskFuture;
   private Future onDemandAckPollFuture;
+  private Future onDemandHealthPollFeature;
   private Future preflightCheckFuture;
   private volatile boolean closed;
   private volatile boolean quiesced;
@@ -72,7 +73,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private boolean preflightCompleted;
   //private volatile boolean closeFinished;
   private CountDownLatch closeFinishedLatched = new CountDownLatch(1);//used to support closeAndFinish which blocks
-
+  private boolean pollingHealth = false;
+  
   public HecChannel(LoadBalancer b, HttpSender sender,
           ConnectionImpl c) throws InterruptedException{
     this.LOG = c.getLogger(HecChannel.class.getName());
@@ -132,7 +134,23 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
        }
 
   }
-
+  
+  // We want health polls to be triggered only when somebody attempts to send on an unhealthy channel and 
+  // stop it when channel gets healthy again.  
+  synchronized void pollHealth() {
+    LOG.trace("pollHealth: starting on channelId: " + this.channelId + 
+            ", isHealthy: " + isHealthy() + 
+            ", pollingHealth: " + pollingHealth);
+    if(!isHealthy() && !pollingHealth) {
+      pollingHealth = true;
+      onDemandHealthPollFeature = sender.getHecIOManager().pollHealth(); 
+      LOG.trace("pollHealth: run on demand Health poll on channelId: " + this.channelId + 
+              ", isHealthy: " + isHealthy() + 
+              ", pollingHealth: " + pollingHealth + 
+              ", onDemandHealthPollFeature: " + onDemandHealthPollFeature);
+    }
+  }
+  
   public synchronized void start() throws InterruptedException{
     if (started) {
       return;
@@ -177,7 +195,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   } 
 
   public boolean send(EventBatchImpl events) {
-    if (!isAvailable()) {
+    if (!isWriteable()) {
+      return false;
+    }
+    
+    if (!isHealthy()) {
+      pollHealth();
       return false;
     }
     
@@ -221,7 +244,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       case PREFLIGHT_OK:
           LOG.info("Preflight checks OK on {}", this);
           preflightCompleted = true;
-          sender.getHecIOManager().startHealthPolling(); //when preflight is OK we can start polling health
+      // once health poll ended successfully or not, we want to indicate that a new health poll may start
+      // on the next send attempt  
+      case HEALTH_POLL_OK:
+        pollingHealth = false;
+      case HEALTH_POLL_ERROR:
+        pollingHealth = false;
+      case HEALTH_POLL_FAILED:
+        pollingHealth = false;
     }
     updateHealth(e, wasAvailable);
   }
@@ -461,6 +491,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         onDemandAckPollFuture.cancel(false);
     }
     
+    if(null != onDemandHealthPollFeature && ! onDemandHealthPollFeature.isCancelled()){
+      onDemandHealthPollFeature.cancel(false);
+    }
+    
     synchronized(this){ //must synchronize to insure we don't 'lose' a preflight task. it is very important to cancel these preflights.
         if(null != preflightCheckFuture&& ! preflightCheckFuture.isCancelled()){
             preflightCheckFuture.cancel(true); //interrupt preflight
@@ -514,6 +548,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   public boolean isAvailable() {
     return !quiesced && !closed && health.isHealthy() && !isFull();
+  }
+  
+  public boolean isWriteable() {
+    return !quiesced && !closed && !isFull();
   }
   
   public boolean isHealthy(){
