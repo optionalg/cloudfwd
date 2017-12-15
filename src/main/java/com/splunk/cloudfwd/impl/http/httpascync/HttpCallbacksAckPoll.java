@@ -20,7 +20,9 @@ import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_NOT_OK;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.io.IOException;
+import java.util.logging.Level;
 import org.slf4j.Logger;
 
 /**
@@ -45,15 +47,11 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         try {
             switch(code){
                 case 200:
-//                    ThreadScheduler.getExecutorInstance("ack_poll_resp_executor").execute(
-//                            ()->{
-//                                try {
+                    ThreadScheduler.getSharedExecutorInstance("ack_poll_resp_executor").execute(
+                            ()->{
                                     consumeAckPollResponse(reply);
-//                                } catch (IOException ex) {
-//                                    error(ex);
-//                                }
-//                            }
-//                    );
+                            }
+                    );
                     break;
                 case 503: //busy
                     warn(reply, code);                    
@@ -98,14 +96,18 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     }      
 
 
-    private void consumeAckPollResponse(String resp) throws IOException {
-        AckPollResponseValueObject ackPollResp = mapper.
-                readValue(resp, AckPollResponseValueObject.class);
-        getManager().getAcknowledgementTracker().handleAckPollResponse(
-                ackPollResp);
-        if (getSender().getChannel().isIdle()) {
-            LOG.info("Channel idle, polling acks {}", getChannel());
-            getSender().getHecIOManager().pollAcks();
+    private void consumeAckPollResponse(String resp)  {
+        try {
+            AckPollResponseValueObject ackPollResp = mapper.
+                    readValue(resp, AckPollResponseValueObject.class);
+            getManager().getAcknowledgementTracker().handleAckPollResponse(
+                    ackPollResp);
+            if (getSender().getChannel().isIdle()) {
+                LOG.info("Channel idle, polling acks {}", getChannel());
+                getSender().getHecIOManager().pollAcks();
+            }
+        } catch (Exception e) {
+             error(e);
         }
     }       
 

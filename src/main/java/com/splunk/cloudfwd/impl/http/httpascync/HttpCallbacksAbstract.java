@@ -48,6 +48,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   private final Logger LOG;
   private final HecIOManager manager;
   private final String name;
+  private final long start = System.currentTimeMillis();
   
   HttpCallbacksAbstract(HecIOManager m, String name) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
@@ -59,15 +60,16 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   @Override
   final public void completed(HttpResponse response) {
     try {    
+        LOG.info("{} took {} ms", getOperation(), System.currentTimeMillis()-start);
         int code = response.getStatusLine().getStatusCode();
         handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
-//        if(code != 200){
-//            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
-//        }
+        if(code != 200){
+            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
+        }
         completed(reply, code);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);

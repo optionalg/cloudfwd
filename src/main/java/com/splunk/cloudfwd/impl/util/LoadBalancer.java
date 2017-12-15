@@ -427,7 +427,7 @@ public class LoadBalancer implements Closeable {
                             //indicating misconfiguration of HEC
                             checkForNoValidChannels(channelsSnapshot, events, forced);
                     connection.logLBHealth();
-                    channels.values().forEach(HecChannel::pollAcks);
+                    //channels.values().forEach(HecChannel::pollAcks);
                 }
                 latch = null;
                 //checkForNoValidChannels(channelsSnapshot, events);
