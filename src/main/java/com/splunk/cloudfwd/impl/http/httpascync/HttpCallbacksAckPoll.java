@@ -21,8 +21,6 @@ import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.ACK_POLL_NOT_OK;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
-import java.io.IOException;
-import java.util.logging.Level;
 import org.slf4j.Logger;
 
 /**
@@ -34,7 +32,6 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     private static final ObjectMapper mapper = new ObjectMapper();
     private final Logger LOG;
     public static final String NAME = "ack_poll";
-    private long start = System.currentTimeMillis();
 
     public HttpCallbacksAckPoll(final HecIOManager m) {
         super(m, NAME);
@@ -43,7 +40,6 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
 
     @Override
     public void completed(String reply, int code) {
-        LOG.info("Ack poll took {} ms", System.currentTimeMillis()-start);
         try {
             switch(code){
                 case 200:
