@@ -1,8 +1,11 @@
 package com.splunk.cloudfwd.impl.http;
 
 import org.apache.http.conn.ssl.AbstractVerifier;
+import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -21,8 +24,8 @@ import javax.net.ssl.SSLException;
  *
  * Created by ssergeev on 6/29/17.
  *
- * This class is to verify a static hostname matches SSL Cert CNs. This
- * class can be used to verify common names in SSL Certificate for HTTP
+ * This class is to verify a static hostname matches SSL Cert subject hostnames. 
+ * This class can be used to verify common names in SSL Certificate for HTTP
  * Client connecting to a host by URL with IP address instead of hostname.
  * Standard verifier cannot verify IP address, as it does not know from which
  * hostname it was resolved from.
@@ -36,28 +39,29 @@ import javax.net.ssl.SSLException;
    httpClient.start();
 
  * After the HttpClient is built and started, we can send a post request using
- * URL built from IP addres resolved from www.myhostname.com DNS record
+ * URL built from IP address resolved from www.myhostname.com DNS record
  * (given the server is configured with a valid certificate with CN,
- * like "*.myhostname.com")
+ * like "*.myhostname.com" or a list of CNs like "myhostname.com", "www.myhostname.com")
 
    final HttpPost httpPost = new HttpPost("https://10.11.12.13:8433");
    httpClient.execute(httpPost, httpCallback);
-   
  *
  */
-public class SslStaticHostVerifier extends AbstractVerifier {
+
+/**
+ * 
+ */
+public class SslStaticHostVerifier implements HostnameVerifier {
 
     private final String host;
+    private final DefaultHostnameVerifier defaultHostnameVerifier = new DefaultHostnameVerifier();
 
     public SslStaticHostVerifier(String host) {
         this.host = host;
     }
-
-    public final void verify(String host, String[] cns, String[] subjectAlts) throws SSLException {
-        this.verify(this.host, cns, subjectAlts, true);
-    }
-
-    public final String toString() {
-        return "STRICT";
+    
+    @Override
+    public boolean verify(String s, SSLSession sslSession) {
+        return defaultHostnameVerifier.verify(this.host, sslSession);
     }
 }
