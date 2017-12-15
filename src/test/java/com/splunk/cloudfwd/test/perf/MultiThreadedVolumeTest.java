@@ -249,6 +249,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 //                        }
                         //waitingSenders.remove(eb.getId());    
                         //LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
+                        LOG.info("{} unacked batches", waitingSenders.size()); 
                         LOG.info("Sender {} generated next batch", workerNumber);
                         eb = nextBatch(batchCounter.incrementAndGet());                   
                     //} catch (InterruptedException ex) {                        
