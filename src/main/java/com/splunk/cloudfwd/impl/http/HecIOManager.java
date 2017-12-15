@@ -130,6 +130,7 @@ public class HecIOManager implements Closeable {
         if(sender.getChannel().isHealthy()){ 
             return null; //don't poll, we were healthy
         }
+        LOG.debug("Starting 3 request health poll on channel {}", getSender().getChannel());
         return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread").submit(
                 ()->{
                     try{

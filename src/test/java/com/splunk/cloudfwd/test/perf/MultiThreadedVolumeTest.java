@@ -47,7 +47,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
-    private final String eventsFilename = "./many_text_events_no_timestamp.sample";
+    private final String eventsFilename = "./1KB_event_5MB_batch.sample";
     private long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
@@ -313,7 +313,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             //sometimes events get acknowledged before the SenderWorker starts waiting
             if (waitingSenders.get(events.getId()) != null) {
               
-                LOG.info("ackd {} in {}", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
+                LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
                 waitingSenders.get(events.getId()).tell();
             }
         }
