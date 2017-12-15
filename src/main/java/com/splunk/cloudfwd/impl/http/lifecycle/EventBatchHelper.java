@@ -24,12 +24,11 @@ import com.splunk.cloudfwd.LifecycleEvent;
  */
 public class EventBatchHelper {
     public static boolean isEventBatchFailOrNotOK(LifecycleEvent e){
-        if(! (e instanceof EventBatchResponse) || ! (e instanceof EventBatchFailure)){
-            return false;
+        if (e instanceof EventBatchFailure){
+            return true;
         }
         if(e instanceof EventBatchResponse){
             return !((EventBatchResponse)e).isOK();       
         }
-        return e instanceof EventBatchFailure;
     }    
 }
