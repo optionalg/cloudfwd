@@ -225,7 +225,7 @@ public class ConnectionImpl implements Connection {
     }
     
     if(LOG.isInfoEnabled()){
-        logLBHealth();
+        //logLBHealth();
     }
     
     ((EventBatchImpl)events).setSendTimestamp(System.currentTimeMillis());
@@ -400,7 +400,7 @@ public class ConnectionImpl implements Connection {
             }            
         }
         
-        LOG.debug("LOAD BALANCER: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
+        LOG.info("LOAD BALANCER: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
                 channelHealths.size(), _preflightCompleted ,_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 

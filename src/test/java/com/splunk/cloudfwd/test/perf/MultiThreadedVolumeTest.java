@@ -248,7 +248,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 //                            LOG.info("sender {} failed in {} ms", this.workerNumber, System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());
 //                        }
                         //waitingSenders.remove(eb.getId());    
-                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
+                        //LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
                         LOG.info("Sender {} generated next batch", workerNumber);
                         eb = nextBatch(batchCounter.incrementAndGet());                   
                     //} catch (InterruptedException ex) {                        
