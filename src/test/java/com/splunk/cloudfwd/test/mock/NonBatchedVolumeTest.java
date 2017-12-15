@@ -28,7 +28,7 @@ import org.junit.Test;
  */
 public class NonBatchedVolumeTest extends AbstractConnectionTest {
 
-  protected int numToSend = 1000000;
+  protected int numToSend = 1000;
 
   @Test
   public void sendWithoutBatching() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {
@@ -40,7 +40,6 @@ public class NonBatchedVolumeTest extends AbstractConnectionTest {
   @Override
   protected Properties getProps() {
     Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
     return props;
   }
 

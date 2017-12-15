@@ -65,8 +65,10 @@ public class PropertiesFileHelper extends ConnectionSettings {
         try {
             // this is to support the creation of channels for socket addresses that are not resolvable
             // so that they can get decomissioned and recreated at a later time, in case DNS recovers
-            if (s.getAddress() == null) {
-                return createSender(s.toString(), s.getHostName() + ":" + s.getPort());
+            if (s.isUnresolved()) { 
+                //since the hostname could not be resolved to an IP address, we cannot construct the URL
+                //using the resolved hostAddr as we do below. 
+                return createSender("https://"+s.toString(), s.getHostName() + ":" + s.getPort());
             }            
             //URLS for channel must be based on IP address not hostname since we
             //have many-to-one relationship between IP address and hostname via DNS records

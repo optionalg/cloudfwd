@@ -15,6 +15,7 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  */
 
 import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
@@ -54,22 +55,14 @@ public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConn
     props.put(DISABLE_CERT_VALIDATION, "true");
     props.put(MOCK_HTTP_KEY, "false");
     props.put(CLOUD_SSL_CERT_CONTENT, "");
+    props.put(CHANNELS_PER_DESTINATION, "1");
+    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
     return props;
   }
   
   @Override
   protected int getNumEventsToSend() {
     return 1;
-  }
-  
-  @Override
-  protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumEventsToSend()) {
-      @Override
-      public void await(long timeout, TimeUnit u) throws InterruptedException {
-        // don't need to wait for anything since we don't get a failed callback
-      }
-    };
   }
   
 }

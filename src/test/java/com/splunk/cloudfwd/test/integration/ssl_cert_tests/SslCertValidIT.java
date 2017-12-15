@@ -17,8 +17,6 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import static com.splunk.cloudfwd.PropertyKeys.*;
-
-import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -72,8 +70,6 @@ public class SslCertValidIT extends AbstractConnectionTest {
   }
 
   @Override
-  protected int getNumEventsToSend() {
-    return 0;
-  }
+  protected int getNumEventsToSend() { return 0; }
 
 }

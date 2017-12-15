@@ -1,9 +1,6 @@
 package com.splunk.cloudfwd.test.integration;
 
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.error.HecConnectionStateException;
-import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
@@ -16,10 +13,14 @@ import java.util.concurrent.TimeUnit;
  * Created by eprokop on 11/3/17.
  */
 public class PreflightTimeoutIT extends AbstractConnectionTest {
-    @Test
-    public void unresponsiveUrlTest() throws InterruptedException {
-        super.sendEvents();
+    
+    @Override
+    protected int getNumEventsToSend() {
+        return 1;
     }
+    
+    @Test
+    public void unresponsiveUrlTest() throws InterruptedException { super.sendEvents(); }
 
     @Override
     protected Properties getProps() {
@@ -29,31 +30,20 @@ public class PreflightTimeoutIT extends AbstractConnectionTest {
         p.setProperty(PropertyKeys.RETRIES, "3");
         p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
         p.setProperty(PropertyKeys.PREFLIGHT_TIMEOUT_MS, "5000");
+        p.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
         return p;
     }
     
-    @Override
-    protected int getNumEventsToSend() {
-        return 0;
-    }
     
-    protected boolean isExpectedConnInstantiationException(Exception e) {
-           if (e instanceof HecConnectionStateException) {
-            HecConnectionStateException ex = (HecConnectionStateException) e;
-            return ((HecConnectionStateException) e).getType()==CHANNEL_PREFLIGHT_TIMEOUT;
-        }
+    @Override
+    protected boolean shouldSendThrowException() { return true; }
+    
+    @Override
+    protected boolean isExpectedSendException(Exception e) {
+        if (e instanceof HecNoValidChannelsException) {
+            return e.getMessage().equals("No valid channels available due to possible misconfiguration."); }
         return false;
     }
-  
-    /**
-     * Override in test if your test wants Connection instantiation to fail
-     * @return
-     */
-    protected boolean connectionInstantiationShouldFail() {
-        return true;
-    }
-
-
     
     @Override
     protected BasicCallbacks getCallbacks() {

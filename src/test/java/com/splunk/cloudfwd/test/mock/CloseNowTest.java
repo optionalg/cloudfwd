@@ -26,7 +26,7 @@ public class CloseNowTest extends AbstractConnectionTest {
 
     @Override
     protected int getNumEventsToSend() {
-        return 500000;
+        return 5000;
     }
     
     @Override

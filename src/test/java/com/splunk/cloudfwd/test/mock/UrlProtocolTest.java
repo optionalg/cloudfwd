@@ -24,7 +24,7 @@ import java.util.Properties;
  */
 
 
-public class UrlProtocolTest extends ExceptionConnInstantiationTest {
+public class UrlProtocolTest extends AbstractExceptionOnSendTest {
      @Override
     protected Properties getProps() {
        Properties props = new Properties();

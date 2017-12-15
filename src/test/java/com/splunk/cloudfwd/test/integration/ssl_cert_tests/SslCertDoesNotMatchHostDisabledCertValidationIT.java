@@ -14,16 +14,13 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -45,7 +42,7 @@ public class SslCertDoesNotMatchHostDisabledCertValidationIT extends AbstractCon
    * This test makes sure that send doesn't throw an exception if Cert Validation is disabled
    */
   public void sendEventsSuccessfully() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(true, false);
+    super.sendEvents(true, true);
   }
   
   @Override
@@ -55,6 +52,7 @@ public class SslCertDoesNotMatchHostDisabledCertValidationIT extends AbstractCon
     props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     props.put(DISABLE_CERT_VALIDATION, "true");
     props.put(MOCK_HTTP_KEY, "false");
+    props.put(PropertyKeys.EVENT_BATCH_SIZE, "0");
     return props;
   }
   
@@ -66,6 +64,13 @@ public class SslCertDoesNotMatchHostDisabledCertValidationIT extends AbstractCon
   @Override
   protected BasicCallbacks getCallbacks() {
     return new BasicCallbacks(getNumEventsToSend()) {
+      
+      @Override
+      public void failed(EventBatch events, Exception ex) {
+        // Expected to get a failed exception on connection.closeNow(), 
+        // as we do not wait for the event to ack
+        LOG.debug("expected failed callback: events: " + events + ", ex: " + ex);
+      }
       @Override
       public void await(long timeout, TimeUnit u) throws InterruptedException {
         // don't need to wait for anything since we don't get a failed callback

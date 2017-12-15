@@ -115,7 +115,9 @@ public final class  UnhealthyEndpointTest extends AbstractConnectionTest {
         //MAKE UNhealthy then send a second message
         TriggerableUnhealthyEndpoints.healthy = false;
         LOG.trace("waiting to detect unhealthy channel");
-        Thread.sleep(sleepTime); //make sure health poll becomes unhealthy (poll has interval so we must wait)
+        connection.send(getTimestampedRawEvent(2));
+        Thread.sleep(sleepTime); //wait for event post to return so health gets recorded as unhealthy. 
+        // At this point, we should have begun health polling since an event post failed, and HecHealth should be flipped to unhealthy.
         HecHealth h = connection.getHealth().get(0);
         LOG.info("{}", h);
         Assert.assertTrue("Expected unhealty channel but got: " + h, !h.isHealthy());
@@ -124,7 +126,7 @@ public final class  UnhealthyEndpointTest extends AbstractConnectionTest {
         new Thread(() -> {
           long start = System.currentTimeMillis();
           try {
-            connection.send(getTimestampedRawEvent(2));
+            connection.send(getTimestampedRawEvent(3));
           } catch (HecConnectionTimeoutException ex) {
             LOG.error(ex.getMessage(), ex);
             Assert.fail();
@@ -140,7 +142,7 @@ public final class  UnhealthyEndpointTest extends AbstractConnectionTest {
         //...which will cause acknowledged to be invoked again, but then count will be 2 so test will end.
          h = connection.getHealth().get(0);
         LOG.info("{}", h);
-        Assert.assertTrue("Expected healty channel but got: " + h, h.isHealthy());      
+        Assert.assertTrue("Expected healthy channel but got: " + h, h.isHealthy());      
 
       } catch (InterruptedException ex) {
         LOG.error(ex.getMessage(), ex);
