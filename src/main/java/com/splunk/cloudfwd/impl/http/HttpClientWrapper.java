@@ -36,32 +36,32 @@ public class HttpClientWrapper {
 
     public synchronized void releaseClient(HttpSender requestor) {
            
-         if (requestors.size() == 0) {
-             throw new IllegalStateException("Illegal attempt to release http client, but http client is already closed.");
-         }
-        requestors.remove(requestor);
-        if (requestors.size() == 0) {
-            try {
-                httpClient.close();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex.getMessage(), ex);
-            }
-        }
+//         if (requestors.size() == 0) {
+//             throw new IllegalStateException("Illegal attempt to release http client, but http client is already closed.");
+//         }
+//        requestors.remove(requestor);
+//        if (requestors.size() == 0) {
+//            try {
+//                httpClient.close();
+//            } catch (IOException ex) {
+//                throw new RuntimeException(ex.getMessage(), ex);
+//            }
+//        }
     }
 
     public synchronized CloseableHttpAsyncClient getClient(
             HttpSender requestor, boolean disableCertificateValidation,
             String cert) {
-        if (requestors.isEmpty()) {
-            try {
+//        if (requestors.isEmpty()) {
+               try {
                 httpClient = new HttpClientFactory(disableCertificateValidation,
                         cert, requestor.getSslHostname(), requestor).build();
                 httpClient.start();              
             } catch (Exception ex) {
                 throw new RuntimeException(ex.getMessage(), ex);
             }
-        }
-        requestors.add(requestor);  
+//        }
+//        requestors.add(requestor);  
         return httpClient;
 
     }
