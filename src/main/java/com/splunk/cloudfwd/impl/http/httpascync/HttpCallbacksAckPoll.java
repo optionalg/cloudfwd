@@ -98,10 +98,10 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
                     readValue(resp, AckPollResponseValueObject.class);
             getManager().getAcknowledgementTracker().handleAckPollResponse(
                     ackPollResp);
-            if (getSender().getChannel().isIdle()) {
-                LOG.info("Channel idle, polling acks {}", getChannel());
-                getSender().getHecIOManager().pollAcks();
-            }
+//            if (getSender().getChannel().isIdle()) {
+//                LOG.info("Channel idle, polling acks {}", getChannel());
+//                getSender().getHecIOManager().pollAcks();
+//            }
         } catch (Exception e) {
              error(e);
         }
