@@ -1,10 +1,10 @@
 package com.splunk.cloudfwd.test.mock.hec_server_error_response_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,7 @@ public class HecServerErrorResponseInvalidTokenTest extends AbstractHecServerErr
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.InvalidTokenEndpoints");
         settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException
         settings.setBlockingTimeoutMS(5000);

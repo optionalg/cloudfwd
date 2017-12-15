@@ -1,13 +1,12 @@
 package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.impl.sim.errorgen.indexer.RollingRestartEndpoints;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 /**
@@ -25,7 +24,7 @@ public class DownIndexersRollingRestartTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.RollingRestartEndpoints");
 
         // mocking 4 indexers with 1 channel each
@@ -48,7 +47,7 @@ public class DownIndexersRollingRestartTest extends AbstractConnectionTest {
     private void createConnection() {
         this.callbacks = getCallbacks();
 
-        PropertiesFileHelper settings = this.getTestProps();
+        ConnectionSettings settings = this.getTestProps();
         this.configureProps(settings);
         this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);

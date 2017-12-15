@@ -14,16 +14,14 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.Properties;
 
 /**
  * This test enables SSL Verification and attempts to instantiate connection
@@ -52,12 +50,12 @@ public class SslCertValidIT extends AbstractConnectionTest {
   }
   
   @Override
-  protected PropertiesFileHelper getTestProps() {
-    return new PropertiesFileHelper();  
+  protected ConnectionSettings getTestProps() {
+    return new ConnectionSettings();  
   }
   
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     settings.setUrls("https://http-inputs-kinesis1.splunkcloud.com:443");
     settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     settings.enableCertValidation();

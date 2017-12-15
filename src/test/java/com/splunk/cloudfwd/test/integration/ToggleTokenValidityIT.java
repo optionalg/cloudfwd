@@ -3,7 +3,6 @@ package com.splunk.cloudfwd.test.integration;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -95,7 +94,7 @@ public class ToggleTokenValidityIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
         settings.setToken(createTestToken("__singleline"));
         // we don't want to hit any ack timeouts because it's easier to make our callbacks not expect them

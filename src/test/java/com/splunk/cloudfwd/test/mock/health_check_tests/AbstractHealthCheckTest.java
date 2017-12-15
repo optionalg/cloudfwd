@@ -1,10 +1,10 @@
 package com.splunk.cloudfwd.test.mock.health_check_tests;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 
@@ -30,7 +30,7 @@ public class AbstractHealthCheckTest extends AbstractConnectionTest {
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     protected void createConnection(LifecycleEvent.Type problemType) {
-        PropertiesFileHelper settings = this.getTestProps();
+        ConnectionSettings settings = this.getTestProps();
         configureProps(settings);
         boolean gotException = false;
         try{

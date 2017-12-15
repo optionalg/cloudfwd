@@ -1,9 +1,9 @@
 package com.splunk.cloudfwd.test.integration;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 import java.util.Set;
 
@@ -30,7 +30,7 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
         settings.setToken(createTestToken("__singleline"));
         settings.setUrls(unknownHost + ",https://localhost:8088");

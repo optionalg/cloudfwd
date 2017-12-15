@@ -1,9 +1,9 @@
 package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 
@@ -56,7 +56,7 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDEndpoints");
         settings.setBlockingTimeoutMS(30000);
         settings.setUnresponsiveMS(-1); //no dead channel detection
@@ -71,7 +71,7 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
     protected void createConnection() {
         this.callbacks = getCallbacks();
 
-        PropertiesFileHelper settings = getTestProps();
+        ConnectionSettings settings = getTestProps();
         configureProps(settings);
         this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);

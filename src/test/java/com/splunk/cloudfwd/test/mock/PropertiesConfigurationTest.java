@@ -54,7 +54,7 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
     // PropertiesHelper Configuration Tests
     @Test
     public void testPropertiesHelperWithOverrides() throws MalformedURLException {
-        // Need connection object to pass into PropertiesFileHelper constructor for failed() callback
+        // Need connection object to pass into ConnectionSettings constructor for failed() callback
         Properties overrides = new Properties();
         overrides.put(TOKEN, "foo-token");
         overrides.put(COLLECTOR_URI, "https://inputs1.kinesis1.foo.com:8088");
@@ -74,7 +74,7 @@ public class PropertiesConfigurationTest extends AbstractConnectionTest {
 
     @Test
     public void testPropertiesHelperWithoutOverrides() throws MalformedURLException {
-        // Need connection object to pass into PropertiesFileHelper constructor for failed() callback
+        // Need connection object to pass into ConnectionSettings constructor for failed() callback
         Properties overrides = new Properties();
         //can't make assumptions about what's in cloudfwd.properties
 //        

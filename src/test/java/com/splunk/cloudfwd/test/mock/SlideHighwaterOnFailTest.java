@@ -1,9 +1,9 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecChannelDeathException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 
@@ -23,7 +23,7 @@ public class SlideHighwaterOnFailTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(SlideHighwaterOnFailTest.class.getName());
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
       Properties props = new Properties();
       //A realistic value of BLOCKING_TIMEOUT_MS would be 1 or more MINUTES, but let's not
       //make this test run too slowly. The point is, we want to SEE the HecConnectionTimeout

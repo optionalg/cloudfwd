@@ -4,7 +4,6 @@ import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,14 +64,14 @@ public abstract class AbstractHecServerErrorResponseTest extends AbstractConnect
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     protected void createConnection() {
-        PropertiesFileHelper settings = this.getTestProps();
+        ConnectionSettings settings = this.getTestProps();
         configureProps(settings);
         connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 
     protected void createConnection(LifecycleEvent.Type problemType) {
-        PropertiesFileHelper settings = this.getTestProps();
+        ConnectionSettings settings = this.getTestProps();
         this.configureProps(settings);
         boolean gotException = false;
         try{

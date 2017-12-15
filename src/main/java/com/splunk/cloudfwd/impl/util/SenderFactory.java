@@ -15,8 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.util;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.http.HttpSender;
@@ -27,35 +25,31 @@ import com.splunk.cloudfwd.error.HecConnectionStateException;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
-import java.util.Properties;
+import org.slf4j.Logger;
 
 /**
  *
  * @author ghendrey
  */
-public class PropertiesFileHelper extends ConnectionSettings {
-
-    @JsonProperty("mock_force_url_map_to_one")
-    private Boolean mockForceUrlMapToOne;
-
-    public boolean isForcedUrlMapToSingleAddr() {
-      return applyDefaultIfNull(this.mockForceUrlMapToOne, false);
+public class SenderFactory {
+    
+    private ConnectionSettings settings;
+    private final Logger LOG;
+    
+    public SenderFactory(ConnectionImpl connection, ConnectionSettings settings) {
+        this.settings = settings;
+        LOG = connection.getLogger(SenderFactory.class.getName());
     }
 
-    public void setMockForceUrlMapToOne(Boolean force) {
-        this.mockForceUrlMapToOne = force;
-    }
-
-  
     private HttpSender createSender(String url, String sslHost) {
       // enable http client debugging
-      if (isHttpDebugEnabled()){
-          setHttpDebugEnabled(true);
+      if (settings.isHttpDebugEnabled()){
+          settings.setHttpDebugEnabled(true);
       }
-      String sslCert = getSSLCertContent();
-      HttpSender sender = new HttpSender(url, sslHost, this, isCertValidationDisabled(), sslCert);
-      if(isMockHttp()){
-        sender.setSimulatedEndpoints(getSimulatedEndpoints());
+      String sslCert = settings.getSSLCertContent();
+      HttpSender sender = new HttpSender(url, sslHost, settings, settings.isCertValidationDisabled(), sslCert);
+      if(settings.isMockHttp()){
+        sender.setSimulatedEndpoints(settings.getSimulatedEndpoints());
       }
       return sender;
   }
@@ -66,7 +60,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
             // so that they can get decomissioned and recreated at a later time, in case DNS recovers
             if (s.isUnresolved()) { 
                 //since the hostname could not be resolved to an IP address, we cannot construct the URL
-                //using the resolved hostAddr as we do below. 
+                //using the resolved hostAddr as we do below. 3
                 return createSender("https://"+s.toString(), s.getHostName() + ":" + s.getPort());
             }            
             //URLS for channel must be based on IP address not hostname since we
@@ -77,7 +71,7 @@ public class PropertiesFileHelper extends ConnectionSettings {
             }
 
             URL url = new URL("https://" + hostAddr + ":" + s.getPort());
-            getLog().debug("Trying to add URL: " + url);
+            LOG.debug("Trying to add URL: " + url);
             //We should provide a hostname for http client, so it can properly set Host header
             //this host is required for many proxy server and virtual servers implementations
             //https://tools.ietf.org/html/rfc7230#section-5.4
@@ -85,16 +79,10 @@ public class PropertiesFileHelper extends ConnectionSettings {
 
             return createSender(url.toString(), host);
         } catch (MalformedURLException ex) {
-            getLog().error(ex.getMessage(), ex);
+            LOG.error(ex.getMessage(), ex);
             throw new HecConnectionStateException(ex.getMessage(),
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
-    }
-
-    @Override
-    public void setConnection(Connection c) {
-        connection = (ConnectionImpl)c;
-        LOG = connection.getLogger(PropertiesFileHelper.class.getName());
     }
 
 }

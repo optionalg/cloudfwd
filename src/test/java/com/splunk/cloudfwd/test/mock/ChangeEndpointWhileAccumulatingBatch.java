@@ -16,13 +16,11 @@
 package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.WRONG_EVENT_FORMAT_FOR_ENDPOINT;
 
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import java.util.Properties;
 import org.junit.Test;
 
 /**
@@ -33,7 +31,7 @@ import org.junit.Test;
  */
 public class ChangeEndpointWhileAccumulatingBatch extends AbstractConnectionTest{
 
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     settings.setEventBatchSize(1024*1024);
   }
     

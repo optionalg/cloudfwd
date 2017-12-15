@@ -1,7 +1,7 @@
 package com.splunk.cloudfwd.test.perf;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class OncePerSecondLongevityTest extends AbstractPerformanceTest {
     }
     
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
       super.configureProps(settings);
     //simulate a non-sticky endpoint
       settings.setMockHttp(false);

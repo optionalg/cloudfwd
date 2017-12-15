@@ -1,10 +1,10 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,7 +31,7 @@ import org.junit.Test;
 public class ResendOnCatchingRuntimExceptionTest extends AbstractConnectionTest {
 
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     settings.setMockHttp(true);
     settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.runtimeexceptions.ExceptionsEndpoint");
     settings.setEventBatchSize(0); //make sure no batching

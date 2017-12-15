@@ -65,8 +65,8 @@ public class LoadBalancer implements Closeable {
     public LoadBalancer(ConnectionImpl c) {
         this.LOG = c.getLogger(LoadBalancer.class.getName());
         this.connection = c;
-        this.channelsPerDestination = c.getPropertiesFileHelper().getChannelsPerDestination();
-        this.discoverer = new IndexDiscoverer(c.getPropertiesFileHelper(), c);
+        this.channelsPerDestination = c.getSettings().getChannelsPerDestination();
+        this.discoverer = new IndexDiscoverer(c.getSettings(), c);
         createChannels(discoverer.getAddrs());
         //Reaping will randomly remove a channel and replace it with a fresh one every so often. 
         //This insures that channels get spread across indexers, even when we are fronted by an ELB
@@ -150,7 +150,7 @@ public class LoadBalancer implements Closeable {
     private void setupReaper() {
         //One channel will be decomissioned each time the scheduler, below, fires. And there will be an interval of decomMS
         //between each channel that is decomissioned. We need to avoid "storm" of decomissioning many channels at once.
-        long decomMs = getPropertiesFileHelper().getChannelDecomMS();
+        long decomMs = this.connection.getSettings().getChannelDecomMS();
         if (decomMs > 0) {
             this.reaperTaskFuture  = ThreadScheduler.getSharedSchedulerInstance("channel_decom_scheduler").scheduleWithFixedDelay(() -> {
                 ArrayList<HecChannel> channels = (ArrayList) this.channels.values();
@@ -203,7 +203,7 @@ public class LoadBalancer implements Closeable {
     private void waitForOnePreflightSuccess(List<HecHealth> healths, List<Future<Void>> futures, 
             List<HecChannel> channelsList) {
         long startMS = System.currentTimeMillis();
-        long timeoutMS = getPropertiesFileHelper().getPreFlightTimeoutMS();
+        long timeoutMS = this.connection.getSettings().getPreFlightTimeoutMS();
         boolean preFlightPassed = false;
         while (!Thread.interrupted()) {
             int numFailed = 0;
@@ -264,7 +264,7 @@ public class LoadBalancer implements Closeable {
                     getMaxTotalChannels() + ")");
             return null;
         }
-        HttpSender sender = (getPropertiesFileHelper()).createSender(s);
+        HttpSender sender = (this.connection.getSenderFactory()).createSender(s);
 
         HecChannel channel = new HecChannel(this, sender, this.connection);
         channel.getChannelMetrics().addObserver(this.connection.getCheckpointManager());
@@ -367,7 +367,7 @@ public class LoadBalancer implements Closeable {
         if (!closed || forced) {
             this.connection.getCheckpointManager().registerEventBatch(events, forced);
         }
-        if(this.channels.size() > getPropertiesFileHelper().getMaxTotalChannels()){
+        if(this.channels.size() > this.connection.getSettings().getMaxTotalChannels()){
             LOG.warn("{} exceeded. There are currently: {}",  PropertyKeys.MAX_TOTAL_CHANNELS, channels.size());
         }
     }
@@ -569,15 +569,8 @@ public class LoadBalancer implements Closeable {
         return connection;
     }
 
-    /**
-     * @return the propertiesFileHelper
-     */
-    public PropertiesFileHelper getPropertiesFileHelper() {
-        return this.connection.getPropertiesFileHelper();
-    }
-
     private boolean isResendable(EventBatchImpl events) {
-         final int maxRetries = getPropertiesFileHelper().getMaxRetries();
+         final int maxRetries = this.connection.getSettings().getMaxRetries();
         if (events.getNumTries() > maxRetries) {
                               String msg = "Tried to send event id=" + events.
                               getId() + " " + events.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;

@@ -1,9 +1,9 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,7 +34,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionTimeoutTest.class.getName());
 
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     //A realistic value of BLOCKING_TIMEOUT_MS would be 1 or more MINUTES, but let's not
     //make this test run too slowly. The point is, we want to SEE the HecConnectionTimeout
     //happen repeatedly, until the message goes through

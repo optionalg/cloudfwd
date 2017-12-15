@@ -1,14 +1,12 @@
 package com.splunk.cloudfwd.test.integration;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.RawEvent;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -39,7 +37,7 @@ public class PeriodicEventBatchFlushIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
         settings.setEventBatchFlushTimeout(2000);
         settings.setEventBatchSize(100000000); // big enough that we don't fill the batch
