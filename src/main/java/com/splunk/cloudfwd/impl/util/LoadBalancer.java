@@ -426,6 +426,7 @@ public class LoadBalancer implements Closeable {
                             //**valid** channels, which means every channel is returning an HecServerErrorResponse
                             //indicating misconfiguration of HEC
                             checkForNoValidChannels(channelsSnapshot, events, forced);
+                    connection.logLBHealth();
                 }
                 latch = null;
                 //checkForNoValidChannels(channelsSnapshot, events);
