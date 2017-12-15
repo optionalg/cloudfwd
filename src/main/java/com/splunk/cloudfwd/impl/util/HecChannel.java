@@ -42,6 +42,7 @@ import java.util.concurrent.ScheduledFuture;
 
 import javax.net.ssl.SSLException;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Future;
 
 
@@ -183,7 +184,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   public boolean send(EventBatchImpl events) {
     if (!isAvailable()) {
-      return false;
+        return new Random().nextBoolean();
+      //return false;
     }
     
     //must increment only *after* we exit the blocking condition above
