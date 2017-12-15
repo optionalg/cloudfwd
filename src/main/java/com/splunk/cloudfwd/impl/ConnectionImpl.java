@@ -354,7 +354,7 @@ public class ConnectionImpl implements Connection {
    }
 
 
-    private void logLBHealth() {
+    public void logLBHealth() {
         List<HecHealth> channelHealths = lb.getHealthNonBlocking();
         int _preflightCompleted=0;
         int _closed=0;
