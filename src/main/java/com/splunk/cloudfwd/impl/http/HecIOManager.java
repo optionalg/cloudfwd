@@ -114,6 +114,9 @@ public class HecIOManager implements Closeable {
     public Future pollAcks() {
         return ThreadScheduler.getSharedExecutorInstance("ack_poll_executor_thread").submit(
                 ()->{
+                    if(ackPollInProgress){
+                        return;
+                    }
                      LOG.trace("POLLING ACKS on {}", sender.getChannel());
                     FutureCallback<HttpResponse> cb = new HttpCallbacksAckPoll(this);
                     sender.pollAcks(this, cb);
