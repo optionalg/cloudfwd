@@ -184,9 +184,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
   public boolean send(EventBatchImpl events) {
     if (!isAvailable()) {
-        if(new Random().nextBoolean()){
             return false;
-        }
     }
     
     //must increment only *after* we exit the blocking condition above
@@ -199,9 +197,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     events.setHecChannel(this);
     sender.sendBatch(events);
-    if (unackedCount.get() == maxUnackedEvents) {
-      pollAcks();
-    }
+//    if (unackedCount.get() == maxUnackedEvents) {
+//      pollAcks();
+//    }
     timeLastBatchSent = System.currentTimeMillis(); // reset timer
     return true;
   }
