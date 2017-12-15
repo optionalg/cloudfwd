@@ -252,7 +252,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         }
         
         if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
+            LOG.debug("channel became available : channel={}", this);
             loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
+        } else if (!isAvailable() && wasAvailable) {
+            LOG.debug("channel became unavailable due to {}, channel={}", e.getType(), this);
         }
     }
     
