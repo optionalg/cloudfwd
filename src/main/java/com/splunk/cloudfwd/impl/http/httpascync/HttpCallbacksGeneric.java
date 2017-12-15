@@ -61,7 +61,7 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
                     onOk(reply, httpCode);
                     break;
                 case 503:
-                    LOG.debug("503 response in HttpCallbacksGeneric {} on channel {}", getName(), getChannel());
+                    LOG.debug("503 response in HttpCallbacksGeneric {} on channel {}", getOperation(), getChannel());
                     if (null != indexerBusyType) {
                         type = indexerBusyType;
                     } else {

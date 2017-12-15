@@ -48,6 +48,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   private final Logger LOG;
   private final HecIOManager manager;
   private final String name;
+  private final long start = System.currentTimeMillis();
   
   HttpCallbacksAbstract(HecIOManager m, String name) {
     LOG = m.getSender().getConnection().getLogger(HttpCallbacksAbstract.class.getName());
@@ -58,7 +59,8 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
   @Override
   final public void completed(HttpResponse response) {
-    try {    
+    try {
+        LOG.debug("Response received. {} took {} ms", getOperation(), System.currentTimeMillis() - start);
         int code = response.getStatusLine().getStatusCode();
         handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
@@ -223,10 +225,6 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
             LOG.error("{} Exception '{}'in ConnectionCallbacks.systemWarning() for  '{}'",
                     getChannel(), ex.getMessage(), getOperation());
         }           
-    }    
-    
-    protected String getName() {
-        return this.name;
     }
     
     protected ConnectionSettings getSettings(){
