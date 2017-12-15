@@ -315,7 +315,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             //sometimes events get acknowledged before the SenderWorker starts waiting
             if (waitingSenders.get(events.getId()) != null) {
               
-                LOG.info("ackd {} in {}", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
+                LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
                 waitingSenders.get(events.getId()).tell();
             }
         }

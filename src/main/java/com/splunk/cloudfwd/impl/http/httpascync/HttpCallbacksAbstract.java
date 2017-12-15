@@ -225,6 +225,10 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         }           
     }    
     
+    protected String getName() {
+        return this.name;
+    }
+    
     protected ConnectionSettings getSettings(){
         return getConnection().getSettings();
     }
