@@ -36,6 +36,9 @@ public class UnvalidatedBytesEvent implements Event{
   private Comparable id;
 
   public UnvalidatedBytesEvent(byte[] bytes, Comparable id) {
+    if(bytes.length < 1){
+      throw new IllegalArgumentException("Byte Array Empty");
+    }
     this.bytes = bytes;
     this.id = id;
   }
