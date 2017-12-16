@@ -15,10 +15,13 @@
  */
 package com.splunk.cloudfwd;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+//import com.sun.org.apache.xalan.internal.utils.FeatureManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,25 +37,22 @@ import java.util.Map;
  * Provides methods for preparing a structured event, as required by the HEC /event endpoint.
  * @author ghendrey
  */
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class EventWithMetadata implements Event {
   // No access to Connection instance so must use SLF4J logger
   private static final Logger LOG = LoggerFactory.getLogger(EventWithMetadata.class.getName());
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
-/*
-  public static final String TIME = "time";
-  public static final String HOST = "host";
-  public static final String INDEX = "index";
-  public static final String SOURCE = "source";
-  public static final String SOURCETYPE = "sourcetype";
-  public static final String EVENT = "event";
-  */
-  private String source;
+  private static ObjectMapper jsonMapper = new ObjectMapper();
 
+  private String source;
+  @JsonProperty("sourcetype")
   private String sourceType;
   private String host;
   private String index;
+  @JsonIgnore
   private long time = -1;
   private final Object event;
+ @JsonIgnore
   private Comparable id;
   @JsonIgnore
   private byte[] bytes; //for memo-izing the bytes...not part of what gets marshalled to json
@@ -101,7 +101,7 @@ public class EventWithMetadata implements Event {
    * subsequent to the first invocation of either.
    * @return
    */
-  @Override  
+  @Override
   public byte[] getBytes() {
     try {
       if(null == this.bytes){
@@ -118,29 +118,6 @@ public class EventWithMetadata implements Event {
   public void writeTo(OutputStream out) throws IOException{
     out.write(getBytes());
   }
-
-  /*
-
-  private ObjectNode getJsonNode() throws IllegalArgumentException {
-    Map eventJSON = new LinkedHashMap();
-    putIfPresent(eventJSON, TIME, formatTime(time));
-    putIfPresent(eventJSON, INDEX, index);
-    putIfPresent(eventJSON, HOST, host);
-    putIfPresent(eventJSON, SOURCETYPE, sourceType);
-    putIfPresent(eventJSON, SOURCE, source);
-    eventJSON.put(EVENT, this.event);
-    ObjectNode eventNode = (ObjectNode) jsonMapper.valueToTree(eventJSON);
-    return eventNode;
-  }
-
-
-  private static void putIfPresent(Map collection, String tag,
-          String value) {
-    if (value != null && !value.isEmpty()) {
-      collection.put(tag, value);
-    }
-  }
-    */
 
   public void setTime(long epochMillis) {
     this.time = epochMillis;
@@ -227,11 +204,13 @@ public class EventWithMetadata implements Event {
   }
 
   @Override
+  @JsonIgnore
   public ConnectionImpl.HecEndpoint getTarget() {
     return ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT;
   }
 
   @Override
+  @JsonIgnore
   public Type getType() {
     if(event instanceof String){
       return Event.Type.TEXT;
@@ -240,7 +219,7 @@ public class EventWithMetadata implements Event {
     }
   }
 
-  @Override
+  @Override @JsonIgnore
   public InputStream getInputStream() {
     return new ByteArrayInputStream(getBytes());
   }
@@ -249,4 +228,9 @@ public class EventWithMetadata implements Event {
   public int length() {
     return getBytes().length;
   }
+
+  public Object getEvent() {
+    return event;
+  }
 }
+

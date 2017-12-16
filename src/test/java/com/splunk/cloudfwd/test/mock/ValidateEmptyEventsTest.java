@@ -1,7 +1,9 @@
 package com.splunk.cloudfwd.test.mock;
 
+
 import com.splunk.cloudfwd.*;
 
+import jdk.nashorn.internal.ir.ObjectNode;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 import static org.junit.Assert.*;
@@ -10,11 +12,9 @@ import org.slf4j.Logger;
 
 public class ValidateEmptyEventsTest {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ValidateEmptyEventsTest.class.getName());
-
-    private byte[] bytes;
-    private Exception ex = null;
-
+   private static final Logger LOG = LoggerFactory.getLogger(ValidateEmptyEventsTest.class.getName());
+   private byte[] bytes;
+   private Exception ex = null;
 
     @Test
     public void TestWithAValidString() {

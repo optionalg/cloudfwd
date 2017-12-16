@@ -26,6 +26,7 @@ public class ByteBufferWithMixedEventsNoSourcetypeIT extends AbstractByteBufferW
   @Test
   public void chalkFullOBytesForEventEndpoint() throws InterruptedException, HecConnectionTimeoutException {
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+    LOG.trace("hello");
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
     verifyResults(getSentEvents(), searchResults);    

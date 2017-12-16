@@ -47,7 +47,7 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
     assertAllChannelsFailed(SSLHandshakeException.class, "General SSLEngine problem");
     connection.closeNow();
   }
-  
+
   @Override
   protected Properties getProps() {
     Properties props = new Properties();

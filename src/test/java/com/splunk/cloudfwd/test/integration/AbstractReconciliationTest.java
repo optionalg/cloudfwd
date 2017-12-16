@@ -74,7 +74,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     cliProperties.put("splunkHost", "localhost");
     cliProperties.put("mgmtPort", "8089");
     cliProperties.put("user", "admin");
-    cliProperties.put("password", "changeme");
+    cliProperties.put("password", "changeat");
   }
   /* ************ /CLI CONFIGURABLE ************ */
 
