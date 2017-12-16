@@ -1,8 +1,8 @@
 package com.splunk.cloudfwd.test.integration;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -20,7 +20,7 @@ public class CreateConnectionAcksDisabledIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
         settings.setToken(createTestToken(null, false));
         settings.setMaxTotalChannels(1);

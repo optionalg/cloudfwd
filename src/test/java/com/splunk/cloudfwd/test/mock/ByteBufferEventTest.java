@@ -1,11 +1,11 @@
 package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.nio.ByteBuffer;
 import org.junit.Test;
 
@@ -42,7 +42,7 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     //default behavior is no "hard coded" test-specific properties
     settings.setEventBatchSize(16000);
     settings.setMockHttp(true); //no dead channel detection

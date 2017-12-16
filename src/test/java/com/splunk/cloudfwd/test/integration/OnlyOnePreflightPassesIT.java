@@ -1,13 +1,10 @@
 package com.splunk.cloudfwd.test.integration;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -31,7 +28,7 @@ public class OnlyOnePreflightPassesIT extends AbstractReconciliationTest {
     }
     
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setToken(createTestToken(null));
         settings.setUrls("https://127.0.0.1:8088,https://kinesis4.splunkcloud.com:8088");  //two endpoints. The kinesis4 endpoint exsits, but isn't HEC endpoint (it's search head)
         settings.setMockHttp(false);

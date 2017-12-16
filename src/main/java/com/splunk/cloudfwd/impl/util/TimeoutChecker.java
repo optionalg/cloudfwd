@@ -60,7 +60,7 @@ public class TimeoutChecker implements EventTracker {
 
     private long getTimeoutMs() {
         //check for timeouts with a minimum frequency of 1 second
-        return connection.getPropertiesFileHelper().getAckTimeoutMS();
+        return connection.getSettings().getAckTimeoutMS();
     }
 
     //how often we should rip through the list and check for timeouts

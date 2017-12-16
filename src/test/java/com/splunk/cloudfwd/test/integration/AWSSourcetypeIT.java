@@ -15,7 +15,6 @@ package com.splunk.cloudfwd.test.integration;/*
  */
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.splunk.cloudfwd.*;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -194,7 +193,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
         settings.setToken(createTestToken(null));
     }

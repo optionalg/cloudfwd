@@ -1,8 +1,8 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 public class IllegalStateAlreadyAckdTest extends IllegalStateAlreadySentTest{
   
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttp(true);
         settings.setEventBatchSize(0); //make sure no batching
         settings.setMaxTotalChannels(1); //so we insure we resend on same channel

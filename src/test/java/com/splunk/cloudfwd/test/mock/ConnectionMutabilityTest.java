@@ -7,7 +7,6 @@ import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.sim.ValidatePropsEndpoint;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -133,7 +132,7 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setAckTimeoutMS(1000000);
         settings.setUnresponsiveMS(-1); //no dead channel detection
         settings.setMockHttp(true);

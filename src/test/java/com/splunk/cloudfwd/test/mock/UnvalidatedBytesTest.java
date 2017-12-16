@@ -1,10 +1,10 @@
 package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 
 /*
@@ -46,7 +46,7 @@ public class UnvalidatedBytesTest extends AbstractConnectionTest {
     sendEvents();
   }
 
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     settings.setEventBatchSize(16000);
     //settings.setMockHttp(false);
     super.eventType = Event.Type.UNKNOWN;

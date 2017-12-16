@@ -2,7 +2,6 @@ package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
@@ -141,7 +140,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
         String token = System.getProperty(PropertyKeys.TOKEN);
         String url = System.getProperty(PropertyKeys.COLLECTOR_URI);

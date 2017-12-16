@@ -1,9 +1,9 @@
 package com.splunk.cloudfwd.test.mock.hec_server_error_response_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class HecServerErrorResponseNoAckIdEvent extends AbstractHecServerErrorRe
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         //in this case, the pre-flight check will pass, and we are simulating were we detect acks disabled on event post
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostNoAckIdEndpoints");
         settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException

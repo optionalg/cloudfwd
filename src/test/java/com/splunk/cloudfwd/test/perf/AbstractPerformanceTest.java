@@ -1,8 +1,8 @@
 package com.splunk.cloudfwd.test.perf;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
@@ -44,7 +44,7 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
   }
   
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     //default behavior is no "hard coded" test-specific properties
     //the assumption here is that we are doing performance testing using cloudfwd.properties not test.properties
     settings.setTestPropertiesEnabled(false);

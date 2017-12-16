@@ -1,7 +1,7 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 
@@ -24,7 +24,7 @@ import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGU
 
 public class UrlProtocolTest extends ExceptionConnInstantiationTest {
      @Override
-     protected void configureProps(PropertiesFileHelper settings) {
+     protected void configureProps(ConnectionSettings settings) {
          settings.setUrls("http://foo.com"); //http is not supported protocol. Must be https
     }
     

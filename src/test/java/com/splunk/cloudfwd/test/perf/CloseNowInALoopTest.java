@@ -16,19 +16,17 @@
 package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.PropertyKeys;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -44,7 +42,7 @@ public class CloseNowInALoopTest {
     @Test
     public void loop() throws InterruptedException, ExecutionException{
         int numConnections = 100;
-        PropertiesFileHelper settings = new PropertiesFileHelper();
+        ConnectionSettings settings = new ConnectionSettings();
         settings.setUrls("https://127.0.0.1:8088");
         settings.setToken("7263336d-ac05-4db9-92c3-9536922d11b1");
         List<Connection> connections = Collections.synchronizedList(new ArrayList<>());

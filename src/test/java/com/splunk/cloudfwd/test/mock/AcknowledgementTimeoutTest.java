@@ -14,13 +14,13 @@ package com.splunk.cloudfwd.test.mock;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
 import org.junit.After;
 import org.junit.Assert;
@@ -60,8 +60,8 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
-        // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    protected void configureProps(ConnectionSettings settings) {
+        // props.put(ConnectionSettings.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
         if (SlowEndpoints.sleep > 10000) {

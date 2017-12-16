@@ -14,8 +14,8 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
@@ -53,7 +53,7 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
   }
   
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     settings.setUrls("https://kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com:443");
     settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     settings.enableCertValidation();

@@ -1,13 +1,10 @@
 package com.splunk.cloudfwd.test.mock;
 
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
-
-import java.util.Properties;
 
 /**
  * Created by eprokop on 11/8/17.
@@ -19,7 +16,7 @@ public class CloseNowTest extends AbstractConnectionTest {
     }
     
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttp(true);
     }
 

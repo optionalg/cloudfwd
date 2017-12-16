@@ -1,8 +1,8 @@
 package com.splunk.cloudfwd.test.mock.health_check_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +16,7 @@ public class HealthCheckInDetentionTest extends AbstractHealthCheckTest {
     private static final Logger LOG = LoggerFactory.getLogger(HealthCheckInDetentionTest.class.getName());
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.InDetentionEndpoints");
         settings.setBlockingTimeoutMS(3000);
     }

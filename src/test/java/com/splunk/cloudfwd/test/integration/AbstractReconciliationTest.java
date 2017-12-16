@@ -3,10 +3,10 @@ package com.splunk.cloudfwd.test.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.impl.http.HttpClientFactory;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.io.IOException;
 import java.util.*;
 
@@ -119,7 +119,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     settings.setMockHttp(false);
     settings.setEventBatchSize(16000);
     settings.setToken(createTestToken(getSourceType()));

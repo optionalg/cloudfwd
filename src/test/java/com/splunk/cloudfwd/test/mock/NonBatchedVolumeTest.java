@@ -1,8 +1,8 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
 
@@ -38,7 +38,7 @@ public class NonBatchedVolumeTest extends AbstractConnectionTest {
 
 
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     //settings.setMockHttp(true);
   }
 

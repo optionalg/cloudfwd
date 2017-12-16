@@ -30,7 +30,7 @@ import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.CheckpointManager;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
+import com.splunk.cloudfwd.impl.util.SenderFactory;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
 import java.net.URL;
 import java.util.Collection;
@@ -63,7 +63,8 @@ public class ConnectionImpl implements Connection {
   private TimeoutChecker timeoutChecker;
   private boolean closed;
   private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
-  private PropertiesFileHelper propertiesFileHelper;
+  private SenderFactory senderFactory;
+  private ConnectionSettings settings;
   private boolean quiesced;
 
 
@@ -82,8 +83,12 @@ public class ConnectionImpl implements Connection {
     if (settings.getUrlString() == null) {
       throw new HecMissingPropertiesException("Missing required key: " + COLLECTOR_URI);
     }
+    // Make sure defaults of -1 are interpreted to their correct values
+    settings.setMaxTotalChannels(settings.getMaxTotalChannels());
+    
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
-    this.propertiesFileHelper = (PropertiesFileHelper)settings;
+    this.settings = settings;
+    this.senderFactory = new SenderFactory(this, settings);
     this.checkpointManager = new CheckpointManager(this);
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
@@ -101,15 +106,15 @@ public class ConnectionImpl implements Connection {
   }
   
   /**
-   * @return the propertiesFileHelper
+   * @return the SenderFactory
    */
-  public PropertiesFileHelper getPropertiesFileHelper() {
-    return propertiesFileHelper;
+  public SenderFactory getSenderFactory() {
+    return senderFactory;
   }
 
   @Override
   public ConnectionSettings getSettings() {
-    return getPropertiesFileHelper();
+    return settings;
   }
   
   public CheckpointManager getCheckpointManager() {
@@ -117,11 +122,11 @@ public class ConnectionImpl implements Connection {
   }
   
   public long getAckTimeoutMS() {
-    return propertiesFileHelper.getAckTimeoutMS();
+    return settings.getAckTimeoutMS();
   }
 
   public synchronized void setBlockingTimeoutMS(long ms) {
-    propertiesFileHelper.setBlockingTimeoutMS(ms);
+      settings.setBlockingTimeoutMS(ms);
   }
   
    //close() is synchronized, as is send and sendBatch, therefore events cannot be sent before close has returned.
@@ -197,7 +202,7 @@ public class ConnectionImpl implements Connection {
     }
     this.events.add(event);
     this.timeoutChecker.start();
-    if (this.events.isFlushable(propertiesFileHelper.getEventBatchSize())) {
+    if (this.events.isFlushable(settings.getEventBatchSize())) {
       return sendBatch(events);
     }
     return 0;
@@ -234,7 +239,7 @@ public class ConnectionImpl implements Connection {
     //send the failed batch again
     this.events = null; //batch is in flight, null it out.
     //check to make sure the endpoint can absorb all the event formats in the batch
-    ((EventBatchImpl)events).checkAndSetCompatibility(propertiesFileHelper.getHecEndpointType());
+    ((EventBatchImpl)events).checkAndSetCompatibility(settings.getHecEndpointType());
     timeoutChecker.start();
     timeoutChecker.add((EventBatchImpl)events);
     LOG.debug("sending  characters {} for id {}", events.getLength(),events.getId());
@@ -270,16 +275,16 @@ public class ConnectionImpl implements Connection {
 
 
   public long getBlockingTimeoutMS() {
-    return propertiesFileHelper.getBlockingTimeoutMS();
+    return settings.getBlockingTimeoutMS();
   }
 
   public String getToken() {
-    return propertiesFileHelper.getToken();
+    return settings.getToken();
   }
 
 
   public List<URL> getUrls() {
-    return propertiesFileHelper.getUrls();
+    return settings.getUrls();
   }
 
   /**

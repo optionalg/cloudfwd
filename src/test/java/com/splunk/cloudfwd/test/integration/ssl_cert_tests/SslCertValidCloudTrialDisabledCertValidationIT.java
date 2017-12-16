@@ -14,15 +14,13 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
-
-import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * Cloud>Trial is issued by a private Splunk certificate authority. For 
@@ -42,7 +40,7 @@ public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConn
   }
   
   @Override
-  protected void configureProps(PropertiesFileHelper settings) {
+  protected void configureProps(ConnectionSettings settings) {
     settings.setUrls("https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
     settings.setToken("19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
     settings.disableCertValidation();

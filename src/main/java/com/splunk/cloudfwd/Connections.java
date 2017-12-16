@@ -19,11 +19,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Properties;
 
 /**
  * Factory for getting a Connection.
@@ -52,8 +49,13 @@ public class Connections {
      * @return
      */
     public static Connection create(ConnectionCallbacks cb, ConnectionSettings settings) {
+        // Print out ConnectionSettings properties before Connection init - to troubleshoot failing init
+        Connections.prettyPrintConnectionSettings(settings, 
+                "ConnectionSettings properties before Connection init are:", 
+                "Could not pretty print Connection properties before Connection init");
+
         ConnectionImpl c = new ConnectionImpl(cb, settings);
-        Connections.setupConnection(c, (PropertiesFileHelper)settings);
+        Connections.setupConnection(c, settings);
         return c;
     }
     
@@ -64,21 +66,27 @@ public class Connections {
      */
     public static Connection create(ConnectionSettings settings) {
         ConnectionImpl c = new ConnectionImpl(new DefaultConnectionCallbacks(), settings);
-        Connections.setupConnection(c, (PropertiesFileHelper) settings);
+        Connections.setupConnection(c, (settings));
         return c;
     }   
     
-    private static void setupConnection(ConnectionImpl c, PropertiesFileHelper settings) {
+    private static void setupConnection(ConnectionImpl c, ConnectionSettings settings) {
         LOG = c.getLogger(Connections.class.getName());
         settings.setConnection(c);
 
         // Print out ConnectionSettings properties
+        Connections.prettyPrintConnectionSettings(settings, 
+                "ConnectionSettings properties after Connection init are:", 
+                "Could not pretty print ConnectionSettings properties after Connection init");
+    }
+    
+    private static void prettyPrintConnectionSettings(ConnectionSettings settings, String successMsg, String failMsg) {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         try {
-            LOG.info("ConnectionSettings properties are:\n" + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(settings));
+            LOG.info(successMsg + "\n" + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(settings));
         } catch (JsonProcessingException e) {
-            LOG.error("Could not pretty print ConnectionSettings properties");
+            LOG.error(failMsg);
         }
     }
     

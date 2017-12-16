@@ -32,8 +32,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
-
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,6 +82,9 @@ public class ConnectionSettings {
 
     @JsonProperty("mock_http")
     private Boolean mockHttp = false;
+
+    @JsonProperty("mock_force_url_map_to_one")
+    private Boolean mockForceUrlMapToOne;
 
     @JsonProperty("enabled")
     private Boolean testPropertiesEnabled;
@@ -142,14 +143,15 @@ public class ConnectionSettings {
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
 
-    public static PropertiesFileHelper fromPropsFile(String pathToFile) {
+    public static ConnectionSettings fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
         JavaPropsMapper mapper = new JavaPropsMapper();
         try {
             InputStream inputStream = ConnectionSettings.class.getResourceAsStream(pathToFile);
             if (inputStream != null) {
-                PropertiesFileHelper propertiesFileHelper = mapper.readValue(inputStream, PropertiesFileHelper.class);
-                return propertiesFileHelper;
+                ConnectionSettings connectionSettings = mapper.readValue(inputStream, ConnectionSettings.class);
+                
+                return connectionSettings;
             }
         } catch (IOException e) {
             throw new RuntimeException("Could not map Properties file to Java object - please check file path.", e);
@@ -277,6 +279,11 @@ public class ConnectionSettings {
     public String getMockHttpClassname() {
         return applyDefaultIfNull(this.mockHttpClassname, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
     }
+
+    public boolean isForcedUrlMapToSingleAddr() {
+        return applyDefaultIfNull(this.mockForceUrlMapToOne, false);
+    }
+
 
     public Endpoints getSimulatedEndpoints() {
         try {
@@ -500,6 +507,10 @@ public class ConnectionSettings {
 
     public void setMockHttpClassname(String endpoints) {
         this.mockHttpClassname = endpoints;
+    }
+
+    public void setMockForceUrlMapToOne(Boolean force) {
+        this.mockForceUrlMapToOne = force;
     }
     
     public void setPreFlightTimeoutMS(long timeoutMS) {

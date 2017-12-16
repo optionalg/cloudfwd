@@ -27,6 +27,7 @@ import java.util.Observable;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import org.slf4j.Logger;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -44,19 +45,19 @@ public class IndexDiscoverer extends Observable {
   //InetSocketAddresses resolved. This means that equality for URL changes based on DNS host resolution
   //and would be changing over time
   //private Map<String, List<InetSocketAddress>> mappings;
-  private final PropertiesFileHelper propertiesFileHelper;// = new PropertiesFileHelper();
+  private final ConnectionSettings connectionSettings;// = new ConnectionSettings();
   private ConnectionImpl connection;
 
-  public IndexDiscoverer(PropertiesFileHelper f, ConnectionImpl c) {
+  public IndexDiscoverer(ConnectionSettings f, ConnectionImpl c) {
     this.LOG = c.getLogger(IndexDiscoverer.class.getName());
     this.connection = c;
-    this.propertiesFileHelper = f;
+    this.connectionSettings = f;
   }
   
 
   public synchronized List<InetSocketAddress> getAddrs(){
     // perform DNS lookup
-    Map<String, List<InetSocketAddress>> mappings = getInetAddressMap(propertiesFileHelper.getUrls());
+    Map<String, List<InetSocketAddress>> mappings = getInetAddressMap(connectionSettings.getUrls());
     List<InetSocketAddress> addrs = new ArrayList<>();
     for (List<InetSocketAddress> sockAddrs : mappings.values()) {
       addrs.addAll(sockAddrs);
@@ -143,7 +144,7 @@ public class IndexDiscoverer extends Observable {
 //  * called by IndexerDiscoveryScheduler
 //  */
 //  synchronized void discover(){
-//    update(getInetAddressMap(propertiesFileHelper.getUrls(),
+//    update(getInetAddressMap(settings.getUrls(),
 //        this.forceUrlMapToOne), mappings);
 //  }
 

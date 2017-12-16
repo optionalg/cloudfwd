@@ -1,10 +1,10 @@
 package com.splunk.cloudfwd.test.mock.in_detention_tests;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +32,7 @@ public class InDetentionAllTest extends AbstractInDetentionTest {
     }
 
     @Override
-    protected void configureProps(PropertiesFileHelper settings) {
+    protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.InDetentionEndpoints");
         settings.setBlockingTimeoutMS(30000);
         settings.setUnresponsiveMS(-1); //no dead channel detection
@@ -40,7 +40,7 @@ public class InDetentionAllTest extends AbstractInDetentionTest {
     }
 
     protected void createConnection(LifecycleEvent.Type problemType) {
-        PropertiesFileHelper settings = this.getTestProps();
+        ConnectionSettings settings = this.getTestProps();
         this.configureProps(settings);
         boolean gotException = false;
         try{
