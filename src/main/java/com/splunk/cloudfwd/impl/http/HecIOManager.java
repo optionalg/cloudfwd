@@ -127,9 +127,10 @@ public class HecIOManager implements Closeable {
     public Future  pollHealth() {
         //Don't poll for health on a healthy channel. Also note that if a channel is misconfigured, we will not pass preflight checks.
         //Therefore, we would never enter pollHeath, since we call pollHealth only when PREFLIGHT_OK.
-        if(sender.getChannel().isHealthy()){ 
-            return null; //don't poll, we were healthy
-        }
+        if (true) return null;
+//        if(sender.getChannel().isHealthy()){ 
+//            return null; //don't poll, we were healthy
+//        }
         LOG.debug("Starting 3 request health poll on channel {}", getSender().getChannel());
         return ThreadScheduler.getSharedExecutorInstance("health_poll_executor_thread").submit(
                 ()->{

@@ -142,6 +142,12 @@ public class ConnectionSettings {
     
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
+    
+    @JsonProperty(ENABLE_PREFLIGHT)
+    private boolean enablePreflight = true;
+    
+    @JsonProperty(REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER)
+    private boolean requireAcksEnabledOnSplunkServer = false;
 
     public static ConnectionSettings fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
@@ -330,36 +336,33 @@ public class ConnectionSettings {
         return applyDefaultIfNull(this.maxPreflightTries, DEFAULT_PREFLIGHT_RETRIES);
     }
     
-    public int getMaxPreflightRetries() {
-        int max = Integer.parseInt(defaultProps.
-                getProperty(PropertyKeys.PREFLIGHT_RETRIES,
-                        PropertyKeys.DEFAULT_PREFLIGHT_RETRIES).trim());
-        if (max < 1) {
-            LOG.debug(PropertyKeys.PREFLIGHT_RETRIES + ": unlimited");
-            max = Integer.MAX_VALUE;
-        }
-        return max;
-    }    
+//    public int getMaxPreflightRetries() {
+//        int max = Integer.parseInt(defaultProps.
+//                getProperty(PropertyKeys.PREFLIGHT_RETRIES,
+//                        PropertyKeys.DEFAULT_PREFLIGHT_RETRIES).trim());
+//        if (max < 1) {
+//            LOG.debug(PropertyKeys.PREFLIGHT_RETRIES + ": unlimited");
+//            max = Integer.MAX_VALUE;
+//        }
+//        return max;
+//    }    
     
     public boolean isPreflightEnabled() {
-        return Boolean.parseBoolean(this.defaultProps.getProperty(
-            PropertyKeys.ENABLE_PREFLIGHT,
-            PropertyKeys.DEFAULT_ENABLE_PREFLIGHT).trim());
+        return applyDefaultIfNull(this.enablePreflight, false);
     }
+    
 
-    public boolean isCheckpointEnabled() {
-        return Boolean.parseBoolean(this.defaultProps.getProperty(
-                PropertyKeys.ENABLE_CHECKPOINTS,
-                PropertyKeys.DEFAULT_ENABLE_CHECKPOINTS).trim());
+//    public boolean isCheckpointEnabled() {
+//        return Boolean.parseBoolean(this.defaultProps.getProperty(
+//                PropertyKeys.ENABLE_CHECKPOINTS,
+//                PropertyKeys.DEFAULT_ENABLE_CHECKPOINTS).trim());
 
     public long getEventBatchFlushTimeout() {
         return applyDefaultIfNull(this.eventBatchFlushTimeout, DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
     }
     
     public boolean isAckRequired() {
-        return Boolean.parseBoolean(this.defaultProps.getProperty(
-                PropertyKeys.REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER,
-                PropertyKeys.DEFAULT_REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER));
+        return applyDefaultIfNull(this.requireAcksEnabledOnSplunkServer, false);
     }
 
     public ConnectionImpl.HecEndpoint getHecEndpointType() {
