@@ -12,6 +12,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLContext;
+import org.apache.http.HttpResponse;
+import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.slf4j.Logger;
 import org.apache.http.conn.ssl.TrustStrategy;
@@ -20,6 +22,7 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
+import org.apache.http.protocol.HttpContext;
 import sun.security.provider.X509Factory;
 
 
@@ -184,7 +187,13 @@ public final class HttpClientFactory {
                 //.setDefaultCookieSpecRegistry(buildRegistry()) //DO NOT MANAGE COOKIES AT THIS LEVEL
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
-                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
+                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host)).setKeepAliveStrategy(new ConnectionKeepAliveStrategy() {
+            @Override
+            public long getKeepAliveDuration(HttpResponse response,
+                    HttpContext context) {
+                return Long.MAX_VALUE;
+            }
+        })
                 .build();
     }
 
