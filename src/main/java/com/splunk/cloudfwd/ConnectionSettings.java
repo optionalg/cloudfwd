@@ -16,66 +16,214 @@
 package com.splunk.cloudfwd;
 
 import static com.splunk.cloudfwd.PropertyKeys.ACK_POLL_MS;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
-import com.splunk.cloudfwd.error.HecMissingPropertiesException;
-import com.splunk.cloudfwd.error.HecIllegalStateException;
-import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.CHANNELS_PER_DESTINATION;
-import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_ACK_POLL_MS;
-import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_CHANNELS_PER_DESTINATION;
-import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_HEALTH_POLL_MS;
-import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_MAX_TOTAL_CHANNELS;
-import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_UNRESPONSIVE_MS;
-import static com.splunk.cloudfwd.PropertyKeys.HEALTH_POLL_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MAX_TOTAL_CHANNELS;
-import static com.splunk.cloudfwd.PropertyKeys.MIN_HEALTH_POLL_MS;
-import static com.splunk.cloudfwd.PropertyKeys.REQUIRED_KEYS;
-import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.Endpoints;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Properties;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  *
  * @author ghendrey
  */
 public class ConnectionSettings {
-    protected final Logger LOG;
-    protected Properties defaultProps = new Properties();
-    //protected Properties overrides;
+    protected Logger LOG;
+    protected Logger GENERIC_LOG;
+    protected ConnectionSettings overrides;
     protected ConnectionImpl connection;
 
-    public ConnectionSettings(Connection c, Properties overrides) {
-        //this.overrides = overrides;
-        this.connection = (ConnectionImpl)c;
-        this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
-        this.parsePropertiesFile(overrides);
+    @JsonProperty("url")
+    private String url;
+
+    @JsonProperty("splunk_hec_token")
+    private String splunkHecToken;
+
+    @JsonProperty("splunk_hec_host")
+    private String splunkHecHost;
+
+    @JsonProperty("splunk_hec_index")
+    private String splunkHecIndex;
+
+    @JsonProperty("splunk_hec_source")
+    private String splunkHecSource;
+    
+    @JsonProperty("splunk_hec_sourcetype")
+    private String splunkHecSourcetype;
+    
+    @JsonProperty("ssl_cert_hostname_regex")
+    private String sslCertHostnameRegex;
+
+    @JsonProperty("hec_endpoint_type")
+    private String hecEndpointType = DEFAULT_HEC_ENDPOINT_TYPE;
+    
+    @JsonProperty("enable_checkpoints")
+    private Boolean enableCheckpoints = DEFAULT_ENABLE_CHECKPOINTS;
+
+    @JsonProperty("disable_certificate_validation")
+    private Boolean disableCertificateValidation = false;
+
+    @JsonProperty("channels_per_dest")
+    private int channelsPerDest = DEFAULT_CHANNELS_PER_DESTINATION;
+
+    @JsonProperty("mock_http")
+    private Boolean mockHttp = false;
+
+    @JsonProperty("mock_force_url_map_to_one")
+    private Boolean mockForceUrlMapToOne;
+
+    @JsonProperty("enabled")
+    private Boolean testPropertiesEnabled;
+
+    @JsonProperty("unresponsive_channel_decom_ms")
+    private long unresponsiveChannelDecomMS = DEFAULT_UNRESPONSIVE_MS;
+
+    @JsonProperty("max_total_channels")
+    private int maxTotalChannels = DEFAULT_MAX_TOTAL_CHANNELS;
+
+    @JsonProperty("max_unacked_per_channel")
+    private int maxUnackedPerChannel = DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL;
+
+    @JsonProperty("event_batch_size")
+    private int eventBatchSize = DEFAULT_EVENT_BATCH_SIZE;
+
+    @JsonProperty("ack_poll_ms")
+    private long ackPollMS = DEFAULT_ACK_POLL_MS;
+
+    @JsonProperty("health_poll_ms")
+    private long healthPollMS = DEFAULT_HEALTH_POLL_MS;
+
+    @JsonProperty("channel_decom_ms")
+    private long channelDecomMS = DEFAULT_DECOM_MS;
+    
+    @JsonProperty("channel_quiesce_timeout_ms")
+    private long channelQuiesceTimeoutMS = DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS;
+
+    @JsonProperty("ack_timeout_ms")
+    private long ackTimeoutMS = DEFAULT_ACK_TIMEOUT_MS;
+
+    @JsonProperty("blocking_timeout_ms")
+    private long blockingTimeoutMS = DEFAULT_BLOCKING_TIMEOUT_MS;
+
+    @JsonProperty("mock_http_classname")
+    private String mockHttpClassname;
+    
+    @JsonProperty("preflight_timeout")
+    private long preFlightTimeoutMS = DEFAULT_PREFLIGHT_TIMEOUT_MS;
+
+    @JsonProperty("ssl_cert_content")
+    private String sslCertContent;
+
+    @JsonProperty("cloud_ssl_cert_content")
+    private String cloudSslCertContent;
+
+    @JsonProperty("enable_http_debug")
+    private Boolean enableHttpDebug = false;
+
+    @JsonProperty("max_retries")
+    private int maxRetries = DEFAULT_RETRIES;
+
+    @JsonProperty("max_preflight_retries")
+    private int maxPreflightTries = DEFAULT_PREFLIGHT_RETRIES;
+    
+    @JsonProperty("event_batch_flush_timeout_ms")
+    private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
+
+    public static ConnectionSettings fromPropsFile(String pathToFile) {
+        // use Jackson to populate this ConnectionSettings instance from file
+        JavaPropsMapper mapper = new JavaPropsMapper();
+        try {
+            InputStream inputStream = ConnectionSettings.class.getResourceAsStream(pathToFile);
+            if (inputStream != null) {
+                ConnectionSettings connectionSettings = mapper.readValue(inputStream, ConnectionSettings.class);
+                
+                return connectionSettings;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not map Properties file to Java object - please check file path.", e);
+        }
+
+        return null;
     }
 
-    public ConnectionSettings(Connection c) {
+    public void setConnection(Connection c) {
         this.connection = (ConnectionImpl)c;
         this.LOG = this.connection.getLogger(ConnectionSettings.class.getName());
-        this.parsePropertiesFile(new Properties());
     }
 
-    public void putProperty(String k, String v) {
-        this.defaultProps.put(k, v);
+    /* ***************************** UTIL ******************************* */
+
+    protected <T> T applyDefaultIfNull(T value, T defaultValue) {
+        return value == null ? defaultValue : value;
     }
+
+    /* ***************************** GETTERS ******************************* */
+    /*
+       If property value is undefined, then return the default. Otherwise, return property value.
+       If set, the property value has already been validated by the property setter at init of ConnectionImpl
+       when the cloudfwd.properties file or overrides object have been loaded into the defaultProps object.
+     */
+
 
     public List<URL> getUrls() {
-        return urlsStringToList(defaultProps.getProperty(
-                PropertyKeys.COLLECTOR_URI));
+        return urlsStringToList(this.url);
+    }
+
+    public String getUrlString() {
+        return this.url;
+    }
+
+    protected List<URL> urlsStringToList(String urlsListAsString) {
+        List<URL> urlList = new ArrayList<>();
+        String[] splits = urlsListAsString.split(",");
+        URL url = null;
+        String urlString = null;
+        for (int i=0;i<splits.length;i++) {
+            urlString = splits[i];
+            try {
+                url =getUrlWithAutoAssignedPorts(urlString);
+                urlList.add(url);
+            } catch (MalformedURLException ex) {
+                String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage();
+                HecConnectionStateException e = new HecConnectionStateException(msg,
+                        HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
+                if (connection != null) {
+                    connection.getCallbacks().systemError(e);
+                }
+                getLog().error(e.getMessage(), e);
+            }
+        }
+        urlList.sort(Comparator.comparing(URL::toString));
+        return urlList;
+    }
+
+    private URL getUrlWithAutoAssignedPorts(String urlString) throws MalformedURLException {
+        URL url = new URL(urlString.trim());
+        if(!url.getProtocol().equals("https")){
+            throw new HecConnectionStateException("protocol '"+url.getProtocol()+ "' is not supported. Use 'https'.",
+                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
+        }
+        if (url.getPort() == -1) {
+            int port = 443;
+            getLog().warn("No port provided for url: " + urlString.trim()
+                    + ". Defaulting to port " + port);
+            return new URL(url.getProtocol(), url.getHost(), port, url.getFile());
+        }
+        return url;
     }
 
     // Compares if the first URL matches Cloud>Trail domain (cloud.splunk.com)
@@ -84,220 +232,102 @@ public class ConnectionSettings {
                 matches("^.+\\.cloud\\.splunk\\.com.*$");
     }
 
-    private int handleInt(String key, String defaultVal) {
-        int n = Integer.parseInt(defaultProps.getProperty(
-                key,defaultVal).trim());        
-        if (n < 1) {
-            int deflt = Integer.parseInt(defaultVal);
-            LOG.debug("{}, defaulting {} to {}", n, key, deflt);
-            return deflt;
-        } else {
-            return n;
-        }
-    }
-    
-    private long handleLong(String key, String defaultVal) {
-        long n = Long.parseLong(defaultProps.getProperty(
-                key,defaultVal).trim());        
-        if (n < 1) {
-            long deflt = Integer.parseInt(defaultVal);
-            LOG.debug("{}, defaulting {} to {}", n, key, deflt);
-            return deflt;
-        } else {
-            return n;
-        }
-    }    
-    
     public int getChannelsPerDestination() {
-        return handleInt(CHANNELS_PER_DESTINATION, DEFAULT_CHANNELS_PER_DESTINATION);
+        return applyDefaultIfNull(this.channelsPerDest, DEFAULT_CHANNELS_PER_DESTINATION);
     }
 
     public long getUnresponsiveChannelDecomMS() {
-        return handleLong(UNRESPONSIVE_MS, DEFAULT_UNRESPONSIVE_MS);
+        return applyDefaultIfNull(this.unresponsiveChannelDecomMS, DEFAULT_UNRESPONSIVE_MS);
     }
 
     public long getAckPollMS() {
-        long interval = Long.parseLong(defaultProps.getProperty(
-                ACK_POLL_MS,
-                DEFAULT_ACK_POLL_MS).trim());
-        if (interval <= 0) {
-            long was = interval;
-            interval = PropertyKeys.MIN_ACK_POLL_MS;
-            LOG.debug("{}, defaulting {} to {}", was, ACK_POLL_MS,interval);  
-        }
-        return interval;
+        return applyDefaultIfNull(this.ackPollMS, DEFAULT_ACK_POLL_MS);
     }
 
     public long getHealthPollMS() {
-        long interval = Long.parseLong(defaultProps.getProperty(
-                HEALTH_POLL_MS,
-                DEFAULT_HEALTH_POLL_MS).trim());
-        if (interval <= 0) {
-            long was = interval;
-            interval = MIN_HEALTH_POLL_MS;
-            LOG.debug("{}, defaulting {} to {}", was, HEALTH_POLL_MS,interval);  
-        }
-        return interval;
+        return applyDefaultIfNull(this.healthPollMS, DEFAULT_HEALTH_POLL_MS);
     }
 
     public int getMaxTotalChannels() {
-        int max = Integer.parseInt(defaultProps.getProperty(
-                MAX_TOTAL_CHANNELS,
-                DEFAULT_MAX_TOTAL_CHANNELS).trim()); //default no limit
-        if (max < 1) {
-            int was = max;
-            max = Integer.MAX_VALUE; //effectively no limit by default
-            LOG.debug("{}, defaulting {} to {}", was, MAX_TOTAL_CHANNELS,max);              
-        }
-        return max;
+        return applyDefaultIfNull(this.maxTotalChannels, DEFAULT_MAX_TOTAL_CHANNELS);
     }
 
     public int getMaxUnackedEventBatchPerChannel() {
-        int max = Integer.parseInt(defaultProps.getProperty(
-                PropertyKeys.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,
-                PropertyKeys.DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL).
-                trim());
-        if (max < PropertyKeys.MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL) {
-            max = 10000;
-        }
-        return max;
+        return applyDefaultIfNull(this.maxUnackedPerChannel, DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL);
     }
 
     public int getEventBatchSize() {
-        int max = Integer.parseInt(defaultProps.getProperty(
-                PropertyKeys.EVENT_BATCH_SIZE,
-                PropertyKeys.DEFAULT_EVENT_BATCH_SIZE).trim());
-        if (max < 1) {
-            max = PropertyKeys.MIN_EVENT_BATCH_SIZE;
-        }
-        return max;
+        return applyDefaultIfNull(this.eventBatchSize, DEFAULT_EVENT_BATCH_SIZE);
     }
 
     public long getChannelDecomMS() {
-        long decomMs = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.CHANNEL_DECOM_MS,
-                PropertyKeys.DEFAULT_DECOM_MS).trim());
-        if (decomMs <= 1) {
-            return -1;
-        }
-        if (decomMs < PropertyKeys.MIN_DECOM_MS && !isMockHttp()) {
-            LOG.warn(
-                    "Ignoring setting for " + PropertyKeys.CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + PropertyKeys.MIN_DECOM_MS);
-            decomMs = PropertyKeys.MIN_DECOM_MS;
-        }
-        return decomMs;
+        return applyDefaultIfNull(this.channelDecomMS, DEFAULT_DECOM_MS);
     }
     
     public long getChannelQuiesceTimeoutMS() {
-        long timeout = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS,
-                PropertyKeys.DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS).trim());
-        if (timeout < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
-            LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS + 
-                    " was set to a potentially too-low value, reset to min value: " + timeout);
-            timeout = PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
-        }
-        return timeout;
+        return applyDefaultIfNull(this.channelQuiesceTimeoutMS, DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS);
     }
 
     public long getAckTimeoutMS() {
-        long timeout = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.ACK_TIMEOUT_MS,
-                PropertyKeys.DEFAULT_ACK_TIMEOUT_MS).trim());
-        if (timeout <= 0) {
-            timeout = Long.MAX_VALUE;
-        } else if (timeout < PropertyKeys.MIN_ACK_TIMEOUT_MS) {
-            LOG.warn(
-                    PropertyKeys.ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeout);
-        }
-        return timeout;
-    }
-    
-    public long getPreFlightTimeout() {
-        long timeout = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.PREFLIGHT_TIMEOUT_MS,
-                PropertyKeys.DEFAULT_PREFLIGHT_TIMEOUT_MS));
-        if (timeout <= 0) {
-            throw new IllegalArgumentException(
-                    PropertyKeys.PREFLIGHT_TIMEOUT_MS + " must be greater than zero.");
-        }
-        return timeout;
+        return applyDefaultIfNull(this.ackTimeoutMS, DEFAULT_ACK_TIMEOUT_MS);
     }
 
     public long getBlockingTimeoutMS() {
-        long timeout = Long.parseLong(defaultProps.getProperty(
-                PropertyKeys.BLOCKING_TIMEOUT_MS,
-                PropertyKeys.DEFAULT_BLOCKING_TIMEOUT_MS).trim());
-        if (timeout < 0) {
-            throw new IllegalArgumentException(
-                    PropertyKeys.BLOCKING_TIMEOUT_MS + " must be positive.");
-        }
-        return timeout;
+        return applyDefaultIfNull(this.blockingTimeoutMS, DEFAULT_BLOCKING_TIMEOUT_MS);
+    }
+    
+    public String getMockHttpClassname() {
+        return applyDefaultIfNull(this.mockHttpClassname, "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
     }
 
+    public boolean isForcedUrlMapToSingleAddr() {
+        return applyDefaultIfNull(this.mockForceUrlMapToOne, false);
+    }
+
+
     public Endpoints getSimulatedEndpoints() {
-        String classname = this.defaultProps.getProperty(
-                PropertyKeys.MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.SimulatedHECEndpoints");
         try {
-            return (Endpoints) Class.forName(classname).newInstance();
+            return (Endpoints) Class.forName(getMockHttpClassname()).newInstance();
         } catch (Exception ex) {
-            LOG.error(ex.getMessage(), ex);
+            getLog().error(ex.getMessage(), ex);
             throw new RuntimeException(ex.getMessage(), ex);
         }
     }
 
+    public long getPreFlightTimeoutMS() {
+        return applyDefaultIfNull(this.preFlightTimeoutMS, DEFAULT_PREFLIGHT_TIMEOUT_MS);
+    }
+
     public boolean isCertValidationDisabled() {
-        return Boolean.parseBoolean(this.defaultProps.getProperty(
-                PropertyKeys.DISABLE_CERT_VALIDATION,
-                "false").trim());
+        return applyDefaultIfNull(this.disableCertificateValidation, false);
     }
 
-    public boolean enabledHttpDebug() {
-        return Boolean.parseBoolean(this.defaultProps.getProperty(
-                PropertyKeys.ENABLE_HTTP_DEBUG,
-                "false").trim());
+    public boolean isHttpDebugEnabled() {
+        return applyDefaultIfNull(this.enableHttpDebug, false);
     }
 
-    /**
-     *
-     * @return
-     */
+    public boolean isCheckpointEnabled() {
+        return applyDefaultIfNull(this.enableCheckpoints, DEFAULT_ENABLE_CHECKPOINTS);
+    }
+
     public String getSSLCertContent() {
-        String certKey = PropertyKeys.SSL_CERT_CONTENT;
+        String certKey = this.sslCertContent;
         if (isCloudInstance()) {
-            certKey = PropertyKeys.CLOUD_SSL_CERT_CONTENT;
+            certKey = this.cloudSslCertContent;
         }
 
-        String sslCertContent = defaultProps.getProperty(certKey);
-        if (sslCertContent != null) {
-            return sslCertContent.trim();
+        if (certKey != null) {
+            return certKey.trim();
         }
         return "";
     }
 
-    public void enableHttpDebug() {
-        System.setProperty("org.apache.commons.logging.Log",
-                "org.apache.commons.logging.impl.SimpleLog");
-        System.setProperty("org.apache.commons.logging.simplelog.showdatetime",
-                "true");
-        System.setProperty(
-                "org.apache.commons.logging.simplelog.log.httpclient.wire.header",
-                "debug");
-        System.setProperty(
-                "org.apache.commons.logging.simplelog.log.org.apache.http",
-                "debug");
+    public int getMaxRetries() {
+        return applyDefaultIfNull(this.maxRetries, DEFAULT_RETRIES);
     }
 
-    public int getMaxRetries() {
-        int max = Integer.parseInt(defaultProps.
-                getProperty(PropertyKeys.RETRIES,
-                        PropertyKeys.DEFAULT_RETRIES).trim());
-        if (max < 1) {
-            LOG.debug(PropertyKeys.RETRIES + ": unlimited");
-            max = Integer.MAX_VALUE;
-        }
-        return max;
+    public int getMaxPreflightRetries() {
+        return applyDefaultIfNull(this.maxPreflightTries, DEFAULT_PREFLIGHT_RETRIES);
     }
     
     public int getMaxPreflightRetries() {
@@ -321,6 +351,9 @@ public class ConnectionSettings {
         return Boolean.parseBoolean(this.defaultProps.getProperty(
                 PropertyKeys.ENABLE_CHECKPOINTS,
                 PropertyKeys.DEFAULT_ENABLE_CHECKPOINTS).trim());
+
+    public long getEventBatchFlushTimeout() {
+        return applyDefaultIfNull(this.eventBatchFlushTimeout, DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
     }
     
     public boolean isAckRequired() {
@@ -331,171 +364,284 @@ public class ConnectionSettings {
 
     public ConnectionImpl.HecEndpoint getHecEndpointType() {
         ConnectionImpl.HecEndpoint endpoint;
-        String type = defaultProps.getProperty(PropertyKeys.HEC_ENDPOINT_TYPE,
-                PropertyKeys.DEFAULT_HEC_ENDPOINT_TYPE).trim();
+        String type = applyDefaultIfNull(this.hecEndpointType, DEFAULT_HEC_ENDPOINT_TYPE);
         if (type.equals("raw")) {
             endpoint = ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT;
         } else if (type.equals("event")) {
             endpoint = ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT;
         } else {
-            LOG.warn(
+            getLog().warn(
                     "Unrecognized HEC Endpoint type. Defaulting to " + PropertyKeys.DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
             endpoint = ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT;
         }
         return endpoint;
     }
 
-    private  void setHecEndpointType(String type) {
-        if(!type.equals("raw") && !type.equals("event")){
-            throw new HecConnectionStateException("Unsupported value for "+PropertyKeys.HEC_ENDPOINT_TYPE+". Should be [raw|event].", HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
-        }
-        defaultProps.put(PropertyKeys.HEC_ENDPOINT_TYPE, type);
-    }
-    
-    public void setHecEndpointType(
-            ConnectionImpl.HecEndpoint type) {
-        if (type == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
-            defaultProps.put(PropertyKeys.HEC_ENDPOINT_TYPE, "event");
-        } else {
-            defaultProps.put(PropertyKeys.HEC_ENDPOINT_TYPE, "raw");
-        }
-    }
-
-    public Properties getDiff(Properties props) {
-        Properties diff = new Properties();
-        diff.putAll(defaultProps);
-        diff.putAll(props);
-        diff.entrySet().removeAll(defaultProps.entrySet());
-        return diff;
-    }
-
     public String getToken() {
-        if (defaultProps.getProperty(PropertyKeys.TOKEN) == null) {
+        if (this.splunkHecToken == null) {
             throw new HecConnectionStateException(
                     "HEC token missing from Connection configuration. " + "See PropertyKeys.TOKEN",
                     HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
         }
-        return defaultProps.getProperty(PropertyKeys.TOKEN);
+        return this.splunkHecToken;
+    }
+
+    public boolean isMockHttp() {
+        return applyDefaultIfNull(this.mockHttp, false);
+    }
+
+
+    public Boolean getTestPropertiesEnabled() {
+        return applyDefaultIfNull(this.testPropertiesEnabled, false);
     }
 
     public String getHost() {
-        return defaultProps.getProperty(PropertyKeys.HOST);
+        return this.splunkHecHost;
     }
 
     public String getSource() {
-        return defaultProps.getProperty(PropertyKeys.SOURCE);
+        return this.splunkHecSource;
     }
 
     public String getSourcetype() {
-        return defaultProps.getProperty(PropertyKeys.SOURCETYPE);
+        return this.splunkHecSourcetype;
     }
 
     public String getIndex() {
-        return defaultProps.getProperty(PropertyKeys.INDEX);
+        return this.splunkHecIndex;
     }
 
-    protected List<URL> urlsStringToList(String urlsListAsString) {
-        List<URL> urlList = new ArrayList<>();
-        String[] splits = urlsListAsString.split(",");
-        URL url = null;
-        String urlString = null;
-        for (int i=0;i<splits.length;i++) {
-            urlString = splits[i];
-            try {
-                url =getUrlWithAutoAssignedPorts(urlString);
-                urlList.add(url);
-            } catch (MalformedURLException ex) {
-                String msg = "url:'"+urlString+"',  "+ ex.getLocalizedMessage() ;
-                HecConnectionStateException e = new HecConnectionStateException(msg,
-                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION, ex);
-                connection.getCallbacks().systemError(e);
-                LOG.error(msg);
-            }
+    /* ***************************** SETTERS ******************************* */
+    // Setters should not throw Exceptions or call callbacks on Connection instance
+    // because they may be called before the Connection is instantiated.
+    // Any setter behavior that should happen on the Connection instance should be defined
+    // in ConnectionSettings > setConnection() method (or in Connections > create())
+
+    public void setChannelsPerDestination(int numChannels) {
+        if (numChannels < 1) {
+            int was = numChannels;
+            numChannels = DEFAULT_CHANNELS_PER_DESTINATION;
+            getLog().debug("{}, defaulting {} to {}", was, CHANNELS_PER_DESTINATION, numChannels);
+            this.channelsPerDest = DEFAULT_CHANNELS_PER_DESTINATION;
         }
-        urlList.sort(Comparator.comparing(URL::toString));
-        return urlList;
+        this.channelsPerDest = numChannels;
     }
 
-    protected boolean isMockHttp() {
-        return Boolean.parseBoolean(this.defaultProps.getProperty(
-                PropertyKeys.MOCK_HTTP_KEY,
-                "false").trim());
+    public void setUnresponsiveMS(long decomMS) {
+        if (decomMS < 1) {
+            long was = decomMS;
+            decomMS = DEFAULT_UNRESPONSIVE_MS;
+            getLog().debug("{}, defaulting {} to {}", was, UNRESPONSIVE_MS, decomMS);
+            this.unresponsiveChannelDecomMS = DEFAULT_UNRESPONSIVE_MS;
+        }
+        this.unresponsiveChannelDecomMS = decomMS;
+    }
+
+    public void setAckPollMS(long pollMS) {
+        if (pollMS <= 0) {
+            long was = pollMS;
+            pollMS = MIN_ACK_POLL_MS;
+            getLog().debug("{}, defaulting {} to smallest allowed value of {}", was, ACK_POLL_MS, pollMS);
+        }
+        this.ackPollMS = pollMS;
+    }
+
+    public void setHealthPollMS(long pollMS) {
+        if (pollMS <= 0) {
+            long was = pollMS;
+            pollMS = MIN_HEALTH_POLL_MS;
+            getLog().debug("{}, defaulting {} to smallest allowed value {}", was, HEALTH_POLL_MS, pollMS);
+        }
+        this.healthPollMS = pollMS;
+    }
+
+    public void setMaxTotalChannels(int totalChannels) {
+        if (totalChannels < 1) {
+            int was = totalChannels;
+            totalChannels = Integer.MAX_VALUE; //effectively no limit by default
+            getLog().debug("{}, defaulting {} to no-limit {}", was, MAX_TOTAL_CHANNELS, totalChannels);
+        }
+        this.maxTotalChannels = totalChannels;
+    }
+
+    public void setMaxUnackedEventBatchPerChannel(int batchesPerChannel) {
+        int max = 10000;
+        if (batchesPerChannel < MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL) {
+            int was = batchesPerChannel;
+            batchesPerChannel = max;
+            getLog().debug("{}, defaulting {} to no limit {}", was, MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, batchesPerChannel);
+        }
+        this.maxUnackedPerChannel = batchesPerChannel;
     }
 
     /**
      * @param numChars the size of the EventBatchImpl in characters (not bytes)
      */
     public void setEventBatchSize(int numChars) {
-        putProperty(PropertyKeys.EVENT_BATCH_SIZE, String.
-                valueOf(numChars));
+        if (numChars < 1) {
+            int was = numChars;
+            numChars = MIN_EVENT_BATCH_SIZE;
+            getLog().debug("{}, defaulting {} to smallest allowed value {}", was, EVENT_BATCH_SIZE, numChars);
+        }
+        this.eventBatchSize = numChars;
     }
 
-    /**
-     * Use this method to change multiple settings on the connection. See
-     * PropertyKeys class for more information.
-     *
-     * @param props
-     */
-    public void setProperties(Properties props) throws UnknownHostException {
-        Properties diffs = getDiff(props);
-        for (String key : diffs.stringPropertyNames()) {
-            String val = diffs.getProperty(key);
-            switch (key) {
-                case PropertyKeys.ACK_TIMEOUT_MS:
-                    setAckTimeoutMS(Long.parseLong(val));
-                    break;
-                case PropertyKeys.COLLECTOR_URI:
-                    setUrls(val);
-                    break;
-                case PropertyKeys.TOKEN:
-                    setToken(val);
-                    break;
-                case PropertyKeys.HEC_ENDPOINT_TYPE:
-                    setHecEndpointType(val);
-                    break;
-                case PropertyKeys.HOST:
-                    setHost(val);
-                    break;
-                case PropertyKeys.INDEX:
-                    setIndex(val);
-                    break;
-                case PropertyKeys.SOURCE:
-                    setSource(val);
-                    break;
-                case PropertyKeys.SOURCETYPE:
-                    setSourcetype(val);
-                    break;
-                default:
-                    LOG.error("Attempt to change property not supported: " + key);
+    public void setChannelDecomMS(long decomMS) {
+        if (decomMS <= 1) {
+            long was = decomMS;
+            decomMS = -1;
+            getLog().debug("{}, defaulting {} to no-limit {}", was, CHANNEL_DECOM_MS, decomMS);
+        } else if (decomMS < MIN_DECOM_MS && !isMockHttp()) {
+            getLog().warn(
+                    "Ignoring setting for " + CHANNEL_DECOM_MS + " because it is less than minimum acceptable value: " + MIN_DECOM_MS);
+            decomMS = MIN_DECOM_MS;
+        }
+        this.channelDecomMS = decomMS;
+    }
+    
+    public void setChannelQuiesceTimeoutMS(long timeoutMS) {
+        if (timeoutMS < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
+            LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS +
+                    " was set to a potentially too-low value, reset to min value: " + timeoutMS);
+            this.channelQuiesceTimeoutMS = MIN_CHANNEL_QUIESCE_TIMEOUT_MS;
+        } else {
+            this.channelQuiesceTimeoutMS = timeoutMS;
+        }
+    }
+
+    public void setAckTimeoutMS(long timeoutMS) {
+        if (timeoutMS != getAckTimeoutMS()) {
+            if (timeoutMS <= 0) {
+                long was = timeoutMS;
+                timeoutMS = Long.MAX_VALUE;
+                getLog().debug("{}, defaulting {} to maximum allowed value {}", was, ACK_TIMEOUT_MS, timeoutMS);
+            } else if (timeoutMS < MIN_ACK_TIMEOUT_MS && !isMockHttp()) {
+                getLog().warn(ACK_TIMEOUT_MS + " was set to a potentially too-low value, reset to min value: " + timeoutMS);
+                timeoutMS = MIN_ACK_TIMEOUT_MS;
+            }
+            this.ackTimeoutMS = timeoutMS;
+            if (connection != null) {
+                connection.getTimeoutChecker().setTimeout();
             }
         }
     }
 
-    /**
-     * Set event acknowledgement timeout. See PropertyKeys.ACK_TIMEOUT_MS for
-     * more information.
-     *
-     * @param ms
-     */
-    public synchronized void setAckTimeoutMS(long ms) {
-        if (ms != getAckTimeoutMS()) {
-            putProperty(ACK_TIMEOUT_MS, String.valueOf(ms));
-            connection.getTimeoutChecker().setTimeout(ms);
+    public void setBlockingTimeoutMS(long timeoutMS) {
+        if (timeoutMS < 0) {
+            throw new IllegalArgumentException(BLOCKING_TIMEOUT_MS + " must be positive.");
+        }
+        this.blockingTimeoutMS = timeoutMS;
+    }
+
+    public void setMockHttpClassname(String endpoints) {
+        this.mockHttpClassname = endpoints;
+    }
+
+    public void setMockForceUrlMapToOne(Boolean force) {
+        this.mockForceUrlMapToOne = force;
+    }
+    
+    public void setPreFlightTimeoutMS(long timeoutMS) {
+        if (timeoutMS <= 0) {
+            throw new IllegalArgumentException(
+                    PropertyKeys.PREFLIGHT_TIMEOUT_MS + " must be greater than zero.");
+        }
+        this.preFlightTimeoutMS = timeoutMS;
+    }
+
+    public void disableCertValidation() {
+        this.disableCertificateValidation = true;
+    }
+    
+    public void enableCertValidation() {
+        this.disableCertificateValidation = false;
+    }
+
+    public void setHttpDebugEnabled(Boolean mode) {
+        if (mode == true) {
+            System.setProperty("org.apache.commons.logging.Log",
+                    "org.apache.commons.logging.impl.SimpleLog");
+            System.setProperty("org.apache.commons.logging.simplelog.showdatetime",
+                    "true");
+            System.setProperty(
+                    "org.apache.commons.logging.simplelog.log.httpclient.wire.header",
+                    "debug");
+            System.setProperty(
+                    "org.apache.commons.logging.simplelog.log.org.apache.http",
+                    "debug");
+        }
+        this.enableHttpDebug = mode;
+    }
+
+    public void setCheckpointEnabled(Boolean mode) {
+        this.enableCheckpoints = mode;
+    }
+
+    public void setSSLCertContent(String cert) {
+        if (isCloudInstance()) {
+            this.cloudSslCertContent = cert;
+        } else {
+            this.sslCertContent = cert;
         }
     }
 
-      /**
-   * Set Http Event Collector token to use.
-   * May take up to PropertyKeys.CHANNEL_DECOM_MS milliseconds
-   * to go into effect.
-   * @param token
-   */
-  public void setToken(String token) {
-    if (!token.equals(getToken())) {
-      putProperty(PropertyKeys.TOKEN, token);
-      checkAndRefreshChannels();
+    public void setMaxRetries(int retries) {
+        if (retries < 1) {
+            int was = retries;
+            retries = Integer.MAX_VALUE;
+            getLog().debug("{}, defaulting {} to maximum allowed value {}", was, RETRIES, retries);
+        }
+        this.maxRetries = retries;
     }
-  }
+
+    public void setMaxPreflightRetries(int retries) {
+        if (retries < 1) {
+            int was = retries;
+            retries = Integer.MAX_VALUE;
+            getLog().debug("{}, defaulting {} to maximum allowed value (unlimited) {}", was, PREFLIGHT_RETRIES, retries);
+        }
+        this.maxPreflightTries = retries;
+    }
+    
+    public void setEventBatchFlushTimeout(long timeoutMS) {
+        if (timeoutMS <= 0) {
+            timeoutMS = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
+            getLog().warn("Property {} must be greater than 0. Using default value of {}",
+                    EVENT_BATCH_FLUSH_TIMEOUT_MS, DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS);
+        }
+        this.eventBatchFlushTimeout = timeoutMS;
+    }
+
+    public void setHecEndpointType(ConnectionImpl.HecEndpoint type) {
+        String endpoint;
+        if (type == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
+            endpoint = "event";
+        } else if (type == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+            endpoint = "raw";
+        } else {
+            getLog().warn(
+                    "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
+            endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
+        }
+        this.hecEndpointType = endpoint;
+    }
+
+    /**
+     * Set Http Event Collector token to use.
+     * May take up to PropertyKeys.CHANNEL_DECOM_MS milliseconds
+     * to go into effect.
+     * @param token
+     */
+    public void setToken(String token) {
+        if (!token.equals(this.splunkHecToken)) {
+            this.splunkHecToken = token;
+            checkAndRefreshChannels();
+        }
+    }
+
+    public void setMockHttp(Boolean mode) {
+        this.mockHttp = mode;
+    }
 
   /**
    * Set urls to send to. See PropertyKeys.COLLECTOR_URI
@@ -503,105 +649,83 @@ public class ConnectionSettings {
    * @param urls comma-separated list of urls
    */
   public void setUrls(String urls) {
-    if(!urls.equals(defaultProps.getProperty(PropertyKeys.COLLECTOR_URI))){
-       // a single url or a list of comma separated urls
-      putProperty(PropertyKeys.COLLECTOR_URI, urls);
-      checkAndRefreshChannels();
-    }
-  }
-
-  /**
-   * Checking if LoadBalancer exists before refreshing channels
-   */
-  private void checkAndRefreshChannels() {
-      if (connection.getLoadBalancer() != null) {
-          connection.getLoadBalancer().refreshChannels();
+      if (connection != null && !urlsStringToList(urls).equals(getUrls())) {
+          this.url = urls;
+          checkAndRefreshChannels();
+      } else {
+          this.url = urls;
       }
   }
 
+  public void setTestPropertiesEnabled(Boolean enabled) {
+      this.testPropertiesEnabled = enabled;
+  }
+  
     /**
      * Set Host value for the data feed
      * @param host Host value for the data feed
      */
-    public void setHost(String host) {
-        if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
-            putProperty(PropertyKeys.HOST, host);
-        }
-    }
+  public void setHost(String host) {
+      if (!StringUtils.isEmpty(host) && !host.equals(getHost())) {
+          this.splunkHecHost = host;
+          checkAndRefreshChannels();
+      }
+  }
 
     /**
      * Set Splunk index in which the data feed is stored
      * @param index The Splunk index in which the data feed is stored
      */
-    public void setIndex(String index) {
-        if (!StringUtils.isEmpty(index) && !index.equals(getIndex())) {
-            putProperty(PropertyKeys.INDEX, index);
-        }
-    }
+  public void setIndex(String index) {
+      if (!StringUtils.isEmpty(index) && !index.equals(getIndex())) {
+          this.splunkHecIndex = index;
+          checkAndRefreshChannels();
+      }
+  }
 
     /**
      * Set the source of the data feed
      * @param source The source of the data feed
      */
-    public void setSource(String source) {
-        if (!StringUtils.isEmpty(source) && !source.equals(getSource())) {
-            putProperty(PropertyKeys.SOURCE, source);
-        }
-    }
+  public void setSource(String source) {
+      if (!StringUtils.isEmpty(source) && !source.equals(getSource())) {
+          this.splunkHecSource = source;
+          checkAndRefreshChannels();
+      }
+  }
 
     /**
      * Set the source type of events of data feed
      * @param sourcetype The source type of events of data feed
      */
-    public void setSourcetype(String sourcetype) {
-        if (!StringUtils.isEmpty(sourcetype) && !sourcetype.equals(getSourcetype())) {
-            putProperty(PropertyKeys.SOURCETYPE, sourcetype);
-        }
-    }
+  public void setSourcetype(String sourcetype) {
+      if (!StringUtils.isEmpty(sourcetype) && !sourcetype.equals(getSourcetype())) {
+          this.splunkHecSourcetype = sourcetype;
+          checkAndRefreshChannels(); 
+      }
+  }
   
-    // All properties are populated by following order of precedence: 1) overrides, 2) cloudfwd.properties, then 3) defaults.
-    private void parsePropertiesFile(Properties overrides) {
-        try {
-            InputStream is = getClass().getResourceAsStream("/cloudfwd.properties");
-            if (is != null) {
-                defaultProps.load(is);
-            }
-
-            if (overrides != null) {
-                defaultProps.putAll(overrides);
-            }
-
-            // If required properties are missing from cloudfwd.properties, overrides, and defaults, then throw exception.
-            for (String key : REQUIRED_KEYS) {
-                if (this.defaultProps.getProperty(key) == null) {
-                    throw new HecMissingPropertiesException(
-                            "Missing required key: " + key);
-                }
-            }
-
-            // For any non-required properties, we allow them to remain null if they are not present in overrides
-            // or cloudfwd.properties, because the property getters below will return the default values.
-        } catch (IOException ex) {
-            LOG.error("Problem loading cloudfwd.properties: {}", ex.getMessage());
-            throw new HecIllegalStateException("Problem loading cloudfwd.properties",
-                    HecIllegalStateException.Type.CANNOT_LOAD_PROPERTIES);
+    /**
+     * Checking if LoadBalancer exists before refreshing channels
+     */
+    private void checkAndRefreshChannels() {
+        if (connection != null && connection.getLoadBalancer() != null) {
+            connection.getLoadBalancer().refreshChannels();
         }
-
     }
 
-    private URL getUrlWithAutoAssignedPorts(String urlString) throws MalformedURLException {
-        URL url = new URL(urlString.trim());
-        if(!url.getProtocol().equals("https")){
-            throw new HecConnectionStateException("protocol '"+url.getProtocol()+ "' is not supported. Use 'https'.",
-                    HecConnectionStateException.Type.CONFIGURATION_EXCEPTION);
-        }
-        if (url.getPort() == -1) {
-            int port = 443;
-            LOG.warn("No port provided for url: " + urlString.trim()
-                    + ". Defaulting to port " + port);
-            return new URL(url.getProtocol(), url.getHost(), port, url.getFile());
-        }
-        return url;
+    protected Logger getLog() {
+      if (this.connection != null) {
+          return LOG;
+      } else {
+          if (GENERIC_LOG == null) {
+              return LoggerFactory.getLogger(EventBatchImpl.class.getName());
+          }
+          return GENERIC_LOG;
+      }
     }
+/*
+User should be able to init Connection using ConnectionSettings
+ */
 
 }

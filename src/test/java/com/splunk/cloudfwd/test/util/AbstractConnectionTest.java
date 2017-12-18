@@ -1,27 +1,19 @@
 package com.splunk.cloudfwd.test.util;
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.*;
+
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.splunk.cloudfwd.HecLoggerFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 /*
@@ -58,7 +50,6 @@ public abstract class AbstractConnectionTest {
    * set enabled=false in test.properties to disable test.properties and
    * fallback on cloudfwd.properties
    */
-  public static final String KEY_ENABLE_TEST_PROPERTIES = "enabled";
   public static final String TEST_METHOD_GUID_KEY = "testMethodGUID";
 
   protected BasicCallbacks callbacks;
@@ -97,23 +88,22 @@ public abstract class AbstractConnectionTest {
   }
   
   protected Connection createAndConfigureConnection(){
-     Properties props = new Properties();
-    props.putAll(getTestProps());
-    props.putAll(getProps());
-    Connection connection = createConnection(callbacks, props);
-    if(null ==connection){
-        return null;
+    ConnectionSettings settings = getTestProps();
+    configureProps(settings);
+    connection = createConnection(callbacks, settings);
+    if(null == connection){
+      return null;
     }
     connection.setLoggerFactory(new HecLoggerFactoryImpl());
     configureConnection(connection);
     return connection;
   }
   
-  protected Connection createConnection(ConnectionCallbacks c, Properties p){
+  protected Connection createConnection(ConnectionCallbacks c, ConnectionSettings settings){
       boolean didThrow = false;
       Connection conn = null;
       try{
-        conn = Connections.create(callbacks, p);
+        conn = Connections.create(callbacks, settings);
       }catch(Exception e){
           e.printStackTrace();
           didThrow = true;
@@ -300,8 +290,8 @@ public abstract class AbstractConnectionTest {
    *
    * @return
    */
-  protected Properties getProps() {
-    return new Properties(); //default behavior is no "hard coded" test-specific properties
+  protected void configureProps(ConnectionSettings settings) {
+    //default behavior is no "hard coded" test-specific properties
   }
 
   /**
@@ -310,25 +300,17 @@ public abstract class AbstractConnectionTest {
    *
    * @return
    */
-  protected Properties getTestProps() {
-    Properties props = new Properties();
-    try (InputStream is = getClass().getResourceAsStream(
-            getTestPropertiesFileName())) {
-      if (null != is) {
-        props.load(is);
-      } else {
-        LOG.trace("No test_defaults.properties found on classpath");
-      }
-    } catch (IOException ex) {
-      LOG.error(ex.getMessage(), ex);
-    }
-    if (Boolean.parseBoolean(props.getProperty("enabled", "false"))) {
-      return props;
+  protected ConnectionSettings getTestProps() {
+      ConnectionSettings testSettings = ConnectionSettings.fromPropsFile(getTestPropertiesFileName());
+    if (testSettings.getTestPropertiesEnabled()) {
+      return testSettings;
     } else {
       LOG.warn("test.properties disabled, using cloudfwd.properties only");
-      return new Properties(); //ignore test.properties
+      return ConnectionSettings.fromPropsFile(getCloudfwdPropertiesFileName()); //ignore test.properties
     }
   }
+
+  private String getCloudfwdPropertiesFileName() { return "/cloudfwd.properties"; }
 
   /**
    * test can override this if a test requires its own .properties file to slap

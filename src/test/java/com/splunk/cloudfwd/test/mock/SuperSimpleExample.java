@@ -1,16 +1,9 @@
 package com.splunk.cloudfwd.test.mock;
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.RawEvent;
-import java.util.Properties;
-import com.splunk.cloudfwd.EventWithMetadata;
+import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -76,21 +69,21 @@ public class SuperSimpleExample {
     }; //end callbacks
 
     //overide defaults in cloudfwd.properties
-    Properties customization = new Properties();
-    customization.put(COLLECTOR_URI, "https://127.0.0.1:8088");
-    customization.put(TOKEN, "ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
-    customization.put(UNRESPONSIVE_MS, "100000");//100 sec - Kill unresponsive channel
-    customization.put(MOCK_HTTP_KEY, "true");
-    customization.put(MAX_TOTAL_CHANNELS, "8"); //increase this to increase parallelism
-    customization.put(CHANNELS_PER_DESTINATION, "8"); //increase this to increase parallelism
-    customization.put(ENABLE_CHECKPOINTS, "true"); 
+    ConnectionSettings customization = ConnectionSettings.fromPropsFile("/cloudfwd.properties");
+    customization.setUrls("https://127.0.0.1:8088");
+    customization.setToken("ad9017fd-4adb-4545-9f7a-62a8d28ba7b3");
+    customization.setUnresponsiveMS(100000);//100 sec - Kill unresponsive channel
+    customization.setMockHttp(true);
+    customization.setMaxTotalChannels(8); //increase this to increase parallelism
+    customization.setChannelsPerDestination(8); //increase this to increase parallelism
+    customization.setCheckpointEnabled(true);
 
     //date formatter for sending 'raw' event
     SimpleDateFormat dateFormat = new SimpleDateFormat(
             "yyyy-MM-dd HH:mm:ss");//one of many supported Splunk timestamp formats
 
     //SEND TEXT EVENTS TO HEC 'RAW' ENDPOINT
-    try (Connection c = Connections.create(callbacks, customization);) {
+    try (Connection c = Connections.create(callbacks, customization)) {
       c.getSettings().setEventBatchSize(1024 * 16); //16kB send buffering -- in practice use a much larger buffer
       c.getSettings().setAckTimeoutMS(60000); //60 sec
       for (int seqno = 1; seqno <= numEvents; seqno++) {//sequence numbers can be any Comparable Object

@@ -1,9 +1,8 @@
 package com.splunk.cloudfwd.test.mock;
 
-
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints;
 import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
@@ -14,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 
 public class SessionCookiesTest extends AbstractConnectionTest {
@@ -57,13 +55,9 @@ public class SessionCookiesTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints");
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
-
-        return props;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints");
+        settings.setMaxTotalChannels(1);
     }
 
 }

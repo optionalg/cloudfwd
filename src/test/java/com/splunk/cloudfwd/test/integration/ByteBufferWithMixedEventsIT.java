@@ -1,12 +1,7 @@
 package com.splunk.cloudfwd.test.integration;
 
 import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
-import java.nio.ByteBuffer;
-import java.util.Properties;
 import java.util.Set;
 import org.junit.Test;
 

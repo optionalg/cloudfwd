@@ -104,8 +104,8 @@ public class AcknowledgementTracker implements EventTracker {
     EventBatchImpl events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      LOG.debug("Channel:{} success acked ids: {}", sender.getChannel(),
-              succeeded);
+      LOG.debug("channel={} received success on {} ack ids out of {}. Success acked ids: {}", 
+              sender.getChannel(), succeeded.size(), apr.getAcks().size(), succeeded);
       if (succeeded.isEmpty()) {
         return;
       }
@@ -113,7 +113,7 @@ public class AcknowledgementTracker implements EventTracker {
         events = polledAcksByAckId.get(ackId);
         if (null == events) {
           LOG.warn(
-                  "Got acknowledgement on ackId: {} but we're no long tracking that ackId on {}",
+                  "Got acknowledgement on ackId: {} but we're no long tracking that ackId on channel={}",
                   ackId, sender.getChannel());
           continue;
         }
@@ -125,7 +125,7 @@ public class AcknowledgementTracker implements EventTracker {
         //events.getAckId can be null if the event is being resent by DeadChannel detector 
         //and EventBatchImpl.prepareForResend has been called
         if (events.getAckId() != null && ackId != events.getAckId()) {
-            String msg = "ackId mismatch key ackID=" + ackId + " existing: " + events + " on "+ sender.getChannel();
+            String msg = "ackId mismatch key ackID=" + ackId + " existing: " + events + " on channel="+ sender.getChannel();
             LOG.warn(msg);
             continue; //conceivable from sticky session violation
   //          throw new HecIllegalStateException(msg,

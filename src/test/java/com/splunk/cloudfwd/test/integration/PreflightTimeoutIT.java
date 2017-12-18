@@ -1,15 +1,12 @@
 package com.splunk.cloudfwd.test.integration;
 
-import com.splunk.cloudfwd.HecHealth;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CHANNEL_PREFLIGHT_TIMEOUT;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
 
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -22,14 +19,12 @@ public class PreflightTimeoutIT extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.setProperty(PropertyKeys.COLLECTOR_URI, "https://kinesis4.splunkcloud.com:8088"); // URL with HEC not enabled 
-        p.setProperty(PropertyKeys.MOCK_HTTP_KEY, "false");
-        p.setProperty(PropertyKeys.RETRIES, "3");
-        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "4");
-        p.setProperty(PropertyKeys.PREFLIGHT_TIMEOUT_MS, "5000");
-        return p;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setUrls("https://kinesis4.splunkcloud.com:8088"); // URL with HEC not enabled
+        settings.setMockHttp(false);
+        settings.setMaxRetries(3);
+        settings.setMaxTotalChannels(4);
+        settings.setPreFlightTimeoutMS(5000);
     }
     
     @Override

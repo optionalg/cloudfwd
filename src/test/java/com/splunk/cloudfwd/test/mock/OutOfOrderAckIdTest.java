@@ -1,17 +1,13 @@
 package com.splunk.cloudfwd.test.mock;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
-
 import java.util.ArrayList;
-import java.util.Properties;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +28,7 @@ import org.junit.Test;
  */
 /**
  *
- * @author mescobar
+ * @author ghendrey
  */
 public class OutOfOrderAckIdTest extends AbstractConnectionTest {
 
@@ -60,18 +56,14 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDEndpoints");
-        props.put(BLOCKING_TIMEOUT_MS, "30000");
-        props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
-        props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDEndpoints");
+        settings.setBlockingTimeoutMS(30000);
+        settings.setUnresponsiveMS(-1); //no dead channel detection
+        settings.setMaxTotalChannels(2);
+        settings.setAckTimeoutMS(60000); //we don't want the ack timout kicking in
         // checkpointing
-        props.put(PropertyKeys.ENABLE_CHECKPOINTS, Boolean.toString(this.checkpoint));
-
-        return props;
+        settings.setCheckpointEnabled(this.checkpoint);
     }
 
     // Need to separate this logic out of setUp() so that each Test
@@ -79,10 +71,9 @@ public class OutOfOrderAckIdTest extends AbstractConnectionTest {
     protected void createConnection() {
         this.callbacks = getCallbacks();
 
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        ConnectionSettings settings = getTestProps();
+        configureProps(settings);
+        this.connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 

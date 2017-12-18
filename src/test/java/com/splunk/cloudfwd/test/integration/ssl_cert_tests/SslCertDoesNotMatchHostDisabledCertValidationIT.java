@@ -14,20 +14,13 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-
-import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * This test attempts to connect to ELB configured with a splunkcloud.com cert by 
@@ -49,13 +42,11 @@ public class SslCertDoesNotMatchHostDisabledCertValidationIT extends AbstractCon
   }
   
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com:443");
-    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(DISABLE_CERT_VALIDATION, "true");
-    props.put(MOCK_HTTP_KEY, "false");
-    return props;
+  protected void configureProps(ConnectionSettings settings) {
+    settings.setUrls("https://kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com:443");
+    settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
+    settings.disableCertValidation();
+    settings.setMockHttp(false);
   }
   
   @Override

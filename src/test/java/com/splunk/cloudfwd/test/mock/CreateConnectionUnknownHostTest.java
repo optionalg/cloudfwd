@@ -1,11 +1,6 @@
 package com.splunk.cloudfwd.test.mock;
 
-import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.error.HecConnectionStateException;
-
-import java.util.Properties;
-
-import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 
 /**
@@ -16,11 +11,9 @@ import com.splunk.cloudfwd.error.HecMaxRetriesException;
  */
 public class CreateConnectionUnknownHostTest extends ExceptionConnInstantiationTest {
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(PropertyKeys.COLLECTOR_URI, "https://foobarunknownhostbaz:8088");
-        props.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.errorgen.unknownhost.UnknownHostEndpoints");
-        return props;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setUrls("https://foobarunknownhostbaz:8088");
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unknownhost.UnknownHostEndpoints");
     }
 
     protected boolean isExpectedConnInstantiationException(Exception e) {
@@ -30,3 +23,6 @@ public class CreateConnectionUnknownHostTest extends ExceptionConnInstantiationT
         return false;
     }
 }
+
+
+

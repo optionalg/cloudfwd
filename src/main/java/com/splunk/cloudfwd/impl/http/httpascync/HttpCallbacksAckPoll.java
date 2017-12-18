@@ -54,6 +54,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
 //                    );
                     break;
                 case 503: //busy
+                    LOG.debug("503 response from ack poll on channel={}", getChannel());
                     warn(reply, code);                    
                     break;
                 case 504: //elb gatewy timeout

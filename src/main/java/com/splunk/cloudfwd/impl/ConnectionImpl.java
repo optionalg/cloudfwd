@@ -24,26 +24,26 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.HecLoggerFactory;
-import static com.splunk.cloudfwd.PropertyKeys.*;
+import com.splunk.cloudfwd.error.HecMissingPropertiesException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.impl.util.CallbackInterceptor;
 import com.splunk.cloudfwd.impl.util.CheckpointManager;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
-import com.splunk.cloudfwd.impl.util.PropertiesFileHelper;
-import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import com.splunk.cloudfwd.impl.util.SenderFactory;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.splunk.cloudfwd.PropertyKeys.COLLECTOR_URI;
+import static com.splunk.cloudfwd.PropertyKeys.TOKEN;
 
 /**
  * Internal implementation of Connection. Should be obtained through a Factory method. 
@@ -63,21 +63,32 @@ public class ConnectionImpl implements Connection {
   private TimeoutChecker timeoutChecker;
   private boolean closed;
   private EventBatchImpl events; //default EventBatchImpl used if send(event) is called
+  private SenderFactory senderFactory;
   private ConnectionSettings settings;
   private boolean quiesced;
 
 
   public ConnectionImpl(ConnectionCallbacks callbacks) {
-    this(callbacks, new Properties());
+    this(callbacks, ConnectionSettings.fromPropsFile("/cloudfwd.properties"));
   }
 
-  public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
-    if(null == callbacks){
+  public ConnectionImpl(ConnectionCallbacks callbacks, ConnectionSettings settings) {
+    if (null == callbacks) {
         throw new HecConnectionStateException("ConnectionCallbacks are null",
                 HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
-    }   
+    }
+    if (settings.getToken() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + TOKEN);
+    }
+    if (settings.getUrlString() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + COLLECTOR_URI);
+    }
+    // Make sure defaults of -1 are interpreted to their correct values
+    settings.setMaxTotalChannels(settings.getMaxTotalChannels());
+    
     this.LOG = this.getLogger(ConnectionImpl.class.getName());
-    this.settings = new PropertiesFileHelper(this,settings);
+    this.settings = settings;
+    this.senderFactory = new SenderFactory(this, settings);
     this.checkpointManager = new CheckpointManager(this);
     this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
     this.lb = new LoadBalancer(this);
@@ -93,30 +104,29 @@ public class ConnectionImpl implements Connection {
     //*before* those two functions (failed, or acknowledged) are invoked.
     throwExceptionIfNoChannelOK();
   }
-//  
-//  /**
-//   * @return the propertiesFileHelper
-//   */
-//  public PropertiesFileHelper getConnectionSettings() {
-//    return propertiesFileHelper;
-//  }
-
-    @Override
-    public ConnectionSettings getSettings() {
-        return settings;
-    }
   
-    public CheckpointManager getCheckpointManager() {
-      return this.checkpointManager;
-    }
+  /**
+   * @return the SenderFactory
+   */
+  public SenderFactory getSenderFactory() {
+    return senderFactory;
+  }
+
+  @Override
+  public ConnectionSettings getSettings() {
+    return settings;
+  }
+  
+  public CheckpointManager getCheckpointManager() {
+    return this.checkpointManager;
+  }
   
   public long getAckTimeoutMS() {
     return settings.getAckTimeoutMS();
   }
 
   public synchronized void setBlockingTimeoutMS(long ms) {
-    this.settings.putProperty(BLOCKING_TIMEOUT_MS, String.
-            valueOf(ms));
+      settings.setBlockingTimeoutMS(ms);
   }
   
    //close() is synchronized, as is send and sendBatch, therefore events cannot be sent before close has returned.
@@ -191,6 +201,7 @@ public class ConnectionImpl implements Connection {
       this.events = new EventBatchImpl();
     }
     this.events.add(event);
+    this.timeoutChecker.start();
     if (this.events.isFlushable(settings.getEventBatchSize())) {
       return sendBatch(events);
     }
@@ -326,7 +337,7 @@ public class ConnectionImpl implements Connection {
     }
     
     private void throwExceptionIfNoChannelOK()  {      
-         List<HecHealth> healths = lb.getHealthNonBlocking(); 
+        List<HecHealth> healths = lb.getHealthNonBlocking(); 
         if(healths.isEmpty()){            
             throw new HecConnectionStateException("No HEC channels could be instatiated on Connection.",
                     HecConnectionStateException.Type.NO_HEC_CHANNELS);
@@ -342,6 +353,10 @@ public class ConnectionImpl implements Connection {
             throw healths.stream().filter(e->!e.isHealthy()).findFirst().get().getStatusException();
         } 
    }  
+   
+   public EventBatchImpl getUnsentBatch() {
+        return this.events;
+   }
 
 
     private void logLBHealth() {

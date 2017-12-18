@@ -1,11 +1,10 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import java.util.Properties;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,10 +40,8 @@ public class OutOfOrderIdTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(PropertyKeys.ENABLE_CHECKPOINTS, "false");
-        return props;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setCheckpointEnabled(false);
     }
 
     @Override

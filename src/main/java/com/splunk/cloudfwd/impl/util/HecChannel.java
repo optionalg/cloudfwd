@@ -43,8 +43,6 @@ import java.util.concurrent.ScheduledFuture;
 import javax.net.ssl.SSLException;
 import java.util.List;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
-
 
 
 /**
@@ -83,8 +81,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     this.channelId = newChannelId();
     this.channelMetrics = new ChannelMetrics(c);
     this.channelMetrics.addObserver(this);
-    this.maxUnackedEvents = loadBalancer.getConnectionSettings().
-            getMaxUnackedEventBatchPerChannel();
+    this.maxUnackedEvents = loadBalancer.getConnection().getSettings().getMaxUnackedEventBatchPerChannel();
     this.memoizedToString = this.channelId + "@" + sender.getBaseUrl();
     LOG.info("constructing channel: {}", memoizedToString);
             
@@ -106,7 +103,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
      * @return
      */
     public HecHealthImpl getHealth() {
-        if(!health.await(getConnetionSettings().getPreFlightTimeout(), TimeUnit.MILLISECONDS)){
+        if(!health.await(getConnectionSettings().getPreFlightTimeoutMS(), TimeUnit.MILLISECONDS)){
             preFlightTimeout();
         }
         return health;
@@ -153,14 +150,14 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 
 
     private void setupDeadChannelDetector() {
-        long unresponsiveDecomMS = getConnetionSettings(). getUnresponsiveChannelDecomMS();
+        long unresponsiveDecomMS = getConnectionSettings().getUnresponsiveChannelDecomMS();
         if (unresponsiveDecomMS > 0) {
             deadChannelDetector = new DeadChannelDetector(unresponsiveDecomMS);
             deadChannelDetector.start();
         }
     }
   
-  private ConnectionSettings getConnetionSettings(){
+  private ConnectionSettings getConnectionSettings(){
       return loadBalancer.getConnection().getSettings();
   }
 
@@ -258,7 +255,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         }
         
         if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
+            LOG.debug("channel became available : channel={}", this);
             loadBalancer.wakeUp(); //inform load balancer so waiting send-round-robin can begin spinning again
+        } else if (!isAvailable() && wasAvailable) {
+            LOG.debug("channel became unavailable due to {}, channel={}", e.getType(), this);
         }
     }
     

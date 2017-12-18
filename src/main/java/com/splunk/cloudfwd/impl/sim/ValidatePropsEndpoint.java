@@ -17,7 +17,7 @@ import java.util.List;
  */
 public class ValidatePropsEndpoint extends SimulatedHECEndpoints {
 
-    public static List<URL> URLS; // set with PropertiesFileHelper.getUrls()
+    public static List<URL> URLS; // set with ConnectionSettings.getUrls()
     public static long ACK_TIMEOUT_MS;
     public static String TOKEN;
     private static Throwable fail = null;

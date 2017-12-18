@@ -34,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -194,10 +193,9 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken(null));
-        return p;
+    protected void configureProps(ConnectionSettings settings) {
+        super.configureProps(settings);
+        settings.setToken(createTestToken(null));
     }
 
     @Override

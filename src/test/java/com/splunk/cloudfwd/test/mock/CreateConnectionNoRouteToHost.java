@@ -1,14 +1,10 @@
 package com.splunk.cloudfwd.test.mock;
 
-import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
-import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.test.integration.AbstractReconciliationTest;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Properties;
 
 /**
  * Created by eprokop on 10/9/17.
@@ -21,11 +17,9 @@ public class CreateConnectionNoRouteToHost extends AbstractReconciliationTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.put(PropertyKeys.MOCK_HTTP_KEY, "true");
-        p.put(PropertyKeys.MOCK_HTTP_CLASSNAME, "com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.NoRouteToHostEndpoints");
-        return p;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setMockHttp(true);
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.splunkcheckfailure.NoRouteToHostEndpoints");
     }
 
     @Override
