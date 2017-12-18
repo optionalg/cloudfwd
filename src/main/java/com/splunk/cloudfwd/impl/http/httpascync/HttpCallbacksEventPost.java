@@ -134,22 +134,29 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         resend(new HecServerBusyException(reply));
     }
       
-    public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
-        LOG.debug("channel={} Event post response: {} for {}", getChannel(), resp, events);
-        EventPostResponseValueObject epr = mapper.readValue(resp,
-                EventPostResponseValueObject.class);
-        if (epr.isAckIdReceived()) {
-            events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
-        } else if (epr.isAckDisabled()) {
-            throwConfigurationException(getSender(), httpCode, resp);
-        }
+    public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {       
+        Runnable r = ()->{
+            try{
+                LOG.debug("channel={} Event post response: {} for {}", getChannel(), resp, events);
+                EventPostResponseValueObject epr = mapper.readValue(resp,
+                        EventPostResponseValueObject.class);
+                if (epr.isAckIdReceived()) {
+                    events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
+                } else if (epr.isAckDisabled()) {
+                    throwConfigurationException(getSender(), httpCode, resp);
+                }
 
-        getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
+                getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
 
-        // send a single ack poll request
-        getSender().getHecIOManager().pollAcks();
+                // send a single ack poll request
+                //getSender().getHecIOManager().pollAcks();
 
-        notify(EVENT_POST_OK, 200, resp, events);
+                notify(EVENT_POST_OK, 200, resp, events);
+            }catch (Exception e) {
+                invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
+            }   
+        };
+        ThreadScheduler.getSharedExecutorInstance("event_post_response_handler").submit(r);
     }
 
     private void throwConfigurationException(HttpSender sender, int httpCode, String resp) 

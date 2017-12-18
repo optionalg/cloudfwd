@@ -110,7 +110,7 @@ public synchronized  static ExecutorService getDedicatedSingleThreadExecutor(Str
                 corePoolSize = maxThreads; //for LinkedBlockingQueue, there will never be more than corePoolSize threads.
             }else{
                 q = new SynchronousQueue<>(true); //allows threads in pool to expand to handle tasks. Tasks are never queued
-                corePoolSize = 0;
+                corePoolSize = 4;
             }
 
             ThreadPoolExecutor tpe = new ThreadPoolExecutor(corePoolSize, maxThreads,

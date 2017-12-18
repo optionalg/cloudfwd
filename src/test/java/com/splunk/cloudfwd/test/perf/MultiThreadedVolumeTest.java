@@ -39,9 +39,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "500"); //500MB
-        cliProperties.put(NUM_SENDERS_KEY, "1"); //128 senders
-        cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
-        cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
+        cliProperties.put(NUM_SENDERS_KEY, "16"); //128 senders
+        cliProperties.put(PropertyKeys.TOKEN, "AF5ECF39-A166-4831-9F51-8001ECEBC9FA"); // will use token in cloudfwd.properties by default
+        cliProperties.put(PropertyKeys.COLLECTOR_URI, "https://inputs1.kinesis4.splunkcloud.com:8088"); // will use token in cloudfwd.properties by default
     }
     
     private int numSenderThreads = 128;

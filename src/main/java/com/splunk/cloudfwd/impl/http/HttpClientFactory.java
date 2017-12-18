@@ -51,11 +51,11 @@ import sun.security.provider.X509Factory;
  *
  */
 public final class HttpClientFactory {
-    public static int MAX_CONN_PER_ROUTE = 0; //unlimited
-    public static int MAX_CONN_TOTAL = 0; //unlimited
+    public static int MAX_CONN_PER_ROUTE = 1; //unlimited
+    public static int MAX_CONN_TOTAL = 1; //unlimited
     public static int CONNECT_TIMEOUT = 30000; //30 sec
     public static int SOCKET_TIMEOUT = 120000; //120 sec
-    public static int REACTOR_SELECT_INTERVAL = 1000;   
+    public static int REACTOR_SELECT_INTERVAL = 5000;   
     
     private final Logger LOG;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
@@ -89,13 +89,21 @@ public final class HttpClientFactory {
             .setSelectInterval(REACTOR_SELECT_INTERVAL)
             .setSoTimeout(SOCKET_TIMEOUT)
             .setConnectTimeout(CONNECT_TIMEOUT)
-            //.setIoThreadCount(256)
+            .setIoThreadCount(1)              
             .build();
         return HttpAsyncClients.custom()                
                 .setMaxConnTotal(MAX_CONN_TOTAL)
                 .setDefaultIOReactorConfig(ioReactorConfig)
                 .disableCookieManagement()
-               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE);          
+               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE)
+               .setKeepAliveStrategy(new ConnectionKeepAliveStrategy() {
+                    @Override
+                    public long getKeepAliveDuration(HttpResponse response,
+                            HttpContext context) {
+                        return Long.MAX_VALUE;
+                    }
+               });
+               
     }    
 
     /**
@@ -187,13 +195,7 @@ public final class HttpClientFactory {
                 //.setDefaultCookieSpecRegistry(buildRegistry()) //DO NOT MANAGE COOKIES AT THIS LEVEL
                 // we want to make sure that SSL certificate match hostname in Host
                 // header, as we may use IP address to connect to the SSL server
-                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host)).setKeepAliveStrategy(new ConnectionKeepAliveStrategy() {
-            @Override
-            public long getKeepAliveDuration(HttpResponse response,
-                    HttpContext context) {
-                return Long.MAX_VALUE;
-            }
-        })
+                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
                 .build();
     }
 
