@@ -144,7 +144,7 @@ public class ConnectionSettings {
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
     
     @JsonProperty(ENABLE_PREFLIGHT)
-    private boolean enablePreflight = true;
+    private boolean enablePreflight = false;
     
     @JsonProperty(REQUIRE_ACKS_ENABLED_ON_SPLUNK_SERVER)
     private boolean requireAcksEnabledOnSplunkServer = false;
