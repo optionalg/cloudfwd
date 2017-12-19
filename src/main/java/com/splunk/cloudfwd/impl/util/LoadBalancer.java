@@ -404,11 +404,12 @@ public class LoadBalancer implements Closeable {
                 LOG.debug("sent EventBatch:{}  on channel={} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
-                if(tryMe.isFull()){
+               if(tryMe.isFull()){
                     tryMe.pollAcks();
+                    //return true;
                 }
-                LOG.debug("channel not available, channel={}", tryMe);
-                LOG.debug("Skipped channel={} available={} healthy={} full={} quiesced={} closed={}", tryMe, tryMe.isAvailable(), tryMe.isHealthy(), tryMe.isFull(), tryMe.isQuiesced(), tryMe.isClosed());
+                //LOG.debug("channel not available, channel={}", tryMe);
+                //LOG.debug("Skipped channel={} available={} healthy={} full={} quiesced={} closed={}", tryMe, tryMe.isAvailable(), tryMe.isHealthy(), tryMe.isFull(), tryMe.isQuiesced(), tryMe.isClosed());
             }
         } catch (RuntimeException e) {
             recoverAndThrowException(events, forced, e);

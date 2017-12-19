@@ -114,7 +114,7 @@ public class HecIOManager implements Closeable {
     public Future pollAcks() {
         return ThreadScheduler.getSharedExecutorInstance("ack_poll_executor_thread").submit(
                 ()->{
-                    if(ackPollInProgress){
+                  if(ackPollInProgress){
                         return;
                     }
                      LOG.trace("POLLING ACKS on {}", sender.getChannel());

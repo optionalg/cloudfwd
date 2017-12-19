@@ -132,10 +132,9 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   //guess about it). What happens is HecIOManager will want to call channelMetrics.ackPollOK, but channelMetrics
   //is also trying to acquire the lock on this object. So deadlock.
   synchronized void pollAcks() {
-     if(null == onDemandAckPollFuture || onDemandAckPollFuture.isDone()){
-           //onDemandAckPoll = ThreadScheduler.getSharedSchedulerInstance("on_demand_ack-poller").schedule(sender.getHecIOManager()::pollAcks, 0, TimeUnit.MILLISECONDS);
+    // if(null == onDemandAckPollFuture || onDemandAckPollFuture.isDone()){
             onDemandAckPollFuture = sender.getHecIOManager().pollAcks();           
-       }
+       //}
 
   }
 
@@ -270,7 +269,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         if( this.unackedCount.get()> maxUnackedEvents){
             LOG.error("{} illegal channel state full={}, unackedCount={}", this, maxUnackedEvents, unackedCount.get());
         }
-        return this.unackedCount.get() == maxUnackedEvents;
+        return this.unackedCount.get() >= maxUnackedEvents;
     }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
