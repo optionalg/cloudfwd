@@ -184,6 +184,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 //    if (!isAvailable()) {
 //      return false;
 //    }
+      try {
+          Thread.sleep(500);
+      } catch (InterruptedException e) {
+          LOG.warn("HecChannel interrupted while sleeping");
+      }
     
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
