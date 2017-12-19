@@ -185,7 +185,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
 //      return false;
 //    }
       try {
-          Thread.sleep(500);
+          Thread.sleep(750);
       } catch (InterruptedException e) {
           LOG.warn("HecChannel interrupted while sleeping");
       }
