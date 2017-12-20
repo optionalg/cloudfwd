@@ -133,10 +133,12 @@ public class LoadBalancer implements Closeable {
     private synchronized void createChannels(List<InetSocketAddress> addrs) {
         Collections.shuffle(addrs); //we do this so that if more than one connection, and fewer max_total_channels than addrs, that each connection won't choose the same addr
         //add multiple channels for each InetSocketAddress
-        for (int i = 0; i < channelsPerDestination; i++) {
+        boolean reachedMax = false;
+        for (int i = 0; i < channelsPerDestination && !reachedMax; i++) {
             for (InetSocketAddress s : addrs) {
                 try {
                     if(addChannel(s, false) == null){
+                        reachedMax = true;
                         break; //reached MAX_TOTAL_CHANNELS
                     }
                 } catch (InterruptedException ex) {
