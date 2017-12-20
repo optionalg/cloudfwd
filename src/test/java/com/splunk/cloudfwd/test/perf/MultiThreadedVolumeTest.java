@@ -232,6 +232,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                         logMetrics(eb, eb.getLength());
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
                         long sent = this.connection.sendBatch(eb);
+                        Thread.sleep((long) (Math.random()*10*1000)); //wait between zero and 20 sec
                         LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
                        // synchronized (this) {
                             // wait while the batch hasn't been acknowledged and it hasn't failed
