@@ -125,6 +125,7 @@ public class HecIOManager implements Closeable {
      */
     public void pollHealth() {
         LOG.trace("health checks on {}", sender.getChannel());
+        LOG.debug("Starting 3 request health poll on channel {}", getSender().getChannel());
 
         GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
                 this,

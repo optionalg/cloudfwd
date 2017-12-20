@@ -68,7 +68,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                 case 200:
                     consumeEventPostOkResponse(reply, code);
                     break;
-                case 503:    
+                case 503:
+                    LOG.debug("503 response from event post on channel={}", getChannel());
                     warn(reply, code);
                     notifyBusyAndResend(reply, code, EVENT_POST_INDEXER_BUSY);
                     break;

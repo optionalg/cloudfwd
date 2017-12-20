@@ -289,7 +289,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     }
     final HttpPost httpPost = new HttpPost(endpointUrl);
     setHeaders(httpPost);
-    
+    LOG.debug("executing event batch post on channel={}, eventBatch={}", getChannel(), events.getEntity().toString());
     httpPost.setEntity(events.getEntity());
     httpClient.execute(httpPost, httpCallback);
   }
@@ -321,6 +321,7 @@ public final class HttpSender implements Endpoints, CookieClient {
       try {
           empty = new StringEntity(Strings.EMPTY);
           dummyEventPost.setEntity(empty);
+          LOG.debug("executing empty event post to raw on channel={}. Request: {}", getChannel(), dummyEventPost);
           httpClient.execute(dummyEventPost, httpCallback);
       } catch (UnsupportedEncodingException ex) {
           LOG.error(ex.getMessage(),ex);
@@ -352,7 +353,7 @@ public final class HttpSender implements Endpoints, CookieClient {
       StringEntity entity;
       
       String req = ackReq.toString();
-      LOG.debug("channel=" + getChannel() + " posting: " + req);
+      LOG.debug("executing ack poll request on channel={} posting: {}", getChannel(), req);
       entity = new StringEntity(req);
       
       entity.setContentType(HttpContentType);
@@ -380,7 +381,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     // create http request
     final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
     healthEndpointCheck= new HttpGet(getUrl);
-    LOG.trace("Polling health {}", healthEndpointCheck);
+    LOG.debug("executing poll on health endpoint, channel={}. Request: {}", getChannel(), healthEndpointCheck);
     setHeaders(healthEndpointCheck);
     httpClient.execute(healthEndpointCheck, httpCallback);
   }
@@ -410,6 +411,7 @@ public final class HttpSender implements Endpoints, CookieClient {
       LOG.trace("checking health via ack endpoint: {}", req);
       entity.setContentType(HttpContentType);
       ackCheck.setEntity(entity);
+      LOG.debug("executing ack check on channel={}", getChannel());
       httpClient.execute(ackCheck, httpCallback);
     } catch (Exception ex) {
       LOG.error("Exception in checkAckEndpoint: {}",ex.getMessage(), ex);
@@ -473,7 +475,7 @@ public final class HttpSender implements Endpoints, CookieClient {
         c.forceClose(); //smoke
         c.resendInFlightEvents();
       } catch (Exception ex) {
-        LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
+        LOG.error("Exception '{}' trying to handle sticky session-cookie violation on channel={}", ex.getMessage(), getChannel(), ex);
       }
     };//end runnable
     

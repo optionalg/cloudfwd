@@ -1,6 +1,7 @@
 package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.After;
@@ -187,6 +188,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         @Override
         public void acknowledged(EventBatch events) {
             super.acknowledged(events);
+            LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
             // sometimes events get acknowledged before the SenderWorker starts waiting
             if (waitingSenders.get(events.getId()) != null) {
                 waitingSenders.get(events.getId()).tell();

@@ -357,10 +357,10 @@ public class LoadBalancer implements Closeable {
         tryMe = channelsSnapshot.get(channelIdx);
         try {
             if (tryMe.send(events)) {
-                LOG.debug("sent EventBatch:{}  on channel: {} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
+                LOG.debug("sent EventBatch:{}  on channel={} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
-                LOG.trace("channel not healthy {}", tryMe);
+                LOG.debug("channel not available, channel={}", tryMe);
                 LOG.debug("Skipped channel: {} available={} full={}", tryMe, tryMe.isAvailable(), tryMe.isFull());
             }
         } catch (RuntimeException e) {

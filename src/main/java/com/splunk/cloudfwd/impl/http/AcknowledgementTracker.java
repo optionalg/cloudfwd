@@ -119,8 +119,8 @@ public class AcknowledgementTracker implements EventTracker {
     EventBatchImpl events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      LOG.info("Channel:{} success acked ids: {}", sender.getChannel(),
-              succeeded);
+        LOG.debug("channel={} received success on {} ack ids out of {}. Success acked ids: {}", 
+            sender.getChannel(), succeeded.size(), apr.getAcks().size(), succeeded);
       if (succeeded.isEmpty()) {
         return;
       }
