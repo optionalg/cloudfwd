@@ -69,14 +69,14 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         List<Future> futureList = new ArrayList<>();
        
         for (int i = 0; i < numSenderThreads; i++) {
-            final int n =i;
+//            final int n =i;
             futureList.add(senderExecutor.submit(()->{
                 SenderWorker s;
-                try {
-                    s = new SenderWorker(n);
-                } catch (UnknownHostException ex) {
-                    throw new RuntimeException(ex.getMessage(), ex);
-                }
+//                try {
+                    s = new SenderWorker();
+//                } catch (UnknownHostException ex) {
+//                    throw new RuntimeException(ex.getMessage(), ex);
+//                }
                 s.sendAndWaitForAcks();
             }));
         }
@@ -202,63 +202,86 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         private Connection connection;
         private ConnectionSettings connectionSettings;
         
-        public SenderWorker(int workerNum) throws UnknownHostException{
-            this.workerNumber = workerNum;
-            this.connection = createAndConfigureConnection();
-            this.connectionSettings = connection.getSettings();
-            if (null ==connection){
-                Assert.fail("null connection");
-            }
-            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
-            //instantiated
-            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
-            }
-            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
-                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
-            }
-            connectionSettings.setMockHttp(false);
-            connectionSettings.setTestPropertiesEnabled(false);
-        }
-        public void sendAndWaitForAcks() {
-            LOG.info("sender {} starting its send loop", workerNumber);
-                EventBatch eb = nextBatch(batchCounter.incrementAndGet());
+//        public SenderWorker(int workerNum) throws UnknownHostException{
+        
+//            this.workerNumber = workerNum;
+//            this.connection = createAndConfigureConnection();
+//            this.connectionSettings = connection.getSettings();
+//            if (null ==connection){
+//                Assert.fail("null connection");
+//            }
+//            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
+//            //instantiated
+//            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+//                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+//            }
+//            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
+//                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
+//            }
+//            connectionSettings.setMockHttp(false);
+//            connectionSettings.setTestPropertiesEnabled(false);
+//        }
+//        public void sendAndWaitForAcks() {
+//            LOG.info("sender {} starting its send loop", workerNumber);
+//                EventBatch eb = nextBatch(batchCounter.incrementAndGet());
+//                while (!Thread.currentThread().isInterrupted()) {
+//                    try{
+//                        failed = false;
+//                        LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
+//                        logMetrics(eb, eb.getLength());
+//                        LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
+//                        long sent = this.connection.sendBatch(eb);
+//                        LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
+//                        synchronized (this) {
+//                            // wait while the batch hasn't been acknowledged and it hasn't failed
+//                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+//                               LOG.debug("Sender {}, about to wait", workerNumber);
+//                                waitingSenders.put(eb.getId(), this);
+//                                wait(1000); //wait1 sec
+//                                LOG.debug("Sender {}, waited 1 sec,", workerNumber);
+//                            }
+//                        }
+//                        if(!failed){
+//                            LOG.info("sender {} ackd {} in {} ms", this.workerNumber, eb.getLength(), System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());                        
+//                        }else{
+//                            LOG.info("sender {} failed in {} ms", this.workerNumber, System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());
+//                        }
+//                        waitingSenders.remove(eb.getId());    
+//                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
+//                        LOG.info("Sender {} generated next batch", workerNumber);
+//                        eb = nextBatch(batchCounter.incrementAndGet());                   
+//                    } catch (InterruptedException ex) {                        
+//                        LOG.warn("Sender {} exiting.", workerNumber);
+//                        return;
+//                    } catch(Exception e){
+//                        LOG.warn("Worker {} caught exception {} sending {}.",workerNumber, e .getMessage(), eb, e);
+//                        waitingSenders.remove(eb.getId()); 
+//                        eb = nextBatch(batchCounter.incrementAndGet());
+//                    }
+//                }
+//                LOG.warn("Sender {} exiting.", workerNumber);
+            public void sendAndWaitForAcks() {
+            try {
+                EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
-                    try{
-                        failed = false;
-                        LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
-                        logMetrics(eb, eb.getLength());
-                        LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
-                        long sent = this.connection.sendBatch(eb);
-                        LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
-                        synchronized (this) {
-                            // wait while the batch hasn't been acknowledged and it hasn't failed
-                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
-                               LOG.debug("Sender {}, about to wait", workerNumber);
-                                waitingSenders.put(eb.getId(), this);
-                                wait(1000); //wait1 sec
-                                LOG.debug("Sender {}, waited 1 sec,", workerNumber);
-                            }
+                    EventBatch eb = next;
+                    long sent = connection.sendBatch(eb);
+                    logMetrics(eb, sent);
+                    LOG.info("Sent batch with id=" + batchCounter.get());
+                    next = nextBatch(batchCounter.incrementAndGet());
+
+                    synchronized (this) {
+                    // wait while the batch hasn't been acknowledged and it hasn't failed
+                        while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+                            waitingSenders.put(eb.getId(), this);
+                            wait(connection.getSettings().getAckTimeoutMS());
                         }
-                        if(!failed){
-                            LOG.info("sender {} ackd {} in {} ms", this.workerNumber, eb.getLength(), System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());                        
-                        }else{
-                            LOG.info("sender {} failed in {} ms", this.workerNumber, System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());
-                        }
-                        waitingSenders.remove(eb.getId());    
-                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
-                        LOG.info("Sender {} generated next batch", workerNumber);
-                        eb = nextBatch(batchCounter.incrementAndGet());                   
-                    } catch (InterruptedException ex) {                        
-                        LOG.warn("Sender {} exiting.", workerNumber);
-                        return;
-                    } catch(Exception e){
-                        LOG.warn("Worker {} caught exception {} sending {}.",workerNumber, e .getMessage(), eb, e);
-                        waitingSenders.remove(eb.getId()); 
-                        eb = nextBatch(batchCounter.incrementAndGet());
                     }
+                    waitingSenders.remove(eb.getId());
                 }
-                LOG.warn("Sender {} exiting.", workerNumber);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e.getMessage());
+            }
         }
 
         private void logMetrics(EventBatch batch, long sent) {
@@ -324,7 +347,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 LOG.error("failed {}", ex);
                 return;
             }
-            LOG.error("EventBatch with id=" + events.getId() + " failed");
+                LOG.error("EventBatch with id=" + events.getId() + " failed");
             super.failed(events, ex);
             SenderWorker s = waitingSenders.get(events.getId());
             if (s != null) {
