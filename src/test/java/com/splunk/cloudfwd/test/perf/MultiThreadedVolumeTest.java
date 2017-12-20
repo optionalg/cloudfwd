@@ -27,7 +27,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ExecutorService executor;
     private ByteBuffer buffer;
-    private final String eventsFilename = "./many_text_events_no_timestamp.sample";
+    private final String eventsFilename = "./1KB_event_5MB_batch.sample";
     private long start = 0;
     private long finish = 0;
     final float warmup = 0.0005f;
