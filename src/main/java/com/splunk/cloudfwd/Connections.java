@@ -95,19 +95,19 @@ public class Connections {
     }
 
     /**
-     * DEPRECATED
+     * DEPRECATED - should use create() that passes in ConnectionSettings instance instead
      */
     public static Connection create(ConnectionCallbacks c, Properties p) {
         return new ConnectionImpl(c, p);
     }
     /**
-     * DEPRECATED
+     * DEPRECATED - should use create() that passes in ConnectionSettings instance instead
      */
     public static Connection create(Properties p) {
         return new ConnectionImpl(new DefaultConnectionCallbacks(), p);
     }
     /**
-     * DEPRECATED
+     * DEPRECATED - should use create() that passes in ConnectionSettings instance instead
      */
     public static Connection create() throws IOException {
         Properties p = new Properties();
