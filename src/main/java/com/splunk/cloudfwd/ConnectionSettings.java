@@ -24,13 +24,18 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.Endpoints;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Properties;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,6 +148,7 @@ public class ConnectionSettings {
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
 
+    
     public static ConnectionSettings fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
         JavaPropsMapper mapper = new JavaPropsMapper();
@@ -696,8 +702,22 @@ public class ConnectionSettings {
           return GENERIC_LOG;
       }
     }
-/*
-User should be able to init Connection using ConnectionSettings
- */
+
+    /**
+     * DEPRECATED - should use individual setter methods to update properties instead.
+     * @param props
+     * @throws UnknownHostException
+     */
+    public void setProperties(Properties props) throws UnknownHostException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try {
+            props.store(bos, null);
+            ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            JavaPropsMapper mapper = new JavaPropsMapper();
+            mapper.readerForUpdating(this).readValue(bis);
+        } catch (IOException e) {
+            throw new RuntimeException("Could update Properties - please check Properties object.", e);
+        }
+    }
 
 }

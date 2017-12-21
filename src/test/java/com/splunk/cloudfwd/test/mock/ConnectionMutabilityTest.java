@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.test.mock;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.sim.ValidatePropsEndpoint;
@@ -11,6 +12,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.UnknownHostException;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -207,5 +209,45 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
         } catch (InterruptedException ex) {
             throw new RuntimeException(ex.getMessage(), ex);
         }
+    }
+
+    @Test
+    public void setMultiplePropertiesDeprecated() throws Throwable {
+        LOG.info("test:  setMultipleProperties");
+        setPropsOnEndpoint();
+        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        super.eventType = Event.Type.TEXT;
+        LOG.info("sending first batch of events");
+        sendSomeEvents(getNumEventsToSend()/4);
+
+        // Set some new properties
+        Properties props1 = new Properties();
+        props1.setProperty(PropertyKeys.TOKEN, "a token");
+        props1.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "120000");
+        props1.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8188");
+        connection.getSettings().setProperties(props1);
+        setPropsOnEndpoint();
+        LOG.info("sending second batch of events");
+        sendSomeEvents(getNumEventsToSend()/4);
+
+
+        // Set the same properties
+//        connection.getSettings().setProperties(props1);
+//        setPropsOnEndpoint();
+//        LOG.info("sending third batch of events");
+//        sendSomeEvents(getNumEventsToSend()/4);
+
+
+        // Set some more new properties
+//        Properties props2 = new Properties();
+//        props2.setProperty(PropertyKeys.TOKEN, "different token");
+//        props2.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "240000");
+//        props2.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8288, https://127.0.0.1:8388");
+//        connection.getSettings().setProperties(props2);
+//        setPropsOnEndpoint();
+//        LOG.info("sending fourth batch of events");
+//        sendSomeEvents(getNumEventsToSend()/4);
+        close();
+        checkAsserts();
     }
 }

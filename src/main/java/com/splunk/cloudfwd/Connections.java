@@ -22,6 +22,10 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 /**
  * Factory for getting a Connection.
  *
@@ -89,5 +93,28 @@ public class Connections {
             LOG.error(failMsg);
         }
     }
-    
+
+    /**
+     * DEPRECATED
+     */
+    public static Connection create(ConnectionCallbacks c, Properties p) {
+        return new ConnectionImpl(c, p);
+    }
+    /**
+     * DEPRECATED
+     */
+    public static Connection create(Properties p) {
+        return new ConnectionImpl(new DefaultConnectionCallbacks(), p);
+    }
+    /**
+     * DEPRECATED
+     */
+    public static Connection create() throws IOException {
+        Properties p = new Properties();
+        try(InputStream is = Connection.class.getResourceAsStream("cloudfwd.properties");){
+            p.load(is);
+            return new ConnectionImpl(new DefaultConnectionCallbacks(), p);
+        }
+    }
+
 }
