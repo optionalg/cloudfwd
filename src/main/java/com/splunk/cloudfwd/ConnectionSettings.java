@@ -592,16 +592,18 @@ public class ConnectionSettings {
 
     public void setHecEndpointType(ConnectionImpl.HecEndpoint type) {
         String endpoint;
-        if (type == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
-            endpoint = "event";
-        } else if (type == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
-            endpoint = "raw";
-        } else {
-            getLog().warn(
-                    "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
-            endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
+        if (type != getHecEndpointType()) {
+            if (type == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
+                endpoint = "event";
+            } else if (type == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+                endpoint = "raw";
+            } else {
+                getLog().warn(
+                        "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
+                endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
+            }
+            this.hecEndpointType = endpoint;
         }
-        this.hecEndpointType = endpoint;
     }
 
     /**
@@ -709,6 +711,46 @@ public class ConnectionSettings {
      * @throws UnknownHostException
      */
     public void setProperties(Properties props) throws UnknownHostException {
+        for (String key : props.stringPropertyNames()) {
+            String val = props.getProperty(key);
+            switch (key) {
+                case PropertyKeys.ACK_TIMEOUT_MS:
+                    setAckTimeoutMS(Long.parseLong(val));
+                    break;
+                case PropertyKeys.COLLECTOR_URI:
+                    setUrls(val);
+                    break;
+                case PropertyKeys.TOKEN:
+                    setToken(val);
+                    break;
+                case PropertyKeys.HEC_ENDPOINT_TYPE:
+                    if (val == "event") {
+                        setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+                    } else if (val == "raw") {
+                        setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+                    }
+                    break;
+                case PropertyKeys.HOST:
+                    setHost(val);
+                    break;
+                case PropertyKeys.INDEX:
+                    setIndex(val);
+                    break;
+                case PropertyKeys.SOURCE:
+                    setSource(val);
+                    break;
+                case PropertyKeys.SOURCETYPE:
+                    setSourcetype(val);
+                    break;
+                default:
+                    LOG.error("Attempt to change property not supported: " + key);
+            }
+        }
+        
+        /* TODO: Investigate whether code below can be made to call each attribute's setter
+           instead of just setting the property directly, so that validation and  
+           checkAndRefreshChannels have the chance of being called. 
+           
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try {
             props.store(bos, null);
@@ -718,6 +760,6 @@ public class ConnectionSettings {
         } catch (IOException e) {
             throw new RuntimeException("Could update Properties - please check Properties object.", e);
         }
+        */
     }
-
 }

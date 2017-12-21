@@ -232,21 +232,21 @@ public class ConnectionMutabilityTest extends AbstractConnectionTest {
 
 
         // Set the same properties
-//        connection.getSettings().setProperties(props1);
-//        setPropsOnEndpoint();
-//        LOG.info("sending third batch of events");
-//        sendSomeEvents(getNumEventsToSend()/4);
+        connection.getSettings().setProperties(props1);
+        setPropsOnEndpoint();
+        LOG.info("sending third batch of events");
+        sendSomeEvents(getNumEventsToSend()/4);
 
 
         // Set some more new properties
-//        Properties props2 = new Properties();
-//        props2.setProperty(PropertyKeys.TOKEN, "different token");
-//        props2.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "240000");
-//        props2.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8288, https://127.0.0.1:8388");
-//        connection.getSettings().setProperties(props2);
-//        setPropsOnEndpoint();
-//        LOG.info("sending fourth batch of events");
-//        sendSomeEvents(getNumEventsToSend()/4);
+        Properties props2 = new Properties();
+        props2.setProperty(PropertyKeys.TOKEN, "different token");
+        props2.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "240000");
+        props2.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8288, https://127.0.0.1:8388");
+        connection.getSettings().setProperties(props2);
+        setPropsOnEndpoint();
+        LOG.info("sending fourth batch of events");
+        sendSomeEvents(getNumEventsToSend()/4);
         close();
         checkAsserts();
     }
