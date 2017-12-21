@@ -331,6 +331,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     HttpEntity e= events.getEntity();
     LOG.debug("executing event batch post on channel={}, eventBatch={}", getChannel(), e.toString());
     httpPost.setEntity(e);
+    ((EventBatch)events).getLifecycleMetrics().setPostSentTimestamp(System.currentTimeMillis());
     httpClient.execute(httpPost, httpCallback);
   }
 
