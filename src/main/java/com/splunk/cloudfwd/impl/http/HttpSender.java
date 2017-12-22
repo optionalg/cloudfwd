@@ -311,7 +311,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     if (!started()) {
       start();
     }
-    
+    ((EventBatch)events).getLifecycleMetrics().setPostSentTimestamp(System.currentTimeMillis());
     if (isSimulated()) {
       this.simulatedEndpoints.postEvents(events, httpCallback);
       return;
@@ -331,7 +331,6 @@ public final class HttpSender implements Endpoints, CookieClient {
     HttpEntity e= events.getEntity();
     LOG.debug("executing event batch post on channel={}, eventBatch={}", getChannel(), e.toString());
     httpPost.setEntity(e);
-    ((EventBatch)events).getLifecycleMetrics().setPostSentTimestamp(System.currentTimeMillis());
     httpClient.execute(httpPost, httpCallback);
   }
 
