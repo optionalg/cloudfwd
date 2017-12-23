@@ -35,5 +35,9 @@ public class HttpClientHostMapper {
                 return new HttpClientWrapper();
             });
         }
+        
+        public static int getNumHosts(){
+            return clientMap.size();
+        }
     
 }

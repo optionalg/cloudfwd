@@ -75,7 +75,7 @@ public class HttpClientWrapper {
     }    
     
     private void adjustConnPoolSize(){        
-        httpClientAndConnPoolControl.getConPoolControl().setDefaultMaxPerRoute(requestors.size());
-        httpClientAndConnPoolControl.getConPoolControl().setMaxTotal(requestors.size());
+        httpClientAndConnPoolControl.getConPoolControl().setDefaultMaxPerRoute(Math.max(requestors.size(),2));
+        httpClientAndConnPoolControl.getConPoolControl().setMaxTotal(Math.max(requestors.size()*HttpClientHostMapper.getNumHosts(), 8));
     }
 }
