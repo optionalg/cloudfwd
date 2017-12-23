@@ -11,15 +11,27 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.logging.Level;
 import javax.net.ssl.SSLContext;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.slf4j.Logger;
 import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
+import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
+import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
+import org.apache.http.nio.conn.NHttpClientConnectionManager;
+import org.apache.http.nio.conn.SchemeIOSessionStrategy;
+import org.apache.http.nio.conn.ssl.SSLIOSessionStrategy;
+import org.apache.http.nio.reactor.ConnectingIOReactor;
+import org.apache.http.nio.reactor.IOReactorException;
+import org.apache.http.pool.ConnPoolControl;
 import sun.security.provider.X509Factory;
 
 
@@ -81,19 +93,43 @@ public final class HttpClientFactory {
         this.host = host.replaceAll(":.*", "");
     }
     
-    private HttpAsyncClientBuilder builderWithCustomOptions(){
-        IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
-            .setSelectInterval(REACTOR_SELECT_INTERVAL)
-            .setSoTimeout(SOCKET_TIMEOUT)
-            .setConnectTimeout(CONNECT_TIMEOUT)
-            //.setIoThreadCount(256)
-            .build();
-        return HttpAsyncClients.custom()                
-                .setMaxConnTotal(MAX_CONN_TOTAL)
-                .setDefaultIOReactorConfig(ioReactorConfig)
-                .disableCookieManagement()
-               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE);          
-    }    
+    private HttpAsyncClientBuilder builderWithCustomOptions(final NHttpClientConnectionManager conMgr){
+//                IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
+//            .setSelectInterval(REACTOR_SELECT_INTERVAL)
+//            .setSoTimeout(SOCKET_TIMEOUT)
+//            .setConnectTimeout(CONNECT_TIMEOUT)
+//            //.setIoThreadCount(256)
+//            .build();
+//        return HttpAsyncClients.custom()                
+//                .setMaxConnTotal(MAX_CONN_TOTAL)
+//                .setDefaultIOReactorConfig(ioReactorConfig)
+//                .disableCookieManagement()
+//               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE); 
+            return HttpAsyncClients.custom()
+                    .setMaxConnTotal(MAX_CONN_TOTAL)
+                    .setDefaultIOReactorConfig(null) //explicitely do NOT let the HttpAsyncClientBuilder construct its own ConnectionManager. We provide it.
+                    .setConnectionManager(conMgr)
+                    .disableCookieManagement()
+                    .setMaxConnPerRoute(MAX_CONN_PER_ROUTE);        
+    }   
+    
+    private PoolingNHttpClientConnectionManager createConnectionManager(SSLIOSessionStrategy sslStrategy){
+            try{
+                IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
+                .setSelectInterval(REACTOR_SELECT_INTERVAL)
+                .setSoTimeout(SOCKET_TIMEOUT)
+                .setConnectTimeout(CONNECT_TIMEOUT)
+                //.setIoThreadCount(256)
+                .build();
+                ConnectingIOReactor ioreactor = new DefaultConnectingIOReactor(ioReactorConfig);   
+                RegistryBuilder<SchemeIOSessionStrategy>  reg = RegistryBuilder.<SchemeIOSessionStrategy>create().register("https",
+                        sslStrategy);               
+               return new PoolingNHttpClientConnectionManager(ioreactor, reg.build());
+            } catch (IOReactorException ex) {
+                LOG.error(ex.getMessage(), ex);
+                throw new RuntimeException(ex.getMessage(), ex);
+        }
+    }
 
     /**
      * Build and return an appropriate HttpAsyncClient
@@ -102,20 +138,20 @@ public final class HttpClientFactory {
      * @throws NoSuchAlgorithmException
      * @throws KeyManagementException
      */
-    public final CloseableHttpAsyncClient build()
+    public final CloseableHttpAsyncClientAndConnPoolControl build()
             throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException
     {
         // If non-empty custom SSL Cert was provided
         if (!cert.trim().isEmpty()) {
-            return build_http_client_custom_cert(cert);
+            return buildHttpClientCustomCert(cert);
         }
         // Build an Insecure HTTP Client if SSL Cert Verification is disabled
         if (disableCertVerification) {
-            return build_http_client_insecure();
+            return buildHttpClientInsecure();
 
         }
         // Return a default HTTP client otherwise
-        return build_default_client();
+        return buildDefaultClient();
     }
 
     /**
@@ -139,7 +175,7 @@ public final class HttpClientFactory {
      * @throws NoSuchAlgorithmException
      * @throws KeyManagementException
      */
-    public static final SSLContext build_ssl_context_allow_all() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    public static final SSLContext buildSslContextAllowAll() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
             public boolean isTrusted(X509Certificate[] certificate,
                                      String type) {
@@ -155,7 +191,7 @@ public final class HttpClientFactory {
      * @param cert ssl certificate content
      * @return ssl context configured to accept just the provided cert
      */
-    public final SSLContext build_ssl_context(String cert) {
+    public final SSLContext buildSslContext(String cert) {
         try {
             // load certificate from file
             X509Certificate cert_obj = CertStrToX509(cert);
@@ -179,13 +215,19 @@ public final class HttpClientFactory {
      * build a default async http client
      * @return default http client
      */
-    public final CloseableHttpAsyncClient build_default_client(){
-        return builderWithCustomOptions()
-                //.setDefaultCookieSpecRegistry(buildRegistry()) //DO NOT MANAGE COOKIES AT THIS LEVEL
-                // we want to make sure that SSL certificate match hostname in Host
-                // header, as we may use IP address to connect to the SSL server
-                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
-                .build();
+    public final CloseableHttpAsyncClientAndConnPoolControl buildDefaultClient(){
+        
+        try {
+            SSLIOSessionStrategy sessStrat = new SSLIOSessionStrategy(SSLContext.getDefault(), new SslStaticHostVerifier(this.host));
+            PoolingNHttpClientConnectionManager connectionMgr =createConnectionManager(sessStrat);
+            CloseableHttpAsyncClient client = builderWithCustomOptions(connectionMgr)
+                    .build();
+            return new CloseableHttpAsyncClientAndConnPoolControl(client, connectionMgr);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
+
+        
     }
 
 
@@ -194,17 +236,15 @@ public final class HttpClientFactory {
      * @param cert
      * @return http client built with provided cert
      */
-    public final CloseableHttpAsyncClient build_http_client_custom_cert(String cert) {
-
-        SSLContext ssl_context  = build_ssl_context(cert);
-
-        return builderWithCustomOptions()
-                //.setDefaultCookieSpecRegistry(buildRegistry())
-                // we want to make sure that SSL certificate match hostname in Host
-                // header, as we may use IP address to connect to the SSL server
-                .setSSLHostnameVerifier(new SslStaticHostVerifier(this.host))
-                .setSSLContext(ssl_context)
+    public final CloseableHttpAsyncClientAndConnPoolControl buildHttpClientCustomCert(String cert) {
+        // we want to make sure that SSL certificate match hostname in Host
+        // header, as we may use IP address to connect to the SSL server
+        SSLContext ssl_context  = buildSslContext(cert);
+        SSLIOSessionStrategy sessStrat = new SSLIOSessionStrategy(ssl_context, new SslStaticHostVerifier(this.host));
+        PoolingNHttpClientConnectionManager connectionMgr =createConnectionManager(sessStrat);
+        CloseableHttpAsyncClient client = builderWithCustomOptions(connectionMgr)
                 .build();
+        return new CloseableHttpAsyncClientAndConnPoolControl(client, connectionMgr);
     }
 
     /**
@@ -215,12 +255,13 @@ public final class HttpClientFactory {
      * @throws KeyStoreException
      * @throws KeyManagementException
      */
-    public final CloseableHttpAsyncClient build_http_client_insecure() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-        return builderWithCustomOptions()
-                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                //.setDefaultCookieSpecRegistry(buildRegistry())
-                .setSSLContext(build_ssl_context_allow_all())
+    public final CloseableHttpAsyncClientAndConnPoolControl buildHttpClientInsecure() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        SSLIOSessionStrategy sessStrat = new SSLIOSessionStrategy(buildSslContextAllowAll(), NoopHostnameVerifier.INSTANCE);
+        PoolingNHttpClientConnectionManager connectionMgr =createConnectionManager(sessStrat);
+        CloseableHttpAsyncClient client =  builderWithCustomOptions(connectionMgr)
                 .build();
+        return new CloseableHttpAsyncClientAndConnPoolControl(client, connectionMgr);
     }
+    
     
 }
