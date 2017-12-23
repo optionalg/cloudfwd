@@ -60,8 +60,10 @@ import sun.security.provider.X509Factory;
  *
  */
 public final class HttpClientFactory {
-    public static int MAX_CONN_PER_ROUTE = 0; //unlimited
-    public static int MAX_CONN_TOTAL = 0; //unlimited
+    //max connections per route, and max connections total will adjust dynamically when system is running
+    public static int INITIAL_MAX_CONN_PER_ROUTE = 2; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
+    public static int INITIAL_MAX_CONN_TOTAL = 4; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
+    
     public static int CONNECT_TIMEOUT = 30000; //30 sec
     public static int SOCKET_TIMEOUT = 120000; //120 sec
     public static int REACTOR_SELECT_INTERVAL = 1000;   
@@ -94,23 +96,12 @@ public final class HttpClientFactory {
     }
     
     private HttpAsyncClientBuilder builderWithCustomOptions(final NHttpClientConnectionManager conMgr){
-//                IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
-//            .setSelectInterval(REACTOR_SELECT_INTERVAL)
-//            .setSoTimeout(SOCKET_TIMEOUT)
-//            .setConnectTimeout(CONNECT_TIMEOUT)
-//            //.setIoThreadCount(256)
-//            .build();
-//        return HttpAsyncClients.custom()                
-//                .setMaxConnTotal(MAX_CONN_TOTAL)
-//                .setDefaultIOReactorConfig(ioReactorConfig)
-//                .disableCookieManagement()
-//               .setMaxConnPerRoute(MAX_CONN_PER_ROUTE); 
             return HttpAsyncClients.custom()
-                    .setMaxConnTotal(MAX_CONN_TOTAL)
+                    .setMaxConnTotal(INITIAL_MAX_CONN_TOTAL)
                     .setDefaultIOReactorConfig(null) //explicitely do NOT let the HttpAsyncClientBuilder construct its own ConnectionManager. We provide it.
                     .setConnectionManager(conMgr)
                     .disableCookieManagement()
-                    .setMaxConnPerRoute(MAX_CONN_PER_ROUTE);        
+                    .setMaxConnPerRoute(INITIAL_MAX_CONN_PER_ROUTE);        
     }   
     
     private PoolingNHttpClientConnectionManager createConnectionManager(SSLIOSessionStrategy sslStrategy){
