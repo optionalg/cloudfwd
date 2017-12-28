@@ -31,6 +31,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Properties;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,6 +145,16 @@ public class ConnectionSettings {
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
 
+    public static ConnectionSettings fromProps(Properties props) {
+        JavaPropsMapper mapper = new JavaPropsMapper();
+        try {
+                ConnectionSettings connectionSettings = mapper.readValue(props, ConnectionSettings.class);
+                return connectionSettings;
+        } catch (IOException e) {
+            throw new RuntimeException("Could not map Properties file to Java object - please check file path.", e);
+        }
+    }
+    
     public static ConnectionSettings fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
         JavaPropsMapper mapper = new JavaPropsMapper();
