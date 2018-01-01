@@ -13,7 +13,7 @@ import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGU
  * Created by eprokop on 10/5/17.
  */
 public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTest {
-    private String unknownHost = "https://foobarunknownhostbaz:8088";
+    private String unknownHost = "https://foobarunknownhostbaz.:8088";
 
     // Scenario: urls with unknown hosts are provided, but there is at least one "good" url
     // Expected behavior: Connection should instantiate and all events should make it into Splunk. "Unknown host" error should surface through systemError() callback
@@ -34,6 +34,7 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
         super.configureProps(settings);
         settings.setToken(createTestToken("__singleline"));
         settings.setUrls(unknownHost + ",https://localhost:8088");
+        settings.setEventBatchSize(0);
         settings.setMaxTotalChannels(2);
     }
 

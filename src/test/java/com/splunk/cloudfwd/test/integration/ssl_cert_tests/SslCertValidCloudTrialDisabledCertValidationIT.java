@@ -33,10 +33,10 @@ public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConn
   
   @Test
   /**
-   * This test makes sure that send doesn't throw an exception if Cert Validation is disabled 
+   * This test makes sure that connection creation doesn't throw an exception if Cert Validation is disabled 
    */
   public void sendEventSuccessfully() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(true, false);
+    //no-op
   }
   
   @Override
@@ -50,17 +50,7 @@ public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConn
   
   @Override
   protected int getNumEventsToSend() {
-    return 1;
-  }
-  
-  @Override
-  protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumEventsToSend()) {
-      @Override
-      public void await(long timeout, TimeUnit u) throws InterruptedException {
-        // don't need to wait for anything since we don't get a failed callback
-      }
-    };
+    return 0;
   }
   
 }

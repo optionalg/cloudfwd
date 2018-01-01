@@ -35,23 +35,35 @@ import java.util.concurrent.TimeUnit;
  * @author ssergeev
  */
 public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTest {
-  
+
+
   @Test
   /**
-   * This test expects that send HecNoValidChannelsException will be thrown 
-   * during the send and validates that all channels became unhealthy caused by
-   * SSLPeerUnverifiedException exception. 
+   * Current logic is to fail on connection instantiation if preflight fails
    */
-  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(false, false);
-    List<HecHealth> healths = connection.getHealth();
-    Assert.assertTrue(!healths.isEmpty());
-    // we expect all channels to fail catching SSLHandshakeException in preflight
-    Assert.assertTrue(healths.stream()
-            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
-            .count() == healths.size());
-    connection.close();
+  public void connectionFails() throws InterruptedException, HecConnectionTimeoutException {
+    // no-op here
   }
+  
+// The logic below is for connection not throwing an exception on instantiation.
+// current implementation is no-op
+
+//  @Test
+//  /**
+//   * This test expects that send HecNoValidChannelsException will be thrown 
+//   * during the send and validates that all channels became unhealthy caused by
+//   * SSLPeerUnverifiedException exception. 
+//   */
+//  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
+//    super.sendEvents(false, false);
+//    List<HecHealth> healths = connection.getHealth();
+//    Assert.assertTrue(!healths.isEmpty());
+//    // we expect all channels to fail catching SSLHandshakeException in preflight
+//    Assert.assertTrue(healths.stream()
+//            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
+//            .count() == healths.size());
+//    connection.close();
+//  }
   
   @Override
   protected void configureProps(ConnectionSettings settings) {
@@ -63,29 +75,14 @@ public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTes
   }
   
   @Override
-  protected boolean shouldSendThrowException() {return true;}
+  protected boolean connectionInstantiationShouldFail() {return true;}
   
   @Override
-  protected boolean isExpectedSendException(Exception e) {
-    if(e instanceof HecNoValidChannelsException) {
-      return true;
-    }
-    return false;
+  protected boolean isExpectedConnInstantiationException(Exception e) {
+    return e instanceof RuntimeException && e.getMessage().equals("General SSLEngine problem");
   }
   
   @Override
-  protected int getNumEventsToSend() {
-    return 1;
-  }
-  
-  @Override
-  protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumEventsToSend()) {
-      @Override
-      public void await(long timeout, TimeUnit u) throws InterruptedException {
-        // don't need to wait for anything since we don't get a failed callback
-      }
-    };
-  }
+  protected int getNumEventsToSend() { return 0; }
   
 }
