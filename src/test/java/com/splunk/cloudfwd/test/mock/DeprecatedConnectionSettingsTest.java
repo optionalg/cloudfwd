@@ -3,13 +3,14 @@ package com.splunk.cloudfwd.test.mock;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+
+import static com.splunk.cloudfwd.PropertyKeys.DEFAULT_BLOCKING_TIMEOUT_MS;
 
 /**
  * Created by mhora on 12/20/17.
@@ -75,11 +76,14 @@ public class DeprecatedConnectionSettingsTest extends BatchedVolumeTest {
     @Test
     public void checkPropertiesCorrectlySet() {
         // Check that override provided in Properties object was correctly parsed to JsonNode and then into ConnectionSettings property
-        Assert.assertEquals(connection.getSettings().getToken(), "ohhai");
+        Assert.assertEquals("ohhai", connection.getSettings().getToken());
         // Check that correct numeric type is set by ConnectionSettings setter
-        Assert.assertEquals(connection.getSettings().getChannelsPerDestination(), 3);
+        Assert.assertEquals(3, connection.getSettings().getChannelsPerDestination());
         // Check that value of -1 was correctly interpreted and set to max value
-        Assert.assertEquals(connection.getSettings().getMaxTotalChannels(), Integer.MAX_VALUE);
-        
+        Assert.assertEquals(Integer.MAX_VALUE, connection.getSettings().getMaxTotalChannels());
+        // Set to default value 
+        Assert.assertEquals(DEFAULT_BLOCKING_TIMEOUT_MS, connection.getSettings().getBlockingTimeoutMS());
+
+
     }
 }
