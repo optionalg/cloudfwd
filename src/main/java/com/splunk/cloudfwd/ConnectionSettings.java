@@ -26,12 +26,14 @@ import com.splunk.cloudfwd.impl.http.Endpoints;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -145,7 +147,7 @@ public class ConnectionSettings {
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
 
-    public static ConnectionSettings fromProps(Properties props) {
+    public static ConnectionSettings fromPropsAsJson(Properties props) {
         JavaPropsMapper mapper = new JavaPropsMapper();
         try {
                 ConnectionSettings connectionSettings = mapper.readValue(props, ConnectionSettings.class);
@@ -153,6 +155,20 @@ public class ConnectionSettings {
         } catch (IOException e) {
             throw new RuntimeException("Could not map Properties file to Java object - please check file path.", e);
         }
+    }
+    
+    public static ConnectionSettings fromProps(Properties props) {
+        Set<Object> keys = props.keySet();
+        ConnectionSettings settings = new ConnectionSettings();
+        for (Field field : ConnectionSettings.class.getDeclaredFields()) {
+            System.out.println("ConnectionSettings: field: " + field);    
+        }
+        
+        System.out.println("ConnectionSettings: keys: " + keys);
+        for (Object key : props.keySet()) {
+            settings.set(key, props.get(key));
+        }
+        return settings;
     }
     
     public static ConnectionSettings fromPropsFile(String pathToFile) {
@@ -179,6 +195,17 @@ public class ConnectionSettings {
 
     /* ***************************** UTIL ******************************* */
 
+    public void set(Object key, Object value) {
+        if (key != null) {
+            try {
+                Field field = ConnectionSettings.class.getDeclaredField(key.toString());
+                field.set(this, value);
+            } catch(Exception e) {
+                System.out.println("Exception getting a field by name, field key: " + key + ", e: " + e);
+            }
+        }
+    }
+    
     protected <T> T applyDefaultIfNull(T value, T defaultValue) {
         return value == null ? defaultValue : value;
     }
