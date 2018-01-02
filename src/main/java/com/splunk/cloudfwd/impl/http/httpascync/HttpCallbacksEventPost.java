@@ -64,6 +64,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     @Override
     public void completed(String reply, int code) {
+        events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
         try {
             switch (code) {
                 case 200:

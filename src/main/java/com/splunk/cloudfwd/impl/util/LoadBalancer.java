@@ -317,6 +317,7 @@ public class LoadBalancer implements Closeable {
 
     private boolean spinSend(boolean resend, EventBatchImpl events) throws HecNoValidChannelsException {
         long startTime = System.currentTimeMillis();
+        events.getLifecycleMetrics().setStartLBSpinTimestamp(startTime);
         int spinCount = 0;
         while (true) {
             if (interrupted || (closed && !resend)) {

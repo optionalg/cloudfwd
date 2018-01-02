@@ -96,5 +96,7 @@ public interface EventBatch extends HttpPostable {
      * @return the sendExceptions
      */
     List<Exception> getExceptions();
+    
+  LifecycleMetrics getLifecycleMetrics();
       
 }

@@ -311,7 +311,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     if (!started()) {
       start();
     }
-    
+    ((EventBatch)events).getLifecycleMetrics().setPostSentTimestamp(System.currentTimeMillis());
     if (isSimulated()) {
       this.simulatedEndpoints.postEvents(events, httpCallback);
       return;

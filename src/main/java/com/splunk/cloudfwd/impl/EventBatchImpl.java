@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.impl;
 
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.LifecycleMetrics;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.LifecycleEvent;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_BATCH_BORN;
@@ -73,6 +74,11 @@ public class EventBatchImpl implements EventBatch {
   private HecChannel hecChannel;
   private LifecycleEvent.Type state = EVENT_BATCH_BORN; //initial lifecyle state
   private List<Exception> sendExceptions = new ArrayList<>();
+  final private LifecycleMetrics lifecycleMetrics = new LifecycleMetrics(this);
+  
+  public EventBatchImpl() {
+    lifecycleMetrics.setCreationTimestamp(System.currentTimeMillis());
+  }
 
   @Override
   public synchronized void prepareToResend() {
@@ -360,6 +366,11 @@ public class EventBatchImpl implements EventBatch {
     public void setFailed(boolean failed) {
         this.failed = failed;
     }
+
+  @Override
+  public LifecycleMetrics getLifecycleMetrics() {
+    return this.lifecycleMetrics;
+  }
 
   private class HttpEventBatchEntity extends AbstractHttpEntity {
 
