@@ -15,8 +15,6 @@
  */
 package com.splunk.cloudfwd.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
@@ -34,13 +32,10 @@ import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.impl.util.LoadBalancer;
 import com.splunk.cloudfwd.impl.util.SenderFactory;
 import com.splunk.cloudfwd.impl.util.TimeoutChecker;
-
-import java.io.IOException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
@@ -61,8 +56,8 @@ public class ConnectionImpl implements Connection {
   private static final Map<String, Logger> loggers = new ConcurrentHashMap<>();    
     
   private HecLoggerFactory loggerFactory;
-  private Logger LOG;
-  private LoadBalancer lb;
+  private final Logger LOG;
+  private final LoadBalancer lb;
   private CheckpointManager checkpointManager; //consolidate metrics across all channels
   private CallbackInterceptor callbacks;
   private TimeoutChecker timeoutChecker;
@@ -78,40 +73,36 @@ public class ConnectionImpl implements Connection {
   }
 
   public ConnectionImpl(ConnectionCallbacks callbacks, ConnectionSettings settings) {
-    setupConnectionImpl(callbacks, settings);
-  }
-  
-  private void setupConnectionImpl(ConnectionCallbacks callbacks, ConnectionSettings settings) {
-      if (null == callbacks) {
-          throw new HecConnectionStateException("ConnectionCallbacks are null",
-                  HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
-      }
-      if (settings.getToken() == null) {
-          throw new HecMissingPropertiesException("Missing required key: " + TOKEN);
-      }
-      if (settings.getUrlString() == null) {
-          throw new HecMissingPropertiesException("Missing required key: " + COLLECTOR_URI);
-      }
-      // Make sure defaults of -1 are interpreted to their correct values
-      settings.setMaxTotalChannels(settings.getMaxTotalChannels());
-
-      this.LOG = this.getLogger(ConnectionImpl.class.getName());
-      this.settings = settings;
-      this.senderFactory = new SenderFactory(this, settings);
-      this.checkpointManager = new CheckpointManager(this);
-      this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
-      this.lb = new LoadBalancer(this);
-      this.events = new EventBatchImpl();
-      //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
-      //the EventBatchImpl that succeeded or failed from the timoutChecker
-      this.timeoutChecker = new TimeoutChecker(this);
-      //when a failure occurs on an EventBatchImpl, everyone who was tracking that event batch needs to cancelEventTrackers
-      //tracking that EventBatchImpl. In other words, failed callback should wipe out all trace of the message from
-      //the Connection and it becomes the implicit responsibility of the owner of the Connection to resend the
-      //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
-      //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
-      //*before* those two functions (failed, or acknowledged) are invoked.
-      throwExceptionIfNoChannelOK();
+    if (null == callbacks) {
+        throw new HecConnectionStateException("ConnectionCallbacks are null",
+                HecConnectionStateException.Type.CONNECTION_CALLBACK_NOT_SET);
+    }
+    if (settings.getToken() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + TOKEN);
+    }
+    if (settings.getUrlString() == null) {
+      throw new HecMissingPropertiesException("Missing required key: " + COLLECTOR_URI);
+    }
+    // Make sure defaults of -1 are interpreted to their correct values
+    settings.setMaxTotalChannels(settings.getMaxTotalChannels());
+    
+    this.LOG = this.getLogger(ConnectionImpl.class.getName());
+    this.settings = settings;
+    this.senderFactory = new SenderFactory(this, settings);
+    this.checkpointManager = new CheckpointManager(this);
+    this.callbacks = new CallbackInterceptor(callbacks, this); //callbacks must be sent before cosntructing LoadBalancer    
+    this.lb = new LoadBalancer(this);
+    this.events = new EventBatchImpl();
+    //when callbacks.acknowledged or callbacks.failed is called, in both cases we need to cancelEventTrackers
+    //the EventBatchImpl that succeeded or failed from the timoutChecker
+    this.timeoutChecker = new TimeoutChecker(this);
+    //when a failure occurs on an EventBatchImpl, everyone who was tracking that event batch needs to cancelEventTrackers
+    //tracking that EventBatchImpl. In other words, failed callback should wipe out all trace of the message from
+    //the Connection and it becomes the implicit responsibility of the owner of the Connection to resend the
+    //Event if they want it delivered. On success, the same thing muse happen - everyone tracking event batch
+    //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
+    //*before* those two functions (failed, or acknowledged) are invoked.
+    throwExceptionIfNoChannelOK();
   }
   
   /**
@@ -418,17 +409,4 @@ public class ConnectionImpl implements Connection {
                 channelHealths.size(), _preflightCompleted ,_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 
-    /**
-     * DEPRECATED - should instantiate ConnectionSettings and call setters to set properties on it directly
-     */
-    public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode node = mapper.valueToTree(settings);
-        try {
-            ConnectionSettings fromProps = mapper.readValue(node.toString(), ConnectionSettings.class);
-            setupConnectionImpl(callbacks, fromProps);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not map Properties object to ConnectionSettings object - please check Properties object.", e);
-        }
-    }
 }

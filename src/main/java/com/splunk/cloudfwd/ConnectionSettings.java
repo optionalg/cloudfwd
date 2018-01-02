@@ -18,6 +18,8 @@ package com.splunk.cloudfwd;
 import static com.splunk.cloudfwd.PropertyKeys.ACK_POLL_MS;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -146,6 +148,20 @@ public class ConnectionSettings {
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
 
+    @Deprecated
+    /*
+        Only used by deprecated Connections.create(ConnectionCallbacks, Properties) method
+     */
+    public static ConnectionSettings fromProps(Properties props) {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node = mapper.valueToTree(props);
+        try {
+            ConnectionSettings settings = mapper.readValue(node.toString(), ConnectionSettings.class);
+            return settings;
+        } catch (IOException e) {
+            throw new RuntimeException("Could not map Properties object to ConnectionSettings object - please check Properties object.", e);
+        }
+    }
     
     public static ConnectionSettings fromPropsFile(String pathToFile) {
         // use Jackson to populate this ConnectionSettings instance from file
@@ -703,8 +719,9 @@ public class ConnectionSettings {
       }
     }
 
+    @Deprecated
     /**
-     * DEPRECATED - should use individual setter methods to update properties instead.
+     * Should use individual setter methods to update properties instead.
      * @param props
      * @throws UnknownHostException
      */
