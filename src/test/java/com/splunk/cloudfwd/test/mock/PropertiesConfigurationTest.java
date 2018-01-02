@@ -34,14 +34,12 @@ public class PropertiesConfigurationTest {
     @Test
     public void testOverrideProperties() throws MalformedURLException {
         // Need connection object to pass into ConnectionSettings constructor for failed() callback
-        List<URL> urls = new ArrayList<>();
-        urls.add(new URL("https://inputs1.kinesis1.foo.com:8088"));
         String testToken = "foo-token";
         String testEventBatchSize = "100";
         
         Properties overrides = new Properties();
         overrides.put(TOKEN, testToken);
-        overrides.put(COLLECTOR_URI, urls.get(0));
+        overrides.put(COLLECTOR_URI, "https://inputs1.kinesis1.foo.com:8088");
         overrides.put(EVENT_BATCH_SIZE, testEventBatchSize);
         
         overrides.put(MOCK_HTTP_KEY, "true");
@@ -50,7 +48,7 @@ public class PropertiesConfigurationTest {
         Connection connection = Connections.create(callbacks, overrides);
 
         // Overrides took effect
-        Assert.assertEquals(urls, connection.getSettings().getUrls()); 
+        Assert.assertEquals("https://inputs1.kinesis1.foo.com:8088", connection.getSettings().getUrlString()); 
         Assert.assertEquals(testToken, connection.getSettings().getToken());
         // Override took effect and value stored as Int
         Assert.assertEquals(Long.parseLong(testEventBatchSize), connection.getSettings().getEventBatchSize());
