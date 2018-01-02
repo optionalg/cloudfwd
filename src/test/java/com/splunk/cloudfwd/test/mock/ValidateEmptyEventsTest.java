@@ -13,6 +13,9 @@ public class ValidateEmptyEventsTest {
     private static final Logger LOG = LoggerFactory.getLogger(ValidateEmptyEventsTest.class.getName());
     private Exception ex = null;
 
+    /**
+     *This test is used to check if the event has a valid name.
+     */
     @Test
     public void TestWithAValidString(){
         try {
@@ -24,6 +27,9 @@ public class ValidateEmptyEventsTest {
         assertNull(ex);
     }
 
+    /**
+     * This test is used to detect events which have an empty string as the name of the event.
+     */
     @Test
     public void TestWithEmptyString(){
         try {
@@ -36,6 +42,10 @@ public class ValidateEmptyEventsTest {
         assertNotNull(ex);
     }
 
+
+    /**
+     * This test is used to detect events where the name of the event is null.
+     */
     @Test
     public void TestWithEventAsNull(){
         try{
@@ -48,6 +58,9 @@ public class ValidateEmptyEventsTest {
         assertNotNull(ex);
     }
 
+    /**
+     * This test is used to detect events which have just blank spaces as the name of the event.
+     */
     @Test
     public void TestWithOnlySpaces(){
         try{
