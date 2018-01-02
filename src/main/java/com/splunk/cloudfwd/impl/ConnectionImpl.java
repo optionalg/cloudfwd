@@ -15,7 +15,8 @@
  */
 package com.splunk.cloudfwd.impl;
 
-import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
@@ -421,9 +422,10 @@ public class ConnectionImpl implements Connection {
      * DEPRECATED - should instantiate ConnectionSettings and call setters to set properties on it directly
      */
     public ConnectionImpl(ConnectionCallbacks callbacks, Properties settings) {
-        JavaPropsMapper mapper = new JavaPropsMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node = mapper.valueToTree(settings);
         try {
-            ConnectionSettings fromProps = mapper.readValue(settings, ConnectionSettings.class);
+            ConnectionSettings fromProps = mapper.readValue(node.toString(), ConnectionSettings.class);
             setupConnectionImpl(callbacks, fromProps);
         } catch (IOException e) {
             throw new RuntimeException("Could not map Properties object to ConnectionSettings object - please check Properties object.", e);

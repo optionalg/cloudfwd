@@ -5,6 +5,7 @@ import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +22,9 @@ public class DeprecatedConnectionSettingsTest extends BatchedVolumeTest {
         props.putAll(getDeprecatedTestProps());
         props.put(PropertyKeys.ACK_TIMEOUT_MS, "1000000"); //we don't want the ack timout kicking in
         props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
+        props.put(PropertyKeys.TOKEN, "ohhai");
+        props.put(PropertyKeys.CHANNELS_PER_DESTINATION, "3");
+        props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "-1");
         boolean didThrow = false;
         Connection connection = null;
         try {
@@ -68,4 +72,14 @@ public class DeprecatedConnectionSettingsTest extends BatchedVolumeTest {
         }
     }
     
+    @Test
+    public void checkPropertiesCorrectlySet() {
+        // Check that override provided in Properties object was correctly parsed to JsonNode and then into ConnectionSettings property
+        Assert.assertEquals(connection.getSettings().getToken(), "ohhai");
+        // Check that correct numeric type is set by ConnectionSettings setter
+        Assert.assertEquals(connection.getSettings().getChannelsPerDestination(), 3);
+        // Check that value of -1 was correctly interpreted and set to max value
+        Assert.assertEquals(connection.getSettings().getMaxTotalChannels(), Integer.MAX_VALUE);
+        
+    }
 }
