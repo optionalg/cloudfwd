@@ -12,7 +12,6 @@ import static org.junit.Assert.assertNull;
 public class ValidateEmptyEventsTest {
     private static final Logger LOG = LoggerFactory.getLogger(ValidateEmptyEventsTest.class.getName());
     private Exception ex = null;
-    private byte[] bytes;
 
     @Test
     public void TestWithAValidString(){
@@ -38,7 +37,7 @@ public class ValidateEmptyEventsTest {
     }
 
     @Test
-    public void TestWithOnlySpaces(){
+    public void TestWithEventAsNull(){
         try{
             LOG.info("Null event");
             new EventWithMetadata(null, 4);
@@ -50,13 +49,13 @@ public class ValidateEmptyEventsTest {
     }
 
     @Test
-    public void BytesArrayEmptyTest(){
+    public void TestWithOnlySpaces(){
         try{
-            LOG.info("Empty byte array");
-            new UnvalidatedBytesEvent(bytes,1);
-        }catch (Exception e){
+            LOG.info("Event with just empty spaces");
+            new EventWithMetadata("   ", 4);
+        }catch (IllegalArgumentException e){
             ex = e;
-            LOG.info("Exception - Empty byte array");
+            LOG.info("Exception - event with empty spaces");
         }
         assertNotNull(ex);
     }
