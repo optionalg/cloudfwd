@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.test.mock;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.Connections;
 import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,6 +27,9 @@ public class DeprecatedConnectionSettingsTest extends BatchedVolumeTest {
         props.put(PropertyKeys.TOKEN, "ohhai");
         props.put(PropertyKeys.CHANNELS_PER_DESTINATION, "3");
         props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "-1");
+        props.put(PropertyKeys.HEC_ENDPOINT_TYPE, "event");
+        props.put(PropertyKeys.ENABLE_CHECKPOINTS, "true");
+        
         boolean didThrow = false;
         Connection connection = null;
         try {
@@ -83,7 +87,10 @@ public class DeprecatedConnectionSettingsTest extends BatchedVolumeTest {
         Assert.assertEquals(Integer.MAX_VALUE, connection.getSettings().getMaxTotalChannels());
         // Set to default value 
         Assert.assertEquals(DEFAULT_BLOCKING_TIMEOUT_MS, connection.getSettings().getBlockingTimeoutMS());
-
-
+        // Check that enum was correctly parsed
+        Assert.assertEquals(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT, connection.getSettings().getHecEndpointType());
+        // Check that boolean was correctly parsed
+        Assert.assertEquals(true, connection.getSettings().isCheckpointEnabled());
+        
     }
 }
