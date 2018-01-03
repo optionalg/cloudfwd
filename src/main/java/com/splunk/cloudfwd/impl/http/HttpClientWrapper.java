@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
+import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 
 /**
  * This class allows many HttpSender to share a single ClosableHttpAsyncClient. It counts references and closes the 
@@ -27,7 +28,8 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
  * @author ghendrey
  */
 public class HttpClientWrapper {
-    private CloseableHttpAsyncClient httpClient;
+
+    private CloseableHttpAsyncClientAndConnPoolControl  httpClientAndConnPoolControl;
     private Set<HttpSender> requestors = new HashSet<>();    
 
     HttpClientWrapper() {
@@ -39,13 +41,15 @@ public class HttpClientWrapper {
          if (requestors.size() == 0) {
              throw new IllegalStateException("Illegal attempt to release http client, but http client is already closed.");
          }
-        requestors.remove(requestor);
+        requestors.remove(requestor);        
         if (requestors.size() == 0) {
             try {
-                httpClient.close();
+                httpClientAndConnPoolControl.getClient().close();
             } catch (IOException ex) {
                 throw new RuntimeException(ex.getMessage(), ex);
             }
+        }else{
+            adjustConnPoolSize();
         }
     }
 
@@ -54,16 +58,26 @@ public class HttpClientWrapper {
             String cert) {
         if (requestors.isEmpty()) {
             try {
-                httpClient = new HttpClientFactory(disableCertificateValidation,
+                httpClientAndConnPoolControl = new HttpClientFactory(disableCertificateValidation,
                         cert, requestor.getSslHostname(), requestor).build();
-                httpClient.start();              
+                httpClientAndConnPoolControl.getClient().start();              
             } catch (Exception ex) {
                 throw new RuntimeException(ex.getMessage(), ex);
             }
         }
-        requestors.add(requestor);  
-        return httpClient;
-
+        //the first time we add a requestor to the set, add will return true and we can update the connection pool
+        //to reflect the new number of HttpSenders that exist. We want the pool to have as many connecitons as there
+        //are HttpSender instances
+        if(requestors.add(requestor)){
+            adjustConnPoolSize();
+        }
+        return httpClientAndConnPoolControl.getClient();
+    }    
+    
+    private void adjustConnPoolSize(){                
+        httpClientAndConnPoolControl.getConPoolControl().setDefaultMaxPerRoute(Math.max(requestors.size()*10,HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
+        //We expect only one Route per HttpSender, but nevertheless, for safety we double the number of requestors in computing the max total connections. This is
+        //a decent idea becuase for each HttpSender there will be multiple pollers (health, acks) in addition to event posting
+        httpClientAndConnPoolControl.getConPoolControl().setMaxTotal(Math.max(requestors.size()*8,HttpClientFactory.INITIAL_MAX_CONN_TOTAL));
     }
-
 }
