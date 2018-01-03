@@ -171,7 +171,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
               setDefaultCredentialsProvider(credsProvider).
               setHostnameVerifier(
                       SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER).
-              setSSLContext(HttpClientFactory.build_ssl_context_allow_all()).
+              setSSLContext(HttpClientFactory.buildSslContextAllowAll()).
               build();
     } catch (Exception ex) {
       Assert.fail("Problem Building Splunk Client, ex: " +

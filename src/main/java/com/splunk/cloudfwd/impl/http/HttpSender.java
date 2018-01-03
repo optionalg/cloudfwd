@@ -50,6 +50,11 @@ public final class HttpSender implements Endpoints, CookieClient {
 
   // Default to SLF4J Logger, and set custom LoggerFactory when channel (and therefore Connection instance) is available
   private Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
+  
+  //separate Http Client instances for data (events) and 'control' (ack, health). This allows control channel to not get
+  //blocked by too much traffic on data channel
+  private static final HttpClientHostMapper dataChannelClientHostMapper = new HttpClientHostMapper();
+  private static final HttpClientHostMapper controlChannelClientHostMapper = new HttpClientHostMapper();
 
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
@@ -65,6 +70,7 @@ public final class HttpSender implements Endpoints, CookieClient {
 //  private final String source;
 //  private final String sourcetype;
   private CloseableHttpAsyncClient httpClient;
+  private CloseableHttpAsyncClient controlClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
   private final String ackUrl;
@@ -210,7 +216,8 @@ public final class HttpSender implements Endpoints, CookieClient {
   public synchronized void start() {
     // attempt to create and start an http client
     try {
-        this.httpClient = HttpClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation,cert);
+        this.httpClient = dataChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation,cert);
+        this.controlClient = controlChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation,cert);
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
@@ -238,9 +245,10 @@ public final class HttpSender implements Endpoints, CookieClient {
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-        //HttpClientWrapper.releaseClient(this);
-         HttpClientHostMapper.getClientWrapper(this).releaseClient(this);
+         dataChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
         httpClient = null;
+        controlChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
+        controlClient = null;
     }
   }
 
@@ -362,7 +370,7 @@ public final class HttpSender implements Endpoints, CookieClient {
             empty = new StringEntity("");
             dummyEventPost.setEntity(empty);
             LOG.debug("executing empty event post to raw on channel={}. Request: {}", getChannel(), dummyEventPost);
-            httpClient.execute(dummyEventPost, httpCallback);
+            controlClient.execute(dummyEventPost, httpCallback);
           } catch (Exception ex) {
             LOG.error(ex.getMessage(), ex);
             throw new RuntimeException(ex.getMessage(), ex);
@@ -399,8 +407,8 @@ public final class HttpSender implements Endpoints, CookieClient {
 
         entity.setContentType(HttpContentType);
         httpPost.setEntity(entity);
-        if(null != httpClient){ //httpClient can be null if close happened
-            httpClient.execute(httpPost, httpCallback);
+        if(null != controlClient){ //httpClient can be null if close happened
+            controlClient.execute(httpPost, httpCallback);
         }
     } catch (Exception ex) {
       hecIoMgr.setAckPollInProgress(false);
@@ -427,8 +435,8 @@ public final class HttpSender implements Endpoints, CookieClient {
         healthEndpointCheck= new HttpGet(getUrl);
         LOG.debug("executing poll on health endpoint, channel={}. Request: {}", getChannel(), healthEndpointCheck);
         setHeaders(healthEndpointCheck);
-        if(null != httpClient){ //httpClient can be null if close happened
-            httpClient.execute(healthEndpointCheck, httpCallback);
+        if(null != controlClient){ //httpClient can be null if close happened
+            controlClient.execute(healthEndpointCheck, httpCallback);
         }
     }catch (Exception ex) {
       LOG.error("{}", ex.getMessage(), ex);
@@ -460,9 +468,9 @@ public final class HttpSender implements Endpoints, CookieClient {
         LOG.trace("checking health via ack endpoint: {}", req);
         entity.setContentType(HttpContentType);
         ackCheck.setEntity(entity);
-        if(null != httpClient){ //httpClient can be null if close happened
+        if(null != controlClient){ //httpClient can be null if close happened
           LOG.debug("executing ack check on channel={}", getChannel());
-          httpClient.execute(ackCheck, httpCallback);
+          controlClient.execute(ackCheck, httpCallback);
         }else{
             LOG.error("httpClient is null");
         }
