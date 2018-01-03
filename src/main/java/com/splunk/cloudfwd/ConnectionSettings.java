@@ -604,6 +604,24 @@ public class ConnectionSettings {
         this.eventBatchFlushTimeout = timeoutMS;
     }
 
+    @Deprecated
+    /**
+     * Allows serializated hecEndpointType to be set by mapper in ConnectionSettings.fromProps()
+     */
+    public void setHecEndpointType(String type) {
+        String endpoint;
+        if (type != this.hecEndpointType) {
+            if ("event".equals(type) || "raw".equals(type)) {
+                endpoint = type;
+            } else {
+                getLog().warn(
+                        "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
+                endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
+            }
+            this.hecEndpointType = endpoint;
+        }
+    }
+
     public void setHecEndpointType(ConnectionImpl.HecEndpoint type) {
         String endpoint;
         if (type != getHecEndpointType()) {
