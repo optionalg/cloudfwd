@@ -45,6 +45,7 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     public void acknowledged(EventBatch events) {
         try {
             ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
+            events.getLifecycleMetrics().setAckedTimestamp(System.currentTimeMillis());
             callbacks.acknowledged(events);
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.acknowledged: " + e.getMessage());
@@ -61,6 +62,7 @@ public class CallbackInterceptor implements ConnectionCallbacks {
                     return;
                 }
                 ((EventBatchImpl)events).setFailed(true);
+                events.getLifecycleMetrics().setFailedTimestamp(System.currentTimeMillis());
                 ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
             }
             this.callbacks.failed(events, ex);

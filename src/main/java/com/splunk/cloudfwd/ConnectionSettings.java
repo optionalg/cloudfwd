@@ -18,6 +18,8 @@ package com.splunk.cloudfwd;
 import static com.splunk.cloudfwd.PropertyKeys.ACK_POLL_MS;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
@@ -28,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -145,13 +148,18 @@ public class ConnectionSettings {
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
 
+    @Deprecated
+    /*
+        Only used by deprecated Connections.create(ConnectionCallbacks, Properties) method
+     */
     public static ConnectionSettings fromProps(Properties props) {
-        JavaPropsMapper mapper = new JavaPropsMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node = mapper.valueToTree(props);
         try {
-                ConnectionSettings connectionSettings = mapper.readValue(props, ConnectionSettings.class);
-                return connectionSettings;
+            ConnectionSettings settings = mapper.readValue(node.toString(), ConnectionSettings.class);
+            return settings;
         } catch (IOException e) {
-            throw new RuntimeException("Could not map Properties file to Java object - please check file path.", e);
+            throw new RuntimeException("Could not map Properties object to ConnectionSettings object - please check Properties object.", e);
         }
     }
     
@@ -598,16 +606,18 @@ public class ConnectionSettings {
 
     public void setHecEndpointType(ConnectionImpl.HecEndpoint type) {
         String endpoint;
-        if (type == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
-            endpoint = "event";
-        } else if (type == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
-            endpoint = "raw";
-        } else {
-            getLog().warn(
-                    "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
-            endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
+        if (type != getHecEndpointType()) {
+            if (type == ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT) {
+                endpoint = "event";
+            } else if (type == ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT) {
+                endpoint = "raw";
+            } else {
+                getLog().warn(
+                        "Unrecognized HEC Endpoint type. Defaulting to " + DEFAULT_HEC_ENDPOINT_TYPE + ". See PropertyKeys.HEC_ENDPOINT_TYPE.");
+                endpoint = DEFAULT_HEC_ENDPOINT_TYPE;
+            }
+            this.hecEndpointType = endpoint;
         }
-        this.hecEndpointType = endpoint;
     }
 
     /**
@@ -708,8 +718,63 @@ public class ConnectionSettings {
           return GENERIC_LOG;
       }
     }
-/*
-User should be able to init Connection using ConnectionSettings
- */
 
+    @Deprecated
+    /**
+     * Should use individual setter methods to update properties instead.
+     * @param props
+     * @throws UnknownHostException
+     */
+    public void setProperties(Properties props) throws UnknownHostException {
+        for (String key : props.stringPropertyNames()) {
+            String val = props.getProperty(key);
+            switch (key) {
+                case PropertyKeys.ACK_TIMEOUT_MS:
+                    setAckTimeoutMS(Long.parseLong(val));
+                    break;
+                case PropertyKeys.COLLECTOR_URI:
+                    setUrls(val);
+                    break;
+                case PropertyKeys.TOKEN:
+                    setToken(val);
+                    break;
+                case PropertyKeys.HEC_ENDPOINT_TYPE:
+                    if (val == "event") {
+                        setHecEndpointType(ConnectionImpl.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+                    } else if (val == "raw") {
+                        setHecEndpointType(ConnectionImpl.HecEndpoint.RAW_EVENTS_ENDPOINT);
+                    }
+                    break;
+                case PropertyKeys.HOST:
+                    setHost(val);
+                    break;
+                case PropertyKeys.INDEX:
+                    setIndex(val);
+                    break;
+                case PropertyKeys.SOURCE:
+                    setSource(val);
+                    break;
+                case PropertyKeys.SOURCETYPE:
+                    setSourcetype(val);
+                    break;
+                default:
+                    LOG.error("Attempt to change property not supported: " + key);
+            }
+        }
+        
+        /* TODO: Investigate whether code below can be made to call each attribute's setter
+           instead of just setting the property directly, so that validation and  
+           checkAndRefreshChannels have the chance of being called. 
+           
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try {
+            props.store(bos, null);
+            ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            JavaPropsMapper mapper = new JavaPropsMapper();
+            mapper.readerForUpdating(this).readValue(bis);
+        } catch (IOException e) {
+            throw new RuntimeException("Could update Properties - please check Properties object.", e);
+        }
+        */
+    }
 }
