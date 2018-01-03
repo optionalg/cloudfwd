@@ -73,10 +73,10 @@ public class EventWithMetadata implements Event {
 
   public EventWithMetadata(Object event, Comparable id) {
     if (null == event) {
-      throw new IllegalArgumentException("Event cannot be null");
+      throw new IllegalArgumentException("Event field cannot be null");
     }
     if(event.toString().trim().isEmpty()){
-      throw new IllegalArgumentException("Event cannot be empty");
+      throw new IllegalArgumentException("Event field cannot be empty");
     }
     this.event = event;
     this.id = id;
