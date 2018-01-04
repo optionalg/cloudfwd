@@ -316,6 +316,22 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
                 waitingSenders.get(events.getId()).tell();
             }
+            
+            LifecycleMetrics lm = events.getLifecycleMetrics();
+            String lifecycleMetricTag = "LIFECYCLE_METRIC";
+            
+            // event post metrics
+            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_SENT_TIMESTAMP, lm.getPostSentTimestamp(), testId);
+            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_RESPONSE_TIMESTAMP, lm.getPostResponseTimeStamp(), testId);
+            LOG.info("{} type={} latency={} testId={}", lifecycleMetricTag, "post_response_latency", lm.getPostResponseLatency(), testId);
+
+            // load balancer metrics
+            LOG.info("{} type={} spintime={} testId={}", lifecycleMetricTag, "load_balancer_spin_time", lm.getTimeInLoadBalancer(), testId);
+
+            // ack metrics
+            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.ACKED_TIMESTAMP, lm.getAckedTimestamp(), testId);
+            LOG.info("{} type={} latency={} testId={}", lifecycleMetricTag, "ack_latency", lm.getAcknowledgedLatency(), testId);
+            
         }
 
         @Override
