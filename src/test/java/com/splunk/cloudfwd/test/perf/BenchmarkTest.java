@@ -74,7 +74,15 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         // no-op - overridden in child class to do timestamp configuration on buffer variable
         String byte_str = new String(buffer.array());
         // TODO Convert time stamp based on source type
-        byte_str = byte_str.replaceAll("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z", new SimpleDateFormat("YYYY-MM-DD'T'hh:mm:ss'Z'").format(new Date()));
+        if (sourcetype.equals(Sourcetype.CLOUDTRAIL_UNPROCESSED) ||
+                sourcetype.equals(Sourcetype.CLOUDWATCH_EVENTS_VERSIONID_LONG) ||
+                sourcetype.equals(Sourcetype.CLOUDWATCH_EVENTS_VERSIONID_MIXED)) {
+            byte_str = byte_str.replaceAll("\"time\":\\s?\"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z",
+                    new SimpleDateFormat("YYYY-MM-DD'T'hh:mm:ss'Z'").format(new Date()));
+        } else {
+            byte_str = byte_str.replaceAll("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z",
+                    new SimpleDateFormat("YYYY-MM-DD'T'hh:mm:ss'Z'").format(new Date()));
+        }
         // Repack buffer
         byte[] bytes = byte_str.getBytes();
         buffer = ByteBuffer.wrap(bytes);
