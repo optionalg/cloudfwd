@@ -16,9 +16,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private ByteBuffer buffer;
     
     // Configurable options //TODO: make this configurable through CLI
-    private String logtype;
+    private Sourcetype sourcetype;
     private int batchSizeMB = 5;
-    private enum sourcetypes {
+    private enum Sourcetype {
         CLOUDTRAIL_UNPROCESSED,
         CLOUDTRAIL_PROCESSED,
         CLOUDWATCH_EVENTS_NO_VERSIONID,
@@ -31,39 +31,38 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     // # nodes in cluster 
 
     private String getEventsFilename() {
-        if (logtype != null) {
-            if (logtype.equals("cloudtrail_unprocessed")) {
+        switch(sourcetype) {
+            case CLOUDTRAIL_UNPROCESSED:
                 return "cloudtrail_via_cloudwatchevents_unprocessed.sample";
-            } else if (logtype.equals("cloudtrail_processed")) {
+            case CLOUDTRAIL_PROCESSED:
                 return "cloudtrail_modinputprocessed.sample";
-            } else if (logtype.equals("cloudwatch_events_no_versionid")) {
+            case CLOUDWATCH_EVENTS_NO_VERSIONID:
                 // Events do not contain either version or id 
                 return "cloudwatchevents_awstrustedadvisor.sample";
-            } else if (logtype.equals("cloudwatch_events_versionid_mixed")) {
+            case CLOUDWATCH_EVENTS_VERSIONID_MIXED:
                 // Some events contain both version and id, while others just contain id
                 return "cloudwatchevents_ec2autoscale.sample";
-            } else if (logtype.equals("cloudwatch_events_versionid_short")) {
+            case CLOUDWATCH_EVENTS_VERSIONID_SHORT:
                 // Events contain both version and id, and are short in length
                 return "cloudwatchevents_codebuild.sample";
-            } else if (logtype.equals("cloudwatch_events_versionid_long")) {
+            case CLOUDWATCH_EVENTS_VERSIONID_LONG:
                 // Events contain both version and id, and are long in length
                 return "cloudwatchevents_macie.sample";
-            } else if (logtype.equals("vpcflowlog")) {
-                return "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
-            }
+            case VPCFLOWLOG:
+                return "cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
+            default:
+                return "many_text_events_no_timestamp.sample";
         }
-        return "many_text_events_no_timestamp.sample";
     }
     
     @Test
     public void runPerfTest() throws InterruptedException {
         // For each sourcetype, send batches for 15 minutes
-        
-        // Read events from file once, then build a batch from it that we can reuse
-        sendTextToRaw();
-        
-        // Update timestamps on batch 
-        updateTimestampsOnBatch();
+        for (Sourcetype s : Sourcetype.values()) {
+            sourcetype = s;
+            // Read events from file once, then build a batch from it that we can reuse
+            sendTextToRaw();
+        }
         
     }
     
