@@ -38,7 +38,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
-        cliProperties.put(NUM_SENDERS_KEY, "384"); 
+        cliProperties.put(NUM_SENDERS_KEY, "384"); // to run in local with JVM memory restrictions, pass -Dnum_senders=64 in CLI to run test
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
     }
@@ -54,9 +54,13 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private int batchSizeMB;
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
-    
+
 
     @Test
+    public void runTest() throws InterruptedException {
+        sendTextToRaw();
+    }
+    
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
@@ -112,7 +116,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             + " (token and url will be pulled from cloudfwd.properties if null)");
     }
 
-    private void readEventsFile() {
+    protected void readEventsFile() {
         try {
             URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
             byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
@@ -194,6 +198,10 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
         }
         */
+    }
+    
+    protected void updateTimestampsOnBatch() {
+        // no-op - overridden in child class to do timestamp configuration on buffer variable
     }
 
     public class SenderWorker {      
@@ -285,6 +293,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
         private EventBatch nextBatch(int seqno) {
             EventBatch batch = Events.createBatch();
+            updateTimestampsOnBatch();
             UnvalidatedByteBufferEvent e = new UnvalidatedByteBufferEvent(
                 buffer.asReadOnlyBuffer(), seqno);
             batch.add(e);
