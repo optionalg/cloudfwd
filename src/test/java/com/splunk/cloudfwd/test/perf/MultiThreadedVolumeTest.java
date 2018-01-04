@@ -53,6 +53,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
     private int batchSizeMB;
 
+    private Connection sharedConnection;
+
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
 
@@ -67,13 +69,14 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
+        this.sharedConnection = createSharedConnection();
        
         for (int i = 0; i < numSenderThreads; i++) {
-            final int n =i;
+            SenderWorkerData senderData = new SenderWorkerData(i, sharedConnection);
             futureList.add(senderExecutor.submit(()->{
                 SenderWorker s;
                 try {
-                    s = new SenderWorker(n);
+                    s = new SenderWorker(senderData);
                 } catch (UnknownHostException ex) {
                     throw new RuntimeException(ex.getMessage(), ex);
                 }
@@ -95,6 +98,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         });
         senderExecutor.shutdownNow();
         LOG.info("Closing connection");
+        sharedConnection.close();
         connection.close();
     }
     
@@ -196,29 +200,35 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         */
     }
 
+    private Connection createSharedConnection(){
+        connection = createAndConfigureConnection();
+        ConnectionSettings connectionSettings = connection.getSettings();
+
+        //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is
+        //instantiated
+        if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+            connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+        }
+        if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
+            connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
+        }
+        connectionSettings.setMockHttp(false);
+        connectionSettings.setTestPropertiesEnabled(false);
+
+        return connection;
+    }
+
     public class SenderWorker {      
         private boolean failed = false;
-        private int workerNumber;
+        private final int workerNumber;
         private Connection connection;
-        private ConnectionSettings connectionSettings;
-        
-        public SenderWorker(int workerNum) throws UnknownHostException{
-            this.workerNumber = workerNum;
-            this.connection = createAndConfigureConnection();
-            this.connectionSettings = connection.getSettings();
-            if (null ==connection){
+
+        public SenderWorker(SenderWorkerData data) throws UnknownHostException{
+            this.workerNumber = data.workerNum;
+            this.connection = data.connection;
+            if (null == connection){
                 Assert.fail("null connection");
             }
-            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
-            //instantiated
-            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
-            }
-            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
-                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
-            }
-            connectionSettings.setMockHttp(false);
-            connectionSettings.setTestPropertiesEnabled(false);
         }
         public void sendAndWaitForAcks() {
             LOG.info("sender {} starting its send loop", workerNumber);
@@ -331,6 +341,15 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 s.failed();
                 s.tell();
             }
+        }
+    }
+
+    public class SenderWorkerData{
+        public int workerNum;
+        public Connection connection;
+        public SenderWorkerData(int workerNum, Connection connection){
+            this.workerNum = workerNum;
+            this.connection = connection;
         }
     }
 }
