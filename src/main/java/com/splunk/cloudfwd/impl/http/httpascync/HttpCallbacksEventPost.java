@@ -26,6 +26,7 @@ import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import org.slf4j.Logger;
 
 /**
@@ -63,12 +64,14 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
     @Override
     public void completed(String reply, int code) {
+        events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
         try {
             switch (code) {
                 case 200:
                     consumeEventPostOkResponse(reply, code);
                     break;
-                case 503:    
+                case 503:
+                    LOG.debug("503 response from event post on channel={}", getChannel());
                     warn(reply, code);
                     notifyBusyAndResend(reply, code, EVENT_POST_INDEXER_BUSY);
                     break;
@@ -106,15 +109,18 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
 
     private void resend(Exception ex) {
-        try {
-            events.addSendException(ex);
-            LOG.warn("resending events through load balancer {} on channel {}",
-                events, getSender().getChannel());
-            getSender().getConnection().getLoadBalancer().
-                sendRoundRobin(events, true); //will callback failed if max retries exceeded
-        } catch (Exception e) {
-            invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
-        }
+        //we must run resends through their own thread. Otherwise the apache client thread could wind up blocked in the load balancer
+        Runnable r = ()-> {
+             try {
+                events.addSendException(ex);
+                LOG.warn("resending events through load balancer {} on channel {}",
+                    events, getSender().getChannel());                
+                getSender().getConnection().getLoadBalancer().sendRoundRobin(events, true); //will callback failed if max retries exceeded   
+            } catch (Exception e) {
+                invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
+            }                
+        };
+        ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
     }
 
     private void notifyFailedAndResend(Exception ex) {
@@ -131,7 +137,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
       
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
-        LOG.debug("{} Event post response: {}", getChannel(), resp);
+        LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {

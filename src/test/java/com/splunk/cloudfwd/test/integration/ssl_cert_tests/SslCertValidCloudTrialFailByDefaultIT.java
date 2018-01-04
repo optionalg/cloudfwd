@@ -14,6 +14,7 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecNoValidChannelsException;
@@ -24,10 +25,7 @@ import org.junit.Test;
 
 import javax.net.ssl.SSLHandshakeException;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-
-import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * Cloud>Trial is issued by a private Splunk certificate authority. For 
@@ -37,59 +35,54 @@ import static com.splunk.cloudfwd.PropertyKeys.*;
  * @author ssergeev
  */
 public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTest {
-  
+
+
   @Test
   /**
-   * This test expects that send HecNoValidChannelsException will be thrown 
-   * during the send and validates that all channels became unhealthy caused by
-   * SSLPeerUnverifiedException exception. 
+   * Current logic is to fail on connection instantiation if preflight fails
    */
-  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(false, false);
-    List<HecHealth> healths = connection.getHealth();
-    Assert.assertTrue(!healths.isEmpty());
-    // we expect all channels to fail catching SSLHandshakeException in preflight
-    Assert.assertTrue(healths.stream()
-            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
-            .count() == healths.size());
-    connection.close();
+  public void connectionFails() throws InterruptedException, HecConnectionTimeoutException {
+    // no-op here
+  }
+  
+// The logic below is for connection not throwing an exception on instantiation.
+// current implementation is no-op
+
+//  @Test
+//  /**
+//   * This test expects that send HecNoValidChannelsException will be thrown 
+//   * during the send and validates that all channels became unhealthy caused by
+//   * SSLPeerUnverifiedException exception. 
+//   */
+//  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
+//    super.sendEvents(false, false);
+//    List<HecHealth> healths = connection.getHealth();
+//    Assert.assertTrue(!healths.isEmpty());
+//    // we expect all channels to fail catching SSLHandshakeException in preflight
+//    Assert.assertTrue(healths.stream()
+//            .filter(e -> e.getStatus().getException() instanceof SSLHandshakeException)
+//            .count() == healths.size());
+//    connection.close();
+//  }
+  
+  @Override
+  protected void configureProps(ConnectionSettings settings) {
+    settings.setUrls("https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
+    settings.setToken("19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
+    settings.enableCertValidation();
+    settings.setMockHttp(false);
+    settings.setSSLCertContent("");
   }
   
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
-    props.put(TOKEN, "19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
-    props.put(DISABLE_CERT_VALIDATION, "false");
-    props.put(MOCK_HTTP_KEY, "false");
-    props.put(CLOUD_SSL_CERT_CONTENT, "");
-    return props;
+  protected boolean connectionInstantiationShouldFail() {return true;}
+  
+  @Override
+  protected boolean isExpectedConnInstantiationException(Exception e) {
+    return e instanceof RuntimeException && e.getMessage().equals("General SSLEngine problem");
   }
   
   @Override
-  protected boolean shouldSendThrowException() {return true;}
-  
-  @Override
-  protected boolean isExpectedSendException(Exception e) {
-    if(e instanceof HecNoValidChannelsException) {
-      return true;
-    }
-    return false;
-  }
-  
-  @Override
-  protected int getNumEventsToSend() {
-    return 1;
-  }
-  
-  @Override
-  protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumEventsToSend()) {
-      @Override
-      public void await(long timeout, TimeUnit u) throws InterruptedException {
-        // don't need to wait for anything since we don't get a failed callback
-      }
-    };
-  }
+  protected int getNumEventsToSend() { return 0; }
   
 }

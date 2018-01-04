@@ -14,16 +14,15 @@ package com.splunk.cloudfwd.test.mock;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import static com.splunk.cloudfwd.PropertyKeys.*;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
-import java.util.Properties;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,14 +38,20 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(
             AcknowledgementTimeoutTest.class.getName());
 
-    public AcknowledgementTimeoutTest() {
-    }
+    public AcknowledgementTimeoutTest() {}
 
     @Override
     @Before
     public void setUp() {
         super.setUp();
     }
+    
+    @After
+    @Override
+    public void tearDown() {
+        super.tearDown();
+        connection.closeNow();
+    }    
 
     @Test
     public void testTimeout() throws InterruptedException, HecConnectionTimeoutException {
@@ -55,23 +60,17 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        // props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+    protected void configureProps(ConnectionSettings settings) {
+        // props.put(ConnectionSettings.MOCK_HTTP_KEY, "true");
         //simulate a slow endpoint
-        props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
         if (SlowEndpoints.sleep > 10000) {
             throw new RuntimeException("Let's not get carried away here");
         }
-
-        props.put(ACK_TIMEOUT_MS, Long.toString(1000));
-        props.put(UNRESPONSIVE_MS,
-                "-1");//disable dead channel detection
-        props.put(PropertyKeys.EVENT_BATCH_SIZE, 0);
+        settings.setAckTimeoutMS(1000);
+        settings.setUnresponsiveMS(-1); //disable dead channel detection
+        settings.setEventBatchSize(0);
         //props.put(PropertyKeys.MAX_TOTAL_CHANNELS, 1);
-        return props;
     }
 
     @Override
@@ -81,9 +80,7 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
 
     @Override
     protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
-        super.sendEvents();
-        Assert.assertTrue("didn't get expected timeout",
-                ((TimeoutCatcher) super.callbacks).gotTimeout);
+        super.sendEvents();      
     }
 
     @Override
@@ -93,35 +90,35 @@ public class AcknowledgementTimeoutTest extends AbstractConnectionTest {
 
     class TimeoutCatcher extends BasicCallbacks {
 
-        public boolean gotTimeout;
-
         public TimeoutCatcher(int expected) {
             super(expected);
         }
-
-        @Override
-        public void failed(EventBatch events, Exception e) {
-            //We expect a timeout
-            Assert.assertTrue(e.getMessage(),
-                    e instanceof HecAcknowledgmentTimeoutException);
-            LOG.trace("Got expected exception: " + e);
-            if (e instanceof HecAcknowledgmentTimeoutException) {
-                gotTimeout = true;
-            }
-            latch.countDown(); //allow the test to finish
+   
+        protected boolean isExpectedFailureType(Exception e){
+          return e instanceof HecAcknowledgmentTimeoutException;
         }
+
+          /**
+           * subclass musts override to return true when their test generates an expected exception
+           * @return
+           */
+          public boolean shouldFail(){
+            return true;
+        }
+        
+        
 
         @Override
         public void checkpoint(EventBatch events) {
             LOG.trace("SUCCESS CHECKPOINT " + events.getId());
             Assert.fail(
-                    "Got an unexpected checkpoint when we were waiting for timeout");
+                    "Got an unexpected checkpoint when we were waiting for timeout: " + events);
         }
 
         @Override
         public void acknowledged(EventBatch events) {
             Assert.fail(
-                    "Got an unexpected acknowledged when we were waiting for timeout");
+                    "Got an unexpected acknowledged when we were waiting for timeout: "+ events);
 
         }
     }

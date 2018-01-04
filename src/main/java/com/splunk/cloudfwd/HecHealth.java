@@ -81,9 +81,15 @@ public interface HecHealth {
     public HecChannel getChannel();
 
     /**
-     * @return the healthy
+     * @return true if healthu
      */
     boolean isHealthy();
+    
+        /**
+     * @return true if channel is full
+     */
+    boolean isFull();
+    
 
     /*
      * Return Exception responsible for LifecycleEvent returned by getStatus. This method has the same affect as

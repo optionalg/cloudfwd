@@ -1,6 +1,7 @@
 package com.splunk.cloudfwd.test.mock.hec_server_error_response_tests;
 
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
@@ -10,12 +11,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Properties;
 import java.util.concurrent.TimeoutException;
-
-import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 
 /**
  * Created by mhora on 10/3/17.
@@ -62,13 +58,10 @@ public class HecServerErrorResponseInvalidEventNumber extends AbstractHecServerE
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.invalidvent.InvalidEventEndpoint");
-        props.put(ACK_TIMEOUT_MS, "500000");  //in this case we excpect to see HecConnectionTimeoutException
-        props.put(BLOCKING_TIMEOUT_MS, "5000");
-        return props;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.invalidvent.InvalidEventEndpoint");
+        settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException
+        settings.setBlockingTimeoutMS(5000);
     }
 
     @Override

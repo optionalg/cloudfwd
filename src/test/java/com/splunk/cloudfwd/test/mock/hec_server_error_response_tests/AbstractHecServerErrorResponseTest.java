@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Properties;
 
 /**
  * Created by mhora on 10/3/17.
@@ -65,20 +64,18 @@ public abstract class AbstractHecServerErrorResponseTest extends AbstractConnect
     // Need to separate this logic out of setUp() so that each Test
     // can use different simulated endpoints
     protected void createConnection() {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
-        this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+        ConnectionSettings settings = this.getTestProps();
+        configureProps(settings);
+        connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         configureConnection(connection);
     }
 
     protected void createConnection(LifecycleEvent.Type problemType) {
-        Properties props = new Properties();
-        props.putAll(getTestProps());
-        props.putAll(getProps());
+        ConnectionSettings settings = this.getTestProps();
+        this.configureProps(settings);
         boolean gotException = false;
         try{
-            this.connection = Connections.create((ConnectionCallbacks) callbacks, props);
+            connection = Connections.create((ConnectionCallbacks) callbacks, settings);
         }catch(Exception e){
             Assert.assertTrue("Expected HecServerErrorResponseException",  e instanceof HecServerErrorResponseException);
             HecServerErrorResponseException servRespExc = (HecServerErrorResponseException) e;

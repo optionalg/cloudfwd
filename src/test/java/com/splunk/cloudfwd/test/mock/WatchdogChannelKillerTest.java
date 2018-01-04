@@ -15,16 +15,13 @@
  */
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.HecHealth;
-import com.splunk.cloudfwd.PropertyKeys;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_KEY;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import java.util.List;
-import java.util.Properties;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,17 +38,15 @@ import org.junit.Test;
 public class WatchdogChannelKillerTest extends AbstractConnectionTest {
 
     @Override
-    protected Properties getProps() {
-        Properties props = new Properties();
-        props.setProperty(MOCK_HTTP_KEY, "true");
-        props.setProperty(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-        props.setProperty(PropertyKeys.EVENT_BATCH_SIZE, "0"); //make sure no batching
-        props.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "1"); //so we insure we resend on same channel  
-        props.setProperty(PropertyKeys.CHANNEL_DECOM_MS, "5000"); //decomission the channel after 5 seconds  
-        props.setProperty(PropertyKeys.ACK_TIMEOUT_MS, "1000"); //1 second for ack timeoout
-        props.setProperty(PropertyKeys.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "1");       
-        return props;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setMockHttp(true);
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
+        settings.setEventBatchSize(0); //make sure no batching
+        settings.setMaxRetries(1); //so we insure we resend on same channel  
+        settings.setChannelDecomMS(500); //decommission the channel after 500ms  
+        settings.setAckTimeoutMS(250); //time out ack in 250ms
+        settings.setChannelQuiesceTimeoutMS(750); //watchdog to kill the channel in 750ms
+        settings.setMaxUnackedEventBatchPerChannel(1);
     }
 
     @Override
@@ -79,12 +74,12 @@ public class WatchdogChannelKillerTest extends AbstractConnectionTest {
     @Test
     public void sendMessageToJammedChannelThatCannotCloseCleanly()
             throws InterruptedException {
-        SlowEndpoints.sleep = 500000; //endpoint won't respond for 500 seconds
+        SlowEndpoints.sleep = 1000; //endpoint won't respond for 10 seconds
         LOG.info(connection.getHealth().toString());
-        super.sendEvents();
-        LOG.info(connection.getHealth().toString());
-        LOG.info("Sorry: this test needs to wait 3 minutes... :-(");
-        Thread.sleep(180000); //wait 3 minutes
+        super.sendEvents(); //send the one event, then procede immediately to the next line
+        connection.close(); //channel will never quiesce, so watchdog must kick in (750ms) to close it
+        Thread.sleep(1000); //wait for watchdog
+        LOG.info(connection.getHealth().toString());        
         List<HecHealth> healths = connection.getHealth();    
         LOG.info(healths.toString());
         Assert.assertEquals("Expected no channels, but found " + healths, 0,

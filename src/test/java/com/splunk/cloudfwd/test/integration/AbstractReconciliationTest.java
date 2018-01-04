@@ -3,9 +3,8 @@ package com.splunk.cloudfwd.test.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
-import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.impl.http.HttpClientFactory;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import java.io.IOException;
@@ -103,7 +102,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   @After
+  @Override
   public void tearDown(){
+    LOG.info("tearing down test");
     deleteTestToken();
     deleteTestIndex();
       try {
@@ -112,15 +113,16 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
           LOG.error("Error closing connection used by tests to setup splunk",ex);
           Assert.fail(ex.getMessage());
       }
+      if(null != connection){
+          connection.closeNow();
+      }
   }
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-    props.put(PropertyKeys.EVENT_BATCH_SIZE, "16000");
-    props.put(PropertyKeys.TOKEN, createTestToken(getSourceType()));    
-    return props;
+  protected void configureProps(ConnectionSettings settings) {
+    settings.setMockHttp(false);
+    settings.setEventBatchSize(16000);
+    settings.setToken(createTestToken(getSourceType()));
   }
   
   protected String getSourceType(){
@@ -169,7 +171,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
               setDefaultCredentialsProvider(credsProvider).
               setHostnameVerifier(
                       SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER).
-              setSSLContext(HttpClientFactory.build_ssl_context_allow_all()).
+              setSSLContext(HttpClientFactory.buildSslContextAllowAll()).
               build();
     } catch (Exception ex) {
       Assert.fail("Problem Building Splunk Client, ex: " +
@@ -307,6 +309,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   protected void enableHec() {
+    LOG.info("Starting enableHec");
     try {
       HttpPost httpRequest = new HttpPost(mgmtSplunkUrl() +
               "/services/data/inputs/http/http");

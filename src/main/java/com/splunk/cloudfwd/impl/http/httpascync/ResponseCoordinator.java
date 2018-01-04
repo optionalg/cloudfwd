@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
+import com.splunk.cloudfwd.impl.http.lifecycle.Failure;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,7 +78,8 @@ h1's response
      */
     public synchronized void conditionallyUpate(LifecycleEvent e,
             ChannelMetrics channelMetrics) {
-        latches[responseCount.get()].countDown(e); //allows someone to await the nth response
+        LOG.trace("conditionallyUpdate for {}", e);
+        latches[responseCount.get()].countDown(e); //allows someone to await the nth response 
         responseCount.incrementAndGet();
         if(!e.isOK()){
             alreadyNotOk.set(true); //record fact that we saw a not OK
@@ -86,7 +88,13 @@ h1's response
         if (isOKIgnorable(e)) {
             return; //under the above conditions we ignore OK responses
         }
-        channelMetrics.update(e);
+        channelMetrics.update(e);    
+    }
+    
+    public void cancel(LifecycleEvent e){        
+        for(LifecycleEventLatch latch:latches){
+            latch.countDown(e); //release anyone who might have been waiting
+        }        
     }
 
     private boolean isOKIgnorable(LifecycleEvent e) {
@@ -123,13 +131,11 @@ h1's response
      * @throws InterruptedException
      */
     public LifecycleEvent awaitNthResponse(int n) throws InterruptedException {
-        //TODO FIXME - for sure we need to also have timeouts at the HTTP layer. If network is down this is going
-        //to block the full five minutes. Furthermore, preflight retries will occur N times and the blocking will stack!
-        if (latches[n].await(5, TimeUnit.MINUTES)) {//wait for ackcheck response before hitting ack endpoint  
+        if (latches[n].await(3, TimeUnit.MINUTES)) {//wait for response
             return this.latches[n].getLifecycleEvent();
         } else {
-            LOG.warn("ResponseCoordinator timed out (5 minutes)  waiting for first response.");
-            return null;
+            LOG.warn("ResponseCoordinator timed out waiting for response {}.", n);
+            return null; //in this case, for preflight checks, there will not be a retry
         }
     }
 

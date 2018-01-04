@@ -1,27 +1,19 @@
 package com.splunk.cloudfwd.test.util;
 
-import com.splunk.cloudfwd.Connection;
-import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.EventWithMetadata;
-import com.splunk.cloudfwd.RawEvent;
+import com.splunk.cloudfwd.*;
+
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.splunk.cloudfwd.HecLoggerFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import com.splunk.cloudfwd.ConnectionCallbacks;
-import com.splunk.cloudfwd.Connections;
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 /*
@@ -58,7 +50,6 @@ public abstract class AbstractConnectionTest {
    * set enabled=false in test.properties to disable test.properties and
    * fallback on cloudfwd.properties
    */
-  public static final String KEY_ENABLE_TEST_PROPERTIES = "enabled";
   public static final String TEST_METHOD_GUID_KEY = "testMethodGUID";
 
   protected BasicCallbacks callbacks;
@@ -72,6 +63,8 @@ public abstract class AbstractConnectionTest {
   protected List<Event> events;
   private Exception sendException;
   private String sendExceptionMsg;
+  
+
 
   //override to do stuff like set buffering or anything else affecting connection
   protected void configureConnection(Connection connection) {
@@ -82,31 +75,37 @@ public abstract class AbstractConnectionTest {
 
   @Before
   public void setUp() {
+    LOG.info("starting test setup()");
     extractCliTestProperties();
     if(connectionInstantiationShouldFail() && getNumEventsToSend() != 0){
         throw new RuntimeException("connectionInstantiationShouldFail returns true, but getNumEventsToSend not returning 0. "
                 + "You should override getNumEventsToSend and return zero.");
     }
     this.callbacks = getCallbacks();
-    Properties props = new Properties();
-    props.putAll(getTestProps());
-    props.putAll(getProps());
-    this.connection = createConnection(callbacks, props);
-    if(null == this.connection){
-        return;
-    }
-    this.connection.setLoggerFactory(new HecLoggerFactoryImpl());
-    configureConnection(connection);
+    this.connection = createAndConfigureConnection();
     this.testMethodGUID = java.util.UUID.randomUUID().toString();
     this.events = new ArrayList<>();
   }
   
-  protected Connection createConnection(ConnectionCallbacks c, Properties p){
+  protected Connection createAndConfigureConnection(){
+    ConnectionSettings settings = getTestProps();
+    configureProps(settings);
+    connection = createConnection(callbacks, settings);
+    if(null == connection){
+      return null;
+    }
+    connection.setLoggerFactory(new HecLoggerFactoryImpl());
+    configureConnection(connection);
+    return connection;
+  }
+  
+  protected Connection createConnection(ConnectionCallbacks c, ConnectionSettings settings){
       boolean didThrow = false;
       Connection conn = null;
       try{
-        conn = Connections.create(callbacks, p);
+        conn = Connections.create(callbacks, settings);
       }catch(Exception e){
+          e.printStackTrace();
           didThrow = true;
           if(!connectionInstantiationShouldFail()){
             e.printStackTrace();
@@ -149,15 +148,23 @@ public abstract class AbstractConnectionTest {
 
   @After
   public void tearDown() {
+      LOG.info("tearing down test");
     //in case of failure we probably have events stuck on a channel. Therefore a regular close will just
     //hang out waiting (infinitely?) for the messages to flush out before gracefully closing. So when we see
     //a failure we must use the closeNow method which closes the channel regardless of whether it has
     //messages in flight.
-    if (callbacks.isFailed()) {
-      if(null != connection){
-          connection.closeNow();
-      }
+    if(null == connection){
+        return;
     }
+    if (callbacks.isFailed() || callbacks.shouldFail()) {     
+          connection.closeNow();      
+    }else{
+        connection.close();
+    }
+    LOG.info("teardown complete");
+//    this.callbacks = null; //unregister the callback first
+//    this.connection = null;
+//    System.gc();
   }
   
   /**
@@ -185,10 +192,10 @@ public abstract class AbstractConnectionTest {
           for (int i = 0; i < expected; i++) {
           ///final EventBatch events =nextEventBatch(i+1);
               Event event = nextEvent(i + 1);
-              LOG.trace("Send event {} i={}", event.getId(), i);
+                LOG.trace("Send event {} i={}", event.getId(), i);
 
               connection.send(event);
-          }
+          }          
       } catch(Exception e) {
           this.sendException = e;
           this.sendExceptionMsg = e.getMessage();
@@ -203,10 +210,11 @@ public abstract class AbstractConnectionTest {
           connection.close();
         }
       }
-      
-      this.callbacks.await(10, TimeUnit.MINUTES);
-      this.callbacks.checkFailures();
-      this.callbacks.checkWarnings();
+      if(null == sendException){      //only await callback-related fails and warns if we did not throw a send exception
+        this.callbacks.await(10, TimeUnit.MINUTES);
+        this.callbacks.checkFailures();
+        this.callbacks.checkWarnings();
+      }
   }
 
   public void checkSendExceptions() {
@@ -282,8 +290,8 @@ public abstract class AbstractConnectionTest {
    *
    * @return
    */
-  protected Properties getProps() {
-    return new Properties(); //default behavior is no "hard coded" test-specific properties
+  protected void configureProps(ConnectionSettings settings) {
+    //default behavior is no "hard coded" test-specific properties
   }
 
   /**
@@ -292,25 +300,17 @@ public abstract class AbstractConnectionTest {
    *
    * @return
    */
-  protected Properties getTestProps() {
-    Properties props = new Properties();
-    try (InputStream is = getClass().getResourceAsStream(
-            getTestPropertiesFileName())) {
-      if (null != is) {
-        props.load(is);
-      } else {
-        LOG.trace("No test_defaults.properties found on classpath");
-      }
-    } catch (IOException ex) {
-      LOG.error(ex.getMessage(), ex);
-    }
-    if (Boolean.parseBoolean(props.getProperty("enabled", "false"))) {
-      return props;
+  protected ConnectionSettings getTestProps() {
+      ConnectionSettings testSettings = ConnectionSettings.fromPropsFile(getTestPropertiesFileName());
+    if (testSettings.getTestPropertiesEnabled()) {
+      return testSettings;
     } else {
       LOG.warn("test.properties disabled, using cloudfwd.properties only");
-      return new Properties(); //ignore test.properties
+      return ConnectionSettings.fromPropsFile(getCloudfwdPropertiesFileName()); //ignore test.properties
     }
   }
+
+  private String getCloudfwdPropertiesFileName() { return "/cloudfwd.properties"; }
 
   /**
    * test can override this if a test requires its own .properties file to slap
@@ -330,8 +330,12 @@ public abstract class AbstractConnectionTest {
    * @return
    */
   protected Event nextEvent(int seqno) {
-     if(seqno%100==0){
+     if(getNumEventsToSend() <= 100){
+         LOG.info("sending id={}", seqno); //if less than 100 events in test, print them all
+     } else if(getNumEventsToSend() <= 1000 && seqno%100==0){ //less than 1000, print every 100
          LOG.info("sending id={}", seqno);
+     }else if (seqno%1000==0){ //print every 1000th event
+         LOG.info("sending id={}", seqno);  
      }
     Event event = null;
     switch (this.eventType) {
@@ -395,7 +399,7 @@ public abstract class AbstractConnectionTest {
     map.put(TEST_METHOD_GUID_KEY, testMethodGUID);
     return map;
   }
-  
+
   protected abstract int getNumEventsToSend();
 
   protected RawEvent getTimestampedRawEvent(int seqno) {
@@ -464,5 +468,29 @@ public abstract class AbstractConnectionTest {
    // return new UnvalidatedBytesEvent(getJsonToEvents(seqno).getBytes(), seqno);
     return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(getJsonToEvents(seqno).getBytes()), seqno);
   }
-
+  
+  /**
+   * assert that health is not empty and all channels failed with 
+   * provided exceptionClass and exceptionMessage.
+   *
+   * @param exceptionClass
+   * @param exceptionMessage
+   */
+  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessage) {
+    List<HecHealth> healths = connection.getHealth();
+    Assert.assertTrue("Expected health checks to be not empty, but got this healths: \"" + healths + "\"", !healths.isEmpty());
+    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
+    healths.stream().forEach(e ->LOG.debug("Got exception in healths: " + e.getStatus().getException().getMessage()));
+    if (healths.stream()
+            .map(h -> h.getStatus().getException())
+            .filter(e -> exceptionClass.isInstance(e))
+            .filter(e -> e.getMessage().equals(exceptionMessage))
+            .count() != healths.size()) {
+      Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass +
+              "\" and message: \"" + exceptionMessage +
+              "\", but got instead the following exceptions in healths: " +
+              Arrays.toString(healths.stream().map(h -> h.getStatus().getException()).toArray()));
+    }
+  }
+  
 }

@@ -1,10 +1,9 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,21 +34,18 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionTimeoutTest.class.getName());
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
+  protected void configureProps(ConnectionSettings settings) {
     //A realistic value of BLOCKING_TIMEOUT_MS would be 1 or more MINUTES, but let's not
     //make this test run too slowly. The point is, we want to SEE the HecConnectionTimeout
     //happen repeatedly, until the message goes through
-    props.put(PropertyKeys.BLOCKING_TIMEOUT_MS, "100"); //block for 100 ms before HecConnectionTimeout
+    settings.setBlockingTimeoutMS(100);//block for 100 ms before HecConnectionTimeout
     //install an endpoint that takes 10 seconds to return an ack
-    props.put(PropertyKeys.MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
-    props.put(PropertyKeys.MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL, "1");
-    props.put(PropertyKeys.MAX_TOTAL_CHANNELS, "1");
-    props.put(PropertyKeys.ACK_TIMEOUT_MS, "60000"); //we don't want the ack timout kicking in
-    props.put(PropertyKeys.ACK_POLL_MS, "250");
-    props.put(PropertyKeys.UNRESPONSIVE_MS, "-1"); //no dead channel detection
-    return props;
+    settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
+    settings.setMaxUnackedEventBatchPerChannel(1);
+    settings.setMaxTotalChannels(1);
+    settings.setAckTimeoutMS(60000);
+    settings.setAckPollMS(250);
+    settings.setUnresponsiveMS(-1);
   }
 
   @Override
@@ -59,7 +55,7 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
               "This test uses close(), not closeNow(), so don't jam it up with more than one Batch to test on "
                       + "a jammed up channel. It will take too long to be practical.");
     }
-    LOG.trace("SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
+    LOG.trace("sendEvents: SENDING EVENTS WITH CLASS GUID: " + AbstractConnectionTest.TEST_CLASS_INSTANCE_GUID
             + "And test method GUID " + testMethodGUID);
     try {
       //send a first message to block the channel (we are using the slowendpoints to jam up the channel, see getProps)
@@ -72,13 +68,14 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
     int expected = getNumEventsToSend();
     for (int i = 2; i <= expected; i++) { //"-1" because we already sent one of the events (above)
       Event event = nextEvent(i);
-      System.out.println("Send event: " + event.getId() + " i=" + i);
+      LOG.trace("sendEvents: Send event: " + event.getId() + " i=" + i);
       int connTimeoutCount = 0;
       while (true) {
         try {
           connection.send(event);
           break;
         } catch (HecConnectionTimeoutException e) {
+            LOG.info("Got expected HecConnectionTimeoutException");
           if (connTimeoutCount++ > 20) {
             //Assert.fail("Too many HecConnectionTimeouts");
             return;

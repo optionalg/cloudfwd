@@ -47,36 +47,26 @@ public class AcknowledgementTracker implements EventTracker {
   private final Map<Long, EventBatchImpl> polledAcksByAckId = new ConcurrentHashMap<>(); //key ackID
  // private final Map<Long, EventBatchImpl> polledAcksByEvent = new ConcurrentHashMap<>(); //key ackID
   //private final Map<Comparable, EventBatchImpl> eventBatches = new ConcurrentHashMap<>();
-  private final HttpSender sender;
+  private final HttpSender sender; 
   private volatile boolean dead;
-
+  
   AcknowledgementTracker(HttpSender sender) {
     this.sender = sender;
   }
 
-  /**
-   * When a session cookie violation occurs, the ack tracker needs to be immediately killed
-   */
-  public void kill(){
-      this.polledAcksByAckId.clear();
-      dead = true;
-  }
-
+    /**
+     * When a session cookie violation occurs, the ack tracker needs to be immediately killed
+     */
+    public void kill(){
+        this.polledAcksByAckId.clear();
+        dead = true;
+    }
+    
   @Override
   public void cancel(EventBatchImpl e) {
       if(null != e.getAckId()){
             polledAcksByAckId.remove(e.getAckId());
       }
-      //hunt for it in the polledAcks
-      /*
-      for (Iterator<Map.Entry<Long, EventBatchImpl>> it = polledAcksByAckId.entrySet().
-              iterator(); it.hasNext();) {
-        Map.Entry<Long, EventBatchImpl> entry = it.next();
-        if (e.getId() == entry.getValue().getId()) {
-          it.remove();         
-        }
-      }
-      */
   }
 
   /**
@@ -95,32 +85,27 @@ public class AcknowledgementTracker implements EventTracker {
 
   public void preEventPost(EventBatchImpl events) {
     events.registerEventTracker(this);
-    /*
-    if (null != this.eventBatches.put(events.getId(), events)) {
-      throwIllegalStateException(events);
-    }  
-    */
   }
 
 
   public void handleEventPostResponse(EventPostResponseValueObject epr,
           EventBatchImpl events) {
-    if (dead) {
-        return;
-    }
+      if(dead){
+          return;
+      }
     Long ackId = epr.getAckId();
     polledAcksByAckId.put(ackId, events);
   }
 
   public void handleAckPollResponse(AckPollResponseValueObject apr) {
-    if (dead) {
+    if(dead){
         return;
     }
     EventBatchImpl events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      LOG.info("Channel:{} success acked ids: {}", sender.getChannel(),
-              succeeded);
+      LOG.debug("channel={} received success on {} ack ids out of {}. Success acked ids: {}", 
+              sender.getChannel(), succeeded.size(), apr.getAcks().size(), succeeded);
       if (succeeded.isEmpty()) {
         return;
       }
@@ -128,26 +113,29 @@ public class AcknowledgementTracker implements EventTracker {
         events = polledAcksByAckId.get(ackId);
         if (null == events) {
           LOG.warn(
-                  "Got acknowledgement on ackId: {} but we're no long tracking that ackId",
-                  ackId);
-          return;
+                  "Got acknowledgement on ackId: {} but we're no long tracking that ackId on channel={}",
+                  ackId, sender.getChannel());
+          continue;
         }
-        events.setAcknowledged(true);    
+        if(events.isAcknowledged()){
+            LOG.warn("will not ack already acked: {}", events);
+            continue; //can happen when when sticky session violated
+        }
         //System.out.println("got ack on channel=" + events.getSender().getChannel() + ", seqno=" + events.getId() +", ackid=" + events.getAckId());
         //events.getAckId can be null if the event is being resent by DeadChannel detector 
         //and EventBatchImpl.prepareForResend has been called
         if (events.getAckId() != null && ackId != events.getAckId()) {
-          String msg = "ackId mismatch key ackID=" + ackId + " recordedAckId=" + events.
-                  getAckId();
-          LOG.error(msg);
-          throw new HecIllegalStateException(msg,
-                  HecIllegalStateException.Type.ACK_ID_MISMATCH);
+            String msg = "ackId mismatch key ackID=" + ackId + " existing: " + events + " on channel="+ sender.getChannel();
+            LOG.warn(msg);
+            continue; //conceivable from sticky session violation
+  //          throw new HecIllegalStateException(msg,
+  //                  HecIllegalStateException.Type.ACK_ID_MISMATCH);
         }
+        events.setAcknowledged(true);    
 
         this.sender.getChannelMetrics().update(new EventBatchResponse(
                 LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
                 events,sender.getBaseUrl()));
-        //eventBatches.remove(events.getId());
         polledAcksByAckId.remove(ackId);
       }
     } catch (Exception e) {

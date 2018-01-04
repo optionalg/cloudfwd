@@ -14,20 +14,13 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
-import com.splunk.cloudfwd.HecHealth;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLHandshakeException;
-import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-
-import static com.splunk.cloudfwd.PropertyKeys.*;
 
 /**
  * Cloud>Trial is issued by a private Splunk certificate authority. For 
@@ -40,36 +33,24 @@ public class SslCertValidCloudTrialDisabledCertValidationIT extends AbstractConn
   
   @Test
   /**
-   * This test makes sure that send doesn't throw an exception if Cert Validation is disabled 
+   * This test makes sure that connection creation doesn't throw an exception if Cert Validation is disabled 
    */
   public void sendEventSuccessfully() throws InterruptedException, HecConnectionTimeoutException {
-    super.sendEvents(true, false);
+    //no-op
   }
   
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
-    props.put(TOKEN, "19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
-    props.put(DISABLE_CERT_VALIDATION, "true");
-    props.put(MOCK_HTTP_KEY, "false");
-    props.put(CLOUD_SSL_CERT_CONTENT, "");
-    return props;
+  protected void configureProps(ConnectionSettings settings) {
+    settings.setUrls("https://input-prd-p-kzgcxv8qsv24.cloud.splunk.com:8088");
+    settings.setToken("19FD13FC-8C67-4E5C-8C2B-E39E6CC76152");
+    settings.disableCertValidation();
+    settings.setMockHttp(false);
+    settings.setSSLCertContent("");
   }
   
   @Override
   protected int getNumEventsToSend() {
-    return 1;
-  }
-  
-  @Override
-  protected BasicCallbacks getCallbacks() {
-    return new BasicCallbacks(getNumEventsToSend()) {
-      @Override
-      public void await(long timeout, TimeUnit u) throws InterruptedException {
-        // don't need to wait for anything since we don't get a failed callback
-      }
-    };
+    return 0;
   }
   
 }

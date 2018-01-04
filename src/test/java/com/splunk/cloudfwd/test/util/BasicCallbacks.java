@@ -41,7 +41,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   protected final CountDownLatch warnLatch;//if warnings are expected, this latch gates the test until it is released
   protected final Set<Comparable> acknowledgedBatches = new ConcurrentSkipListSet<>();
   protected boolean failed;
-  private AtomicInteger failedCount = new AtomicInteger(0);
+  protected AtomicInteger failedCount = new AtomicInteger(0);
   protected String failMsg;
   protected Exception exception;
   protected Exception systemWarning;
@@ -131,7 +131,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
                     getId());
         }
 
-  }
+    }
 
   @Override
   public void failed(EventBatch events, Exception ex) {
@@ -178,10 +178,10 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
   @Override
   public void checkpoint(EventBatch events) {
-    LOG.info("SUCCESS CHECKPOINT {}", events.getId()); 
-    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
-      latch.countDown();
-    }
+    LOG.info("SUCCESS CHECKPOINT {}", events.getId());     
+//    if (expectedAckCount.compareTo((Integer) events.getId()) == 0) {
+//      latch.countDown();
+//    }
   }
 
   public void await(long timeout, TimeUnit u) throws InterruptedException {

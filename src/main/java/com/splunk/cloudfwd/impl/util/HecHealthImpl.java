@@ -53,8 +53,15 @@ public class HecHealthImpl implements HecHealth {
 
     @Override
     public String toString() {
-        return "HecHealthImpl{" + "channelCreatorThreadName=" + channelCreatorThreadName 
-                + ", healthy=" + healthy + ", status=" + status + ", channel=" + channel + " age="+getChannelAge()
+        return "HecHealthImpl{" 
+                + "channelCreatorThreadName=" + channelCreatorThreadName 
+                + ", preflightComplete="+getChannel().isPreflightCompleted()
+                + ", available="+getChannel().isAvailable()
+                + ", healthy=" + healthy
+                + ", full=" + isFull()
+                + ", status=" + status 
+                + ", channel=" + channel 
+                + ", age="+getChannelAge()
                 + ", timeSinceHealthChanged="+getTimeSinceHealthChanged()
                 + ", timeSinceDecommissioned="+getTimeSinceDecomissioned()
                 + ", timeSinceDeclaredDead="+getTimeSinceDeclaredDead()
@@ -67,11 +74,20 @@ public class HecHealthImpl implements HecHealth {
     public LifecycleEvent getStatus() {
         return this.status;
     }
+    
+    /**
+     * This is necessary so that when a channel is closing, it can insure that nobody will get stuck in await, awaiting a preflight
+     * that will never complete.
+     */
+    public void unlatch(){
+        this.latch.countDown();
+    }
 
     public void setStatus(LifecycleEvent status, boolean healthy) {
         this.status = status;
         this.healthy = healthy;
         this.latch.countDown();
+        LOG.debug("channel={} health={} due to {}", getChannel(), healthy, status);
     }
 
     @Override
@@ -216,7 +232,14 @@ public class HecHealthImpl implements HecHealth {
             return Duration.ofMillis(System.currentTimeMillis() - finishCloseTime);
         }
     }
-    
+
+    /**
+     * @return the full
+     */
+    public boolean isFull() {
+        return this.channel.isFull();
+    }
+           
     @Override
     public boolean passedPreflight() {
         return  !(getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_HEALTH_CHECK_PENDING ||
@@ -225,6 +248,5 @@ public class HecHealthImpl implements HecHealth {
                 getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_NOT_OK ||
                 getStatus().getType() == LifecycleEvent.Type.PREFLIGHT_FAILED);
     }
-    
-    
+
 }

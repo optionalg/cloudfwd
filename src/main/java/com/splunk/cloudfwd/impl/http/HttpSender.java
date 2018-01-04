@@ -24,7 +24,7 @@ import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.util.HecChannel;
-import com.splunk.cloudfwd.impl.util.LoadBalancer;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -33,17 +33,14 @@ import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-
-import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import java.net.URISyntaxException;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.utils.URIBuilder;
 
 /**
  * This class performs the actually HTTP send to HEC
@@ -53,57 +50,67 @@ public final class HttpSender implements Endpoints, CookieClient {
 
   // Default to SLF4J Logger, and set custom LoggerFactory when channel (and therefore Connection instance) is available
   private Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
+  
+  //separate Http Client instances for data (events) and 'control' (ack, health). This allows control channel to not get
+  //blocked by too much traffic on data channel
+  private static final HttpClientHostMapper dataChannelClientHostMapper = new HttpClientHostMapper();
+  private static final HttpClientHostMapper controlChannelClientHostMapper = new HttpClientHostMapper();
 
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
   private static final String HttpContentType = "application/json; profile=urn:splunk:event:1.0; charset=utf-8"; //FIX ME application/json not all the time
   private static final String ChannelHeader = "X-Splunk-Request-Channel";
-  private static final String Host = "Host";
-
+  private static final String Host = "host";
   private final String eventUrl;
   private final String rawUrl;
-  private final String token;
-  private final String cert;
-  private final String host;
+//  private final String token;
+    private final String cert;
+    private final String host; //hostname used for SSL certificate validation
+//  private final String index;
+//  private final String source;
+//  private final String sourcetype;
   private CloseableHttpAsyncClient httpClient;
+  private CloseableHttpAsyncClient controlClient;
   private boolean disableCertificateValidation = false;
   private HecChannel channel = null;
   private final String ackUrl;
   private final String healthUrl;
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
-  private final String baseUrl;
+  private final String baseUrl; 
   private String cookie;
-  private ExecutorService resenderExecutor;
-  //the following  posts/gets are used by health checks an preflight checks 
+  //the following  posts/gets are used by health checks and preflight checks. We record them so we can cancel them on close. 
   private HttpPost ackCheck;
   private HttpGet healthEndpointCheck;
   private HttpPost dummyEventPost;
+  private final ConnectionSettings connectionSettings;
 
   /**
    * Initialize HttpEventCollectorSender
    *
-   * @param url http event collector input server.
-   * @param token application token
+     * @param url THe URL for the host portion of the URL must be an IP address NOT a hostname
+   * @param connectionSettings ConnectionSettings
    * @param disableCertificateValidation disables Certificate Validation
    * @param cert SSL Certificate Authority Public key to verify TLS with
    * Self-Signed SSL Certificate chain
-   * @param host Hostname to use in HTTP requests. It is needed when we use IP
-   * addresses in url by RFC
    */
-  public HttpSender(final String url, final String token,
-          final boolean disableCertificateValidation,
-          final String cert, final String host) {
+  public HttpSender(final String url, String ssl_host, final ConnectionSettings connectionSettings,
+                    final boolean disableCertificateValidation, final String cert) {
     this.baseUrl = url;
-    this.host = host;
-    this.eventUrl = url.trim() + "/services/collector/event";
-    this.rawUrl = url.trim() + "/services/collector/raw";
-    this.ackUrl = url.trim() + "/services/collector/ack";
-    this.healthUrl = url.trim() + "/services/collector/health";
-    this.token = token;
+    this.host = ssl_host;
+    this.connectionSettings = connectionSettings;
+//    this.index = connectionSettings.getIndex();
+//    this.sourcetype = connectionSettings.getSourcetype();
+//    this.source = connectionSettings.getSource();
+//    this.token = connectionSettings.getToken();
     this.cert = cert;
-    this.disableCertificateValidation = disableCertificateValidation;
     this.hecIOManager = new HecIOManager(this);
+    this.eventUrl = this.baseUrl.trim() + "/services/collector/event";
+    this.rawUrl = this.baseUrl.trim() + "/services/collector/raw";
+    this.ackUrl = this.baseUrl.trim() + "/services/collector/ack";
+    this.healthUrl = this.baseUrl.trim() + "/services/collector/health";
+    this.disableCertificateValidation = disableCertificateValidation;
+
   }
   
     
@@ -159,23 +166,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     return simulatedEndpoints != null;
   }
 
-  /**
-   * Close events sender
-   */
-  @Override
-  public void close() {
-//    if (null != eventsBatch) { //can happen if no msgs sent on this sender
-//      eventsBatch.close();
-//    }
-    this.hecIOManager.close();
-    if (null != simulatedEndpoints) {
-      simulatedEndpoints.close();
-    }
-    abortPreflightAndHealthcheckRequests();    
-    stopHttpClient();
-  }
-
-    public void abortPreflightAndHealthcheckRequests() {
+    public synchronized void abortPreflightAndHealthcheckRequests() {
         if(null != this.ackCheck){
             ackCheck.abort();
         }
@@ -211,42 +202,96 @@ public final class HttpSender implements Endpoints, CookieClient {
     }
     
     if (httpClient != null) {
-      // http client is already started
-      return true;
+        synchronized(this){
+            if (httpClient != null) { //double check required once we enter synchronized block
+                // http client is already started
+                return true;
+            }
+        }
     }
     return false;
   }
 
   @Override
-  public void start() {
+  public synchronized void start() {
     // attempt to create and start an http client
     try {
-      httpClient = new HttpClientFactory(disableCertificateValidation,
-              cert, host, this).build();
-      httpClient.start();
+        this.httpClient = dataChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation,cert);
+        this.controlClient = controlChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation,cert);
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
       callbacks.failed(null, ex);
     }
   }
+  
+  /**
+   * Close events sender
+   */
+  @Override
+  public synchronized void close() {
+//    if (null != eventsBatch) { //can happen if no msgs sent on this sender
+//      eventsBatch.close();
+//    }
+    this.hecIOManager.close();
+    if (null != simulatedEndpoints) {
+      simulatedEndpoints.close();
+    }
+    abortPreflightAndHealthcheckRequests();    
+    stopHttpClient();
+  }  
 
   // Currently we never close http client. This method is added for symmetry
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-      try {
-        httpClient.close();
-      } catch (IOException e) {
-          LOG.error("Failed to shutdown HttpSender {}", e.getMessage());
-      }
-      httpClient = null;
+         dataChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
+        httpClient = null;
+        controlChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
+        controlClient = null;
     }
+  }
+
+  private String appendUri(String endpoint) {
+      try {
+          URIBuilder builder = new URIBuilder(endpoint);
+          
+          String index = connectionSettings.getIndex();
+          if (!StringUtils.isEmpty(index)) {
+              builder.addParameter("index", index);
+          }
+          
+          String source = connectionSettings.getSource();
+          if (!StringUtils.isEmpty(source)) {
+              builder.addParameter("source", source);
+          }
+          
+          String sourcetype =connectionSettings.getSourcetype();
+          if (!StringUtils.isEmpty(sourcetype)) {
+              builder.addParameter("sourcetype", sourcetype);
+          }
+          
+          String hostField = connectionSettings.getHost();
+          if (!StringUtils.isEmpty(hostField)) {
+              builder.addParameter("host", hostField);
+          }
+          return builder.toString();
+      } catch (URISyntaxException ex) {
+          LOG.warn("problem with HEC endpoint URL: {}", ex.getMessage());
+          return endpoint;
+      }
   }
   
   private void setHeaders(HttpRequestBase r){
       setHttpHeadersNoChannel(r);
       setHttpChannelHeaders(r);
+      setCookieHeader(r);
+  }
+  
+  private void setCookieHeader(HttpRequestBase r){
+      if(null != this.cookie && !this.cookie.isEmpty()){
+          r.setHeader("Cookie", this.cookie);
+      }
   }
   
     // set splunk specific http request headers
@@ -260,7 +305,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   private void setHttpHeadersNoChannel(HttpRequestBase r) {
     r.setHeader(
             AuthorizationHeaderTag,
-            String.format(AuthorizationHeaderScheme, token));
+            String.format(AuthorizationHeaderScheme, connectionSettings.getToken()));
     
     if (host != null) {
       r.setHeader(Host, host);
@@ -268,13 +313,13 @@ public final class HttpSender implements Endpoints, CookieClient {
   }
   
   @Override
-  public void postEvents(final HttpPostable events,
+  public synchronized void postEvents(final HttpPostable events,
           FutureCallback<HttpResponse> httpCallback) {
     // make sure http client or simulator is started
     if (!started()) {
       start();
     }
-    
+    ((EventBatch)events).getLifecycleMetrics().setPostSentTimestamp(System.currentTimeMillis());
     if (isSimulated()) {
       this.simulatedEndpoints.postEvents(events, httpCallback);
       return;
@@ -287,10 +332,13 @@ public final class HttpSender implements Endpoints, CookieClient {
     if (endpointUrl == null) {
       throw new NullPointerException("endpointUrl was null.");
     }
-    final HttpPost httpPost = new HttpPost(endpointUrl);
+
+    String completeUrl = appendUri(endpointUrl);
+    final HttpPost httpPost = new HttpPost(completeUrl);
     setHeaders(httpPost);
-    
-    httpPost.setEntity(events.getEntity());
+    HttpEntity e= events.getEntity();
+    LOG.debug("executing event batch post on channel={}, eventBatch={}", getChannel(), e.toString());
+    httpPost.setEntity(e);
     httpClient.execute(httpPost, httpCallback);
   }
 
@@ -299,65 +347,69 @@ public final class HttpSender implements Endpoints, CookieClient {
      * @param httpCallback
      */
     @Override
-    public void checkRawEndpoint(FutureCallback<HttpResponse> httpCallback){
-    // make sure http client or simulator is started
-    if (!started()) {
-      start();
-    }
-    EventBatchImpl dummyEvents = new EventBatchImpl();
-    dummyEvents.setAckId(MAX_ACK_ID); //make sure we don't poll for acks with ackId=0 which could actually be in flight
+    public synchronized void checkRawEndpoint(FutureCallback<HttpResponse> httpCallback){
+        try{    
+            // make sure http client or simulator is started
+            if (!started()) {
+              start();
+            }
+            EventBatchImpl dummyEvents = new EventBatchImpl();
+            dummyEvents.setAckId(MAX_ACK_ID); //make sure we don't poll for acks with ackId=0 which could actually be in flight
 
-    if (isSimulated()) {     
-      this.simulatedEndpoints.checkRawEndpoint(httpCallback);
-      return;
-    }
-    final String encoding = "utf-8";
+            if (isSimulated()) {     
+              this.simulatedEndpoints.checkRawEndpoint(httpCallback);
+              return;
+            }
+            final String encoding = "utf-8";
 
-    // create http request
+            // create http request
 
-    this.dummyEventPost = new HttpPost(rawUrl);
-    setHeaders(dummyEventPost);
-    StringEntity empty;
-      try {
-          empty = new StringEntity(Strings.EMPTY);
-          dummyEventPost.setEntity(empty);
-          httpClient.execute(dummyEventPost, httpCallback);
-      } catch (UnsupportedEncodingException ex) {
-          LOG.error(ex.getMessage(),ex);
-      }
-  }  
+            this.dummyEventPost = new HttpPost(rawUrl);
+            setHeaders(dummyEventPost);
+            StringEntity empty;
+            empty = new StringEntity("");
+            dummyEventPost.setEntity(empty);
+            LOG.debug("executing empty event post to raw on channel={}. Request: {}", getChannel(), dummyEventPost);
+            controlClient.execute(dummyEventPost, httpCallback);
+          } catch (Exception ex) {
+            LOG.error(ex.getMessage(), ex);
+            throw new RuntimeException(ex.getMessage(), ex);
+        }
+    }  
   
   @Override
-  public void pollAcks(HecIOManager hecIoMgr,
+  public synchronized void pollAcks(HecIOManager hecIoMgr,
           FutureCallback<HttpResponse> httpCallback) {
-    if (!started()) {
-      start();
-    }; // make sure http client or simulator is started
-    AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();
     try {
-      if (ackReq.isEmpty()) {
-          LOG.trace("no ackIds to poll for");
-        return;
-      } else {        
-        hecIoMgr.setAckPollInProgress(true);
-      }
-      if (isSimulated()) {
-        LOG.debug("SIMULATED POLL ACKS");
-        this.simulatedEndpoints.pollAcks(hecIoMgr, httpCallback);
-        return;
-      }
-      final HttpPost httpPost = new HttpPost(ackUrl);
-      setHeaders(httpPost);
-      
-      StringEntity entity;
-      
-      String req = ackReq.toString();
-      LOG.debug("channel=" + getChannel() + " posting: " + req);
-      entity = new StringEntity(req);
-      
-      entity.setContentType(HttpContentType);
-      httpPost.setEntity(entity);
-      httpClient.execute(httpPost, httpCallback);
+        if (!started()) {
+          start();
+        }; // make sure http client or simulator is started
+        AcknowledgementTracker.AckRequest ackReq = hecIoMgr.getAckPollRequest();        
+        if (ackReq.isEmpty()) {
+            LOG.trace("no ackIds to poll for on {}", getChannel());
+          return;
+        } else {        
+          hecIoMgr.setAckPollInProgress(true);
+        }
+        if (isSimulated()) {
+          LOG.debug("SIMULATED POLL ACKS");
+          this.simulatedEndpoints.pollAcks(hecIoMgr, httpCallback);
+          return;
+        }
+        final HttpPost httpPost = new HttpPost(ackUrl);
+        setHeaders(httpPost);
+
+        StringEntity entity;
+
+        String req = ackReq.toString();
+        LOG.debug("executing ack poll request on channel={} posting: {}", getChannel(), req);
+        entity = new StringEntity(req);
+
+        entity.setContentType(HttpContentType);
+        httpPost.setEntity(entity);
+        if(null != controlClient){ //httpClient can be null if close happened
+            controlClient.execute(httpPost, httpCallback);
+        }
     } catch (Exception ex) {
       hecIoMgr.setAckPollInProgress(false);
       LOG.error(ex.getMessage(), ex);
@@ -367,52 +419,63 @@ public final class HttpSender implements Endpoints, CookieClient {
   
   
   @Override
-  public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    // make sure http client or simulator is started
-    if (!started()) {
-      start();
+  public synchronized void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
+    try{
+        // make sure http client or simulator is started
+        if (!started()) {
+          start();
+        }
+        if (isSimulated()) {
+          LOG.debug("SIMULATED POLL HEALTH");
+          this.simulatedEndpoints.checkHealthEndpoint(httpCallback);
+          return;
+        }
+        // create http request
+        final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, connectionSettings.getToken());
+        healthEndpointCheck= new HttpGet(getUrl);
+        LOG.debug("executing poll on health endpoint, channel={}. Request: {}", getChannel(), healthEndpointCheck);
+        setHeaders(healthEndpointCheck);
+        if(null != controlClient){ //httpClient can be null if close happened
+            controlClient.execute(healthEndpointCheck, httpCallback);
+        }
+    }catch (Exception ex) {
+      LOG.error("{}", ex.getMessage(), ex);
+      throw new RuntimeException(ex.getMessage(), ex);
     }
-    if (isSimulated()) {
-      LOG.debug("SIMULATED POLL HEALTH");
-      this.simulatedEndpoints.checkHealthEndpoint(httpCallback);
-      return;
-    }
-    // create http request
-    final String getUrl = String.format("%s?ack=1&token=%s", healthUrl, token);
-    healthEndpointCheck= new HttpGet(getUrl);
-    LOG.trace("Polling health {}", healthEndpointCheck);
-    setHeaders(healthEndpointCheck);
-    httpClient.execute(healthEndpointCheck, httpCallback);
   }
 
   @Override
-  public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
-    if (!started()) {
-      start();
-    }
-    if (isSimulated()) {
-      this.simulatedEndpoints.checkAckEndpoint(httpCallback);
-      return;
-    }
-    Set<Long> dummyAckId = new HashSet<>();
-    dummyAckId.add(MAX_ACK_ID);//default max ack Id. TODO we should not let channels send this many event batches
-    AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);
-
+  public synchronized void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
     try {
-      this.ackCheck = new HttpPost(ackUrl);
-      setHeaders(ackCheck); 
+        if (!started()) {
+          start();
+        }
+        if (isSimulated()) {
+          this.simulatedEndpoints.checkAckEndpoint(httpCallback);
+          return;
+        }
+        Set<Long> dummyAckId = new HashSet<>();
+        dummyAckId.add(MAX_ACK_ID);//default max ack Id. TODO we should not let channels send this many event batches
+        AcknowledgementTracker.AckRequest dummyAckReq = new AcknowledgementTracker.AckRequest(dummyAckId);        
+        this.ackCheck = new HttpPost(ackUrl);
+        setHeaders(ackCheck); 
 
-      StringEntity entity;
+        StringEntity entity;
 
-      String req = dummyAckReq.toString();
-      LOG.debug(req);
-      entity = new StringEntity(req);
-      LOG.trace("checking health via ack endpoint: {}", req);
-      entity.setContentType(HttpContentType);
-      ackCheck.setEntity(entity);
-      httpClient.execute(ackCheck, httpCallback);
+        String req = dummyAckReq.toString();
+        LOG.debug(req);
+        entity = new StringEntity(req);
+        LOG.trace("checking health via ack endpoint: {}", req);
+        entity.setContentType(HttpContentType);
+        ackCheck.setEntity(entity);
+        if(null != controlClient){ //httpClient can be null if close happened
+          LOG.debug("executing ack check on channel={}", getChannel());
+          controlClient.execute(ackCheck, httpCallback);
+        }else{
+            LOG.error("httpClient is null");
+        }
     } catch (Exception ex) {
-      LOG.error("Exception in checkAckEndpoint: {}",ex.getMessage(), ex);
+      LOG.error("{}", ex.getMessage(), ex);
       throw new RuntimeException(ex.getMessage(), ex);
     }
   }
@@ -433,9 +496,6 @@ public final class HttpSender implements Endpoints, CookieClient {
     this.simulatedEndpoints = simulatedEndpoints;
   }
 
-  public String getToken() {
-    return token;
-  }
 
   /**
    * @return the baseUrl
@@ -444,48 +504,44 @@ public final class HttpSender implements Endpoints, CookieClient {
     return baseUrl;
   }
 
-  @Override
-  public void setSessionCookies(String cookie) {
-    if (null == cookie || cookie.isEmpty()) {
-      return;
-    }
-    if (null != this.cookie && !this.cookie.equals(cookie)) {
-      synchronized(this) {
-        LOG.warn("An attempt was made to change the Session-Cookie from {} to {} on {}", this.cookie, cookie, getChannel());
-        this.cookie = cookie;
-        LOG.warn("replacing channel, resending events, and killing {}", getChannel());
-        getAcknowledgementTracker().kill();
-        getChannel().close();
-        resendEvents();
-      }//end sync
-    } else {
-      this.cookie = cookie;
-    }
-  }
-
-  private void resendEvents(){
-    Runnable r = ()->{
-      try {
-        HecChannel c = getChannel();
-        LoadBalancer lb = getConnection().getLoadBalancer();
-        lb.addChannelFromRandomlyChosenHost(); //to compensate for the channel we are about to smoke
-        lb.removeChannel(c.getChannelId(), true); //bye bye
-        c.forceClose(); //smoke
-        c.resendInFlightEvents();
-      } catch (Exception ex) {
-        LOG.error("Excepton '{}' trying to handle sticky session-cookie violation on {}", ex.getMessage(), getChannel(), ex);
-      }
-    };//end runnable
-    
-    if (this.resenderExecutor == null) {
-      ThreadFactory f = new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-          return new Thread(r, "event resender channel " + getChannel());
+    @Override
+    public void setSessionCookies(String cookie) {
+        if (null == cookie || cookie.isEmpty()) {
+            return;
         }
-      };
-      this.resenderExecutor = Executors.newSingleThreadExecutor(f);
+        if (null != this.cookie && !this.cookie.equals(cookie)) {
+            synchronized (this) { //we don't want to make multiple attempts to handle the same detected change
+                if (null != this.cookie && !this.cookie.equals(cookie)) { //must double-check the condition once inside sync'd block
+                    LOG.warn(
+                            "An attempt was made to change the Session-Cookie from {} to {} on {}",
+                            this.cookie, cookie, getChannel());
+                    this.cookie = cookie; //record the new cookie so that subsequent same cookies don't try to resend again                    
+                    LOG.warn("replacing channel, resending events, and killing {}",
+                            getChannel());
+                    getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
+                    getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
+                    resendEvents(); //will ultimately result in this channel getting killed
+                }
+            }//end sync
+        } else {
+            this.cookie = cookie;
+        }
     }
-    this.resenderExecutor.execute(r);
-  }
+    
+    private void resendEvents(){
+        Runnable r = ()->{
+             try {
+                getChannel().closeAndReplaceAndResend();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                LOG.error("Exception '{}' trying to handle sticky session-cookie violation on channel={}", ex.getMessage(), getChannel(), ex);
+            }            
+        };//end runnable
+        ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
+    }
+    
+    public String getSslHostname(){
+        return this.host;
+    }
+  
 }

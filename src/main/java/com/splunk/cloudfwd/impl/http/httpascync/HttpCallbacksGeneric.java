@@ -30,8 +30,8 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
     //these are the lifecycels event types that will be raised when their condition occurs
     private final LifecycleEvent.Type okType;
     private final LifecycleEvent.Type failType;
-    private final LifecycleEvent.Type gatewayTimeoutType = null;
-    private final LifecycleEvent.Type indexerBusyType = null;
+    private LifecycleEvent.Type gatewayTimeoutType = null;
+    private LifecycleEvent.Type indexerBusyType = null;
 
     public HttpCallbacksGeneric(HecIOManager m, LifecycleEvent.Type okType,
             LifecycleEvent.Type failType, String name) {
@@ -47,6 +47,8 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
             LifecycleEvent.Type failType, LifecycleEvent.Type gatewayTimeoutType,
             LifecycleEvent.Type indexerBusyType, String name) {
         this(m, okType, failType, name);
+        this.gatewayTimeoutType = gatewayTimeoutType;
+        this.indexerBusyType = indexerBusyType;
     }
 
     @Override
@@ -59,6 +61,7 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
                     onOk(reply, httpCode);
                     break;
                 case 503:
+                    LOG.debug("503 response in HttpCallbacksGeneric {} on channel {}", getOperation(), getChannel());
                     if (null != indexerBusyType) {
                         type = indexerBusyType;
                     } else {
@@ -97,6 +100,7 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
      * Override this to provide hndling of Http200/OK. Default behavior does nothing (NoOp)
      * @param reply
      * @param httpCode
+     * @throws java.io.IOException
      * @throws java.lang.Exception
      */
     protected void onOk(String reply, int httpCode) throws IOException {

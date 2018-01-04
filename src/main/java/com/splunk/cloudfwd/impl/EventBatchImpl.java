@@ -16,6 +16,7 @@
 package com.splunk.cloudfwd.impl;
 
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.LifecycleMetrics;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.LifecycleEvent;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_BATCH_BORN;
@@ -52,8 +53,9 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.EVENT_POST_FAILED;
  * @author ghendrey
  */
 public class EventBatchImpl implements EventBatch {
+  private static final Logger DEFAULT_LOGGER =  LoggerFactory.getLogger(EventBatchImpl.class.getName());
   // Default to SLF4J Logger, and set custom LoggerFactory when Channel (and therefore Connection instance) is available.
-  private Logger LOG = LoggerFactory.getLogger(EventBatchImpl.class.getName());
+  private Logger LOG =  DEFAULT_LOGGER; //unless we default this to the static instance we will pay big penalty for instantiating one for each EventBatchImpl
 
   protected Comparable id=-1; //will be set to the id of the last (most recent) Event added to the batch. Defaults to invalid -1.
   protected Long ackId; //Will be null until we receive ackId for this batch from HEC
@@ -61,6 +63,7 @@ public class EventBatchImpl implements EventBatch {
   protected boolean acknowledged;
   private boolean failed;
   private long sendTimestamp = System.currentTimeMillis();
+  private long firstEventAddedTimestamp;
   protected int numEvents;
   protected int numTries; //events are resent by DeadChannelDetector
   protected int length;
@@ -71,6 +74,11 @@ public class EventBatchImpl implements EventBatch {
   private HecChannel hecChannel;
   private LifecycleEvent.Type state = EVENT_BATCH_BORN; //initial lifecyle state
   private List<Exception> sendExceptions = new ArrayList<>();
+  final private LifecycleMetrics lifecycleMetrics = new LifecycleMetrics(this);
+  
+  public EventBatchImpl() {
+    lifecycleMetrics.setCreationTimestamp(System.currentTimeMillis());
+  }
 
   @Override
   public synchronized void prepareToResend() {
@@ -110,10 +118,17 @@ public class EventBatchImpl implements EventBatch {
     }
     this.id = event.getId();
     this.length += event.length();
+    if (this.events.isEmpty()) {
+      this.firstEventAddedTimestamp = System.currentTimeMillis();
+    }
     this.events.add(event);
     return this;
   }
-
+  
+  public long getFirstEventAddedTimestamp() {
+    return this.firstEventAddedTimestamp;
+  }
+  
   @Override
   public ConnectionImpl.HecEndpoint getTarget() {
     return knownTarget;
@@ -174,7 +189,7 @@ public class EventBatchImpl implements EventBatch {
    * @return the acknowledged
    */
   @Override
-  public boolean isAcknowledged() {
+  public boolean isAcknowledged() { //note: must not be synchronized. Can deadlock when an EventBatch post wants to get the momitor on checkpoint manager, but CheckpointManager is in synchronized 'release' method and calls isAcknowledge on this batch
     return acknowledged;
   }
 
@@ -182,7 +197,7 @@ public class EventBatchImpl implements EventBatch {
    * @param acknowledged the acknowledged to set
    */
   @Override
-  public void setAcknowledged(boolean acknowledged) {
+  public synchronized void setAcknowledged(boolean acknowledged) {    
     this.acknowledged = acknowledged;
   }
 
@@ -279,7 +294,9 @@ public class EventBatchImpl implements EventBatch {
               return;
           }
       }
-      throw new IllegalStateException("No acknowledgement tracker registered with EventBatch " + this);
+      //actually we CANNOT throw this exception. We've seen session-cookie violation before we even post
+      //an event batch
+      //throw new IllegalStateException("No acknowledgement tracker registered with EventBatch " + this);
   }
 
   /**
@@ -349,6 +366,11 @@ public class EventBatchImpl implements EventBatch {
     public void setFailed(boolean failed) {
         this.failed = failed;
     }
+
+  @Override
+  public LifecycleMetrics getLifecycleMetrics() {
+    return this.lifecycleMetrics;
+  }
 
   private class HttpEventBatchEntity extends AbstractHttpEntity {
 

@@ -1,15 +1,12 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import static com.splunk.cloudfwd.PropertyKeys.*;
-import static com.splunk.cloudfwd.PropertyKeys.UNRESPONSIVE_MS;
 import com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints;
-import java.util.List;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -52,19 +49,15 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
   }
 
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    //props.put(PropertiesFileHelper.MOCK_HTTP_KEY, "true");
+  protected void configureProps(ConnectionSettings settings) {
+    //props.put(ConnectionSettings.MOCK_HTTP_KEY, "true");
     //simulate a non-sticky endpoint
-    props.put(MOCK_HTTP_CLASSNAME,
-            "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
-    props.put(MAX_TOTAL_CHANNELS, "1");
-    props.put(MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL,"1000");
-    props.put(ACK_POLL_MS, "250");
-    props.put(HEALTH_POLL_MS, "250");
-    props.put(UNRESPONSIVE_MS, "-1"); //disable dead channel removal
-
-    return props;
+    settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.TriggerableUnhealthyEndpoints");
+    settings.setMaxTotalChannels(1);
+    settings.setMaxUnackedEventBatchPerChannel(1000);
+    settings.setAckPollMS(250);
+    settings.setHealthPollMS(250);
+    settings.setUnresponsiveMS(-1); //disable dead channel removal
   }
 
   @Override
@@ -103,11 +96,12 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
 
     @Override
     public void acknowledged(EventBatch events) {
+      super.acknowledged(events);
       count++;
       if (count == 2) {
         Assert.assertTrue("Message Failed to block on unhealthy channel",
                 TriggerableUnhealthyEndpoints.healthy);
-        return; //need one event to return so that we start polling
+        return; 
       }
 
       try {
@@ -115,7 +109,9 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
         //MAKE UNhealthy then send a second message
         TriggerableUnhealthyEndpoints.healthy = false;
         LOG.trace("waiting to detect unhealthy channel");
-        Thread.sleep(sleepTime); //make sure health poll becomes unhealthy (poll has interval so we must wait)
+        connection.send(getTimestampedRawEvent(2));
+        Thread.sleep(sleepTime); //wait for event post to return so health gets recorded as unhealthy. 
+        // At this point, we should have begun health polling since an event post failed, and HecHealth should be flipped to unhealthy.
         HecHealth h = connection.getHealth().get(0);
         LOG.info("{}", h);
         Assert.assertTrue("Expected unhealty channel but got: " + h, !h.isHealthy());
@@ -124,7 +120,7 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
         new Thread(() -> {
           long start = System.currentTimeMillis();
           try {
-            connection.send(getTimestampedRawEvent(2));
+            connection.send(getTimestampedRawEvent(3));
           } catch (HecConnectionTimeoutException ex) {
             LOG.error(ex.getMessage(), ex);
             Assert.fail();
@@ -134,14 +130,13 @@ public final class UnhealthyEndpointTest extends AbstractConnectionTest {
                   "Message only blocked for " + blockedOnUnhealthyChannelTime + " ms. Expected at least 4000 ms.",
                   blockedOnUnhealthyChannelTime > sleepTime); //we must have blocked longer than the unhealthy time 
         }).start();
-        Thread.sleep(4000); //wait 4 sec before turning endpoint healthy (will keep message blocked in load balancer)
+        Thread.sleep(sleepTime); //wait couple seconds to let events spin in load balancer  
         TriggerableUnhealthyEndpoints.healthy = true; //will unblock the HecChannel on next health poll 
-        Thread.sleep(sleepTime); //wait couple seconds to let channel become healthy ...        
+        Thread.sleep(sleepTime); //wait couple seconds for health poll to detect healthy chanel 
         //...which will cause acknowledged to be invoked again, but then count will be 2 so test will end.
          h = connection.getHealth().get(0);
         LOG.info("{}", h);
-        Assert.assertTrue("Expected healty channel but got: " + h, h.isHealthy());
-        LOG.trace("sending event that we expect to block on send");        
+        Assert.assertTrue("Expected healthy channel but got: " + h, h.isHealthy());      
 
       } catch (InterruptedException ex) {
         LOG.error(ex.getMessage(), ex);

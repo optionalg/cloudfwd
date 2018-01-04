@@ -59,6 +59,7 @@ public interface Connection extends Closeable{
      * @return the callbacks
      */
     ConnectionCallbacks getCallbacks();
+    
 
     /**
      * @return the closed

@@ -15,6 +15,10 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.cookies;
 
+import com.splunk.cloudfwd.impl.http.HecIOManager;
+import com.splunk.cloudfwd.impl.http.HttpPostable;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
+import com.splunk.cloudfwd.impl.sim.*;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 
@@ -70,7 +74,7 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
 
     @Override
     protected EventEndpoint createEventEndpoint() {
-        return new CookiedEventpoint();
+        return new CookiedEventpoint(ackEndpoint);
     }
 
     @Override
@@ -92,6 +96,10 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
     }
 
     class CookiedEventpoint extends EventEndpoint {
+        public CookiedEventpoint(AcknowledgementEndpoint ackEndpoint) {
+            this.ackEndpoint = ackEndpoint;
+            //ackEndpoint.start();
+        }
 
         @Override
         public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
@@ -129,3 +137,4 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
 
 
 }
+

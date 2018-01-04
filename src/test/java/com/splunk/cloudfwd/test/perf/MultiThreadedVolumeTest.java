@@ -1,24 +1,23 @@
 package com.splunk.cloudfwd.test.perf;
 
-import com.google.common.primitives.Bytes;
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import org.apache.http.util.ByteArrayBuffer;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
-import java.nio.BufferOverflowException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 
 /**
  * Optionally pass command line parameters "token" and "url" as: 
@@ -31,29 +30,28 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String MAX_THREADS_KEY = "max_threads";
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
-    private static final String NUM_SENDERS_KEY = "num_senders";   
-    private static final String LOGTYPE = "logtype";
+    private static final String NUM_SENDERS_KEY = "num_senders";    
     
     // defaults for CLI parameters
-    static {
-        cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "75");
+    static {        
+        cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "50");
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
-        cliProperties.put(MAX_MEMORY_MB_KEY, "500"); //500MB
-        cliProperties.put(NUM_SENDERS_KEY, "128"); //128 senders
+        cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
+        cliProperties.put(NUM_SENDERS_KEY, "384"); 
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
-        cliProperties.put(LOGTYPE, null);
     }
     
     private int numSenderThreads = 128;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
+    private final String eventsFilename = "./1KB_event_5MB_batch.sample";
     private long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
-    private int batchSizeMB = 5;
+    private int batchSizeMB;
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
     
@@ -62,15 +60,25 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
+       // ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
         ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
-                (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
+        (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
-        connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
+        //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
        
         for (int i = 0; i < numSenderThreads; i++) {
-            futureList.add(senderExecutor.submit(new SenderWorker(i)::sendAndWaitForAcks));
+            final int n =i;
+            futureList.add(senderExecutor.submit(()->{
+                SenderWorker s;
+                try {
+                    s = new SenderWorker(n);
+                } catch (UnknownHostException ex) {
+                    throw new RuntimeException(ex.getMessage(), ex);
+                }
+                s.sendAndWaitForAcks();
+            }));
         }
         
         try {
@@ -103,60 +111,21 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         LOG.info("Test arguments: " + cliProperties 
             + " (token and url will be pulled from cloudfwd.properties if null)");
     }
-    
-    private String getEventsFilename() {
-        String logtype = cliProperties.get(LOGTYPE);
-        if (logtype != null) {
-            if (logtype.equals("cloudtrail_unprocessed")) {
-                return "cloudtrail_via_cloudwatchevents_unprocessed.sample";
-            } else if (logtype.equals("cloudtrail_processed")) {
-                return "cloudtrail_modinputprocessed.sample";
-            } else if (logtype.equals("cloudwatch_events_no_versionid")) {
-                // Events do not contain either version or id 
-                return "cloudwatchevents_awstrustedadvisor.sample";
-            } else if (logtype.equals("cloudwatch_events_versionid_mixed")) {
-                // Some events contain both version and id, while others just contain id
-                return "cloudwatchevents_ec2autoscale.sample";
-            } else if (logtype.equals("cloudwatch_events_versionid_short")) {
-                // Events contain both version and id, and are short in length
-                return "cloudwatchevents_codebuild.sample";
-            } else if (logtype.equals("cloudwatch_events_versionid_long")) {
-                // Events contain both version and id, and are long in length
-                return "cloudwatchevents_macie.sample";
-            } else if (logtype.equals("vpcflowlog")) {
-                return "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
-            }
-        }
-        return "many_text_events_no_timestamp.sample";
-    }
-    
+
     private void readEventsFile() {
-        byte[] bytes = new byte[0];
         try {
-            URL resource = getClass().getClassLoader().getResource(getEventsFilename()); // to use a file on classpath in resources folder.
-            bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+            URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
+            byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+            batchSizeMB = bytes.length / 1000000;
+            buffer = ByteBuffer.wrap(bytes);
         } catch (Exception ex) {
-            Assert.fail("Problem reading file " + getEventsFilename() + ": " + ex.getMessage());
-        }
-        int origByteSize = bytes.length;
-        buffer = ByteBuffer.allocate(batchSizeMB * 1024 * 1024 + 3000);
-        
-        // Make sure we send ~5MB batches, regardless of the size of the sample log file 
-        while (buffer.position() <= batchSizeMB * 1024 * 1024) {
-            System.out.println("******** BATCH SIZE 1.1: going to add " + origByteSize + " bytes");
-            try {
-                buffer.put(bytes);
-            } catch (BufferOverflowException e ) {
-                System.out.println("buffer overflowed - could not put bytes");
-                return;
-            }
-            System.out.println("******** BATCH SIZE 2: current buffer size: " + buffer.position());
+            Assert.fail("Problem reading file " + eventsFilename + ": " + ex.getMessage());
         }
     }
 
     @Override
     protected String getTestPropertiesFileName() {
-        return "cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
+        return "/cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
     }
 
     // not used
@@ -171,17 +140,18 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = new Properties();
-        if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-            p.put(PropertyKeys.TOKEN, cliProperties.get(PropertyKeys.TOKEN));
+    protected void configureProps(ConnectionSettings settings) {
+        super.configureProps(settings);
+        String token = System.getProperty(PropertyKeys.TOKEN);
+        String url = System.getProperty(PropertyKeys.COLLECTOR_URI);
+        if (System.getProperty(PropertyKeys.TOKEN) != null) {
+            settings.setToken(token);
         }
-        if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
-            p.put(PropertyKeys.COLLECTOR_URI, cliProperties.get(PropertyKeys.COLLECTOR_URI));
+        if (System.getProperty(PropertyKeys.COLLECTOR_URI) != null) {
+            settings.setUrls(url);
         }
-        p.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-        p.put(KEY_ENABLE_TEST_PROPERTIES, "false");
-        return p;
+        settings.setMockHttp(false);
+        settings.setTestPropertiesEnabled(false);
     }
 
     private void checkAndLogPerformance(boolean shouldAssert) {
@@ -229,43 +199,66 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public class SenderWorker {      
         private boolean failed = false;
         private int workerNumber;
+        private Connection connection;
+        private ConnectionSettings connectionSettings;
         
-        public SenderWorker(int workerNum){
+        public SenderWorker(int workerNum) throws UnknownHostException{
             this.workerNumber = workerNum;
+            this.connection = createAndConfigureConnection();
+            this.connectionSettings = connection.getSettings();
+            if (null ==connection){
+                Assert.fail("null connection");
+            }
+            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
+            //instantiated
+            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+            }
+            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
+                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
+            }
+            connectionSettings.setMockHttp(false);
+            connectionSettings.setTestPropertiesEnabled(false);
         }
         public void sendAndWaitForAcks() {
-            try{
-                EventBatch next = nextBatch(batchCounter.incrementAndGet());
+            LOG.info("sender {} starting its send loop", workerNumber);
+                EventBatch eb = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
                     try{
                         failed = false;
-                        EventBatch eb = next;
                         LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
                         logMetrics(eb, eb.getLength());
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
-                        long sent = connection.sendBatch(eb);
-                        LOG.info("Sender {} sent batch with id={}", workerNumber,  eb.getId());                        
-                        next = nextBatch(batchCounter.incrementAndGet());
-                        LOG.info("Sender {} generated next batch", workerNumber);
+                        long sent = this.connection.sendBatch(eb);
+                        LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
                         synchronized (this) {
                             // wait while the batch hasn't been acknowledged and it hasn't failed
                            while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
                                LOG.debug("Sender {}, about to wait", workerNumber);
                                 waitingSenders.put(eb.getId(), this);
-                                wait(5000); //wait 500 ms //fixme 5 seconds too long
-                                LOG.debug("Sender {}, waited 500ms", workerNumber);
+                                wait(1000); //wait1 sec
+                                LOG.debug("Sender {}, waited 1 sec,", workerNumber);
                             }
                         }
-                        waitingSenders.remove(eb.getId());
-                    } catch (InterruptedException ex) {
-                        LOG.debug("Sender {} exiting.", workerNumber);
+                        if(!failed){
+                            LOG.info("sender {} ackd {} in {} ms", this.workerNumber, eb.getLength(), System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());                        
+                        }else{
+                            LOG.info("sender {} failed in {} ms", this.workerNumber, System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());
+                        }
+                        waitingSenders.remove(eb.getId());    
+                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
+                        LOG.info("Sender {} generated next batch", workerNumber);
+                        eb = nextBatch(batchCounter.incrementAndGet());                   
+                    } catch (InterruptedException ex) {                        
+                        LOG.warn("Sender {} exiting.", workerNumber);
                         return;
+                    } catch(Exception e){
+                        LOG.warn("Worker {} caught exception {} sending {}.",workerNumber, e .getMessage(), eb, e);
+                        waitingSenders.remove(eb.getId()); 
+                        eb = nextBatch(batchCounter.incrementAndGet());
                     }
                 }
-                LOG.debug("Sender {} exiting.", workerNumber);
-            }catch(Exception e){
-                LOG.error("Worker {} caught exception {}",workerNumber, e .getMessage(), e);
-            }
+                LOG.warn("Sender {} exiting.", workerNumber);
         }
 
         private void logMetrics(EventBatch batch, long sent) {
@@ -319,6 +312,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             super.acknowledged(events);
             //sometimes events get acknowledged before the SenderWorker starts waiting
             if (waitingSenders.get(events.getId()) != null) {
+              
+                LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
                 waitingSenders.get(events.getId()).tell();
             }
         }

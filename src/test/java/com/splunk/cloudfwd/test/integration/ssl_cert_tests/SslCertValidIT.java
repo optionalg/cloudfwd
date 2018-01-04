@@ -14,17 +14,14 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  * limitations under the License.
  */
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import static com.splunk.cloudfwd.PropertyKeys.*;
-
-import com.splunk.cloudfwd.impl.util.HecChannel;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.Properties;
 
 /**
  * This test enables SSL Verification and attempts to instantiate connection
@@ -53,22 +50,21 @@ public class SslCertValidIT extends AbstractConnectionTest {
   }
   
   @Override
-  protected Properties getTestProps() {
-    return new Properties();
+  protected ConnectionSettings getTestProps() {
+    return new ConnectionSettings();  
   }
   
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties();
-    props.put(COLLECTOR_URI, "https://http-inputs-kinesis1.splunkcloud.com:443");
-    props.put(TOKEN, "DB22D948-5A1D-4E73-8626-0AB3143BEE47");
-    props.put(DISABLE_CERT_VALIDATION, "false");
-    props.put(MOCK_HTTP_KEY, "false");
+  protected void configureProps(ConnectionSettings settings) {
+    settings.setUrls("https://http-inputs-kinesis1.splunkcloud.com:443");
+    settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
+    settings.enableCertValidation();
+    settings.setMockHttp(false);
     // Despite we overwrite getTestProps here, ConnectionSettings will read
     // cloudfwd.properties file anyway. So we set CLOUD_SSL_CERT_CONTENT to
     // empty string explicitly.
-    props.put(CLOUD_SSL_CERT_CONTENT, "");
-    return props;
+    //FIXME: This call below should set this.cloudSslCertContent, not this.sslCertContent (fails isCloudInstance()) call
+    settings.setSSLCertContent("");
   }
 
   @Override

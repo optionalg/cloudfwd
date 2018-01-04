@@ -15,10 +15,16 @@
  */
 package com.splunk.cloudfwd;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import java.io.IOException;
-import java.io.InputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Properties;
+
+import static com.splunk.cloudfwd.ConnectionSettings.fromProps;
 
 /**
  * Factory for getting a Connection.
@@ -26,49 +32,80 @@ import java.util.Properties;
  * @author ghendrey
  */
 public class Connections {
+    
+    private static Logger LOG = LoggerFactory.getLogger(Connections.class.getName());
 
     private Connections() {
 
     }
 
     public static Connection create(ConnectionCallbacks c) {
-        return create(c, new Properties());
+        return create(c, new ConnectionSettings());
     }
-
+    
     /**
      * When creating a connection, an attempt is made to check the server-side configurations of every channel managed by the 
      * load balancer. If any of the channels finds misconfigurations, such as HEC acknowldegements disabled, or invalid HEC
      * token, then an exception is thrown from Connections.create. This is 'fail fast' behavior designed to quickly expose 
      * serverside configuration issues.
-     * @param c The ConnectionCallbacks 
-     * @param p Properties that customize the Connection
+     * @param cb
+     * @param settings
      * @return
      */
-    public static Connection create(ConnectionCallbacks c, Properties p) {
-        return new ConnectionImpl(c, p);
+    public static Connection create(ConnectionCallbacks cb, ConnectionSettings settings) {
+        // Print out ConnectionSettings properties before Connection init - to troubleshoot failing init
+        Connections.prettyPrintConnectionSettings(settings, 
+                "ConnectionSettings properties before Connection init are:", 
+                "Could not pretty print Connection properties before Connection init");
+
+        ConnectionImpl c = new ConnectionImpl(cb, settings);
+        Connections.setupConnection(c, settings);
+        return c;
+    }
+  
+  @Deprecated
+  /**
+   * For backward compatibility accept properties
+   * @param cb
+   * @param settings
+   * @return
+   */
+  public static Connection create(ConnectionCallbacks cb, Properties props) {
+    ConnectionSettings settings = fromProps(props);
+    ConnectionImpl c = new ConnectionImpl(cb, settings);
+    Connections.setupConnection(c, settings);
+    return c;
+  }
+  
+  /**
+     * Creates a Connection with DefaultConnectionCallbacks
+     * @param settings Properties that customize the Connection
+     * @return
+     */
+    public static Connection create(ConnectionSettings settings) {
+        ConnectionImpl c = new ConnectionImpl(new DefaultConnectionCallbacks(), settings);
+        Connections.setupConnection(c, (settings));
+        return c;
+    }   
+    
+    private static void setupConnection(ConnectionImpl c, ConnectionSettings settings) {
+        LOG = c.getLogger(Connections.class.getName());
+        settings.setConnection(c);
+
+        // Print out ConnectionSettings properties
+        Connections.prettyPrintConnectionSettings(settings, 
+                "ConnectionSettings properties after Connection init are:", 
+                "Could not pretty print ConnectionSettings properties after Connection init");
     }
     
-    /**
-     * Creates a Connection with DefaultConnectionCallbacks
-     * @param p Properties that customize the Connection
-     * @return
-     */
-    public static Connection create(Properties p) {
-        return new ConnectionImpl(new DefaultConnectionCallbacks(), p);
-    }    
-    
-     /**
-     * Creates a Connection with DefaultConnectionCallbacks and default settings loaded from cloudfwd.properties
-     * @param pProperties that customize the Connection
-     * @return
-     */
-    public static Connection create() throws IOException {
-        Properties p = new Properties();
-        try(InputStream is = Connection.class.getResourceAsStream("cloudfwd.properties");){
-            p.load(is);
-            return new ConnectionImpl(new DefaultConnectionCallbacks(), p);
+    private static void prettyPrintConnectionSettings(ConnectionSettings settings, String successMsg, String failMsg) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        try {
+            LOG.info(successMsg + "\n" + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(settings));
+        } catch (JsonProcessingException e) {
+            LOG.error(failMsg);
         }
-    }    
+    }
     
-   
 }

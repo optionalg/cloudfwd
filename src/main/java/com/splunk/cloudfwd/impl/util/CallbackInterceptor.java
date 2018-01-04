@@ -33,16 +33,19 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     private static Logger LOG;
 
     ConnectionCallbacks callbacks;
+    private final CheckpointManager cpManager;
 
     public CallbackInterceptor(ConnectionCallbacks callbacks, ConnectionImpl c) {
         this.LOG = c.getLogger(CallbackInterceptor.class.getName());
         this.callbacks = callbacks;
+        this.cpManager = c.getCheckpointManager();
     }
 
     @Override
     public void acknowledged(EventBatch events) {
         try {
             ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
+            events.getLifecycleMetrics().setAckedTimestamp(System.currentTimeMillis());
             callbacks.acknowledged(events);
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.acknowledged: " + e.getMessage());
@@ -59,9 +62,11 @@ public class CallbackInterceptor implements ConnectionCallbacks {
                     return;
                 }
                 ((EventBatchImpl)events).setFailed(true);
+                events.getLifecycleMetrics().setFailedTimestamp(System.currentTimeMillis());
                 ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
             }
             this.callbacks.failed(events, ex);
+            this.cpManager.release((EventBatchImpl)events);
         } catch (Exception e) {
             LOG.error("Caught exception from ConnectionCallbacks.failed: " + e.getMessage());
             LOG.error(e.getMessage(), e);

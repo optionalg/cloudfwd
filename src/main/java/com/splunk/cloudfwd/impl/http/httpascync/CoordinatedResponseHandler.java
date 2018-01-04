@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.http.httpascync;
 
-import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 
 /**

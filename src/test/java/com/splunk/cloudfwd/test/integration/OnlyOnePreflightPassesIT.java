@@ -1,12 +1,10 @@
 package com.splunk.cloudfwd.test.integration;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
-import com.splunk.cloudfwd.PropertyKeys;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -30,14 +28,12 @@ public class OnlyOnePreflightPassesIT extends AbstractReconciliationTest {
     }
     
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.put(PropertyKeys.TOKEN, createTestToken(null));
-        p.setProperty(PropertyKeys.COLLECTOR_URI, "https://127.0.0.1:8088,https://kinesis4.splunkcloud.com:8088");  
-        p.setProperty(PropertyKeys.MOCK_HTTP_KEY, "false");
-        p.setProperty(PropertyKeys.RETRIES, "3");
-        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
-        p.setProperty(PropertyKeys.PREFLIGHT_TIMEOUT_MS, "500000000");
-        return p;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setToken(createTestToken(null));
+        settings.setUrls("https://127.0.0.1:8088,https://kinesis4.splunkcloud.com:8088");  //two endpoints. The kinesis4 endpoint exsits, but isn't HEC endpoint (it's search head)
+        settings.setMockHttp(false);
+        settings.setMaxRetries(3);
+        settings.setMaxTotalChannels(2);
+        settings.setPreFlightTimeoutMS(500000000);
     }
 }

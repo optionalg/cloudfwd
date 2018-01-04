@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2017 Splunk, Inc..
  *
@@ -26,5 +25,5 @@ public interface CookieClient {
      * Set the session cookies that the client should send with subsequent requests.
      * @param cookies a semi-colon separated list of cookies.s
      */
-    public void setSessionCookies(String cookies);
+    public void setSessionCookies(String cookies); 
 }

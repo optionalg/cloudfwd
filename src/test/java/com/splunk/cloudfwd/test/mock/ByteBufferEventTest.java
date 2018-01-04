@@ -1,12 +1,12 @@
 package com.splunk.cloudfwd.test.mock;
 
+import com.splunk.cloudfwd.Connection;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.UnvalidatedByteBufferEvent;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import java.nio.ByteBuffer;
-import java.util.Properties;
 import org.junit.Test;
 
 /*
@@ -40,15 +40,16 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
   protected int getNumEventsToSend() {
     return 100;
   }
-  
-    protected Properties getProps() {
-    Properties props = new Properties(); //default behavior is no "hard coded" test-specific properties
-    props.put(PropertyKeys.EVENT_BATCH_SIZE,  "16000");
-    props.put(PropertyKeys.MOCK_HTTP_KEY, "true");
+
+  @Override
+  protected void configureProps(ConnectionSettings settings) {
+    //default behavior is no "hard coded" test-specific properties
+    settings.setEventBatchSize(16000);
+    settings.setMockHttp(true); //no dead channel detection
     super.eventType = Event.Type.UNKNOWN;
-    return props;
-  }  
+  }
   
+  @Override
   protected Event nextEvent(int seqno) {
     Event event = null;
     switch (this.eventType) {
@@ -66,9 +67,15 @@ public class ByteBufferEventTest extends AbstractConnectionTest {
     return event;
   }  
 
-  private Event getByteBufferEvent(int seqno) {
+  protected Event getByteBufferEvent(int seqno) {
     Event e  = super.getJsonToEvents(seqno);
     return new UnvalidatedByteBufferEvent(ByteBuffer.wrap(e.getBytes()), seqno);
   }
+  
+  @Override
+  protected void configureConnection(Connection connection) {
+    connection.getSettings().setHecEndpointType(
+              Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
+  }  
   
 }

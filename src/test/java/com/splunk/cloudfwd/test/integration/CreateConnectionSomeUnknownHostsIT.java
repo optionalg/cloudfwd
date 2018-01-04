@@ -1,12 +1,10 @@
 package com.splunk.cloudfwd.test.integration;
 
-import com.splunk.cloudfwd.PropertyKeys;
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
-
-import java.util.Properties;
 import java.util.Set;
 
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
@@ -15,7 +13,7 @@ import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGU
  * Created by eprokop on 10/5/17.
  */
 public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTest {
-    private String unknownHost = "https://foobarunknownhostbaz:8088";
+    private String unknownHost = "https://foobarunknownhostbaz.:8088";
 
     // Scenario: urls with unknown hosts are provided, but there is at least one "good" url
     // Expected behavior: Connection should instantiate and all events should make it into Splunk. "Unknown host" error should surface through systemError() callback
@@ -32,12 +30,12 @@ public class CreateConnectionSomeUnknownHostsIT extends AbstractReconciliationTe
     }
 
     @Override
-    protected Properties getProps() {
-        Properties p = super.getProps();
-        p.setProperty(PropertyKeys.TOKEN, createTestToken("__singleline"));
-        p.setProperty(PropertyKeys.COLLECTOR_URI, unknownHost + ",https://localhost:8088");
-        p.setProperty(PropertyKeys.MAX_TOTAL_CHANNELS, "2");
-        return p;
+    protected void configureProps(ConnectionSettings settings) {
+        super.configureProps(settings);
+        settings.setToken(createTestToken("__singleline"));
+        settings.setUrls(unknownHost + ",https://localhost:8088");
+        settings.setEventBatchSize(0);
+        settings.setMaxTotalChannels(2);
     }
 
     @Override

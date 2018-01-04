@@ -77,15 +77,26 @@ public interface EventBatch extends HttpPostable {
    */
   void setAcknowledged(boolean acknowledged);
 
-  ConnectionImpl.HecEndpoint getTarget();
+    /**
+     * Returs the type of the HEC endpoint that this EventBatch would be send to
+     * @return the hec endpoint type
+     */
+    ConnectionImpl.HecEndpoint getTarget();
 
   String toString();
   
-  public boolean isFlushable(int charBufferLen);
+    /**
+     * returns true if number of bytes in this EventBatch exceeds len
+     * @param len
+     * @return
+     */
+    public boolean isFlushable(int len);
 
     /**
      * @return the sendExceptions
      */
     List<Exception> getExceptions();
-  
+    
+  LifecycleMetrics getLifecycleMetrics();
+      
 }

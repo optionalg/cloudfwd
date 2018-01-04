@@ -28,7 +28,7 @@ public class PropertyKeys {
    * The authentication token for the Http Event Collector input on the Splunk
    * destination.
    */
-  public static final String TOKEN = "token";
+  public static final String TOKEN = "splunk_hec_token";
 
   /**
    * The url and port number for the Splunk HEC endpoint or load balancer in
@@ -38,9 +38,29 @@ public class PropertyKeys {
   public static final String COLLECTOR_URI = "url";
 
   /**
-   * TODO: not used, remove this when refactoring PropertiesFileHelper
+   * Host value for the data feed
+   * If none, host field is set to hostname
    */
-  public static final String HOST = "host";
+  public static final String HOST = "splunk_hec_host";
+
+  /**
+   * The Splunk index in which the data feed is stored
+   * New Index must be created/exist on Splunk to store events.
+   * Default: main
+   */
+  public static final String INDEX = "splunk_hec_index";
+
+  /**
+   * The source of the data feed
+   * Default: based on sources EG: filename, network protocol
+   */
+  public static final String SOURCE = "splunk_hec_source";
+
+  /**
+   * The source type of events of data feed
+   * Default: based on pre-defined source types EG:httpevent
+   */
+  public static final String SOURCETYPE = "splunk_hec_sourcetype";
 
   /**
    * Specifies whether to send to Splunk HEC /raw or /event endpoint.
@@ -72,7 +92,7 @@ public class PropertyKeys {
    * If true, disables certificate validation and allows sending to non-HTTPs
    * endpoints. Defaults to false.
    */
-  public static final String DISABLE_CERT_VALIDATION = "disableCertificateValidation";
+  public static final String DISABLE_CERT_VALIDATION = "disable_certificate_validation";
 
   /**
    * Integer number of channels per internet socket address destination. Event
@@ -134,6 +154,7 @@ public class PropertyKeys {
    *
    * @see DEFAULT_EVENT_BATCH_SIZE
    * @see MIN_EVENT_BATCH_SIZE
+   * @see EVENT_BATCH_FLUSH_TIMEOUT_MS
    */
   public static final String EVENT_BATCH_SIZE = "event_batch_size";
 
@@ -220,6 +241,13 @@ public class PropertyKeys {
    * @see DEFAULT_RETRIES
    */
   public static final String PREFLIGHT_RETRIES = "max_preflight_tries";
+  
+  /**
+   * Channel Quiesce Timeout in MS define how much time to wait for a channel to 
+   * drain all events. Channel will be killed if not quiesced in the time.
+   * @see DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS
+   */
+  public static final String CHANNEL_QUIESCE_TIMEOUT_MS = "channel_quiesce_timeout_ms";
 
   /**
    * The time to wait for channel preflight checks to complete. Preflight checks are run when a new channel is 
@@ -230,11 +258,14 @@ public class PropertyKeys {
    */
   public static final String PREFLIGHT_TIMEOUT_MS = "preflight_timeout";
 
-
-  /* **************************** REQUIRED KEYS ************************* */
-
-  // Connection object cannot be instantiated without these keys being provided, either in overrides or cloudfwd.properties
-  public static final String[] REQUIRED_KEYS = {TOKEN, COLLECTOR_URI};
+  /**
+   * The time to wait before flushing the internal buffer and sending the event batch to Splunk, 
+   * even if the buffer isn't full yet.
+   * 
+   * @see DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS
+   * @see EVENT_BATCH_SIZE
+   */
+  public static final String EVENT_BATCH_FLUSH_TIMEOUT_MS = "event_batch_flush_timeout_ms";
 
 
   /* **************************** DEFAULTS ************************* */
@@ -243,70 +274,70 @@ public class PropertyKeys {
    *
    * @see EVENT_BATCH_SIZE
    */
-  public static final String DEFAULT_EVENT_BATCH_SIZE = "32768"; //32k characters
+  public static final int DEFAULT_EVENT_BATCH_SIZE = 32768; //32k characters
 
   /**
    * Default value for ACK_POLL_MS property.
    *
    * @see ACK_POLL_MS
    */
-  public static final String DEFAULT_ACK_POLL_MS = "1000"; //1sec
+  public static final long DEFAULT_ACK_POLL_MS = 1000; //1sec
 
   /**
    * Default value for HEALTH_POLL_MS property.
    *
    * @see HEALTH_POLL_MS
    */
-  public static final String DEFAULT_HEALTH_POLL_MS = "1000";  //1 sec
+  public static final long DEFAULT_HEALTH_POLL_MS = 1000;  //1 sec
 
   /**
    * Default value for CHANNEL_DECOM_MS property.
    *
    * @see CHANNEL_DECOM_MS
    */
-  public static final String DEFAULT_DECOM_MS = "600000";   //10 min
+  public static final long DEFAULT_DECOM_MS = 600000;   //10 min
 
   /**
    * Default value for ACK_TIMEOUT_MS property.
    *
    * @see ACK_TIMEOUT_MS
    */
-  public static final String DEFAULT_ACK_TIMEOUT_MS = "300000"; //5 min
+  public static final long DEFAULT_ACK_TIMEOUT_MS = 300000; //5 min
 
   /**
    * Default value for BLOCKING_TIMEOUT_MS property.
    *
    * @see BLOCKING_TIMEOUT_MS
    */
-  public static final String DEFAULT_BLOCKING_TIMEOUT_MS = "60000"; //1 min   
+  public static final long DEFAULT_BLOCKING_TIMEOUT_MS = 60000; //1 min   
 
   /**
    * Default value for UNRESPONSIVE_MS property.
    *
    * @see UNRESPONSIVE_MS
    */
-  public static final String DEFAULT_UNRESPONSIVE_MS = "-1"; //disabled by default
+  public static final long DEFAULT_UNRESPONSIVE_MS = -1; //disabled by default
 
   /**
    * Default value for the RETRIES property.
    *
    * @see RETRIES
    */
-  public static final String DEFAULT_RETRIES = "10";
+  public static final int DEFAULT_RETRIES = 10;
   
  /**
    * Default value for the PREFLIGHT_RETRIES property.
    *
    * @see RETRIES
    */
-  public static final String DEFAULT_PREFLIGHT_RETRIES = "3";  
+  public static final int DEFAULT_PREFLIGHT_RETRIES = 3;  
 
   /**
    * Default value for the MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL property.
    *
    * @see MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL
    */
-  public static final String DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = "2";
+  public static final int DEFAULT_MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL = 2;
 
   /**
    * Default value for the MAX_TOTAL_CHANNELS property. This is interpreted as
@@ -314,14 +345,14 @@ public class PropertyKeys {
    *
    * @see MAX_TOTAL_CHANNELS
    */
-  public static final String DEFAULT_MAX_TOTAL_CHANNELS = "-1";
+  public static final int DEFAULT_MAX_TOTAL_CHANNELS = -1;
 
   /**
    * Default value for the CHANNELS_PER_DESTINATION property.
    *
    * @see CHANNELS_PER_DESTINATION
    */
-  public static final String DEFAULT_CHANNELS_PER_DESTINATION = "8";
+  public static final int DEFAULT_CHANNELS_PER_DESTINATION = 8;
 
   /**
    * Default value for the HEC_ENDPOINT_TYPE property.
@@ -337,15 +368,29 @@ public class PropertyKeys {
    * When disabled, the application does NOT have to send events in order of
    * monotonically increasing IDs.
    */
-  public static final String DEFAULT_ENABLE_CHECKPOINTS = "false";
+  public static final Boolean DEFAULT_ENABLE_CHECKPOINTS = false;
+  
+  /**
+   * Channel Quiesce Timeout define how much time to wait for a channel to 
+   * drain all events. Channel will be killed if not quiesced in the time.
+   * @see CHANNEL_QUIESCE_TIMEOUT_MS
+   */
+  public static final long DEFAULT_CHANNEL_QUIESCE_TIMEOUT_MS = 180000;
+
 
   /**
    * Default value for the PREFLIGHT_TIMEOUT_MS property.
    *
    * @see PREFLIGHT_TIMEOUT_MS
    */
-  public static final String DEFAULT_PREFLIGHT_TIMEOUT_MS = "60000"; // 1 minute
-
+  public static final long DEFAULT_PREFLIGHT_TIMEOUT_MS = 60000; // 1 minute
+    
+  /**
+   * Default value for the EVENT_BATCH_FLUSH_TIMEOUT_MS property.
+   * 
+   * @see EVENT_BATCH_FLUSH_TIMEOUT_MS
+   */
+  public static final long DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS = 30000; // 30 sec
 
   /* **************************** LIMITS ************************* */
   /**
@@ -392,5 +437,13 @@ public class PropertyKeys {
    * @see MAX_UNACKED_EVENT_BATCHES_PER_CHANNEL
    */
   public static final int MIN_UNACKED_EVENT_BATCHES_PER_CHANNEL = 1;
-
+  
+  /**
+   * Minimum allowed value for CHANNEL_QUIESCE_TIMEOUT_MS property. Should be 
+   * bigger than MIN_ACK_TIMEOUT_MS to let ack to be timed out.
+   *
+   * @see ACK_TIMEOUT_MS
+   */
+  public static final long MIN_CHANNEL_QUIESCE_TIMEOUT_MS = MIN_ACK_TIMEOUT_MS + 30000; 
+  
 }

@@ -88,8 +88,8 @@ This example will use the same configurations set up in the [Amazon Kinesis Stre
 2. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas.
 3. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
-url=https://127.0.0.1:8088
-token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
+splunk_hec_url=https://127.0.0.1:8088
+splunk_hec_token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 4. You can also input specific host(s), index(es), source(s), or sourcetype(s). 
 5. Save your modified cloudfwd.properties file.
@@ -114,8 +114,8 @@ This example uses the Firehose to Splunk Add-on to get AWS logs into your Splunk
 2. In examples > kinesis > resources > cloudfwd.properties, set your HEC endpoint URL(s). You can put an ELB destination or multiple host destinations, separated by commas.
 3. In examples > kinesis > resources > cloudfwd.properties, input your generated HEC token.
 ```
-url=https://127.0.0.1:8088
-token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
+splunk_hec_url=https://127.0.0.1:8088
+splunk_hec_token=80EE7887-EC3E-4D11-95AE-CA9B2DCBB4CB
 ```
 4. In your preferred IDE, run LogWriter with the following arguments: ```<stream_name> <AWS_region_name> <AWS_profile_name> <name_of_log_file>```<br>
 	a. Example: ``` mystream us-west-2 default cloudwatchEventLogs  ```<br>
@@ -133,7 +133,11 @@ Cloudfwd comes with a set of unit and integration tests. You can run these with 
 * To run all unit tests, run ```mvn test```. The unit tests use a simulated Splunk server.
 * To run integration tests and unit tests together, run ```mvn verify -DskipITs=false```. The integration tests require a Splunk instance to be running, and will send a small amount of data into your Splunk instance using the Cloudfwd client. It will then query the Splunk instance for the data in order to verify it. You must add your instance's username and password to `AbstractReconciliationTest.java`.
 * To build Cloudfwd and run integration and unit tests together, run ```mvn install -DskipITs=false```
-
+* To run a test that outputs throughput to your Splunk instance, run ```mvn test -Dtest=MultiThreadedVolumeTest -DargLine="-Durl=<URL> -Dtoken=<TOKEN> -Dmin_tp=<THROUGHPUT> -Dmax_threads=<THREADS> -Dduration_mins=<DURATION> -Dmem_mb=<MEMORY_MB>"```
+	* min_tp = minimum throughput (in mbps) for test to pass
+	* max_threads = maximum number of threads allowed at any given time for test to pass
+	* duration_mins = test duration in minutes
+	* mem_mb = maximum memory (in MB) cloudfwd is allowed to use for the test to pass
 
 ## Troubleshoot Cloudfwd
 

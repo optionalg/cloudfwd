@@ -1,19 +1,16 @@
 package com.splunk.cloudfwd.test.mock.hec_server_error_response_tests;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Properties;
 import java.util.concurrent.TimeoutException;
-
 import static com.splunk.cloudfwd.LifecycleEvent.Type.INDEXER_BUSY;
-import static com.splunk.cloudfwd.PropertyKeys.ACK_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.BLOCKING_TIMEOUT_MS;
-import static com.splunk.cloudfwd.PropertyKeys.MOCK_HTTP_CLASSNAME;
 
 /**
  * Created by mhora on 10/3/17.
@@ -36,8 +33,7 @@ public class HecServerErrorResponseIndexerBusyButHealthCheckOKTest extends Abstr
 
             @Override
             protected boolean isExpectedFailureType(Exception e) {
-                boolean isExpectedType = e instanceof HecConnectionTimeoutException;
-                return isExpectedType;
+                return e instanceof HecConnectionTimeoutException || e instanceof HecMaxRetriesException;
             }
 
             @Override
@@ -55,13 +51,10 @@ public class HecServerErrorResponseIndexerBusyButHealthCheckOKTest extends Abstr
     }
 
     @Override
-    protected Properties getProps() {
-        Properties props =  new Properties();
-        props.put(MOCK_HTTP_CLASSNAME,
-                "com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
-        props.put(ACK_TIMEOUT_MS, "500000");  //in this case we excpect to see HecConnectionTimeoutException
-        props.put(BLOCKING_TIMEOUT_MS, "5000");
-        return props;
+    protected void configureProps(ConnectionSettings settings) {
+        settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unhealthy.EventPostIndexerBusyEndpoints");
+        settings.setAckTimeoutMS(500000); //in this case we excpect to see HecConnectionTimeoutException
+        settings.setBlockingTimeoutMS(5000);
     }
 
     @Override

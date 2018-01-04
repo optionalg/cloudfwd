@@ -1,12 +1,11 @@
 package com.splunk.cloudfwd.test.perf;
 
+import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.PropertyKeys;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
@@ -41,18 +40,17 @@ public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
   }
   @Override
     protected String getTestPropertiesFileName() {
-    return "cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
+    return "/cloudfwd.properties"; //try as hard as we can to ignore test.properties and not use it
   }
   
   @Override
-  protected Properties getProps() {
-    Properties props = new Properties(); //default behavior is no "hard coded" test-specific properties
-        //the assumption here is that we are doing performance testing using cloudfwd.properties not test.properties
-    props.put(AbstractConnectionTest.KEY_ENABLE_TEST_PROPERTIES, false);    
+  protected void configureProps(ConnectionSettings settings) {
+    //default behavior is no "hard coded" test-specific properties
+    //the assumption here is that we are doing performance testing using cloudfwd.properties not test.properties
+    settings.setTestPropertiesEnabled(false);
     //NOT http mock, but real server is the assumption for these tests
-    props.put(PropertyKeys.MOCK_HTTP_KEY, "false");
-    return props;
-  }  
+    settings.setMockHttp(false);
+  }
 
   @Override
   protected void sendEvents() throws InterruptedException, HecConnectionTimeoutException {
