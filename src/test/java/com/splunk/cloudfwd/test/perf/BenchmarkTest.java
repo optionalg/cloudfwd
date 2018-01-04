@@ -30,6 +30,13 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         CLOUDWATCH_EVENTS_VERSIONID_LONG,
         VPCFLOWLOG
     }
+    private static final String CLOUDTRAIL_TOKEN_KEY = "cloudtrail_token";
+    private static final String CLOUDWATCHEVENTS_TOKEN_KEY = "cloudwatchevents_token";
+    private static final String VPCFLOWLOG_TOKEN_KEY = "vpcflowlog_token";
+    
+    private String cloudTrailToken;
+    private String cloudWatchEventsToken;
+    private String vpcFlowLogToken;
     
     // # nodes in cluster 
 
@@ -54,15 +61,21 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             case VPCFLOWLOG:
                 return "cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
             default:
-                return "many_text_events_no_timestamp.sample";
+                return "many_text_events_no_timestamp.sample"; // should never happen
         }
     }
 
     @Test
     public void runPerfTest() throws InterruptedException {
+        cloudTrailToken = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
+        cloudWatchEventsToken = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+        vpcFlowLogToken = cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
+        
         // For each sourcetype, send batches for 15 minutes
         for (Sourcetype s : Sourcetype.values()) {
             sourcetype = s;
+            // set token to correct sourcetype
+            connection.getSettings().setToken(getToken(sourcetype));
             // Read events from file once, then build a batch from it that we can reuse
             sendTextToRaw();
         }
@@ -71,7 +84,6 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     
     @Override
     protected void updateTimestampsOnBatch() {
-        // no-op - overridden in child class to do timestamp configuration on buffer variable
         String byte_str = new String(buffer.array());
         // TODO Convert time stamp based on source type
         if (sourcetype.equals(Sourcetype.CLOUDTRAIL_UNPROCESSED) ||
@@ -111,6 +123,23 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
                 return;
             }
             System.out.println("******** BATCH SIZE 2: current buffer size: " + buffer.position());
+        }
+    }
+    
+    private String getToken(Sourcetype s) {
+        switch(s) {
+            case CLOUDTRAIL_UNPROCESSED:
+            case CLOUDTRAIL_PROCESSED:
+                return cloudTrailToken;
+            case CLOUDWATCH_EVENTS_NO_VERSIONID:
+            case CLOUDWATCH_EVENTS_VERSIONID_MIXED:
+            case CLOUDWATCH_EVENTS_VERSIONID_SHORT:
+            case CLOUDWATCH_EVENTS_VERSIONID_LONG:
+                return cloudWatchEventsToken;
+            case VPCFLOWLOG:
+                return vpcFlowLogToken;
+            default:
+                return ""; //should never happen
         }
     }
 }
