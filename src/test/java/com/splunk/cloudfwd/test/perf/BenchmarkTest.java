@@ -54,7 +54,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
                 return "many_text_events_no_timestamp.sample";
         }
     }
-    
+
     @Test
     public void runPerfTest() throws InterruptedException {
         // For each sourcetype, send batches for 15 minutes
@@ -68,7 +68,13 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     
     @Override
     protected void updateTimestampsOnBatch() {
-        // Make timestamps reflect current time
+        // no-op - overridden in child class to do timestamp configuration on buffer variable
+        String byte_str = new String(buffer.array());
+        // TODO Convert time stamp based on source type
+
+        // Repack buffer
+        byte[] bytes = byte_str.getBytes();
+        buffer = ByteBuffer.wrap(bytes);
         
     }
 
