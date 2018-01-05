@@ -319,18 +319,19 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             
             LifecycleMetrics lm = events.getLifecycleMetrics();
             String lifecycleMetricTag = "LIFECYCLE_METRIC";
+            long currentTime = System.currentTimeMillis();
             
             // event post metrics
-            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_SENT_TIMESTAMP, lm.getPostSentTimestamp(), testId);
-            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_RESPONSE_TIMESTAMP, lm.getPostResponseTimeStamp(), testId);
-            LOG.info("{} type={} latency={} testId={}", lifecycleMetricTag, "post_response_latency", lm.getPostResponseLatency(), testId);
+            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_SENT_TIMESTAMP, lm.getPostSentTimestamp().get(0), testId);
+            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_RESPONSE_TIMESTAMP, lm.getPostResponseTimeStamp().get(0), testId);
+            LOG.info("{} type={} time={} latency={} testId={}", lifecycleMetricTag, "post_response_latency", currentTime, lm.getPostResponseLatency(), testId);
 
             // load balancer metrics
-            LOG.info("{} type={} spintime={} testId={}", lifecycleMetricTag, "load_balancer_spin_time", lm.getTimeInLoadBalancer(), testId);
+            LOG.info("{} type={} time={} spintime={} testId={}", lifecycleMetricTag, "load_balancer_spin_time", currentTime, lm.getTimeInLoadBalancer(), testId);
 
             // ack metrics
-            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.ACKED_TIMESTAMP, lm.getAckedTimestamp(), testId);
-            LOG.info("{} type={} latency={} testId={}", lifecycleMetricTag, "ack_latency", lm.getAcknowledgedLatency(), testId);
+            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.ACKED_TIMESTAMP, lm.getAckedTimestamp().get(0), testId);
+            LOG.info("{} type={} time={} timelatency={} testId={}", lifecycleMetricTag, "ack_latency", currentTime, lm.getAcknowledgedLatency(), testId);
             
         }
 
