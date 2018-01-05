@@ -39,11 +39,17 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private static final String CLOUDTRAIL_TOKEN_KEY = "cloudtrail_token";
     private static final String CLOUDWATCHEVENTS_TOKEN_KEY = "cloudwatchevents_token";
     private static final String VPCFLOWLOG_TOKEN_KEY = "vpcflowlog_token";
+
+    static {
+        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, null);
+        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, null);
+        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, null);
+    }
     
     HashMap<SourcetypeEnum, Sourcetype> sourcetypes = new HashMap();
     
-    private static final int MIN_MBPS = 70; //FIXME placeholder - collect baseline metric from initial test run
-    private static final int MAX_MEMORY_GB = 1; //FIXME placeholder - collect baseline metric from initial test run
+    private static final int MIN_MBPS = 75; //FIXME placeholder - collect baseline metric from initial test run
+    private static final int MAX_MEMORY_MB = 1000; //FIXME placeholder - collect baseline metric from initial test run
     
     class Sourcetype {
         String filepath;
@@ -63,38 +69,38 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         sourcetypes.put(SourcetypeEnum.CLOUDTRAIL_UNPROCESSED, new Sourcetype(
             "./cloudtrail_via_cloudwatchevents_unprocessed.sample",
             cliProperties.get(CLOUDTRAIL_TOKEN_KEY),
-            MIN_MBPS,
-            MAX_MEMORY_GB)
+            MIN_MBPS, 
+            MAX_MEMORY_MB)
         );
         sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_NO_VERSIONID, new Sourcetype(
-                "./cloudwatchevents_awstrustedadvisor.sample",
-                cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
-                MIN_MBPS,
-                MAX_MEMORY_GB)
+            "./cloudwatchevents_awstrustedadvisor.sample",
+            cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
+            MIN_MBPS,
+            MAX_MEMORY_MB)
         );
         sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED, new Sourcetype(
-                "./cloudwatchevents_ec2autoscale.sample",
-                cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
-                MIN_MBPS,
-                MAX_MEMORY_GB)
+            "./cloudwatchevents_ec2autoscale.sample",
+            cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
+            MIN_MBPS,
+            MAX_MEMORY_MB)
         );
         sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT, new Sourcetype(
-                "./cloudwatchevents_codebuild.sample",
-                cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
-                MIN_MBPS,
-                MAX_MEMORY_GB)
+            "./cloudwatchevents_codebuild.sample",
+            cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
+            MIN_MBPS,
+            MAX_MEMORY_MB)
         );
         sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_LONG, new Sourcetype(
-                "./cloudwatchevents_macie.sample",
-                cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
-                MIN_MBPS,
-                MAX_MEMORY_GB)
+            "./cloudwatchevents_macie.sample",
+            cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY),
+            MIN_MBPS,
+            MAX_MEMORY_MB)
         );
         sourcetypes.put(SourcetypeEnum.VPCFLOWLOG, new Sourcetype(
-                "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample",
-                cliProperties.get(VPCFLOWLOG_TOKEN_KEY),
-                MIN_MBPS,
-                MAX_MEMORY_GB)
+            "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample",
+            cliProperties.get(VPCFLOWLOG_TOKEN_KEY),
+            MIN_MBPS,
+            MAX_MEMORY_MB)
         );
     }
     
@@ -109,6 +115,31 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             connection.getSettings().setToken(sourcetypes.get(sourcetype).token);
             // Read events from file once, then build a batch from it that we can reuse
             sendTextToRaw();
+
+            // Throughput
+            float mbps = showThroughput(System.currentTimeMillis(), start);
+            if (mbps != Float.NaN) {
+                Assert.assertTrue("Throughput must be above minimum value of " + sourcetypes.get(sourcetype).minMbps,
+                        mbps > sourcetypes.get(sourcetype).minMbps);
+            }
+
+            // Memory Used
+            long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
+            Assert.assertTrue("Memory usage must be below maximum value of " + sourcetypes.get(sourcetype).minMemory + " MB",
+                    memoryUsed < sourcetypes.get(sourcetype).minMemory);
+            
+            // Failures
+//            Integer numFailed = callbacks.getFailedCount();
+//            Integer numSent = batchCounter.get();
+//            float percentFailed = ( (float) numFailed / (float) numSent ) * 100F;
+//            Assert.assertTrue("Percentage failed must be below 2%", percentFailed < 2F);
+
+            // Threads
+//            long threadCount = Thread.activeCount() - numSenderThreads;
+//            LOG.info("Thread count: " + threadCount);
+//            Assert.assertTrue("Thread count must be below maximum value of " + cliProperties.get(MAX_THREADS_KEY),
+//                    threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
+            
         }
         
     }

@@ -48,7 +48,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
     private final String eventsFilename = "./1KB_event_5MB_batch.sample";
-    private long start = 0;
+    protected long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
     private int batchSizeMB;
@@ -184,6 +184,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
         LOG.info("Memory usage: " + memoryUsed + " MB");
 
+        /*
         // asserts
         if (shouldAssert) {
             if (mbps != Float.NaN) {
@@ -196,6 +197,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
                 memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
         }
+        */
     }
     
     protected void updateTimestampsOnBatch() {
