@@ -184,7 +184,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
         LOG.info("Memory usage: " + memoryUsed + " MB");
 
-        /*
         // asserts
         if (shouldAssert) {
             if (mbps != Float.NaN) {
@@ -197,7 +196,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             Assert.assertTrue("Memory usage must be below maximum value of " + cliProperties.get(MAX_MEMORY_MB_KEY) + " MB",
                 memoryUsed < Long.parseLong(cliProperties.get(MAX_MEMORY_MB_KEY)));
         }
-        */
     }
     
     protected void updateTimestampsOnBatch() {
