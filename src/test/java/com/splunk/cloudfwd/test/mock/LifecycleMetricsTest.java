@@ -35,8 +35,12 @@ public class LifecycleMetricsTest {
         eb.getLifecycleMetrics().setStartLBSpinTimestamp(time - 1);
         eb.getLifecycleMetrics().setPostSentTimestamp(time);
         eb.getLifecycleMetrics().setAckedTimestamp(time + 1);
+        eb.getLifecycleMetrics().setAckPollSentTimestamp(time + 2);
+        eb.getLifecycleMetrics().setAckPollResponseTimestamp(time + 3);
         Assert.assertEquals("acked latency should be 1", 1, (long)eb.getLifecycleMetrics().getAcknowledgedLatency());
         Assert.assertEquals("timestamps should match", time + 1, (long)eb.getLifecycleMetrics().getAckedTimestamp().get(0));
+        Assert.assertEquals("ack poll sent timestamp should be correct", time + 2, (long)eb.getLifecycleMetrics().getAckPollSentTimestamps().get(0));
+        Assert.assertEquals("ack poll response timestamp should be correct", time + 3, (long)eb.getLifecycleMetrics().getAckPollResponseTimestamps().get(0));
     }
 
     @Test

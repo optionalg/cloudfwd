@@ -13,6 +13,8 @@ public class LifecycleMetrics {
     public static final String START_LB_SPIN_TIMESTAMP = "start_lb_spin_timestamp"; // time the event batch entered the load balancer
     public static final String POST_SENT_TIMESTAMP = "post_sent_timestamp"; // time the event batch post request was sent to Splunk
     public static final String POST_RESPONSE_TIMESTAMP= "post_repsonse_timestamp"; // time the event batch post request received a response
+    public static final String ACK_POLL_SENT_TIMESTAMP = "ack_poll_sent_timestamp";
+    public static final String ACK_POLL_RECEIVED_TIMESTAMP = "ack_poll_received_timestamp";
     public static final String ACKED_TIMESTAMP = "acked_timestamp"; // time the event batch was acknowledged
     public static final String FAILED_TIMESTAMP = "failed_timestamp"; // time the event batch was 
     
@@ -95,6 +97,22 @@ public class LifecycleMetrics {
     
     public Long getTimeInLoadBalancer() {
         return timeInLoadBalancer;
+    }
+    
+    public List<Long> getAckPollSentTimestamps() {
+        return timestampsMS.get(ACK_POLL_SENT_TIMESTAMP);
+    }
+    
+    public void setAckPollSentTimestamp(Long timestamp) {
+        setTimestamp(ACK_POLL_SENT_TIMESTAMP, timestamp);
+    }
+
+    public List<Long> getAckPollResponseTimestamps() {
+        return timestampsMS.get(ACK_POLL_RECEIVED_TIMESTAMP);
+    }
+
+    public void setAckPollResponseTimestamp(Long timestamp) {
+        setTimestamp(ACK_POLL_RECEIVED_TIMESTAMP, timestamp);
     }
 
     private void setTimestamp(String key, Long timestamp) {

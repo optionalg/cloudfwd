@@ -76,6 +76,7 @@ public class AcknowledgementTracker implements EventTracker {
    * @return
    */
   public AckRequest getAckRequest() {
+    recordAckPollSent();
     return new AckRequest(polledAcksByAckId.keySet());
   }
 
@@ -97,11 +98,26 @@ public class AcknowledgementTracker implements EventTracker {
     polledAcksByAckId.put(ackId, events);
   }
 
+  private void recordAckPollSent() {
+      long timestamp = System.currentTimeMillis();
+      for (EventBatchImpl e : polledAcksByAckId.values()) {
+          e.getLifecycleMetrics().setAckPollSentTimestamp(timestamp);
+      }
+  }
+  
+  private void recordAckPollResponse() {
+      long timestamp = System.currentTimeMillis();
+      for (EventBatchImpl e : polledAcksByAckId.values()) {
+          e.getLifecycleMetrics().setAckPollResponseTimestamp(timestamp);
+      }
+  }
+
   public void handleAckPollResponse(AckPollResponseValueObject apr) {
     if(dead){
         return;
     }
     EventBatchImpl events = null;
+    recordAckPollResponse();
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
       LOG.debug("channel={} received success on {} ack ids out of {}. Success acked ids: {}", 
