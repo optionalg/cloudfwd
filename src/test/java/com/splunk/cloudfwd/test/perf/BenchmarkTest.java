@@ -23,7 +23,6 @@ import java.util.HashMap;
     3.) Call BenchmarkTest and pass 3 tokens as cloudtrail_token, cloudwatchevents_token, and vpcflowlog_token
  */
 public class BenchmarkTest extends MultiThreadedVolumeTest {
-    private ByteBuffer buffer;
     
     // Configurable options //TODO: make this configurable through CLI
     private SourcetypeEnum sourcetype;
