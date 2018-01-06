@@ -147,7 +147,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     @Override
     protected void updateTimestampsOnBatch() {
         String byte_str = new String(buffer.array());
-        // TODO Convert time stamp based on source type
+        // Convert time stamp based on source type
         if (sourcetype.equals(SourcetypeEnum.CLOUDTRAIL_UNPROCESSED) ||
                 sourcetype.equals(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_LONG) ||
                 sourcetype.equals(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED)) {
@@ -177,14 +177,13 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
         // Make sure we send ~5MB batches, regardless of the size of the sample log file 
         while (buffer.position() <= batchSizeMB * 1024 * 1024) {
-            System.out.println("******** BATCH SIZE 1: going to add " + origByteSize + " bytes");
             try {
                 buffer.put(bytes);
             } catch (BufferOverflowException e ) {
                 System.out.println("buffer overflowed - could not put bytes");
                 return;
             }
-            System.out.println("******** BATCH SIZE 2: current buffer size: " + buffer.position());
         }
+        System.out.println("Finished building batch of size: " + buffer.position());
     }
 }
