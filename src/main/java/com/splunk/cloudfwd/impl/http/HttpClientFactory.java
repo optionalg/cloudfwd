@@ -110,7 +110,7 @@ public final class HttpClientFactory {
                 .setSelectInterval(REACTOR_SELECT_INTERVAL)
                 .setSoTimeout(SOCKET_TIMEOUT)
                 .setConnectTimeout(CONNECT_TIMEOUT)
-                //.setIoThreadCount(256)
+                //.setIoThreadCount(8)
                 .build();
                 ConnectingIOReactor ioreactor = new DefaultConnectingIOReactor(ioReactorConfig);   
                 RegistryBuilder<SchemeIOSessionStrategy>  reg = RegistryBuilder.<SchemeIOSessionStrategy>create().register("https",

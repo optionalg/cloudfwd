@@ -247,6 +247,8 @@ public final class HttpSender implements Endpoints, CookieClient {
     if (httpClient != null) {
          dataChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
         httpClient = null;
+    }
+    if (controlClient != null) {
         controlChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
         controlClient = null;
     }
