@@ -22,7 +22,7 @@ package com.splunk.cloudfwd.error;
  */
 public class HecIllegalStateException extends IllegalStateException {
 
-  public enum Type {
+    public enum Type {
     /**
      * This type gets thrown with EventBatch still on-flight. It hasn't been acknowledged or has not failed
      */
@@ -74,8 +74,12 @@ public class HecIllegalStateException extends IllegalStateException {
     /**
      * This type gets thrown when InputStream experiences an error in loading cloudfwd.properties resources (example: wrong file name).
      */
-    CANNOT_LOAD_PROPERTIES
-  }
+    CANNOT_LOAD_PROPERTIES, 
+    /**
+     * This type represents an internal state exception (no Http client allocated for given channel)
+     */    
+    NO_CLIENT_ALLOCATED
+    }
   private final Type type;
 
   /**

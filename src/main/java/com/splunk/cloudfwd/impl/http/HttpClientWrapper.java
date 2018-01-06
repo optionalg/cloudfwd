@@ -15,11 +15,11 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import com.splunk.cloudfwd.error.HecIllegalStateException;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
-import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 
 /**
  * This class allows many HttpSender to share a single ClosableHttpAsyncClient. It counts references and closes the 
@@ -28,56 +28,74 @@ import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
  * @author ghendrey
  */
 public class HttpClientWrapper {
-
-    private CloseableHttpAsyncClientAndConnPoolControl  httpClientAndConnPoolControl;
-    private Set<HttpSender> requestors = new HashSet<>();    
-
+    private static final int REQUESTORS_PER_CLIENT = 128;
+    private LinkedList<CloseableHttpAsyncClientAndConnPoolControl>  clients = new LinkedList<>();
+    private Map<HttpSender, CloseableHttpAsyncClientAndConnPoolControl> senderToClientMap = new HashMap<>();    
+    
     HttpClientWrapper() {
 
     }
 
     public synchronized void releaseClient(HttpSender requestor) {
-           
-         if (requestors.size() == 0) {
-             throw new IllegalStateException("Illegal attempt to release http client, but http client is already closed.");
-         }
-        requestors.remove(requestor);        
-        if (requestors.size() == 0) {
-            try {
-                httpClientAndConnPoolControl.getClient().close();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex.getMessage(), ex);
-            }
-        }else{
-            adjustConnPoolSize();
-        }
+        CloseableHttpAsyncClientAndConnPoolControl c = senderToClientMap.remove(requestor);        
+        if(c.removeReference(requestor)){ //true if there are no more references to this client
+            this.clients.remove(c); 
+        }   
     }
 
     public synchronized CloseableHttpAsyncClient getClient(
             HttpSender requestor, boolean disableCertificateValidation,
             String cert) {
-        if (requestors.isEmpty()) {
+        CloseableHttpAsyncClientAndConnPoolControl c;
+        if (!isClientAllocatedFor(requestor)) {
+            if(clients.isEmpty()){
+                 c = newClient(disableCertificateValidation, cert, requestor);
+            }else{
+                 c = getMostRecentlyCreatedClient();
+                if(c.getReferenceCount() == REQUESTORS_PER_CLIENT){
+                    c = newClient(disableCertificateValidation, cert, requestor);
+                }                 
+            }
+            c.addReference(requestor);        
+        }else{ //already have a client mapped to this requestor
+            c =getAllocatedClient(requestor);
+        }
+
+        return c.getClient();
+    }    
+    
+
+    
+    private CloseableHttpAsyncClientAndConnPoolControl getMostRecentlyCreatedClient(){
+        return this.clients.getLast();
+    }
+
+    private boolean isClientAllocatedFor(HttpSender requestor) {
+        return this.senderToClientMap.containsKey(requestor);
+    }
+    
+    private CloseableHttpAsyncClientAndConnPoolControl getAllocatedClient(HttpSender requestor){
+        CloseableHttpAsyncClientAndConnPoolControl c = this.senderToClientMap.get(requestor);
+        if(null == c){
+            throw new HecIllegalStateException("No client allocated for " + requestor.getBaseUrl(),
+                    HecIllegalStateException.Type.NO_CLIENT_ALLOCATED);
+        }
+        return c;
+    }
+
+    private CloseableHttpAsyncClientAndConnPoolControl newClient(
+            boolean disableCertificateValidation, String cert,
+            HttpSender requestor) {
             try {
-                httpClientAndConnPoolControl = new HttpClientFactory(disableCertificateValidation,
+                CloseableHttpAsyncClientAndConnPoolControl c = new HttpClientFactory(disableCertificateValidation,
                         cert, requestor.getSslHostname(), requestor).build();
-                httpClientAndConnPoolControl.getClient().start();              
+                c.getClient().start();    
+                clients.add(c);
+                senderToClientMap.put(requestor, c);
+                return c;
             } catch (Exception ex) {
                 throw new RuntimeException(ex.getMessage(), ex);
             }
-        }
-        //the first time we add a requestor to the set, add will return true and we can update the connection pool
-        //to reflect the new number of HttpSenders that exist. We want the pool to have as many connecitons as there
-        //are HttpSender instances
-        if(requestors.add(requestor)){
-            adjustConnPoolSize();
-        }
-        return httpClientAndConnPoolControl.getClient();
-    }    
-    
-    private void adjustConnPoolSize(){                
-        httpClientAndConnPoolControl.getConPoolControl().setDefaultMaxPerRoute(Math.max(requestors.size()*10,HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
-        //We expect only one Route per HttpSender, but nevertheless, for safety we double the number of requestors in computing the max total connections. This is
-        //a decent idea becuase for each HttpSender there will be multiple pollers (health, acks) in addition to event posting
-        httpClientAndConnPoolControl.getConPoolControl().setMaxTotal(Math.max(requestors.size()*8,HttpClientFactory.INITIAL_MAX_CONN_TOTAL));
     }
+
 }
