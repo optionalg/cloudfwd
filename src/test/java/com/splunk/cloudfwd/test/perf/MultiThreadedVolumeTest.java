@@ -46,7 +46,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private int numSenderThreads = 128;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
-    private ByteBuffer buffer;
+    protected ByteBuffer buffer;
     private final String eventsFilename = "./1KB_event_5MB_batch.sample";
     protected long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
