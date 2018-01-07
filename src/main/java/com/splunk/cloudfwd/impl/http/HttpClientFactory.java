@@ -61,8 +61,8 @@ import sun.security.provider.X509Factory;
  */
 public final class HttpClientFactory {
     //max connections per route, and max connections total will adjust dynamically when system is running
-    public static int INITIAL_MAX_CONN_PER_ROUTE = 2; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
-    public static int INITIAL_MAX_CONN_TOTAL = 4; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
+    public static int INITIAL_MAX_CONN_PER_ROUTE = 0; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
+    public static int INITIAL_MAX_CONN_TOTAL = 0; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
     
     public static int CONNECT_TIMEOUT = 30000; //30 sec
     public static int SOCKET_TIMEOUT = 120000; //120 sec
