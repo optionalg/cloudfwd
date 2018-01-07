@@ -61,12 +61,12 @@ import sun.security.provider.X509Factory;
  */
 public final class HttpClientFactory {
     //max connections per route, and max connections total will adjust dynamically when system is running
-    public static int INITIAL_MAX_CONN_PER_ROUTE = 0; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
-    public static int INITIAL_MAX_CONN_TOTAL = 0; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
+    public static int INITIAL_MAX_CONN_PER_ROUTE = 1; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
+    public static int INITIAL_MAX_CONN_TOTAL = 1; //Initial value. See HttpClientWrapper.adjustConnPoolSize for dyamic behavior
     
-    public static int CONNECT_TIMEOUT = 30000; //30 sec
-    public static int SOCKET_TIMEOUT = 120000; //120 sec
-    public static int REACTOR_SELECT_INTERVAL = 1000;   
+    public static int CONNECT_TIMEOUT = 300000; //30 sec
+    public static int SOCKET_TIMEOUT = 1200000; //120 sec
+    public static int REACTOR_SELECT_INTERVAL = 10000;   
     
     private final Logger LOG;
     // Enable Parallel mode for HttpClient, which will be set to the default org.apache.http pool size
@@ -110,6 +110,8 @@ public final class HttpClientFactory {
                 .setSelectInterval(REACTOR_SELECT_INTERVAL)
                 .setSoTimeout(SOCKET_TIMEOUT)
                 .setConnectTimeout(CONNECT_TIMEOUT)
+                        .setSndBufSize(1024*1024*8)
+                        //.setBacklogSize()
                 //.setIoThreadCount(8)
                 .build();
                 ConnectingIOReactor ioreactor = new DefaultConnectingIOReactor(ioReactorConfig);   
