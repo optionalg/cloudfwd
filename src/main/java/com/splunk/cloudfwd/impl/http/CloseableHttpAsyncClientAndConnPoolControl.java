@@ -70,6 +70,7 @@ public class CloseableHttpAsyncClientAndConnPoolControl {
 //        //We expect only one Route per HttpSender, but nevertheless, for safety we double the number of requestors in computing the max total connections. This is
 //        //a decent idea becuase for each HttpSender there will be multiple pollers (health, acks) in addition to event posting
 //        this.connPoolControl.setMaxTotal(0);//Math.max(referenceHolders.size(),HttpClientFactory.INITIAL_MAX_CONN_TOTAL));
+
     }    
 
     //returns true if there are no reference holders left after this removeReference
