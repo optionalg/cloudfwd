@@ -66,10 +66,17 @@ public class CloseableHttpAsyncClientAndConnPoolControl {
     }
     
     private void adjustConnPoolSize(){                
+<<<<<<< HEAD
 //        this.connPoolControl.setDefaultMaxPerRoute(0);//Math.max(referenceHolders.size(),HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
 //        //We expect only one Route per HttpSender, but nevertheless, for safety we double the number of requestors in computing the max total connections. This is
 //        //a decent idea becuase for each HttpSender there will be multiple pollers (health, acks) in addition to event posting
 //        this.connPoolControl.setMaxTotal(0);//Math.max(referenceHolders.size(),HttpClientFactory.INITIAL_MAX_CONN_TOTAL));
+=======
+        this.connPoolControl.setDefaultMaxPerRoute(0);//Math.max(referenceHolders.size(),HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
+        //We expect only one Route per HttpSender, but nevertheless, for safety we double the number of requestors in computing the max total connections. This is
+        //a decent idea becuase for each HttpSender there will be multiple pollers (health, acks) in addition to event posting
+        this.connPoolControl.setMaxTotal(0);//Math.max(referenceHolders.size(),HttpClientFactory.INITIAL_MAX_CONN_TOTAL));
+>>>>>>> 1d8f51630e4e3f9b0fe9c48a80590fdac81ef1e3
     }    
 
     //returns true if there are no reference holders left after this removeReference
