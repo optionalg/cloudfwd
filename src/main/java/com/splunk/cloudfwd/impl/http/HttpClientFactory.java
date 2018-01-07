@@ -102,6 +102,8 @@ public final class HttpClientFactory {
                     .setDefaultIOReactorConfig(null) //explicitely do NOT let the HttpAsyncClientBuilder construct its own ConnectionManager. We provide it.
                     .setConnectionManager(conMgr)
                     .disableCookieManagement()
+                    .setConnectionManagerShared(
+                            true)
                     .setMaxConnPerRoute(INITIAL_MAX_CONN_PER_ROUTE);        
     }   
     
@@ -112,7 +114,12 @@ public final class HttpClientFactory {
                 .setSoTimeout(SOCKET_TIMEOUT)
                 .setConnectTimeout(CONNECT_TIMEOUT)
                         .setSndBufSize(1024*1024*8)
-                        //.setBacklogSize()
+                        
+                        .setBacklogSize(100)
+                        .setSoKeepAlive(true)
+                        .setTcpNoDelay(true)
+                        .setSoReuseAddress(true)
+                        .setInterestOpQueued(true)
                 //.setIoThreadCount(8)
                 .build();
                 ConnectingIOReactor ioreactor = new DefaultConnectingIOReactor(ioReactorConfig);   
