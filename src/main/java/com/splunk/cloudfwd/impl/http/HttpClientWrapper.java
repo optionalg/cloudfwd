@@ -28,7 +28,7 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
  * @author ghendrey
  */
 public class HttpClientWrapper {
-    private static final int REQUESTORS_PER_CLIENT = 32;
+    private static final int REQUESTORS_PER_CLIENT = 4;
     private LinkedList<CloseableHttpAsyncClientAndConnPoolControl>  clients = new LinkedList<>();
     private Map<HttpSender, CloseableHttpAsyncClientAndConnPoolControl> senderToClientMap = new HashMap<>();    
     
