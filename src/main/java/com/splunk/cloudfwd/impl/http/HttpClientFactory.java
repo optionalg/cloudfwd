@@ -102,8 +102,6 @@ public final class HttpClientFactory {
                     .setDefaultIOReactorConfig(null) //explicitely do NOT let the HttpAsyncClientBuilder construct its own ConnectionManager. We provide it.
                     .setConnectionManager(conMgr)
                     .disableCookieManagement()
-                    .setConnectionManagerShared(
-                            true)
                     .setMaxConnPerRoute(INITIAL_MAX_CONN_PER_ROUTE);        
     }   
     
