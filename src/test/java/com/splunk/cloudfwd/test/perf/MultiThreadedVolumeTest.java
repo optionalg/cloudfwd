@@ -45,7 +45,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use uri in cloudfwd.properties by default
         // AWS uses 50 shards each with its own connection  
-        cliProperties.put(NUM_CONNECTIONS_KEY, "50");  
+        cliProperties.put(NUM_CONNECTIONS_KEY, "1");  
     }
     
     private AtomicInteger batchCounter = new AtomicInteger(0);
@@ -67,7 +67,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
        // ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
-        ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
+        ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads ,
         (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
         //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
@@ -237,15 +237,14 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
         public void sendAndWaitForAcks() {
             LOG.info("sender {} starting its send loop", workerNumber);
-            int batchId = batchCounter.incrementAndGet();
-                EventBatch eb = nextBatch(batchId);
+                EventBatch eb = nextBatch(batchCounter.incrementAndGet());
                 while (!Thread.currentThread().isInterrupted()) {
                     try{
                         failed = false;
                         LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
                         logMetrics(eb, eb.getLength());
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
-                        long sent = connections.get(batchId % connections.size()).sendBatch(eb);
+                        long sent = connections.get((int) eb.getId() % connections.size()).sendBatch(eb);
                         LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
                         synchronized (this) {
                             // wait while the batch hasn't been acknowledged and it hasn't failed
