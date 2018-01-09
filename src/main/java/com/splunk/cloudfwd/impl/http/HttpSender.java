@@ -53,8 +53,8 @@ public final class HttpSender implements Endpoints, CookieClient {
   
   //separate Http Client instances for data (events) and 'control' (ack, health). This allows control channel to not get
   //blocked by too much traffic on data channel
-  private static final HttpClientHostMapper dataChannelClientHostMapper = new HttpClientHostMapper();
-  private static final HttpClientHostMapper controlChannelClientHostMapper = new HttpClientHostMapper();
+  private final HttpClientHostMapper dataChannelClientHostMapper = new HttpClientHostMapper();
+  private final HttpClientHostMapper controlChannelClientHostMapper = new HttpClientHostMapper();
 
   private static final String AuthorizationHeaderTag = "Authorization";
   private static final String AuthorizationHeaderScheme = "Splunk %s";
