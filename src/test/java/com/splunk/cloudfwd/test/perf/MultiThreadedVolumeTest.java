@@ -1,6 +1,7 @@
 package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.*;
+import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
@@ -31,6 +32,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
     private static final String NUM_SENDERS_KEY = "num_senders";    
+    private static final String NUM_CONNECTIONS_KEY = "num_connections";    
+    private int numSenderThreads;
     
     // defaults for CLI parameters
     static {        
@@ -40,10 +43,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
         cliProperties.put(NUM_SENDERS_KEY, "384"); 
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
-        cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
+        cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use uri in cloudfwd.properties by default
+        // AWS uses 50 shards each with its own connection  
+        cliProperties.put(NUM_CONNECTIONS_KEY, "50");  
     }
     
-    private int numSenderThreads = 128;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
@@ -54,6 +58,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private int batchSizeMB;
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
+    
+    private List<Connection> connections = new ArrayList<>();
     
 
     @Test
@@ -67,7 +73,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
-       
+        createConnectionPool();
         for (int i = 0; i < numSenderThreads; i++) {
             final int n =i;
             futureList.add(senderExecutor.submit(()->{
@@ -98,6 +104,30 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         connection.close();
     }
     
+    private Connection createAndConfigureTestConnection() {
+        Connection connection = createAndConfigureConnection();
+        ConnectionSettings connectionSettings = connection.getSettings();
+        if (null ==connection){
+            Assert.fail("null connection");
+        }
+        //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
+        //instantiated
+        if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+            connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+        }
+        if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
+            connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
+        }
+        connectionSettings.setMockHttp(false);
+        connectionSettings.setTestPropertiesEnabled(false);
+        return connection;
+    }
+    
+    private void createConnectionPool() {
+        for(int i = 0; i < Long.parseLong(cliProperties.get(NUM_CONNECTIONS_KEY)); i++) {
+            connections.add(createAndConfigureTestConnection());
+        }
+    }
     @Override
     protected void extractCliTestProperties() {
         if (System.getProperty("argLine") != null) {
@@ -204,32 +234,18 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         
         public SenderWorker(int workerNum) throws UnknownHostException{
             this.workerNumber = workerNum;
-            this.connection = createAndConfigureConnection();
-            this.connectionSettings = connection.getSettings();
-            if (null ==connection){
-                Assert.fail("null connection");
-            }
-            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
-            //instantiated
-            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
-            }
-            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
-                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
-            }
-            connectionSettings.setMockHttp(false);
-            connectionSettings.setTestPropertiesEnabled(false);
         }
         public void sendAndWaitForAcks() {
             LOG.info("sender {} starting its send loop", workerNumber);
-                EventBatch eb = nextBatch(batchCounter.incrementAndGet());
+            int batchId = batchCounter.incrementAndGet();
+                EventBatch eb = nextBatch(batchId);
                 while (!Thread.currentThread().isInterrupted()) {
                     try{
                         failed = false;
                         LOG.debug("Sender {} about to log metrics with id={}", workerNumber,  eb.getId());
                         logMetrics(eb, eb.getLength());
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
-                        long sent = this.connection.sendBatch(eb);
+                        long sent = connections.get(batchId % connections.size()).sendBatch(eb);
                         LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
                         synchronized (this) {
                             // wait while the batch hasn't been acknowledged and it hasn't failed
