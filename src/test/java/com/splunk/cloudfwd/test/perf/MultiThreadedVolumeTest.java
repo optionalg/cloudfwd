@@ -45,7 +45,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use uri in cloudfwd.properties by default
         // AWS uses 50 shards each with its own connection  
-        cliProperties.put(NUM_CONNECTIONS_KEY, "1");  
     }
     
     private AtomicInteger batchCounter = new AtomicInteger(0);
@@ -124,7 +123,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
     
     private void createConnectionPool() {
-        for(int i = 0; i < Long.parseLong(cliProperties.get(NUM_CONNECTIONS_KEY)); i++) {
+        for(int i = 0; i < Long.parseLong(cliProperties.get(NUM_SENDERS_KEY)); i++) {
             connections.add(createAndConfigureTestConnection());
         }
     }
