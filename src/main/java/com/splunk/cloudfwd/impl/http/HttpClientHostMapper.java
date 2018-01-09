@@ -27,9 +27,13 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class HttpClientHostMapper {
         //key in the following Map is ssl hostname
-        private final ConcurrentMap<String, HttpClientWrapper> clientMap = new ConcurrentHashMap<>(); 
+        private ConcurrentMap<String, HttpClientWrapper> clientMap = null; 
         
         public HttpClientWrapper getClientWrapper(HttpSender sender){
+            if (clientMap == null) {
+              clientMap = new ConcurrentHashMap<>();
+            }
+//            System.out.println("getClientWrapper: clientMap: " + clientMap);
             String sslHostname = sender.getSslHostname();
             return clientMap.computeIfAbsent(sslHostname, (key)->{
                 return new HttpClientWrapper();
