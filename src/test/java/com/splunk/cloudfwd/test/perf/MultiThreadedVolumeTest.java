@@ -31,7 +31,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
     private static final String NUM_SENDERS_KEY = "num_senders";
-    private static final String SHARE_CONNECTION = "share_connection";
+    private static final String SHARE_FACTOR = "share_factor";  //specifies how many threads can share the same connection
 
     // defaults for CLI parameters
     static {        
@@ -42,10 +42,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(NUM_SENDERS_KEY, "1"); //128 senders
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
-        cliProperties.put(SHARE_CONNECTION, "false");
+        cliProperties.put(SHARE_FACTOR, "1");  //One thread, one connection object
     }
+
     
     private int numSenderThreads = 128;
+    private int shareFactor = 1;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
@@ -61,22 +63,17 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     @Test
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
-        boolean shareConnection = Boolean.parseBoolean(cliProperties.get(SHARE_CONNECTION));
-        if (shareConnection)
-            LOG.info("Sharing connection across sender threads");
-        else
-            LOG.info("Creating one connection per sender thread");
+        shareFactor = Integer.parseInt(cliProperties.get(SHARE_FACTOR));
 
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
        // ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
         ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
         (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
-        //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
 
-        ConnectionManager connManager = new ConnectionManager(shareConnection);
+        ConnectionManager connManager = new ConnectionManager(shareFactor);
        
         for (int i = 0; i < numSenderThreads; i++) {
             SenderWorkerData senderData = new SenderWorkerData(i, connManager.getConnection());
@@ -343,39 +340,28 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
 
     public class ConnectionManager{
-        private boolean share;
         private Connection sharedConnection = null;
+        private int shareCount = 0;
+        private final int shareFactor;
         private  List<Connection> connections = new ArrayList<>();
-        ConnectionManager(boolean share){
-        this.share = share;
+        ConnectionManager(int shareFactor){
+
+            this.shareFactor = shareFactor;
         }
 
         public Connection getConnection(){
-            if (!share){
-                LOG.info("Creating a new connection");
-                connection =  createConnection();
-                connections.add(connection);
-                return connection;
-            }
-            else {
-                if (sharedConnection == null) {
-                    sharedConnection = createConnection();
-                }
-                LOG.info("Returning shared connection");
-                return sharedConnection;
-            }
 
+            if((shareCount % shareFactor) == 0 ){
+                LOG.info("Share factor met, creating new connection");
+                sharedConnection = createConnection();
+            }
+            shareCount ++;
+            return sharedConnection;
         }
-
         void closeConnections(){
-            if (sharedConnection != null)
-                sharedConnection.close();
-            else {
-                for(Connection conn : connections){
-                    conn.close();
-                }
+            for(Connection conn : connections){
+                conn.close();
             }
-
         }
 
         private Connection createConnection(){
@@ -392,6 +378,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             }
             connectionSettings.setMockHttp(false);
             connectionSettings.setTestPropertiesEnabled(false);
+
+            //keep track of connections
+            connections.add(connection);
+            LOG.info("Total connections count in connections pool: {}", connections.size() );
+
 
             return connection;
         }
