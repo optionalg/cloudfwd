@@ -38,23 +38,22 @@ public class HttpClientWrapper {
     private final Long refreshIntervalMS = 30L * 60L * 1000L; // 30 minutes
     private AtomicLong bytesSent = new AtomicLong();
     private Long lastRefreshedTimeStampMS = System.currentTimeMillis();
-    private CloseableHttpAsyncClientAndConnPoolControl previousHttpClient;
 
     HttpClientWrapper() {
 
     }
     
-    public CloseableHttpAsyncClient checkUpdateClient(HttpSender requestor, boolean disableCertificateValidation,
-                                  String cert) {
+    public CloseableHttpAsyncClient getClient(HttpSender requestor, boolean disableCertificateValidation,
+                                  String cert, int bytesToSend) {
         if (shouldRefreshClient()) {
             synchronized(this) {
                 if (shouldRefreshClient()) {
-                    System.out.println("refreshing client");
                     scheduleCloseClient();
                     buildClient(requestor, disableCertificateValidation, cert);
                 }
             }
         }
+        bytesSent.getAndAdd(bytesToSend);
         return httpClientAndConnPoolControl.getClient();
     }
 
@@ -88,10 +87,6 @@ public class HttpClientWrapper {
             adjustConnPoolSize();
         }
         return httpClientAndConnPoolControl.getClient();
-    }    
-    
-    public void recordBytesSent(int bytes) {
-        bytesSent.getAndAdd(bytes);
     }
     
     private void buildClient(HttpSender requestor, boolean disableCertificateValidation,
@@ -108,17 +103,17 @@ public class HttpClientWrapper {
     }
     
     private void scheduleCloseClient() {
-        previousHttpClient = httpClientAndConnPoolControl;
+        CloseableHttpAsyncClientAndConnPoolControl previous = httpClientAndConnPoolControl;
 
         // close after a delay in case we are still waiting for slow responses from server
-        ThreadScheduler.getSharedSchedulerInstance("Http client closer").schedule(()->{
-            try {
-                previousHttpClient.getClient().close();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            } finally {
-                previousHttpClient = null; // we don't want to keep a reference 
-            }
+        ThreadScheduler.getSharedSchedulerInstance("Http client closer scheduler").schedule(()->{
+            ThreadScheduler.getSharedExecutorInstance("Http client closer executor").execute(()-> {
+                try {
+                    previous.getClient().close();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
         }, 60, TimeUnit.SECONDS);
     }
     
