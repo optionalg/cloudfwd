@@ -54,7 +54,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
     cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use uri in cloudfwd.properties by default
     // AWS uses 50 shards each with its own connection  
-    cliProperties.put(NUM_CONNECTIONS_KEY, "10");
+    cliProperties.put(NUM_CONNECTIONS_KEY, "4");
   }
   
   
