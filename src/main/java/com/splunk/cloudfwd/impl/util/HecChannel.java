@@ -43,6 +43,7 @@ import java.util.concurrent.ScheduledFuture;
 import javax.net.ssl.SSLException;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
 
 
 /**
@@ -177,9 +178,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   } 
 
   public boolean send(EventBatchImpl events) {
-//    if (!isAvailable()) {
-//      return false;
-//    }
+    if (!isAvailable()) {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException ex) {
+            java.util.logging.Logger.getLogger(HecChannel.class.getName()).
+                    log(Level.SEVERE, null, ex);
+        }
+      return false;
+    }
     
     //must increment only *after* we exit the blocking condition above
     int count = unackedCount.incrementAndGet();
