@@ -31,8 +31,34 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private long start = 0;
     private long finish = 0;
     final float warmup = 0.0005f;
-
-    private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
+  
+  protected static Map<String, String> cliProperties = new HashMap<>();
+  
+  private static final String MIN_THROUGHPUT_MBPS_KEY = "min_tp";
+  private static final String MAX_THREADS_KEY = "max_threads";
+  private static final String DURATION_MINUTES_KEY = "duration_mins";
+  private static final String MAX_MEMORY_MB_KEY = "mem_mb";
+  private static final String NUM_SENDERS_KEY = "num_senders";
+  private static final String NUM_CONNECTIONS_KEY = "num_connections";
+  private int numSenderThreads;
+  
+  private List<Connection> connections = new ArrayList<>();
+  
+  // defaults for CLI parameters
+  static {
+    cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "50");
+    cliProperties.put(MAX_THREADS_KEY, "300");
+    cliProperties.put(DURATION_MINUTES_KEY, "15");
+    cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
+    cliProperties.put(NUM_SENDERS_KEY, "384");
+    cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
+    cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use uri in cloudfwd.properties by default
+    // AWS uses 50 shards each with its own connection  
+    cliProperties.put(NUM_CONNECTIONS_KEY, "10");
+  }
+  
+  
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
 
     @Override
     protected int getNumEventsToSend() {
@@ -48,6 +74,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Callable<Object>> callables = new ArrayList<>();
+        createConnectionPool();
         for (int i = 0; i < numThreads; i++) {
             callables.add(Executors.callable(new SenderWorker()::sendAndWaitForAcks));
         }
@@ -56,8 +83,40 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         close();
         // do thread cleanup
     }
-
-    private void readEventsFile() {
+  private Connection createAndConfigureTestConnection() {
+    Connection connection = createAndConfigureConnection();
+    ConnectionSettings connectionSettings = connection.getSettings();
+    if (null ==connection){
+      Assert.fail("null connection");
+    }
+    //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
+    //instantiated
+    if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+      connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+    }
+    if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
+      connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
+    }
+    return connection;
+  }
+  
+  private void createConnectionPool() {
+    for(int i = 0; i < Long.parseLong(cliProperties.get(NUM_CONNECTIONS_KEY)); i++) {
+      connections.add(createAndConfigureTestConnection());
+    }
+  }
+  
+  protected Connection createAndConfigureConnection(){
+    Properties settings = getTestProps();
+    connection = createConnection(callbacks, settings);
+    if(null == connection){
+      return null;
+    }
+    configureConnection(connection);
+    return connection;
+  }
+  
+  private void readEventsFile() {
         try {
             URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
             byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
@@ -114,7 +173,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 EventBatch next = nextBatch(batchCounter.incrementAndGet());
                 while ((Integer)next.getId() <= numBatches) {
                     EventBatch eb = next;
-                    long sent = connection.sendBatch(eb);
+                    long sent = connections.get((int) eb.getId() % connections.size() ).sendBatch(eb);
                     logMetrics(eb, sent);
                     LOG.info("Sent batch with id=" + batchCounter.get());
                     next = nextBatch(batchCounter.incrementAndGet());

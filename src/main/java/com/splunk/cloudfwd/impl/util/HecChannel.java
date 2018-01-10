@@ -184,7 +184,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                     LOG.error("Exception trying to close and replace '{}': {}",
                             HecChannel.this, e.getMessage());
                 }
-            }, (long)decomTime, TimeUnit.MILLISECONDS); //randomize the channel decommission - so that all channels do not decomission simultaneously.
+            }, (long)decomTime, TimeUnit.MILLISECONDS); //randomize the channel decommit
+          // ssion - so that all channels do not decomission simultaneously.
         }
     }
 
