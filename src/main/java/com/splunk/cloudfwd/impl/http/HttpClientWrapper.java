@@ -69,7 +69,7 @@ public class HttpClientWrapper {
         //to reflect the new number of HttpSenders that exist. We want the pool to have as many connecitons as there
         //are HttpSender instances
         if(requestors.add(requestor)){
-            adjustConnPoolSize();
+//            adjustConnPoolSize();
         }
         return httpClientAndConnPoolControl.getClient();
     }    
