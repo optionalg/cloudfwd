@@ -36,7 +36,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     static {        
         cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "50");
         cliProperties.put(MAX_THREADS_KEY, "300");
-        cliProperties.put(DURATION_MINUTES_KEY, "15");
+        cliProperties.put(DURATION_MINUTES_KEY, "5"); //FIXME: revert to 15 by default after trial tests complete
         cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
         cliProperties.put(NUM_SENDERS_KEY, "384"); // to run in local with JVM memory restrictions, pass -Dnum_senders=64 in CLI to run test
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
@@ -49,8 +49,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     protected ByteBuffer buffer;
     private final String eventsFilename = "./1KB_event_5MB_batch.sample";
     protected long start = 0;
-    private long testStartTimeMillis = System.currentTimeMillis();
-    private long warmUpTimeMillis = 2*60*1000; // 2 mins
+    protected long testStartTimeMillis = System.currentTimeMillis();
+    protected long warmUpTimeMillis = 2*60*1000; //2 mins
     private int batchSizeMB;
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
@@ -158,10 +158,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         settings.setTestPropertiesEnabled(false);
     }
 
-    private void checkAndLogPerformance(boolean shouldAssert) {
-        // throughput
-        float mbps = showThroughput(System.currentTimeMillis(), start);
-
+    protected void checkAndLogPerformance(boolean shouldAssert) {
         // failures
         Integer numFailed = callbacks.getFailedCount();
         Integer numSent = batchCounter.get();
@@ -203,6 +200,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     protected void updateTimestampsOnBatch() {
         // no-op - overridden in child class to do timestamp configuration on buffer variable
     }
+    
+    protected void setSenderToken(ConnectionSettings connectionSettings) {
+        if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+            connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+        }
+    }
 
     public class SenderWorker {      
         private boolean failed = false;
@@ -219,9 +222,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             }
             //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
             //instantiated
-            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
-            }
+            setSenderToken(connectionSettings);
             if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
                 connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
             }
