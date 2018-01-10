@@ -22,6 +22,10 @@ import com.splunk.cloudfwd.impl.ConnectionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Properties;
+
+import static com.splunk.cloudfwd.ConnectionSettings.fromProps;
+
 /**
  * Factory for getting a Connection.
  *
@@ -58,8 +62,22 @@ public class Connections {
         Connections.setupConnection(c, settings);
         return c;
     }
-    
-    /**
+  
+  @Deprecated
+  /**
+   * For backward compatibility accept properties
+   * @param cb
+   * @param settings
+   * @return
+   */
+  public static Connection create(ConnectionCallbacks cb, Properties props) {
+    ConnectionSettings settings = fromProps(props);
+    ConnectionImpl c = new ConnectionImpl(cb, settings);
+    Connections.setupConnection(c, settings);
+    return c;
+  }
+  
+  /**
      * Creates a Connection with DefaultConnectionCallbacks
      * @param settings Properties that customize the Connection
      * @return
