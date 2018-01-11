@@ -17,7 +17,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 
 /**
  * Optionally pass command line parameters "token" and "url" as: 
@@ -31,7 +30,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
     private static final String NUM_SENDERS_KEY = "num_senders";
-    private static final String SHARE_FACTOR = "share_factor";  //specifies how many threads can share the same connection
+    private static final String THREADS_PER_CONNECTION = "threads_per_connection";  //specifies how many threads can share the same connection
 
     // defaults for CLI parameters
     static {        
@@ -42,12 +41,12 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(NUM_SENDERS_KEY, "384"); 
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
-        cliProperties.put(SHARE_FACTOR, "1");  //One thread, one connection object
+        cliProperties.put(THREADS_PER_CONNECTION, "1");  //One thread, one connection object
     }
 
     
     private int numSenderThreads = 128;
-    private int shareFactor = 1;
+    private int threadsPerConnection = 1;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
@@ -63,7 +62,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     @Test
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
-        shareFactor = Integer.parseInt(cliProperties.get(SHARE_FACTOR));
+        threadsPerConnection = Integer.parseInt(cliProperties.get(THREADS_PER_CONNECTION));
 
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
        // ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
@@ -73,7 +72,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
 
-        ConnectionManager connManager = new ConnectionManager(shareFactor);
+        ConnectionManager connManager = new ConnectionManager(threadsPerConnection);
        
         for (int i = 0; i < numSenderThreads; i++) {
             SenderWorkerData senderData = new SenderWorkerData(i, connManager.getConnection());
