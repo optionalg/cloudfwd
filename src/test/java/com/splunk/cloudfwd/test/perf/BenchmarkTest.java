@@ -25,7 +25,7 @@ import java.util.HashMap;
  */
 public class BenchmarkTest extends MultiThreadedVolumeTest {
     
-    // Configurable options //TODO: make this configurable through CLI
+    // Configurable options
     private SourcetypeEnum sourcetype;
     private int batchSizeMB = 5;
     private enum SourcetypeEnum {
@@ -44,14 +44,14 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private String cloudTrailToken;
     private String cloudWatchEventsToken;
     private String vpcFlowLogToken;
-    private String genericSIngleLineEventToken;
+    private String genericSingleLineEventToken;
 
     static {
 //        cliProperties.put("num_senders", "40"); // Low default sender count due to java.lang.OutOfMemoryError: GC overhead limit exceeded on local.
-        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, null);
-        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, null);
-        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, null);
-        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, null);
+        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, "30016E78-313E-4D21-AA9E-76D6DB1D7DA6");
+        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, "2F2D2DE9-E023-42D0-80A0-ED5A58B4DC49");
+        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, "A6A3E414-CBBA-498B-BBED-9A5A720E79EE");
+        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, "18ABC6A4-0BCE-4FC5-ACD0-3ADF6997F50A");
     }
     
     HashMap<SourcetypeEnum, Sourcetype> sourcetypes = new HashMap();
@@ -74,16 +74,16 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     }
     
     private void setupSourcetypes() {
-        genericSIngleLineEventToken = "30016E78-313E-4D21-AA9E-76D6DB1D7DA6";//cliProperties.put(GENERICSINGLELINE_TOKEN_KEY);
-        cloudTrailToken = "2F2D2DE9-E023-42D0-80A0-ED5A58B4DC49";//cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
-        cloudWatchEventsToken = "A6A3E414-CBBA-498B-BBED-9A5A720E79EE";//cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
-        vpcFlowLogToken = "18ABC6A4-0BCE-4FC5-ACD0-3ADF6997F50A";//cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
+        genericSingleLineEventToken = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
+        cloudTrailToken = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
+        cloudWatchEventsToken = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+        vpcFlowLogToken = cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
 
         sourcetypes.put(SourcetypeEnum.GENERIC_SINGLELINE_EVENTS, new Sourcetype(
-                "./1KB_event_5MB_batch.sample",
-                genericSIngleLineEventToken,
-                MIN_MBPS,
-                MAX_MEMORY_MB)
+            "./1KB_event_5MB_batch.sample",
+            genericSingleLineEventToken,
+            MIN_MBPS,
+            MAX_MEMORY_MB)
         );
         sourcetypes.put(SourcetypeEnum.CLOUDTRAIL_UNPROCESSED, new Sourcetype(
             "./cloudtrail_via_cloudwatchevents_unprocessed.sample",
@@ -182,7 +182,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         if (sourcetype.equals(SourcetypeEnum.CLOUDTRAIL_UNPROCESSED)) {
             byte_str = byte_str.replaceAll("\"eventTime\":\\s?\"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z","\"eventTime\" : \"" +
                     new SimpleDateFormat("YYYY-MM-DD'T'hh:mm:ss'Z'").format(new Date()));
-        } if( sourcetype.equals(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT)||
+        } else if( sourcetype.equals(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT)||
                 sourcetype.equals(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_LONG) ||
                 sourcetype.equals(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED)) {
             byte_str = byte_str.replaceAll("\"time\":\\s?\"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z", "\"time\" : \"" +
