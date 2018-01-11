@@ -365,6 +365,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       params.add(new BasicNameValuePair("name", TOKEN_NAME));
       if (sourcetype != null) {
         params.add(new BasicNameValuePair("sourcetype", sourcetype));
+        if (sourcetype == "aws:cloudtrail") {
+          params.add(new BasicNameValuePair("source", "aws_firehose_cloudtrail"));
+        }
       }
       params.add(new BasicNameValuePair("index", INDEX_NAME));
       String useACKValue = useACK ? "1" : "0";

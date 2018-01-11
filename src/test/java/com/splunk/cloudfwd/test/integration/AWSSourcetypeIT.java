@@ -59,7 +59,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
             getName());
 
     // filenames
-    private String addOnFileName = "./Splunk_TA_aws-kinesis-firehose-0.9.0.spl";
+    private String addOnFileName = "./Splunk_TA_aws-kinesis-firehose-1.1.1.spl";
     private String vpcFlowFileName = "./vpc-flow-log.sample";
     private String cloudwatchFileName = "./cloudwatch.sample";
     private String cloudtrailFileName = "./cloudtrail.sample";
@@ -102,7 +102,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
     public void cloudwatchToRaw() throws IOException, InterruptedException {
         LOG.info("test: cloudwatchToRaw");
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-        connection.getSettings().setToken(createTestToken("aws:cloudwatch:events"));
+        connection.getSettings().setToken(createTestToken("aws:firehose:cloudwatchevents"));
         sendFromFile(cloudwatchFileName);
         Set<String> results = getEventsFromSplunk();
         verifyResults(eventStringsFromFile(cloudwatchFileName), results);
