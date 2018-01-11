@@ -74,13 +74,10 @@ public class HttpClientWrapper {
         return httpClientAndConnPoolControl.getClient();
     }    
     
-    private void adjustConnPoolSize(){      
-        System.out.println(System.currentTimeMillis() + " adjusting connection pool. Max per route: " + Math.max(requestors.size()*10,HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
+    private void adjustConnPoolSize(){
         httpClientAndConnPoolControl.getConPoolControl().setDefaultMaxPerRoute(Math.max(requestors.size()*10,HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
         //We expect only one Route per HttpSender, but nevertheless, for safety we double the number of requestors in computing the max total connections. This is
         //a decent idea becuase for each HttpSender there will be multiple pollers (health, acks) in addition to event posting
-        System.out.println(System.currentTimeMillis() + " adjusting connection pool. Max total: " + Math.max(requestors.size()*8,HttpClientFactory.INITIAL_MAX_CONN_TOTAL));
-        System.out.println(System.currentTimeMillis() + " requestors " + requestors.size());
         httpClientAndConnPoolControl.getConPoolControl().setMaxTotal(Math.max(requestors.size()*8,HttpClientFactory.INITIAL_MAX_CONN_TOTAL));
     }
 }

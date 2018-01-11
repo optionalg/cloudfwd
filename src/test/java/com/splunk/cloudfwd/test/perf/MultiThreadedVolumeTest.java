@@ -80,7 +80,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 s.sendAndWaitForAcks();
             }));
         }
-        LOG.info("sleeping for " + cliProperties.get(DURATION_MINUTES_KEY) + " mins");
+        LOG.info("MultiThreadedVolumeTest main thread sleeping for " + cliProperties.get(DURATION_MINUTES_KEY) + " mins");
         try {
             Thread.sleep(Long.parseLong(cliProperties.get(DURATION_MINUTES_KEY))*60*1000); // blocks
         } catch (InterruptedException ex) {
