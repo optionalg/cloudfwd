@@ -74,7 +74,7 @@ public class HttpClientWrapper {
         return httpClientAndConnPoolControl.getClient();
     }    
     
-    private void adjustConnPoolSize(){
+    private void adjustConnPoolSize(){                
         httpClientAndConnPoolControl.getConPoolControl().setDefaultMaxPerRoute(Math.max(requestors.size()*10,HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
         //We expect only one Route per HttpSender, but nevertheless, for safety we double the number of requestors in computing the max total connections. This is
         //a decent idea becuase for each HttpSender there will be multiple pollers (health, acks) in addition to event posting
