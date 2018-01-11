@@ -30,7 +30,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String MAX_THREADS_KEY = "max_threads";
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
-    private static final String NUM_SENDERS_KEY = "num_senders";    
+    private static final String NUM_SENDERS_KEY = "num_senders";
+    private static final String ENABLE_LIFECYCLE_METRICS_LOGGING_KEY = "enable_lifecycle_metrics_logging";
     
     // defaults for CLI parameters
     static {        
@@ -41,6 +42,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(NUM_SENDERS_KEY, "384"); 
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
+        cliProperties.put(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY, "false");
     }
     
     private int numSenderThreads = 128;
@@ -317,21 +319,23 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 waitingSenders.get(events.getId()).tell();
             }
             
-            LifecycleMetrics lm = events.getLifecycleMetrics();
-            String lifecycleMetricTag = "LIFECYCLE_METRIC";
-            long currentTime = System.currentTimeMillis();
-            
-            // event post metrics
-            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_SENT_TIMESTAMP, lm.getPostSentTimestamp().get(0), testId);
-            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_RESPONSE_TIMESTAMP, lm.getPostResponseTimeStamp().get(0), testId);
-            LOG.info("{} type={} time={} latency={} testId={}", lifecycleMetricTag, "post_response_latency", currentTime, lm.getPostResponseLatency(), testId);
+            if (Boolean.parseBoolean(cliProperties.get(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY))) {
+                LifecycleMetrics lm = events.getLifecycleMetrics();
+                String lifecycleMetricTag = "LIFECYCLE_METRIC";
+                long currentTime = System.currentTimeMillis();
 
-            // load balancer metrics
-            LOG.info("{} type={} time={} spintime={} testId={}", lifecycleMetricTag, "load_balancer_spin_time", currentTime, lm.getTimeInLoadBalancer(), testId);
+                // event post metrics
+                LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_SENT_TIMESTAMP, lm.getPostSentTimestamp().get(0), testId);
+                LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_RESPONSE_TIMESTAMP, lm.getPostResponseTimeStamp().get(0), testId);
+                LOG.info("{} type={} time={} latency={} testId={}", lifecycleMetricTag, "post_response_latency", currentTime, lm.getPostResponseLatency(), testId);
 
-            // ack metrics
-            LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.ACKED_TIMESTAMP, lm.getAckedTimestamp().get(0), testId);
-            LOG.info("{} type={} time={} timelatency={} testId={}", lifecycleMetricTag, "ack_latency", currentTime, lm.getAcknowledgedLatency(), testId);
+                // load balancer metrics
+                LOG.info("{} type={} time={} spintime={} testId={}", lifecycleMetricTag, "load_balancer_spin_time", currentTime, lm.getTimeInLoadBalancer(), testId);
+
+                // ack metrics
+                LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.ACKED_TIMESTAMP, lm.getAckedTimestamp().get(0), testId);
+                LOG.info("{} type={} time={} timelatency={} testId={}", lifecycleMetricTag, "ack_latency", currentTime, lm.getAcknowledgedLatency(), testId);
+            }
             
         }
 
