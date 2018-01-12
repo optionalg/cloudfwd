@@ -36,7 +36,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     static {        
         cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "50");
         cliProperties.put(MAX_THREADS_KEY, "300");
-        cliProperties.put(DURATION_MINUTES_KEY, "5"); //FIXME: revert to 15 by default after trial tests complete
+        cliProperties.put(DURATION_MINUTES_KEY, "15"); //FIXME: revert to 15 by default after trial tests complete
         cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
         cliProperties.put(NUM_SENDERS_KEY, "384"); // to run in local with JVM memory restrictions, pass -Dnum_senders=64 in CLI to run test
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
