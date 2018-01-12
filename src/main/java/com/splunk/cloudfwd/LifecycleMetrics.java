@@ -12,7 +12,7 @@ public class LifecycleMetrics {
     public static final String CREATION_TIMESTAMP = "creation_timestamp"; // time the event batch was constructed 
     public static final String START_LB_SPIN_TIMESTAMP = "start_lb_spin_timestamp"; // time the event batch entered the load balancer
     public static final String POST_SENT_TIMESTAMP = "post_sent_timestamp"; // time the event batch post request was sent to Splunk
-    public static final String POST_RESPONSE_TIMESTAMP= "post_repsonse_timestamp"; // time the event batch post request received a response
+    public static final String POST_RESPONSE_TIMESTAMP= "post_response_timestamp"; // time the event batch post request received a response
     public static final String ACKED_TIMESTAMP = "acked_timestamp"; // time the event batch was acknowledged
     public static final String FAILED_TIMESTAMP = "failed_timestamp"; // time the event batch was 
     

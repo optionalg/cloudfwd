@@ -17,7 +17,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 
 /**
  * Optionally pass command line parameters "token" and "url" as: 
@@ -30,8 +29,10 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private static final String MAX_THREADS_KEY = "max_threads";
     private static final String DURATION_MINUTES_KEY = "duration_mins";
     private static final String MAX_MEMORY_MB_KEY = "mem_mb";
-    private static final String NUM_SENDERS_KEY = "num_senders";    
-    
+    private static final String NUM_SENDERS_KEY = "num_senders";
+    private static final String ENABLE_LIFECYCLE_METRICS_LOGGING_KEY = "enable_lifecycle_metrics_logging";
+    private static final String THREADS_PER_CONNECTION = "threads_per_connection";  //specifies how many threads can share the same connection
+
     // defaults for CLI parameters
     static {        
         cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "50");
@@ -41,9 +42,13 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(NUM_SENDERS_KEY, "384"); 
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
+        cliProperties.put(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY, "false");
+        cliProperties.put(THREADS_PER_CONNECTION, "1");  //One thread, one connection object
     }
+
     
     private int numSenderThreads = 128;
+    private int threadsPerConnection = 1;
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
@@ -59,28 +64,31 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     @Test
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
+        threadsPerConnection = Integer.parseInt(cliProperties.get(THREADS_PER_CONNECTION));
+
         //create executor before connection. Else if connection instantiation fails, NPE on cleanup via null executor
        // ExecutorService senderExecutor = ThreadScheduler.getSharedExecutorInstance("Connection client");
         ExecutorService senderExecutor = Executors.newFixedThreadPool(numSenderThreads,
         (Runnable r) -> new Thread(r, "Connection client")); // second argument is Threadfactory
         readEventsFile();
-        //connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
         eventType = Event.Type.TEXT;
         List<Future> futureList = new ArrayList<>();
+
+        ConnectionManager connManager = new ConnectionManager(threadsPerConnection);
        
         for (int i = 0; i < numSenderThreads; i++) {
-            final int n =i;
+            SenderWorkerData senderData = new SenderWorkerData(i, connManager.getConnection());
             futureList.add(senderExecutor.submit(()->{
                 SenderWorker s;
                 try {
-                    s = new SenderWorker(n);
+                    s = new SenderWorker(senderData);
                 } catch (UnknownHostException ex) {
                     throw new RuntimeException(ex.getMessage(), ex);
                 }
                 s.sendAndWaitForAcks();
             }));
         }
-        
+        LOG.info("MultiThreadedVolumeTest main thread sleeping for " + cliProperties.get(DURATION_MINUTES_KEY) + " mins");
         try {
             Thread.sleep(Long.parseLong(cliProperties.get(DURATION_MINUTES_KEY))*60*1000); // blocks
         } catch (InterruptedException ex) {
@@ -94,7 +102,8 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             f.cancel(true);
         });
         senderExecutor.shutdownNow();
-        LOG.info("Closing connection");
+        LOG.info("Closing connections");
+        connManager.closeConnections();
         connection.close();
     }
     
@@ -198,27 +207,15 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
     public class SenderWorker {      
         private boolean failed = false;
-        private int workerNumber;
+        private final int workerNumber;
         private Connection connection;
-        private ConnectionSettings connectionSettings;
-        
-        public SenderWorker(int workerNum) throws UnknownHostException{
-            this.workerNumber = workerNum;
-            this.connection = createAndConfigureConnection();
-            this.connectionSettings = connection.getSettings();
-            if (null ==connection){
+
+        public SenderWorker(SenderWorkerData data) throws UnknownHostException{
+            this.workerNumber = data.workerNum;
+            this.connection = data.connection;
+            if (null == connection){
                 Assert.fail("null connection");
             }
-            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is 
-            //instantiated
-            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
-                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
-            }
-            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
-                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
-            }
-            connectionSettings.setMockHttp(false);
-            connectionSettings.setTestPropertiesEnabled(false);
         }
         public void sendAndWaitForAcks() {
             LOG.info("sender {} starting its send loop", workerNumber);
@@ -316,6 +313,25 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
                 waitingSenders.get(events.getId()).tell();
             }
+            
+            if (Boolean.parseBoolean(cliProperties.get(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY))) {
+                LifecycleMetrics lm = events.getLifecycleMetrics();
+                String lifecycleMetricTag = "LIFECYCLE_METRIC";
+                long currentTime = System.currentTimeMillis();
+
+                // event post metrics
+                LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_SENT_TIMESTAMP, lm.getPostSentTimestamp().get(0), testId);
+                LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.POST_RESPONSE_TIMESTAMP, lm.getPostResponseTimeStamp().get(0), testId);
+                LOG.info("{} type={} time={} latency={} testId={}", lifecycleMetricTag, "post_response_latency", currentTime, lm.getPostResponseLatency(), testId);
+
+                // load balancer metrics
+                LOG.info("{} type={} time={} spintime={} testId={}", lifecycleMetricTag, "load_balancer_spin_time", currentTime, lm.getTimeInLoadBalancer(), testId);
+
+                // ack metrics
+                LOG.info("{} type={} time={} testId={}", lifecycleMetricTag, LifecycleMetrics.ACKED_TIMESTAMP, lm.getAckedTimestamp().get(0), testId);
+                LOG.info("{} type={} time={} timelatency={} testId={}", lifecycleMetricTag, "ack_latency", currentTime, lm.getAcknowledgedLatency(), testId);
+            }
+            
         }
 
         @Override
@@ -332,5 +348,65 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 s.tell();
             }
         }
+    }
+
+    public class SenderWorkerData{
+        public int workerNum;
+        public Connection connection;
+        SenderWorkerData(int workerNum, Connection connection){
+            this.workerNum = workerNum;
+            this.connection = connection;
+        }
+    }
+
+    public class ConnectionManager{
+        private Connection sharedConnection = null;
+        private int shareCount = 0;
+        private final int shareFactor;
+        private  List<Connection> connections = new ArrayList<>();
+        ConnectionManager(int shareFactor){
+
+            this.shareFactor = shareFactor;
+        }
+
+        public Connection getConnection(){
+
+            if((shareCount % shareFactor) == 0 ){
+                LOG.info("Share factor met, creating new connection");
+                sharedConnection = createConnection();
+            }
+            shareCount ++;
+            return sharedConnection;
+        }
+        void closeConnections(){
+            for(Connection conn : connections){
+                conn.close();
+            }
+        }
+
+        private Connection createConnection(){
+            connection = createAndConfigureConnection();
+            ConnectionSettings connectionSettings = connection.getSettings();
+
+            //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is
+            //instantiated
+            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+            }
+            if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
+                connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
+            }
+            connectionSettings.setMockHttp(false);
+            connectionSettings.setTestPropertiesEnabled(false);
+
+            //keep track of connections
+            connections.add(connection);
+            LOG.info("Total Connection objects used by MultiThreadedVolumeTest: {}", connections.size() );
+
+
+            return connection;
+        }
+
+
     }
 }
