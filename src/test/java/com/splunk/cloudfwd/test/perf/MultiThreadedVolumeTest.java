@@ -305,6 +305,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                 return;
             }
             LOG.error("EventBatch with id=" + events.getId() + " failed");
+            unacked.remove(events.getId());
             super.failed(events, ex);
         }
     }
