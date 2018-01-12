@@ -48,10 +48,10 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     static {
 //        cliProperties.put("num_senders", "40"); // Low default sender count due to java.lang.OutOfMemoryError: GC overhead limit exceeded on local.
-        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, "30016E78-313E-4D21-AA9E-76D6DB1D7DA6");
-        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, "2F2D2DE9-E023-42D0-80A0-ED5A58B4DC49");
-        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, "A6A3E414-CBBA-498B-BBED-9A5A720E79EE");
-        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, "18ABC6A4-0BCE-4FC5-ACD0-3ADF6997F50A");
+        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, "5e36d429-40cb-45f2-8e32-5ebffd918953");
+        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, "c9f74633-d4c6-4387-993c-13714659728d");
+        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, "cfdbea05-a120-4498-a7f7-e03085a8bdbb");
+        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, "0b29a2f4-2051-4469-9ea7-d63922e2dd59");
     }
     
     HashMap<SourcetypeEnum, Sourcetype> sourcetypes = new HashMap();
@@ -204,14 +204,18 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             Assert.fail("Problem reading file " + sourcetypes.get(sourcetype).filepath + ": " + ex.getMessage());
         }
         int origByteSize = bytes.length;
-        buffer = ByteBuffer.allocate(batchSizeMB * 1024 * 1024 + 3000);
+        int bufferMultiplicationFactor = (batchSizeMB * 1024 * 1024 + 3000) / origByteSize; // for creating the buffer size without having any extra spaces
+
+        buffer = ByteBuffer.allocate(bufferMultiplicationFactor*origByteSize);
 
         // Make sure we send ~5MB batches, regardless of the size of the sample log file 
-        while (buffer.position() <= batchSizeMB * 1024 * 1024) {
+          while((buffer.position() < (bufferMultiplicationFactor*origByteSize)) && ((buffer.position() + bytes.length) <= (bufferMultiplicationFactor*origByteSize))){
             try {
                 buffer.put(bytes);
+
             } catch (BufferOverflowException e ) {
                 System.out.println("buffer overflowed - could not put bytes");
+
                 return;
             }
         }
