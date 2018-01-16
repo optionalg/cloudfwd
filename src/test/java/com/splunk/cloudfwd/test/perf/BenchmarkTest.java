@@ -174,7 +174,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 //                    threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
         }
     }
-    
+/*
     @Override
     protected void updateTimestampsOnBatch() {
         String byte_str = new String(buffer.array());
@@ -191,9 +191,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         // Repack buffer
         byte[] bytes = byte_str.getBytes();
         buffer = ByteBuffer.wrap(bytes);
-        
-    }
 
+    }
+*/
     @Override
     protected void readEventsFile() {
         byte[] bytes = new byte[0];
