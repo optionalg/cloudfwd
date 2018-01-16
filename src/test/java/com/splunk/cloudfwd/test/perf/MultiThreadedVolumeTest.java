@@ -37,9 +37,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     static {        
         cliProperties.put(MIN_THROUGHPUT_MBPS_KEY, "50");
         cliProperties.put(MAX_THREADS_KEY, "300");
-        cliProperties.put(DURATION_MINUTES_KEY, "15"); //FIXME: revert to 15 by default after trial tests complete
+        cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
-        cliProperties.put(NUM_SENDERS_KEY, "64"); // to run in local with JVM memory restrictions, pass -Dnum_senders=64 in CLI to run test
+        cliProperties.put(NUM_SENDERS_KEY, "384");
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
         cliProperties.put(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY, "false");
@@ -65,7 +65,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     public void runTest() throws InterruptedException {
         sendTextToRaw();
     }
-    
+
     public void sendTextToRaw() throws InterruptedException {   
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         threadsPerConnection = Integer.parseInt(cliProperties.get(THREADS_PER_CONNECTION));
