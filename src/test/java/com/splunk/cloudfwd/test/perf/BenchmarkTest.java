@@ -58,7 +58,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     HashMap<SourcetypeEnum, Sourcetype> sourcetypes = new HashMap();
     
     private static final int MIN_MBPS = 50; //FIXME placeholder - collect baseline metric from initial test run
-    private static final int MAX_MEMORY_MB = 2000; //FIXME placeholder - collect baseline metric from initial test run
+    private static final int MAX_MEMORY_MB = 1024; //FIXME placeholder - collect baseline metric from initial test run
     
     class Sourcetype {
         String filepath;
@@ -129,42 +129,49 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     @Test
     public void testGenericEvents() throws InterruptedException {
         sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
+        eventsFilename = sourcetypes.get(sourcetype).filepath;
         sendTextToRaw();
     }
 
     @Test
     public void testCloudTrail() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDTRAIL_UNPROCESSED;
+        eventsFilename = sourcetypes.get(sourcetype).filepath;
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch1() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_NO_VERSIONID;
+        eventsFilename = sourcetypes.get(sourcetype).filepath;
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch2() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED;
+        eventsFilename = sourcetypes.get(sourcetype).filepath;
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch3() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT;
+        eventsFilename = sourcetypes.get(sourcetype).filepath;
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch4() throws InterruptedException {
-        sourcetype = SourcetypeEnum.VPCFLOWLOG;
+        sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_LONG;
+        eventsFilename = sourcetypes.get(sourcetype).filepath;
         sendTextToRaw();
     }
 
     @Test
     public void testVpcFlowLog() throws InterruptedException {
-        sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
+        sourcetype = SourcetypeEnum.VPCFLOWLOG;
+        eventsFilename = sourcetypes.get(sourcetype).filepath;
         sendTextToRaw();
     }
     
@@ -263,4 +270,5 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 //        }
 //        System.out.println("FINISHED BUILDING BATCH OF SIZE: " + buffer.position());
     }
+
 }
