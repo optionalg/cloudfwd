@@ -2,6 +2,7 @@ package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.ConnectionSettings;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URL;
@@ -73,7 +74,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         }
     }
     
-    private void setupSourcetypes() {
+    // Runs before every @Test
+    @Before
+    public void setupSourcetypes() {
         genericSingleLineEventToken = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
         cloudTrailToken = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
         cloudWatchEventsToken = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
@@ -121,13 +124,53 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             MIN_MBPS,
             MAX_MEMORY_MB)
         );
-}
+    }
+
+    @Test
+    public void testGenericEvents() throws InterruptedException {
+        sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
+        sendTextToRaw();
+    }
+
+    @Test
+    public void testCloudTrail() throws InterruptedException {
+        sourcetype = SourcetypeEnum.CLOUDTRAIL_UNPROCESSED;
+        sendTextToRaw();
+    }
+
+    @Test
+    public void testCloudWatch1() throws InterruptedException {
+        sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_NO_VERSIONID;
+        sendTextToRaw();
+    }
+
+    @Test
+    public void testCloudWatch2() throws InterruptedException {
+        sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED;
+        sendTextToRaw();
+    }
+
+    @Test
+    public void testCloudWatch3() throws InterruptedException {
+        sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT;
+        sendTextToRaw();
+    }
+
+    @Test
+    public void testCloudWatch4() throws InterruptedException {
+        sourcetype = SourcetypeEnum.VPCFLOWLOG;
+        sendTextToRaw();
+    }
+
+    @Test
+    public void testVpcFlowLog() throws InterruptedException {
+        sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
+        sendTextToRaw();
+    }
     
     @Test
     @Override
     public void runTest() throws InterruptedException {
-        setupSourcetypes();
-        
         // For each sourcetype, send batches for 15 minutes
         for (SourcetypeEnum s : SourcetypeEnum.values()) {
             sourcetype = s;
