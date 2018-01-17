@@ -168,18 +168,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         sendTextToRaw();
     }
     
-    @Test
     @Override
     public void runTest() throws InterruptedException {
-        // For each sourcetype, send batches for 15 minutes
-        for (SourcetypeEnum s : SourcetypeEnum.values()) {
-            sourcetype = s;
-
-            System.out.println("Sending to URL: " + connection.getSettings().getUrlString());
-            System.out.println("With Token: " + connection.getSettings().getToken());
-            // Read events from file once, then build a batch from it that we can reuse
-            sendTextToRaw();
-        }
+        //No-op - override MultiThreadedVolumeTest
     }
     
     @Override
@@ -239,6 +230,14 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 */
     @Override
     protected void readEventsFile() {
+//        try {
+//            URL resource = getClass().getClassLoader().getResource(sourcetypes.get(sourcetype).filepath); // to use a file on classpath in resources folder.
+//            byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+//            batchSizeMB = bytes.length / 1000000;
+//            buffer = ByteBuffer.wrap(bytes);
+//        } catch (Exception ex) {
+//            Assert.fail("Problem reading file " + sourcetypes.get(sourcetype).filepath + ": " + ex.getMessage());
+//        }
         byte[] bytes = new byte[0];
         try {
             URL resource = getClass().getClassLoader().getResource(sourcetypes.get(sourcetype).filepath); // to use a file on classpath in resources folder.
