@@ -230,37 +230,37 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 */
     @Override
     protected void readEventsFile() {
-//        try {
-//            URL resource = getClass().getClassLoader().getResource(sourcetypes.get(sourcetype).filepath); // to use a file on classpath in resources folder.
-//            byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
-//            batchSizeMB = bytes.length / 1000000;
-//            buffer = ByteBuffer.wrap(bytes);
-//        } catch (Exception ex) {
-//            Assert.fail("Problem reading file " + sourcetypes.get(sourcetype).filepath + ": " + ex.getMessage());
-//        }
-        byte[] bytes = new byte[0];
         try {
             URL resource = getClass().getClassLoader().getResource(sourcetypes.get(sourcetype).filepath); // to use a file on classpath in resources folder.
-            bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+            byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+            batchSizeMB = bytes.length / 1000000;
+            buffer = ByteBuffer.wrap(bytes);
         } catch (Exception ex) {
             Assert.fail("Problem reading file " + sourcetypes.get(sourcetype).filepath + ": " + ex.getMessage());
         }
-        int origByteSize = bytes.length;
-        int bufferMultiplicationFactor = (batchSizeMB * 1024 * 1024 + 3000) / origByteSize; // for creating the buffer size without having any extra spaces
-
-        buffer = ByteBuffer.allocate(bufferMultiplicationFactor*origByteSize);
-
-        // Make sure we send ~5MB batches, regardless of the size of the sample log file 
-          while((buffer.position() < (bufferMultiplicationFactor*origByteSize)) && ((buffer.position() + bytes.length) <= (bufferMultiplicationFactor*origByteSize))){
-            try {
-                buffer.put(bytes);
-
-            } catch (BufferOverflowException e ) {
-                System.out.println("buffer overflowed - could not put bytes");
-
-                return;
-            }
-        }
-        System.out.println("FINISHED BUILDING BATCH OF SIZE: " + buffer.position());
+//        byte[] bytes = new byte[0];
+//        try {
+//            URL resource = getClass().getClassLoader().getResource(sourcetypes.get(sourcetype).filepath); // to use a file on classpath in resources folder.
+//            bytes = Files.readAllBytes(Paths.get(resource.getFile()));
+//        } catch (Exception ex) {
+//            Assert.fail("Problem reading file " + sourcetypes.get(sourcetype).filepath + ": " + ex.getMessage());
+//        }
+//        int origByteSize = bytes.length;
+//        int bufferMultiplicationFactor = (batchSizeMB * 1024 * 1024 + 3000) / origByteSize; // for creating the buffer size without having any extra spaces
+//
+//        buffer = ByteBuffer.allocate(bufferMultiplicationFactor*origByteSize);
+//
+//        // Make sure we send ~5MB batches, regardless of the size of the sample log file
+//          while((buffer.position() < (bufferMultiplicationFactor*origByteSize)) && ((buffer.position() + bytes.length) <= (bufferMultiplicationFactor*origByteSize))){
+//            try {
+//                buffer.put(bytes);
+//
+//            } catch (BufferOverflowException e ) {
+//                System.out.println("buffer overflowed - could not put bytes");
+//
+//                return;
+//            }
+//        }
+//        System.out.println("FINISHED BUILDING BATCH OF SIZE: " + buffer.position());
     }
 }
