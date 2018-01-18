@@ -47,9 +47,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     }
 
     
-    private int numSenderThreads = 128;
+    protected int numSenderThreads = 128;
     private int threadsPerConnection = 1;
-    private AtomicInteger batchCounter = new AtomicInteger(0);
+    protected AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     protected ByteBuffer buffer;
     protected String eventsFilename = "./1KB_event_5MB_batch.sample";
@@ -58,7 +58,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     protected long warmUpTimeMillis = 2*60*1000; //2 mins
     private int batchSizeMB;
 
-    private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
+    protected static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
 
 
     @Test
@@ -181,7 +181,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         LOG.info("Batch size (MB): " + batchSizeMB);
         LOG.info("Acknowledged throughput (MBps): " + (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds);
         LOG.info("Acknowledged throughput (mbps): " + (float) batchSizeMB * 8F * (float) numAckedBatches / (float) elapsedSeconds);
-
+        
         // thread count
         long threadCount = Thread.activeCount() - numSenderThreads;
         LOG.info("Thread count: " + threadCount);

@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.test.perf;
 import com.splunk.cloudfwd.ConnectionSettings;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.URL;
@@ -28,7 +29,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     
     // Configurable options
     private SourcetypeEnum sourcetype;
-    private int batchSizeMB = 5;
+    private int batchSizeMB = 5; // TODO: make configurable?
     private enum SourcetypeEnum {
         GENERIC_SINGLELINE_EVENTS,
         CLOUDTRAIL_UNPROCESSED,
@@ -42,20 +43,17 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private static final String CLOUDWATCHEVENTS_TOKEN_KEY = "cloudwatchevents_token";
     private static final String VPCFLOWLOG_TOKEN_KEY = "vpcflowlog_token";
     private static final String GENERICSINGLELINE_TOKEN_KEY = "genericsingleline_token";
-    private String cloudTrailToken;
-    private String cloudWatchEventsToken;
-    private String vpcFlowLogToken;
-    private String genericSingleLineEventToken;
+    private String token;
 
     static {
 //        cliProperties.put("num_senders", "40"); // Low default sender count due to java.lang.OutOfMemoryError: GC overhead limit exceeded on local.
-        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, "5e36d429-40cb-45f2-8e32-5ebffd918953");
-        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, "c9f74633-d4c6-4387-993c-13714659728d");
-        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, "cfdbea05-a120-4498-a7f7-e03085a8bdbb");
-        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, "0b29a2f4-2051-4469-9ea7-d63922e2dd59");
+        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, null);
+        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, null);
+        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, null);
+        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, null);
     }
-    
-    HashMap<SourcetypeEnum, Sourcetype> sourcetypes = new HashMap();
+
+    private HashMap<SourcetypeEnum, Sourcetype> sourcetypes;
     
     private static final int MIN_MBPS = 50; //FIXME placeholder - collect baseline metric from initial test run
     private static final int MAX_MEMORY_MB = 1024; //FIXME placeholder - collect baseline metric from initial test run
@@ -74,104 +72,59 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         }
     }
     
-    // Runs before every @Test
-    @Before
-    public void setupSourcetypes() {
-        genericSingleLineEventToken = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
-        cloudTrailToken = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
-        cloudWatchEventsToken = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
-        vpcFlowLogToken = cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
-
-        sourcetypes.put(SourcetypeEnum.GENERIC_SINGLELINE_EVENTS, new Sourcetype(
-            "./1KB_event_5MB_batch.sample",
-            genericSingleLineEventToken,
-            MIN_MBPS,
-            MAX_MEMORY_MB)
-        );
-        sourcetypes.put(SourcetypeEnum.CLOUDTRAIL_UNPROCESSED, new Sourcetype(
-            "./cloudtrail_via_cloudwatchevents_unprocessed.sample",
-            cloudTrailToken,
-                MIN_MBPS, //Perf peaks at 4 minutes (51mbps), starts degrading at 7 minutes down to 33 at 15 minutes
-                MAX_MEMORY_MB)
-        );
-        sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_NO_VERSIONID, new Sourcetype(
-            "./cloudwatchevents_awstrustedadvisor.sample",
-            cloudWatchEventsToken,
-                MIN_MBPS,
-                MAX_MEMORY_MB)
-        );
-        sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED, new Sourcetype(
-            "./cloudwatchevents_ec2autoscale.sample",
-            cloudWatchEventsToken,
-            MIN_MBPS,
-            MAX_MEMORY_MB)
-        );
-        sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT, new Sourcetype(
-            "./cloudwatchevents_codebuild.sample",
-            cloudWatchEventsToken,
-            MIN_MBPS,
-            MAX_MEMORY_MB)
-        );
-        sourcetypes.put(SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_LONG, new Sourcetype(
-            "./cloudwatchevents_macie.sample",
-            cloudWatchEventsToken,
-            MIN_MBPS,
-            MAX_MEMORY_MB)
-        );
-        sourcetypes.put(SourcetypeEnum.VPCFLOWLOG, new Sourcetype(
-            "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample",
-            vpcFlowLogToken,
-            MIN_MBPS,
-            MAX_MEMORY_MB)
-        );
-    }
-
     @Test
     public void testGenericEvents() throws InterruptedException {
         sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
-        eventsFilename = sourcetypes.get(sourcetype).filepath;
+        token = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
+        eventsFilename = "./1KB_event_5MB_batch.sample";
         sendTextToRaw();
     }
 
     @Test
     public void testCloudTrail() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDTRAIL_UNPROCESSED;
-        eventsFilename = sourcetypes.get(sourcetype).filepath;
+        token = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
+        eventsFilename = "./cloudtrail_via_cloudwatchevents_unprocessed.sample";
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch1() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_NO_VERSIONID;
-        eventsFilename = sourcetypes.get(sourcetype).filepath;
+        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+        eventsFilename = "./cloudwatchevents_awstrustedadvisor.sample";
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch2() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED;
-        eventsFilename = sourcetypes.get(sourcetype).filepath;
+        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+        eventsFilename = "./cloudwatchevents_ec2autoscale.sample";
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch3() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT;
-        eventsFilename = sourcetypes.get(sourcetype).filepath;
+        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+        eventsFilename = "./cloudwatchevents_codebuild.sample";
         sendTextToRaw();
     }
 
     @Test
     public void testCloudWatch4() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_LONG;
-        eventsFilename = sourcetypes.get(sourcetype).filepath;
+        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+        eventsFilename = "./cloudwatchevents_macie.sample";
         sendTextToRaw();
     }
 
     @Test
     public void testVpcFlowLog() throws InterruptedException {
         sourcetype = SourcetypeEnum.VPCFLOWLOG;
-        eventsFilename = sourcetypes.get(sourcetype).filepath;
+        token = cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
+        eventsFilename = "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
         sendTextToRaw();
     }
     
@@ -182,7 +135,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     
     @Override
     protected void setSenderToken(ConnectionSettings connectionSettings) {
-        connectionSettings.setToken(sourcetypes.get(sourcetype).token);
+        connectionSettings.setToken(token);
     }
     
     @Override
@@ -192,6 +145,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             // Throughput
             float mbps = showThroughput(System.currentTimeMillis(), testStartTimeMillis);
             if (mbps != Float.NaN) {
+                //TODO: MB (/8F)
                 System.out.println("Sourcetype " + sourcetype + " - mbps: " + mbps + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
 //            Assert.assertTrue("Throughput must be above minimum value of " + sourcetypes.get(sourcetype).minMbps,
 //                    mbps > sourcetypes.get(sourcetype).minMbps);
@@ -199,20 +153,53 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             // Memory Used
             long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
             System.out.println("Memory(MB): " + memoryUsed);
-//        Assert.assertTrue("Memory usage must be below maximum value of " + sourcetypes.get(sourcetype).minMemory + " MB",
+//          Assert.assertTrue("Memory usage must be below maximum value of " + sourcetypes.get(sourcetype).minMemory + " MB",
 //                memoryUsed < sourcetypes.get(sourcetype).minMemory);
 
-            // Failures
-//            Integer numFailed = callbacks.getFailedCount();
-//            Integer numSent = batchCounter.get();
-//            float percentFailed = ( (float) numFailed / (float) numSent ) * 100F;
-//            Assert.assertTrue("Percentage failed must be below 2%", percentFailed < 2F);
-
             // Threads
-//            long threadCount = Thread.activeCount() - numSenderThreads;
-//            LOG.info("Thread count: " + threadCount);
+            long threadCount = Thread.activeCount() - numSenderThreads;
+            System.out.println("Sender Thread Count: " + threadCount);
 //            Assert.assertTrue("Thread count must be below maximum value of " + cliProperties.get(MAX_THREADS_KEY),
 //                    threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
+
+            // Failures
+            Integer numFailed = callbacks.getFailedCount();
+            Integer numSent = batchCounter.get();
+            float percentFailed = ( (float) numFailed / (float) numSent ) * 100F;
+            System.out.println("Percentage failed: " + percentFailed);
+//            Assert.assertTrue("Percentage failed must be below 2%", percentFailed < 2F);
+
+            LOG.info("{ }");
+            /*
+                [{
+                    sourcetype: _,
+                    runtimeMins: _,
+                    ackedThroughputMBps: {
+                        min: _,
+                        max: _,
+                        avg: _
+                    },
+                    memoryMB: {
+                        min: _,
+                        max: _,
+                        avg: _
+                    },
+                    threadCount: {
+                        min: _,
+                        max: _,
+                        avg: _
+                    },
+                    percentageFailed: {
+                        min: _,
+                        max: _,
+                        avg: _
+                    },
+                    ackLatency: {
+                        min: _,
+                        max: _,
+                        avg: _//                    }
+                }, {...}, ...]
+             */
         }
     }
 /*
@@ -235,40 +222,5 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     }
 */
-    @Override
-    protected void readEventsFile() {
-        try {
-            URL resource = getClass().getClassLoader().getResource(sourcetypes.get(sourcetype).filepath); // to use a file on classpath in resources folder.
-            byte[] bytes = Files.readAllBytes(Paths.get(resource.getFile()));
-            batchSizeMB = bytes.length / 1000000;
-            buffer = ByteBuffer.wrap(bytes);
-        } catch (Exception ex) {
-            Assert.fail("Problem reading file " + sourcetypes.get(sourcetype).filepath + ": " + ex.getMessage());
-        }
-//        byte[] bytes = new byte[0];
-//        try {
-//            URL resource = getClass().getClassLoader().getResource(sourcetypes.get(sourcetype).filepath); // to use a file on classpath in resources folder.
-//            bytes = Files.readAllBytes(Paths.get(resource.getFile()));
-//        } catch (Exception ex) {
-//            Assert.fail("Problem reading file " + sourcetypes.get(sourcetype).filepath + ": " + ex.getMessage());
-//        }
-//        int origByteSize = bytes.length;
-//        int bufferMultiplicationFactor = (batchSizeMB * 1024 * 1024 + 3000) / origByteSize; // for creating the buffer size without having any extra spaces
-//
-//        buffer = ByteBuffer.allocate(bufferMultiplicationFactor*origByteSize);
-//
-//        // Make sure we send ~5MB batches, regardless of the size of the sample log file
-//          while((buffer.position() < (bufferMultiplicationFactor*origByteSize)) && ((buffer.position() + bytes.length) <= (bufferMultiplicationFactor*origByteSize))){
-//            try {
-//                buffer.put(bytes);
-//
-//            } catch (BufferOverflowException e ) {
-//                System.out.println("buffer overflowed - could not put bytes");
-//
-//                return;
-//            }
-//        }
-//        System.out.println("FINISHED BUILDING BATCH OF SIZE: " + buffer.position());
-    }
 
 }
