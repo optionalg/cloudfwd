@@ -402,7 +402,9 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
 
             //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is
             //instantiated
-            setSenderToken(connectionSettings);
+            if (cliProperties.get(PropertyKeys.TOKEN) != null) {
+                connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
+            }
             if (cliProperties.get(PropertyKeys.COLLECTOR_URI) != null) {
                 connectionSettings.setUrls(cliProperties.get(PropertyKeys.COLLECTOR_URI));
             }

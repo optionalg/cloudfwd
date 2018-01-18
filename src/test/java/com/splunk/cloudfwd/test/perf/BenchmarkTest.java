@@ -137,7 +137,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     protected void setSenderToken(ConnectionSettings connectionSettings) {
         connectionSettings.setToken(token);
     }
-    
+
     @Override
     protected void checkAndLogPerformance(boolean shouldAssert) {
         super.checkAndLogPerformance(shouldAssert);
@@ -146,7 +146,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             float mbps = showThroughput(System.currentTimeMillis(), testStartTimeMillis);
             if (mbps != Float.NaN) {
                 //TODO: MB (/8F)
-                System.out.println("Sourcetype " + sourcetype + " - mbps: " + mbps + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
+//                System.out.println("Sourcetype " + sourcetype + " - mbps: " + mbps + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
+                System.out.println("Sourcetype " + sourcetype + " - mbps: " + (mbps/8));
+
 //            Assert.assertTrue("Throughput must be above minimum value of " + sourcetypes.get(sourcetype).minMbps,
 //                    mbps > sourcetypes.get(sourcetype).minMbps);
             }
