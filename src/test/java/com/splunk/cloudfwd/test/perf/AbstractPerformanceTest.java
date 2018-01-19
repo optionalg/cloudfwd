@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractPerformanceTest extends AbstractConnectionTest {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractPerformanceTest.class.getName());
+  protected String testId = java.util.UUID.randomUUID().toString();
 
   @Override
   protected BasicCallbacks getCallbacks() {
