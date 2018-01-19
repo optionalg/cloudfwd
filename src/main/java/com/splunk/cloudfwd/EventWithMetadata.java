@@ -139,14 +139,14 @@ public class EventWithMetadata implements Event {
   /**
    * @return the sourceType
    */
-  public String getSourceType() {
+  public String getSourcetype() {
     return sourcetype;
   }
 
   /**
    * @param sourceType the sourceType to set
    */
-  public void setSourceType(String sourceType) {
+  public void setSourcetype(String sourceType) {
     this.sourcetype = sourceType;
   }
 
