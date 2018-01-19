@@ -91,12 +91,14 @@ public class RawEvent implements Event{
   }
   
   private RawEvent(byte[] bytes, Comparable id,  Event.Type type){
-   
+    if(bytes.length < 1 ){
+      throw new IllegalArgumentException("Raw event is empty");
+    }
     if(endsWith(bytes, (byte)'\n')){
       this.bytes = bytes;
     }else{
       this.bytes = ArrayUtils.add(bytes, (byte)'\n');
-    };
+    }
     this.id = id;
     this.type = type;
   }
