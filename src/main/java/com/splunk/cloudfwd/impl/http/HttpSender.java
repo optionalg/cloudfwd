@@ -245,8 +245,10 @@ public final class HttpSender implements Endpoints, CookieClient {
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-         dataChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
+        dataChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
         httpClient = null;
+    }
+    if (controlClient != null) {
         controlChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
         controlClient = null;
     }
