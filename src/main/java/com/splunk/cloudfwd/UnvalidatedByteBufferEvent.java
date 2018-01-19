@@ -37,6 +37,9 @@ public class UnvalidatedByteBufferEvent implements Event {
   private final Comparable id;
 
   public UnvalidatedByteBufferEvent(ByteBuffer buf, Comparable id) {
+    if(buf.capacity() == 0){
+      throw new IllegalArgumentException("ByteBuffer Empty");
+    }
     this.buf = buf;
     this.id = id;
   }

@@ -42,8 +42,7 @@ public class EventWithMetadata implements Event {
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   private String source;
-  @JsonProperty("sourcetype")
-  private String sourceType;
+  private String sourcetype;
   private String host;
   private String index;
   @JsonIgnore
@@ -141,14 +140,14 @@ public class EventWithMetadata implements Event {
    * @return the sourceType
    */
   public String getSourceType() {
-    return sourceType;
+    return sourcetype;
   }
 
   /**
    * @param sourceType the sourceType to set
    */
   public void setSourceType(String sourceType) {
-    this.sourceType = sourceType;
+    this.sourcetype = sourceType;
   }
 
   /**

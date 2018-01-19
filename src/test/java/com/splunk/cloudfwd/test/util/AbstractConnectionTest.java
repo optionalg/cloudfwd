@@ -443,6 +443,7 @@ public abstract class AbstractConnectionTest {
     m.put("where_to", "/events");
     m.put("seqno", Integer.toString(seqno));
     Event event = new EventWithMetadata(m, seqno);
+      ((EventWithMetadata)event).setTime(3423);
     return event;
   }
 
