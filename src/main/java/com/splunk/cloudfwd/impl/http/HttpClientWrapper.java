@@ -18,11 +18,8 @@ package com.splunk.cloudfwd.impl.http;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
-import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
+import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 
 /**
  * This class allows many HttpSender to share a single ClosableHttpAsyncClient. It counts references and closes the 
@@ -33,28 +30,10 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 public class HttpClientWrapper {
 
     private CloseableHttpAsyncClientAndConnPoolControl  httpClientAndConnPoolControl;
-    private Set<HttpSender> requestors = new HashSet<>();
-    private final Long sendLimitBytes = 80L * 1024L * 1024L * 30L * 60L; // 30 minutes worth of sending data at 80 Mb/s 
-    private final Long refreshIntervalMS = 30L * 60L * 1000L; // 30 minutes
-    private AtomicLong bytesSent = new AtomicLong();
-    private Long lastRefreshedTimeStampMS = System.currentTimeMillis();
+    private Set<HttpSender> requestors = new HashSet<>();    
 
     HttpClientWrapper() {
 
-    }
-    
-    public CloseableHttpAsyncClient getClient(HttpSender requestor, boolean disableCertificateValidation,
-                                  String cert, int bytesToSend) {
-        if (shouldRefreshClient()) {
-            synchronized(this) {
-                if (shouldRefreshClient()) {
-                    scheduleCloseClient();
-                    buildClient(requestor, disableCertificateValidation, cert);
-                }
-            }
-        }
-        bytesSent.getAndAdd(bytesToSend);
-        return httpClientAndConnPoolControl.getClient();
     }
 
     public synchronized void releaseClient(HttpSender requestor) {
@@ -78,7 +57,13 @@ public class HttpClientWrapper {
             HttpSender requestor, boolean disableCertificateValidation,
             String cert) {
         if (requestors.isEmpty()) {
-            buildClient(requestor, disableCertificateValidation, cert);
+            try {
+                httpClientAndConnPoolControl = new HttpClientFactory(disableCertificateValidation,
+                        cert, requestor.getSslHostname(), requestor).build();
+                httpClientAndConnPoolControl.getClient().start();              
+            } catch (Exception ex) {
+                throw new RuntimeException(ex.getMessage(), ex);
+            }
         }
         //the first time we add a requestor to the set, add will return true and we can update the connection pool
         //to reflect the new number of HttpSenders that exist. We want the pool to have as many connecitons as there
@@ -87,40 +72,7 @@ public class HttpClientWrapper {
             adjustConnPoolSize();
         }
         return httpClientAndConnPoolControl.getClient();
-    }
-    
-    private void buildClient(HttpSender requestor, boolean disableCertificateValidation,
-                        String cert) {
-        try {
-            httpClientAndConnPoolControl = new HttpClientFactory(disableCertificateValidation,
-                    cert, requestor.getSslHostname(), requestor).build();
-            httpClientAndConnPoolControl.getClient().start();
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-        lastRefreshedTimeStampMS = System.currentTimeMillis();
-        bytesSent.set(0);
-    }
-    
-    private void scheduleCloseClient() {
-        CloseableHttpAsyncClientAndConnPoolControl previous = httpClientAndConnPoolControl;
-
-        // close after a delay in case we are still waiting for slow responses from server
-        ThreadScheduler.getSharedSchedulerInstance("Http client closer scheduler").schedule(()->{
-            ThreadScheduler.getSharedExecutorInstance("Http client closer executor").execute(()-> {
-                try {
-                    previous.getClient().close();
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            });
-        }, 60, TimeUnit.SECONDS);
-    }
-    
-    private boolean shouldRefreshClient() {
-        return bytesSent.get() > sendLimitBytes || 
-                System.currentTimeMillis() - lastRefreshedTimeStampMS > refreshIntervalMS;
-    }
+    }    
     
     private void adjustConnPoolSize(){                
         httpClientAndConnPoolControl.getConPoolControl().setDefaultMaxPerRoute(Math.max(requestors.size()*10,HttpClientFactory.INITIAL_MAX_CONN_PER_ROUTE));
