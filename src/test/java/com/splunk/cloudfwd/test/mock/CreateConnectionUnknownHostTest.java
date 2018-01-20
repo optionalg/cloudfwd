@@ -18,7 +18,7 @@ public class CreateConnectionUnknownHostTest extends ExceptionConnInstantiationT
 
     protected boolean isExpectedConnInstantiationException(Exception e) {
         if (e instanceof HecMaxRetriesException) {
-            return  e.getMessage().equals("Simulated UnknownHostException");
+            return  e.getMessage().equals("Caused by: java.net.UnknownHostException, with message: Simulated UnknownHostException");
         }
         return false;
     }
