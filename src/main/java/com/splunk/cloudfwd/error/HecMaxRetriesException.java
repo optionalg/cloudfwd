@@ -21,9 +21,13 @@ package com.splunk.cloudfwd.error;
  */
 public class HecMaxRetriesException extends RuntimeException{
 
+  public HecMaxRetriesException(String message, Exception ex) {
+    super("Caused by: " + ex.getClass().getName() + ", with message: " + message);
+  }
+
   public HecMaxRetriesException(String message) {
     super(message);
   }
-  
-  
+
+
 }
