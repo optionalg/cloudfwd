@@ -79,7 +79,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         List<Future> futureList = new ArrayList<>();
 
         ConnectionManager connManager = new ConnectionManager(threadsPerConnection);
-       
         for (int i = 0; i < numSenderThreads; i++) {
             SenderWorkerSettings senderData = new SenderWorkerSettings(i, connManager.getConnection());
             futureList.add(senderExecutor.submit(()->{
@@ -209,13 +208,13 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     protected void updateTimestampsOnBatch() {
         // no-op - overridden in child class to do timestamp configuration on buffer variable
     }
-    
+ /*
     protected void setSenderToken(ConnectionSettings connectionSettings) {
         if (cliProperties.get(PropertyKeys.TOKEN) != null) {
             connectionSettings.setToken(cliProperties.get(PropertyKeys.TOKEN));
         }
     }
-
+*/
     public class SenderWorker {      
         private boolean failed = false;
         private final int workerNumber;
@@ -386,6 +385,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             if((shareCount % shareFactor) == 0 ){
                 LOG.info("Share factor met, creating new connection");
                 sharedConnection = createConnection();
+
             }
             shareCount ++;
             return sharedConnection;
@@ -399,7 +399,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         private Connection createConnection(){
             connection = createAndConfigureConnection();
             ConnectionSettings connectionSettings = connection.getSettings();
-
             //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is
             //instantiated
             if (cliProperties.get(PropertyKeys.TOKEN) != null) {
@@ -414,7 +413,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             //keep track of connections
             connections.add(connection);
             LOG.info("Total Connection objects used by MultiThreadedVolumeTest: {}", connections.size() );
-
 
             return connection;
         }
