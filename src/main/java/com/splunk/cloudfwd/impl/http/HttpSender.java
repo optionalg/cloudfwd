@@ -533,6 +533,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     private void resendEvents(){
         Runnable r = ()->{
              try {
+                LOG.debug("HttpSender resendEvents on channel={}", getChannel());
                 getChannel().closeAndReplaceAndResend();
             } catch (Exception ex) {
                 ex.printStackTrace();

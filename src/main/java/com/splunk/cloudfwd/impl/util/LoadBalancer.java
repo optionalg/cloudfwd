@@ -540,6 +540,7 @@ public class LoadBalancer implements Closeable {
     public synchronized void refreshChannels()  {
         discoverer.getAddrs(); //do this now to try to generate any exceptions related to the URL 
         staleChannels.putAll(channels);
+        LOG.debug("LoadBalancer refreshing {} channels", channels.values());
         for (HecChannel c : this.channels.values()) {
             try {
                 c.closeAndReplace(); //will block while new channel passes preflight or preflight times out. Do this to avoid "storm" of preflight requests on active connection

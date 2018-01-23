@@ -103,6 +103,7 @@ public class ConnectionImpl implements Connection {
     //must cancelEventTrackers their tracking. Therefore, we intercept the success and fail callbacks by calling cancelEventTrackers()
     //*before* those two functions (failed, or acknowledged) are invoked.
     throwExceptionIfNoChannelOK();
+    LOG.debug("ConnectionImpl constructor {}", this);
   }
   
   /**
@@ -168,6 +169,7 @@ public class ConnectionImpl implements Connection {
     //when closeNow() is invoked from a callback like the
     //Exception handler
     CountDownLatch latch = new CountDownLatch(1);
+    LOG.debug("ConnectionImpl closeNow {}", this);
     new Thread(() -> {
       lb.closeNow();
       timeoutChecker.closeNow();
