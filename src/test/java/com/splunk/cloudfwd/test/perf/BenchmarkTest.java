@@ -1,11 +1,20 @@
 package com.splunk.cloudfwd.test.perf;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationConfig;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.splunk.cloudfwd.ConnectionSettings;
+import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.URL;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -44,7 +53,32 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private static final String VPCFLOWLOG_TOKEN_KEY = "vpcflowlog_token";
     private static final String GENERICSINGLELINE_TOKEN_KEY = "genericsingleline_token";
     private String token;
-
+    private JSONObject jsonReport;
+    
+    private Float ackedThroughputMin = null;
+    private float ackedThroughputMax = 0;
+    private float ackedThroughputTotal = 0;
+    
+    private Long memoryMin = null;
+    private long memoryMax = 0;
+    private long memoryTotal = 0;
+    
+    private Long threadMin = null;
+    private long threadMax = 0;
+    private long threadTotal = 0;
+    
+    private Float failedMin = null;
+    private float failedMax = 0;
+    private float failedTotal = 0;
+    
+    private Double latencyMin = null;
+    private double latencyMax = 0;
+    
+    private long runtimeSecs;
+    private long metricsStartTimeMillis = testStartTimeMillis - warmUpTimeMillis;
+    
+    private long callCount = 0;
+    
     static {
 //        cliProperties.put("num_senders", "40"); // Low default sender count due to java.lang.OutOfMemoryError: GC overhead limit exceeded on local.
         cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, null);
@@ -78,6 +112,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         token = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
         eventsFilename = "./1KB_event_5MB_batch.sample";
         sendTextToRaw();
+        printReport(sourcetype);
     }
 
     @Test
@@ -86,6 +121,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         token = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
         eventsFilename = "./cloudtrail_via_cloudwatchevents_unprocessed.sample";
         sendTextToRaw();
+        printReport(sourcetype);
     }
 
     @Test
@@ -94,6 +130,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_awstrustedadvisor.sample";
         sendTextToRaw();
+        printReport(sourcetype);
     }
 
     @Test
@@ -102,6 +139,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_ec2autoscale.sample";
         sendTextToRaw();
+        printReport(sourcetype);
     }
 
     @Test
@@ -110,6 +148,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_codebuild.sample";
         sendTextToRaw();
+        printReport(sourcetype);
     }
 
     @Test
@@ -118,6 +157,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_macie.sample";
         sendTextToRaw();
+        printReport(sourcetype);
     }
 
     @Test
@@ -126,6 +166,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         token = cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
         eventsFilename = "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
         sendTextToRaw();
+        printReport(sourcetype);
     }
     
     @Override
@@ -142,65 +183,142 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     protected void checkAndLogPerformance(boolean shouldAssert) {
         super.checkAndLogPerformance(shouldAssert);
         if (shouldAssert) {
+            callCount++;
+
             // Throughput
             float mbps = showThroughput(System.currentTimeMillis(), testStartTimeMillis);
             if (mbps != Float.NaN) {
-                //TODO: MB (/8F)
-                System.out.println("Sourcetype " + sourcetype + " - mbps: " + mbps + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
+//                System.out.println("Sourcetype " + sourcetype + " - MBps: " + (mbps / 8F) + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
 //            Assert.assertTrue("Throughput must be above minimum value of " + sourcetypes.get(sourcetype).minMbps,
 //                    mbps > sourcetypes.get(sourcetype).minMbps);
+                if (ackedThroughputMin == null || ackedThroughputMin.floatValue() > mbps) {
+                    ackedThroughputMin = mbps;
+                }
+                if (ackedThroughputMax < mbps) {
+                    ackedThroughputMax = mbps;
+                }
+                ackedThroughputTotal += mbps;
             }
             // Memory Used
             long memoryUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000; // MB
-            System.out.println("Memory(MB): " + memoryUsed);
+//            System.out.println("Memory(MB): " + memoryUsed);
 //          Assert.assertTrue("Memory usage must be below maximum value of " + sourcetypes.get(sourcetype).minMemory + " MB",
 //                memoryUsed < sourcetypes.get(sourcetype).minMemory);
-
+            if (memoryMin == null || memoryMin.longValue() > memoryUsed) {
+                memoryMin = memoryUsed;
+            }
+            if (memoryMax < memoryUsed) {
+                memoryMax = memoryUsed;
+            }
+            memoryTotal += memoryUsed;
+           
             // Threads
             long threadCount = Thread.activeCount() - numSenderThreads;
-            System.out.println("Sender Thread Count: " + threadCount);
+//            System.out.println("Sender Thread Count: " + threadCount);
 //            Assert.assertTrue("Thread count must be below maximum value of " + cliProperties.get(MAX_THREADS_KEY),
 //                    threadCount < Long.parseLong(cliProperties.get(MAX_THREADS_KEY)));
-
+            if (threadMin == null || threadMin.longValue() > threadCount) {
+                threadMin = threadCount;
+            }
+            if (threadMax < threadCount) {
+                threadMax = threadCount;
+            }
+            threadTotal += threadCount;
+            
             // Failures
             Integer numFailed = callbacks.getFailedCount();
             Integer numSent = batchCounter.get();
             float percentFailed = ( (float) numFailed / (float) numSent ) * 100F;
-            System.out.println("Percentage failed: " + percentFailed);
+//            System.out.println("Percentage failed: " + percentFailed);
 //            Assert.assertTrue("Percentage failed must be below 2%", percentFailed < 2F);
-
-            LOG.info("{ }");
-            /*
-                [{
-                    sourcetype: _,
-                    runtimeMins: _,
-                    ackedThroughputMBps: {
-                        min: _,
-                        max: _,
-                        avg: _
-                    },
-                    memoryMB: {
-                        min: _,
-                        max: _,
-                        avg: _
-                    },
-                    threadCount: {
-                        min: _,
-                        max: _,
-                        avg: _
-                    },
-                    percentageFailed: {
-                        min: _,
-                        max: _,
-                        avg: _
-                    },
-                    ackLatency: {
-                        min: _,
-                        max: _,
-                        avg: _//                    }
-                }, {...}, ...]
-             */
+            if (failedMin == null || failedMin.floatValue() > percentFailed) {
+                failedMin = percentFailed;
+            }
+            if (failedMax < percentFailed) {
+                failedMax = percentFailed;
+            }
+            failedTotal += percentFailed;
+            
+            // Ack Latency
+            double lastLatencySec = ((ThroughputCalculatorCallback) callbacks).getLastLatency() / 1000;
+//            System.out.println("Last ack Latency: " + lastLatencySec + " seconds");
+            if (latencyMin == null || latencyMin.doubleValue() > lastLatencySec) {
+                latencyMin = lastLatencySec;
+            }
+            if (latencyMax < lastLatencySec) {
+                latencyMax = lastLatencySec;
+            }
+            double avgLatencySec = ((ThroughputCalculatorCallback) callbacks).getAvgLatency() / 1000;
+//            System.out.println("Average ack Latency: " + avgLatencySec + " seconds");
         }
+    }
+    
+    private void createReport(SourcetypeEnum sourcetype) {
+        runtimeSecs = ((System.currentTimeMillis() - metricsStartTimeMillis) / 1000);
+        jsonReport = new JSONObject();
+        jsonReport.put("runtimeMins", (runtimeSecs / 60));
+        jsonReport.put("ackedThroughoutMBps", createAckedThroughputStats());
+        jsonReport.put("memoryMB", createMemoryStats());
+        jsonReport.put("threadCount", createThreadStats());
+        jsonReport.put("percentageFailed", createFailedStats());
+        jsonReport.put("ackLatencySecs", createLatencyStats());
+    }
+    
+    private HashMap createAckedThroughputStats() {
+        HashMap<String, Float> statsObject = new HashMap();
+        statsObject.put("min", ackedThroughputMin);
+        statsObject.put("max", ackedThroughputMax);
+        statsObject.put("avg", ackedThroughputTotal / callCount);
+        return statsObject;
+    }
+
+    private HashMap createMemoryStats() {
+        HashMap<String, Long> statsObject = new HashMap();
+        statsObject.put("min", memoryMin);
+        statsObject.put("max", memoryMax);
+        statsObject.put("avg", memoryTotal / callCount);
+        return statsObject;
+    }
+
+    private HashMap createThreadStats() {
+        HashMap<String, Long> statsObject = new HashMap();
+        statsObject.put("min", threadMin);
+        statsObject.put("max", threadMax);
+        statsObject.put("avg", threadTotal / callCount);
+        return statsObject;
+    }
+
+    private HashMap createFailedStats() {
+        HashMap<String, Float> statsObject = new HashMap();
+        statsObject.put("min", failedMin);
+        statsObject.put("max", failedMax);
+        statsObject.put("avg", failedTotal / callCount);
+        return statsObject;
+    }
+
+    private HashMap createLatencyStats() {
+        HashMap<String, Double> statsObject = new HashMap();
+        statsObject.put("min", latencyMin);
+        statsObject.put("max", latencyMax);
+        statsObject.put("avg", ((ThroughputCalculatorCallback) callbacks).getLastLatency() / 1000);
+        return statsObject;
+    }
+
+    
+    private void printReport(SourcetypeEnum sourcetype) {
+        createReport(sourcetype);
+        
+        System.out.println("\nSOURCETYPE: " + sourcetype);
+
+        // Pretty print JSON
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+            System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonReport));
+        } catch (IOException e) {
+            System.out.println("Error pretty printing metrics JSON");
+        }
+       
     }
 /*
     @Override
