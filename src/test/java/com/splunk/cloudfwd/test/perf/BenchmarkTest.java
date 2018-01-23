@@ -1,17 +1,11 @@
 package com.splunk.cloudfwd.test.perf;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -23,6 +17,7 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+
 
 /**
  * Created by mhora on 1/3/18.
@@ -173,12 +168,13 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     public void runTest() throws InterruptedException {
         //No-op - override MultiThreadedVolumeTest
     }
-    
+
+/*
     @Override
     protected void setSenderToken(ConnectionSettings connectionSettings) {
         connectionSettings.setToken(token);
     }
-    
+*/
     @Override
     protected void checkAndLogPerformance(boolean shouldAssert) {
         super.checkAndLogPerformance(shouldAssert);
@@ -340,5 +336,19 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     }
 */
+
+    @Override
+    protected Connection createAndConfigureConnection(){
+        ConnectionSettings settings = getTestProps();
+        configureProps(settings);
+        if(token != null)
+            settings.setToken(token);
+        connection = createConnection(callbacks, settings);
+        if(null == connection){
+            return null;
+        }
+        configureConnection(connection);
+        return connection;
+    }
 
 }
