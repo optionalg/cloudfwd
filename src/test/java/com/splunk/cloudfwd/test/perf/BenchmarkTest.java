@@ -2,20 +2,15 @@ package com.splunk.cloudfwd.test.perf;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import org.json.simple.JSONObject;
+import com.splunk.cloudfwd.PropertyKeys;
+
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.URL;
-import java.nio.BufferOverflowException;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+
 import java.util.HashMap;
 
 
@@ -49,37 +44,37 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private static final String GENERICSINGLELINE_TOKEN_KEY = "genericsingleline_token";
     private String token;
     private JSONObject jsonReport;
-    
+
     private Float ackedThroughputMin = null;
     private float ackedThroughputMax = 0;
     private float ackedThroughputTotal = 0;
-    
+
     private Long memoryMin = null;
     private long memoryMax = 0;
     private long memoryTotal = 0;
-    
+
     private Long threadMin = null;
     private long threadMax = 0;
     private long threadTotal = 0;
-    
+
     private Float failedMin = null;
     private float failedMax = 0;
     private float failedTotal = 0;
-    
+
     private Double latencyMin = null;
     private double latencyMax = 0;
-    
+
     private long runtimeSecs;
     private long metricsStartTimeMillis = testStartTimeMillis - warmUpTimeMillis;
-    
+
     private long callCount = 0;
-    
+
     static {
 //        cliProperties.put("num_senders", "40"); // Low default sender count due to java.lang.OutOfMemoryError: GC overhead limit exceeded on local.
-        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, null);
-        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, null);
-        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, null);
-        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, null);
+        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, "929A251C-8227-4AB0-B4BC-65F6AFDAD618");
+        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, "8AA8FCDD-D289-45DE-B179-EFD1E20D0C7F");
+        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, "BBF895B9-096C-4FAE-A79B-DB85366215FD");
+        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, "F27E5D70-F8F0-45EC-BA4E-AA38E099269A");
     }
 
     private HashMap<SourcetypeEnum, Sourcetype> sourcetypes;
@@ -100,7 +95,10 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             this.minMemoryMb = minMemoryMb;
         }
     }
-    
+
+    /**
+     * This test is producing average throughput of around 60-65 Mbps
+     */
     @Test
     public void testGenericEvents() throws InterruptedException {
         sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
@@ -110,6 +108,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         printReport(sourcetype);
     }
 
+    /**
+     * This test is producing average throughput of around 50-55 Mbps
+     */
     @Test
     public void testCloudTrail() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDTRAIL_UNPROCESSED;
@@ -119,6 +120,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         printReport(sourcetype);
     }
 
+    /**
+     * This test is producing average throughput of around 60-65 Mbps
+     */
     @Test
     public void testCloudWatch1() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_NO_VERSIONID;
@@ -207,7 +211,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
                 memoryMax = memoryUsed;
             }
             memoryTotal += memoryUsed;
-           
+
             // Threads
             long threadCount = Thread.activeCount() - numSenderThreads;
 //            System.out.println("Sender Thread Count: " + threadCount);
@@ -220,7 +224,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
                 threadMax = threadCount;
             }
             threadTotal += threadCount;
-            
+
             // Failures
             Integer numFailed = callbacks.getFailedCount();
             Integer numSent = batchCounter.get();
@@ -234,7 +238,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
                 failedMax = percentFailed;
             }
             failedTotal += percentFailed;
-            
+
             // Ack Latency
             double lastLatencySec = ((ThroughputCalculatorCallback) callbacks).getLastLatency() / 1000;
 //            System.out.println("Last ack Latency: " + lastLatencySec + " seconds");
@@ -248,7 +252,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 //            System.out.println("Average ack Latency: " + avgLatencySec + " seconds");
         }
     }
-    
+
     private void createReport(SourcetypeEnum sourcetype) {
         runtimeSecs = ((System.currentTimeMillis() - metricsStartTimeMillis) / 1000);
         jsonReport = new JSONObject();
@@ -259,7 +263,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         jsonReport.put("percentageFailed", createFailedStats());
         jsonReport.put("ackLatencySecs", createLatencyStats());
     }
-    
+
     private HashMap createAckedThroughputStats() {
         HashMap<String, Float> statsObject = new HashMap();
         statsObject.put("min", ackedThroughputMin);
@@ -300,10 +304,10 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         return statsObject;
     }
 
-    
+
     private void printReport(SourcetypeEnum sourcetype) {
         createReport(sourcetype);
-        
+
         System.out.println("\nSOURCETYPE: " + sourcetype);
 
         // Pretty print JSON
@@ -314,7 +318,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         } catch (IOException e) {
             System.out.println("Error pretty printing metrics JSON");
         }
-       
+
     }
 /*
     @Override
@@ -336,7 +340,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     }
 */
-
+/*
     @Override
     protected Connection createAndConfigureConnection(){
         ConnectionSettings settings = getTestProps();
@@ -349,6 +353,22 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         }
         configureConnection(connection);
         return connection;
+    }
+*/
+    @Override
+    protected void configureProps(ConnectionSettings settings) {
+        super.configureProps(settings);
+        if(token != null)
+            settings.setToken(token);
+        String url = System.getProperty(PropertyKeys.COLLECTOR_URI);
+        if (System.getProperty(PropertyKeys.TOKEN) != null) {
+            settings.setToken(token);
+        }
+        if (System.getProperty(PropertyKeys.COLLECTOR_URI) != null) {
+            settings.setUrls(url);
+        }
+        settings.setMockHttp(false);
+        settings.setTestPropertiesEnabled(false);
     }
 
 }
