@@ -2,6 +2,7 @@ package com.splunk.cloudfwd.test.perf;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import org.json.simple.JSONObject;
@@ -71,10 +72,10 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     static {
 //        cliProperties.put("num_senders", "40"); // Low default sender count due to java.lang.OutOfMemoryError: GC overhead limit exceeded on local.
-        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, "929A251C-8227-4AB0-B4BC-65F6AFDAD618");
-        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, "8AA8FCDD-D289-45DE-B179-EFD1E20D0C7F");
-        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, "BBF895B9-096C-4FAE-A79B-DB85366215FD");
-        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, "F27E5D70-F8F0-45EC-BA4E-AA38E099269A");
+        cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, null);
+        cliProperties.put(CLOUDTRAIL_TOKEN_KEY, null);
+        cliProperties.put(CLOUDWATCHEVENTS_TOKEN_KEY, null);
+        cliProperties.put(VPCFLOWLOG_TOKEN_KEY, null);
     }
 
     private HashMap<SourcetypeEnum, Sourcetype> sourcetypes;
@@ -103,7 +104,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     public void testGenericEvents() throws InterruptedException {
         sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
         token = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
-        eventsFilename = "./1KB_event_5MB_batch.sample";
+        eventsFilename = "./events_from_aws_5MB_batch.sample";
         sendTextToRaw();
         printReport(sourcetype);
     }
@@ -173,12 +174,12 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         //No-op - override MultiThreadedVolumeTest
     }
 
-/*
-    @Override
+
+//    @Override
     protected void setSenderToken(ConnectionSettings connectionSettings) {
         connectionSettings.setToken(token);
     }
-*/
+
     @Override
     protected void checkAndLogPerformance(boolean shouldAssert) {
         super.checkAndLogPerformance(shouldAssert);
@@ -340,7 +341,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     }
 */
-/*
+
     @Override
     protected Connection createAndConfigureConnection(){
         ConnectionSettings settings = getTestProps();
@@ -354,12 +355,14 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         configureConnection(connection);
         return connection;
     }
-*/
+
+
+/*
     @Override
     protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
         if(token != null)
-            settings.setToken(token);
+            setSenderToken(settings);
         String url = System.getProperty(PropertyKeys.COLLECTOR_URI);
         if (System.getProperty(PropertyKeys.TOKEN) != null) {
             settings.setToken(token);
@@ -370,5 +373,5 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         settings.setMockHttp(false);
         settings.setTestPropertiesEnabled(false);
     }
-
+*/
 }
