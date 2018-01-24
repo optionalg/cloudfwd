@@ -245,7 +245,7 @@ public final class HttpSender implements Endpoints, CookieClient {
   // with startHttpClient.
   private void stopHttpClient() throws SecurityException {
     if (httpClient != null) {
-         dataChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
+        dataChannelClientHostMapper.getClientWrapper(this).releaseClient(this);
         httpClient = null;
     }
     if (controlClient != null) {
@@ -341,8 +341,6 @@ public final class HttpSender implements Endpoints, CookieClient {
     HttpEntity e= events.getEntity();
     LOG.debug("executing event batch post on channel={}, eventBatch={}", getChannel(), e.toString());
     httpPost.setEntity(e);
-    httpClient = dataChannelClientHostMapper.getClientWrapper(this).getClient(
-        this, disableCertificateValidation, cert, ((EventBatch)events).getLength());
     httpClient.execute(httpPost, httpCallback);
   }
 
@@ -374,7 +372,6 @@ public final class HttpSender implements Endpoints, CookieClient {
             empty = new StringEntity("");
             dummyEventPost.setEntity(empty);
             LOG.debug("executing empty event post to raw on channel={}. Request: {}", getChannel(), dummyEventPost);
-            controlClient = controlChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation, cert, 0);
             controlClient.execute(dummyEventPost, httpCallback);
           } catch (Exception ex) {
             LOG.error(ex.getMessage(), ex);
@@ -412,7 +409,6 @@ public final class HttpSender implements Endpoints, CookieClient {
 
         entity.setContentType(HttpContentType);
         httpPost.setEntity(entity);
-        controlClient = controlChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation, cert, 0);
         if(null != controlClient){ //httpClient can be null if close happened
             controlClient.execute(httpPost, httpCallback);
         }
@@ -441,7 +437,6 @@ public final class HttpSender implements Endpoints, CookieClient {
         healthEndpointCheck= new HttpGet(getUrl);
         LOG.debug("executing poll on health endpoint, channel={}. Request: {}", getChannel(), healthEndpointCheck);
         setHeaders(healthEndpointCheck);
-        controlClient = controlChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation, cert, 0);
         if(null != controlClient){ //httpClient can be null if close happened
             controlClient.execute(healthEndpointCheck, httpCallback);
         }
@@ -475,7 +470,6 @@ public final class HttpSender implements Endpoints, CookieClient {
         LOG.trace("checking health via ack endpoint: {}", req);
         entity.setContentType(HttpContentType);
         ackCheck.setEntity(entity);
-        controlClient = controlChannelClientHostMapper.getClientWrapper(this).getClient(this, disableCertificateValidation, cert, 0);
         if(null != controlClient){ //httpClient can be null if close happened
           LOG.debug("executing ack check on channel={}", getChannel());
           controlClient.execute(ackCheck, httpCallback);
@@ -539,6 +533,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     private void resendEvents(){
         Runnable r = ()->{
              try {
+                LOG.debug("HttpSender resendEvents on channel={}", getChannel());
                 getChannel().closeAndReplaceAndResend();
             } catch (Exception ex) {
                 ex.printStackTrace();

@@ -147,17 +147,19 @@ public class HecIOManager implements Closeable {
                                 LifecycleEvent.Type.HEALTH_POLL_OK,
                                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
                                 "health_poll_ack_endpoint_check");
-
-                        GenericCoordinatedResponseHandler cb3 = new GenericCoordinatedResponseHandler(
+                        
+                        GenericCoordinatedResponseHandler cb3 = new NoDataEventPostResponseHandler(
                                 this,
                                 LifecycleEvent.Type.HEALTH_POLL_OK,
                                 LifecycleEvent.Type.HEALTH_POLL_FAILED,
+                                LifecycleEvent.Type.HEALTH_POLL_GATEWAY_TIMEOUT,
+                                LifecycleEvent.Type.HEALTH_POLL_INDEXER_BUSY,
                                 "health_poll_raw_endpoint_check");
 
                         ResponseCoordinator.create(cb1, cb2, cb3);
                         sender.checkHealthEndpoint(cb1);
                         sender.checkAckEndpoint(cb2);
-                        sender.checkAckEndpoint(cb3);
+                        sender.checkRawEndpoint(cb3);
                     }catch(Exception e){
                         LOG.error("{}", e.getMessage(), e);
                     }

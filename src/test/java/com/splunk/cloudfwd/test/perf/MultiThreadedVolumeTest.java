@@ -39,7 +39,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
-        cliProperties.put(NUM_SENDERS_KEY, "384");
+        cliProperties.put(NUM_SENDERS_KEY, "384"); 
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
         cliProperties.put(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY, "false");
@@ -52,7 +52,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     protected AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     protected ByteBuffer buffer;
-    protected String eventsFilename = "./1KB_event_5MB_batch.sample";
+    protected String eventsFilename = "./events_from_aws_5MB_batch.sample";
     protected long start = 0;
     protected long testStartTimeMillis = System.currentTimeMillis();
     protected long warmUpTimeMillis = 2*60*1000; //2 mins
@@ -66,7 +66,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         sendTextToRaw();
     }
 
-    public void sendTextToRaw() throws InterruptedException {   
+    public void sendTextToRaw() throws InterruptedException {
         numSenderThreads = Integer.parseInt(cliProperties.get(NUM_SENDERS_KEY));
         threadsPerConnection = Integer.parseInt(cliProperties.get(THREADS_PER_CONNECTION));
 
@@ -79,6 +79,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         List<Future> futureList = new ArrayList<>();
 
         ConnectionManager connManager = new ConnectionManager(threadsPerConnection);
+
         for (int i = 0; i < numSenderThreads; i++) {
             SenderWorkerSettings senderData = new SenderWorkerSettings(i, connManager.getConnection());
             futureList.add(senderExecutor.submit(()->{
@@ -180,7 +181,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         LOG.info("Batch size (MB): " + batchSizeMB);
         LOG.info("Acknowledged throughput (MBps): " + (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds);
         LOG.info("Acknowledged throughput (mbps): " + (float) batchSizeMB * 8F * (float) numAckedBatches / (float) elapsedSeconds);
-        
+
         // thread count
         long threadCount = Thread.activeCount() - numSenderThreads;
         LOG.info("Thread count: " + threadCount);
@@ -204,7 +205,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         }
         */
     }
-    
+
     protected void updateTimestampsOnBatch() {
         // no-op - overridden in child class to do timestamp configuration on buffer variable
     }
@@ -385,7 +386,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             if((shareCount % shareFactor) == 0 ){
                 LOG.info("Share factor met, creating new connection");
                 sharedConnection = createConnection();
-
             }
             shareCount ++;
             return sharedConnection;
@@ -399,6 +399,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         private Connection createConnection(){
             connection = createAndConfigureConnection();
             ConnectionSettings connectionSettings = connection.getSettings();
+
             //to accurately simulate amazon load tests, we need to set the properties AFTER the connection is
             //instantiated
             if (cliProperties.get(PropertyKeys.TOKEN) != null) {
@@ -413,6 +414,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             //keep track of connections
             connections.add(connection);
             LOG.info("Total Connection objects used by MultiThreadedVolumeTest: {}", connections.size() );
+
 
             return connection;
         }

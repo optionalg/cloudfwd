@@ -28,7 +28,7 @@ public class ByteBufferWithMixedEventsNoSourcetypeIT extends AbstractByteBufferW
     connection.getSettings().setHecEndpointType(Connection.HecEndpoint.STRUCTURED_EVENTS_ENDPOINT);
     super.sendEvents();
     Set<String> searchResults = getEventsFromSplunk();
-    verifyResults(getSentEvents(), searchResults);    
+     verifyResults(getSentEvents(), searchResults);
   }
   
    @Override

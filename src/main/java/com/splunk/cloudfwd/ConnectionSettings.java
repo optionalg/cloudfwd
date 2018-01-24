@@ -661,12 +661,25 @@ public class ConnectionSettings {
    * @param urls comma-separated list of urls
    */
   public void setUrls(String urls) {
-      if (connection != null && !urlsStringToList(urls).equals(getUrls())) {
+      if (connection != null && !urlsSame(urls)) {
+          getLog().debug("setUrls refreshing channels: new urls: " + urlsStringToList(urls) + " old urls: " + getUrls() + " urls arg: " + urls + " this.url: " + this.url);
           this.url = urls;
           checkAndRefreshChannels();
       } else {
           this.url = urls;
       }
+  }
+
+  private boolean urlsSame(String urls) {
+      List<URL> oldUrls = getUrls();
+      List<URL> newUrls = urlsStringToList(urls);
+      if (oldUrls.size() != newUrls.size()) return false;
+      for (int i = 0; i < oldUrls.size(); i++) {
+          if (!oldUrls.get(i).toString().equals(newUrls.get(i).toString())) {
+              return false;
+          }
+      }
+      return true;
   }
 
   public void setTestPropertiesEnabled(Boolean enabled) {
@@ -722,6 +735,7 @@ public class ConnectionSettings {
      */
     private void checkAndRefreshChannels() {
         if (connection != null && connection.getLoadBalancer() != null) {
+            getLog().debug("ConnectionSettings refreshing channels");
             connection.getLoadBalancer().refreshChannels();
         }
     }
