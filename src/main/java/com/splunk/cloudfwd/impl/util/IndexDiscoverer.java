@@ -62,6 +62,7 @@ public class IndexDiscoverer extends Observable {
     for (List<InetSocketAddress> sockAddrs : mappings.values()) {
       addrs.addAll(sockAddrs);
     }
+    LOG.debug("IndexDiscoverer.getAddrs list of InetSocketAddress: {}", addrs);
     return addrs;
   }
 
