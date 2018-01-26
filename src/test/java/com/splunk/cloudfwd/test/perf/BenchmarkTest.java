@@ -39,10 +39,10 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         CLOUDWATCH_EVENTS_VERSIONID_LONG,
         VPCFLOWLOG
     }
-    private static final String CLOUDTRAIL_TOKEN_KEY = "cloudtrail_token";
-    private static final String CLOUDWATCHEVENTS_TOKEN_KEY = "cloudwatchevents_token";
-    private static final String VPCFLOWLOG_TOKEN_KEY = "vpcflowlog_token";
-    private static final String GENERICSINGLELINE_TOKEN_KEY = "genericsingleline_token";
+//    private static final String CLOUDTRAIL_TOKEN_KEY = "cloudtrail_token";
+//    private static final String CLOUDWATCHEVENTS_TOKEN_KEY = "cloudwatchevents_token";
+//    private static final String VPCFLOWLOG_TOKEN_KEY = "vpcflowlog_token";
+//    private static final String GENERICSINGLELINE_TOKEN_KEY = "genericsingleline_token";
     private String token;
     private JSONObject jsonReport;
 
@@ -69,7 +69,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private long metricsStartTimeMillis = testStartTimeMillis - warmUpTimeMillis;
 
     private long callCount = 0;
-
+/*
     static {
 //        cliProperties.put("num_senders", "40"); // Low default sender count due to java.lang.OutOfMemoryError: GC overhead limit exceeded on local.
         cliProperties.put(GENERICSINGLELINE_TOKEN_KEY, null);
@@ -96,38 +96,31 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             this.minMemoryMb = minMemoryMb;
         }
     }
+*/
 
-    /**
-     * This test is producing average throughput of around 60-65 Mbps
-     */
     @Test
     public void testGenericEvents() throws InterruptedException {
         sourcetype = SourcetypeEnum.GENERIC_SINGLELINE_EVENTS;
-        token = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
+//        token = cliProperties.get(GENERICSINGLELINE_TOKEN_KEY);
         eventsFilename = "./events_from_aws_5MB_batch.sample";
         sendTextToRaw();
         printReport(sourcetype);
     }
 
-    /**
-     * This test is producing average throughput of around 50-55 Mbps
-     */
     @Test
     public void testCloudTrail() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDTRAIL_UNPROCESSED;
-        token = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
+//        token = cliProperties.get(CLOUDTRAIL_TOKEN_KEY);
         eventsFilename = "./cloudtrail_via_cloudwatchevents_unprocessed.sample";
         sendTextToRaw();
         printReport(sourcetype);
     }
 
-    /**
-     * This test is producing average throughput of around 60-65 Mbps
-     */
+
     @Test
     public void testCloudWatch1() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_NO_VERSIONID;
-        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+//        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_awstrustedadvisor.sample";
         sendTextToRaw();
         printReport(sourcetype);
@@ -136,7 +129,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     @Test
     public void testCloudWatch2() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_MIXED;
-        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+//        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_ec2autoscale.sample";
         sendTextToRaw();
         printReport(sourcetype);
@@ -145,7 +138,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     @Test
     public void testCloudWatch3() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_SHORT;
-        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+//        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_codebuild.sample";
         sendTextToRaw();
         printReport(sourcetype);
@@ -154,7 +147,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     @Test
     public void testCloudWatch4() throws InterruptedException {
         sourcetype = SourcetypeEnum.CLOUDWATCH_EVENTS_VERSIONID_LONG;
-        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
+//        token = cliProperties.get(CLOUDWATCHEVENTS_TOKEN_KEY);
         eventsFilename = "./cloudwatchevents_macie.sample";
         sendTextToRaw();
         printReport(sourcetype);
@@ -163,7 +156,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     @Test
     public void testVpcFlowLog() throws InterruptedException {
         sourcetype = SourcetypeEnum.VPCFLOWLOG;
-        token = cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
+//        token = cliProperties.get(VPCFLOWLOG_TOKEN_KEY);
         eventsFilename = "./cloudwatchlogs_vpcflowlog_lambdaprocessed.sample";
         sendTextToRaw();
         printReport(sourcetype);
@@ -187,7 +180,9 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             callCount++;
 
             // Throughput
-            float mbps = showThroughput(System.currentTimeMillis(), testStartTimeMillis);
+            int numAckedBatches = callbacks.getAcknowledgedBatches().size();
+            long elapsedSeconds = (System.currentTimeMillis() - testStartTimeMillis) / 1000;
+            float mbps = (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds;
             if (mbps != Float.NaN) {
 //                System.out.println("Sourcetype " + sourcetype + " - MBps: " + (mbps / 8F) + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
 //            Assert.assertTrue("Throughput must be above minimum value of " + sourcetypes.get(sourcetype).minMbps,
@@ -341,7 +336,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     }
 */
-
+/*
     @Override
     protected Connection createAndConfigureConnection(){
         ConnectionSettings settings = getTestProps();
@@ -357,7 +352,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     }
 
 
-/*
+
     @Override
     protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);

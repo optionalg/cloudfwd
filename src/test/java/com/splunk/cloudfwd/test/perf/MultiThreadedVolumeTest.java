@@ -56,7 +56,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     protected long start = 0;
     protected long testStartTimeMillis = System.currentTimeMillis();
     protected long warmUpTimeMillis = 2*60*1000; //2 mins
-    private int batchSizeMB;
+    protected int batchSizeMB;
 
     protected static final Logger LOG = LoggerFactory.getLogger(MultiThreadedVolumeTest.class.getName());
 
