@@ -228,30 +228,30 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
                         LOG.debug("Sender {} about to send batch with id={}", workerNumber,  eb.getId());
                         long sent = this.connection.sendBatch(eb);
                         LOG.info("Sender={} sent={} bytes with id={}", this.workerNumber, sent, eb.getId());                                            
-                        synchronized (this) {
-                            // wait while the batch hasn't been acknowledged and it hasn't failed
-                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
-                               LOG.debug("Sender {}, about to wait", workerNumber);
-                                waitingSenders.put(eb.getId(), this);
-                                wait(1000); //wait1 sec
-                                LOG.debug("Sender {}, waited 1 sec,", workerNumber);
-                            }
-                        }
+//                        synchronized (this) {
+//                            // wait while the batch hasn't been acknowledged and it hasn't failed
+//                           while (!callbacks.getAcknowledgedBatches().contains(eb.getId()) && !failed) {
+//                               LOG.debug("Sender {}, about to wait", workerNumber);
+//                                waitingSenders.put(eb.getId(), this);
+//                                wait(1000); //wait1 sec
+//                                LOG.debug("Sender {}, waited 1 sec,", workerNumber);
+//                            }
+//                        }
                         if(!failed){
                             LOG.info("sender {} ackd {} in {} ms", this.workerNumber, eb.getLength(), System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());                        
                         }else{
                             LOG.info("sender {} failed in {} ms", this.workerNumber, System.currentTimeMillis()- ((EventBatchImpl)eb).getSendTimestamp());
                         }
-                        waitingSenders.remove(eb.getId());    
-                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
+//                        waitingSenders.remove(eb.getId());    
+//                        LOG.info("{} unacked batches, {}", waitingSenders.size(), waitingSenders.keySet().toString());      
                         LOG.info("Sender {} generated next batch", workerNumber);
                         eb = nextBatch(batchCounter.incrementAndGet());                   
-                    } catch (InterruptedException ex) {                        
-                        LOG.warn("Sender {} exiting.", workerNumber);
-                        return;
+//                    } catch (InterruptedException ex) {                        
+//                        LOG.warn("Sender {} exiting.", workerNumber);
+//                        return;
                     } catch(Exception e){
                         LOG.warn("Worker {} caught exception {} sending {}.",workerNumber, e .getMessage(), eb, e);
-                        waitingSenders.remove(eb.getId()); 
+//                        waitingSenders.remove(eb.getId()); 
                         eb = nextBatch(batchCounter.incrementAndGet());
                     }
                 }
@@ -308,11 +308,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         public void acknowledged(EventBatch events) {
             super.acknowledged(events);
             //sometimes events get acknowledged before the SenderWorker starts waiting
-            if (waitingSenders.get(events.getId()) != null) {
-              
-                LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
-                waitingSenders.get(events.getId()).tell();
-            }
+//            if (waitingSenders.get(events.getId()) != null) {
+//              
+//                LOG.info("{} byte batch acknowledged in {} ms", events.getLength(), System.currentTimeMillis()- ((EventBatchImpl)events).getSendTimestamp());
+//                waitingSenders.get(events.getId()).tell();
+//            }
             
             if (Boolean.parseBoolean(cliProperties.get(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY))) {
                 LifecycleMetrics lm = events.getLifecycleMetrics();
@@ -342,11 +342,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             }
             LOG.error("EventBatch with id=" + events.getId() + " failed");
             super.failed(events, ex);
-            SenderWorker s = waitingSenders.get(events.getId());
-            if (s != null) {
-                s.failed();
-                s.tell();
-            }
+//            SenderWorker s = waitingSenders.get(events.getId());
+//            if (s != null) {
+//                s.failed();
+//                s.tell();
+//            }
         }
     }
 

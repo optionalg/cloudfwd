@@ -260,9 +260,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     
     public boolean isFull(){
         if( this.unackedCount.get()> maxUnackedEvents){
-            LOG.error("{} illegal channel state full={}, unackedCount={}", this, maxUnackedEvents, unackedCount.get());
+            LOG.error("ConnectionImpl={} channel={} illegal channel state full={}, unackedCount={}", 
+                getConnection(), this, maxUnackedEvents, unackedCount.get());
         }
-        return this.unackedCount.get() == maxUnackedEvents;
+        return this.unackedCount.get() >= maxUnackedEvents;
     }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {

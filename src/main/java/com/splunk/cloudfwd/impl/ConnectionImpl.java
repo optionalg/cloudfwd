@@ -407,7 +407,7 @@ public class ConnectionImpl implements Connection {
             }            
         }
         
-        LOG.debug("LOAD BALANCER for ConnectionImpl {}: channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
+        LOG.info("LOAD BALANCER for ConnectionImpl={} : channels={}, preflighted={}, available={}, healthy={}, full={}, quiesced={}, decommed={}, dead={}, closed={}, closedFinished={}, misconfigured={}", 
                 this, channelHealths.size(), _preflightCompleted ,_available, _healthy, _full,  _quiesced, _decomissioned, _dead, _closed,_closedFinished, _misconfigured);
     }
 
