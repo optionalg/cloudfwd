@@ -58,6 +58,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
                     warn(reply, code);                    
                     break;
                 case 504: //elb gatewy timeout
+                    LOG.info("504 response from ack poll on channel={}", getChannel());
                     warn(reply, code);
                     break;
                 default:

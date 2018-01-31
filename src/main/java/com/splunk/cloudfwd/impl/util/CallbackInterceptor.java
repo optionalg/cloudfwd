@@ -67,6 +67,10 @@ public class CallbackInterceptor implements ConnectionCallbacks {
                 ((EventBatchImpl)events).setFailed(true);
                 events.getLifecycleMetrics().setFailedTimestamp(System.currentTimeMillis());
                 ((EventBatchImpl)events).cancelEventTrackers();//remove the EventBatchImpl from the places in the system it should be removed
+                HecChannel c = ((EventBatchImpl)events).getHecChannel();
+                if (c != null) { 
+                    c.removeEventBatch(events); // remove event batch so channel isn't considered "full"
+                }
             }
             this.callbacks.failed(events, ex);
             this.cpManager.release((EventBatchImpl)events);

@@ -25,6 +25,8 @@ import com.splunk.cloudfwd.impl.http.EventPostResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
+
+import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import org.slf4j.Logger;
@@ -71,11 +73,12 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                     consumeEventPostOkResponse(reply, code);
                     break;
                 case 503:
-                    LOG.debug("503 response from event post on channel={}", getChannel());
+                    LOG.info("503 response from event post on channel={}", getChannel());
                     warn(reply, code);
                     notifyBusyAndResend(reply, code, EVENT_POST_INDEXER_BUSY);
                     break;
                 case 504:                 
+                    LOG.info("504 response from event post on channel={}", getChannel());
                     warn(reply, code);
                     notifyBusyAndResend(reply, code, EVENT_POST_GATEWAY_TIMEOUT);
                     break;                    
@@ -113,9 +116,9 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         Runnable r = ()-> {
              try {
                 events.addSendException(ex);
-                LOG.warn("resending events through load balancer {} on channel {}",
-                    events, getSender().getChannel());                
-                getSender().getConnection().getLoadBalancer().sendRoundRobin(events, true); //will callback failed if max retries exceeded   
+                LOG.warn("resending events={} through load balancer on channel={} due to ex={}",
+                    events, getSender().getChannel(), ex);                
+                getSender().getConnection().getLoadBalancer().resend(events); //will callback failed if max retries exceeded   
             } catch (Exception e) {
                 invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
             }                
@@ -131,13 +134,12 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
 
     private void notifyBusyAndResend(String reply, int code, LifecycleEvent.Type t) {
-        Response r = new Response(t,code, reply, getSender().getBaseUrl());
-        notify(r);
+        notify(t, code, reply, events);
         resend(new HecServerBusyException(reply));
     }
       
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
-        LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
+        LOG.info("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {
