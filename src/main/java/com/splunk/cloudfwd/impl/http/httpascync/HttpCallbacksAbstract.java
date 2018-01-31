@@ -60,7 +60,8 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   @Override
   final public void completed(HttpResponse response) {
     try {
-        LOG.debug("Response received. {} took {} ms", getOperation(), System.currentTimeMillis() - start);
+        LOG.info("ConnectionImpl={} channel={} Response received. {} took {} ms", 
+            getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
         int code = response.getStatusLine().getStatusCode();
         handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");

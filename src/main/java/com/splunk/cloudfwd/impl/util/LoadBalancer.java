@@ -243,7 +243,7 @@ public class LoadBalancer implements Closeable {
             return null; //don't bother adding channel if we are shutting down, and we're not forcing it
         }
         InetSocketAddress addr = discoverer.randomlyChooseAddr();
-        LOG.debug("Adding channel for socket address  {}", addr);
+        LOG.debug("Adding channel for socket address  {} on ConnectionImpl {}", addr, getConnection());
         HecChannel channel = addChannel(addr, true); //this will force the channel to be added, even if we are ac MAX_TOTAL_CHANNELS
         if (channel != null) {
             channel.start();
@@ -268,7 +268,7 @@ public class LoadBalancer implements Closeable {
 
         HecChannel channel = new HecChannel(this, sender, this.connection);
         channel.getChannelMetrics().addObserver(this.connection.getCheckpointManager());
-        LOG.debug("Adding channel {}", channel);
+        LOG.debug("Adding channel {} for InetSocketAddress {} on ConnectionImpl", channel, s, getConnection());
         channels.put(channel.getChannelId(), channel);
         return channel;
     }

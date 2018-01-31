@@ -61,7 +61,8 @@ public class ThroughputCalculatorCallback extends BasicCallbacks {
     ackedCount.incrementAndGet();
     lastLatency = System.currentTimeMillis() - ((EventBatchImpl)events).getSendTimestamp();
     totLatency.addAndGet(lastLatency);
-  
+    LOG.info("ThroughputCalculatorCallback Batch acknowledged with last_latency={}, total_batches_acked={}, " +
+        "num_outstanding_batches={}", lastLatency, ackedCount.get(), batchSizes.size());
     Long size = batchSizes.remove(events.getId());
     if (size != null) {
       if (size < 0) {

@@ -24,7 +24,7 @@ import com.splunk.cloudfwd.LifecycleEvent;
  */
 public class EventBatchHelper {
     public static boolean isEventBatchFailOrNotOK(LifecycleEvent e){
-        if(! (e instanceof EventBatchResponse) || ! (e instanceof EventBatchFailure)){
+        if(! (e instanceof EventBatchResponse) && ! (e instanceof EventBatchFailure)){
             return false;
         }
         if(e instanceof EventBatchResponse){

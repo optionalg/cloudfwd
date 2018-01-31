@@ -44,6 +44,8 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     @Override
     public void acknowledged(EventBatch events) {
         try {
+            LOG.debug("acknowledged events={}, ack_latency={}, channel={}", events, 
+                System.currentTimeMillis() - ((EventBatchImpl)events).getSendTimestamp(), ((EventBatchImpl)events).getHecChannel());
             ((EventBatchImpl) events).cancelEventTrackers(); //remove the EventBatchImpl from the places in the system it should be removed
             events.getLifecycleMetrics().setAckedTimestamp(System.currentTimeMillis());
             callbacks.acknowledged(events);
@@ -57,6 +59,7 @@ public class CallbackInterceptor implements ConnectionCallbacks {
     public void failed(EventBatch events, Exception ex) {
         try {
             if(null != events) {
+                LOG.warn("failed events={}, channel={} exception={}", events, ((EventBatchImpl)events).getHecChannel(), ex);
                 if (((EventBatchImpl)events).isFailed()){
                     LOG.debug("Ignoring failed call on already failed events {}", events);
                     return;
