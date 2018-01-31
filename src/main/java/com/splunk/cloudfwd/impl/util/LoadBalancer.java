@@ -297,6 +297,20 @@ public class LoadBalancer implements Closeable {
         }
 
     }
+    
+    public boolean resend(EventBatchImpl events) {
+        try {
+            HecChannel c = events.getHecChannel();
+            if (c != null) {
+                c.removeEventBatch(events);
+            }
+        } catch (Exception ex) {
+            LOG.error("ConnectionImpl={} EventBatch={} Error removing event batch from channel " +
+                "during load balancer resend. exception={}", getConnection(), events, ex);
+        }
+        LOG.debug("Load balancer resending EventBatch={}", events);
+        return sendRoundRobin(events, true);
+    }
 
     private void sendRoundRobin(EventBatchImpl events) throws HecConnectionTimeoutException,
             HecNoValidChannelsException {
@@ -402,11 +416,11 @@ public class LoadBalancer implements Closeable {
         tryMe = channelsSnapshot.get(channelIdx);
         try {
             if (tryMe.send(events)) {
-                LOG.debug("sent EventBatch:{}  on channel={} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
+                LOG.info("sent EventBatch:{}  on channel={} available={} full={}", events, tryMe, tryMe.isAvailable(), tryMe.isFull());
                 return true;
             }else{
                 LOG.debug("channel not available, channel={}", tryMe);
-                LOG.debug("Skipped channel={} available={} healthy={} full={} quiesced={} closed={}", tryMe, tryMe.isAvailable(), tryMe.isHealthy(), tryMe.isFull(), tryMe.isQuiesced(), tryMe.isClosed());
+                LOG.info("Skipped channel={} available={} healthy={} full={} quiesced={} closed={}", tryMe, tryMe.isAvailable(), tryMe.isHealthy(), tryMe.isFull(), tryMe.isQuiesced(), tryMe.isClosed());
             }
         } catch (RuntimeException e) {
             recoverAndThrowException(events, forced, e);

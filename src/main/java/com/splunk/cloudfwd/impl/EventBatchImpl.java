@@ -94,7 +94,7 @@ public class EventBatchImpl implements EventBatch {
     long flightTime = System.currentTimeMillis() - sendTimestamp;
     boolean isTimedOut = flightTime >= timeout;
     if (isTimedOut) {
-        LOG.warn("Timed Out at {} ms: {}", flightTime, this);    
+        LOG.warn("eventBatch={} timed out at {} ms on channel={}", this, flightTime, getHecChannel());    
     }
     return isTimedOut;
   }

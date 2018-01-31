@@ -195,7 +195,7 @@ public final class HttpSender implements Endpoints, CookieClient {
    *
    * @return true if started, false otherwise
    */
-  public synchronized boolean started() {
+  public boolean started() {
     if (isSimulated()) {
       simulatedEndpoints.start();
       return true;
@@ -221,7 +221,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     } catch (Exception ex) {
       LOG.error("Exception building httpClient: " + ex.getMessage(), ex);
       ConnectionCallbacks callbacks = getChannel().getCallbacks();
-      callbacks.failed(null, ex);
+      callbacks.systemError(ex);
     }
   }
   

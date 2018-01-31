@@ -16,11 +16,14 @@
 package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.ChannelMetrics;
 import com.splunk.cloudfwd.impl.http.HttpSender;
+import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchLifecycleEvent;
+import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.LifecycleEventObserver;
 import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.PropertyKeys;
@@ -29,6 +32,8 @@ import com.splunk.cloudfwd.error.HecChannelDeathException;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchHelper;
 import java.io.Closeable;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
@@ -60,8 +65,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
   private volatile boolean quiesced;
   private HecHealthImpl health;
   private final LoadBalancer loadBalancer;
-  private final AtomicInteger unackedCount = new AtomicInteger(0);
   private final AtomicInteger ackedCount = new AtomicInteger(0);
+  private final Set<Comparable> unackedEventIds = new ConcurrentSkipListSet<>();
 
   private volatile boolean started;
   private final String channelId;
@@ -182,8 +187,8 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     
     //must increment only *after* we exit the blocking condition above
-    int count = unackedCount.incrementAndGet();
-    LOG.debug("channel=" + getChannelId() + " unack-count=" + count);
+    unackedEventIds.add(events.getId());
+    LOG.info("channel={} unackedCount={} unackedEventIds={}", this, getUnackedCount(), unackedEventIds);
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();
@@ -191,7 +196,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     events.setHecChannel(this);
     sender.sendBatch(events);
-    if (unackedCount.get() == maxUnackedEvents) {
+    if (getUnackedCount() >= maxUnackedEvents) {
       pollAcks();
     }
     return true;
@@ -206,7 +211,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     boolean wasAvailable = isAvailable();
     switch (e.getType()) {
       case ACK_POLL_OK: {
-        ackReceived(e);
+        ackReceived((EventBatchResponse)e);
         break;
       }
       case EVENT_POST_OK: {
@@ -247,7 +252,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //when an event batch is NOT successfully delivered we must consider it "gone" from this channel
         if(EventBatchHelper.isEventBatchFailOrNotOK(e)){
             LOG.info("FAIL or NOT OK caused  DECREMENT {}", e);
-            this.unackedCount.decrementAndGet();
+            unackedEventIds.remove(((EventBatchLifecycleEvent)e).getEvents().getId());
         }
         
         if (!wasAvailable && isAvailable()) { //channel has become available where as previously NOT available
@@ -259,11 +264,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     
     public boolean isFull(){
-        if( this.unackedCount.get()> maxUnackedEvents){
-            LOG.error("ConnectionImpl={} channel={} illegal channel state full={}, unackedCount={}", 
-                getConnection(), this, maxUnackedEvents, unackedCount.get());
+        if (getUnackedCount() > maxUnackedEvents) {
+            LOG.error("ConnectionImpl={} channel={} illegal channel state maxUnackedEvents={} unackedCount={}", 
+                getConnection(), this, maxUnackedEvents, getUnackedCount());
         }
-        return this.unackedCount.get() >= maxUnackedEvents;
+        return getUnackedCount() >= maxUnackedEvents;
+    }
+    
+    boolean removeEventBatch(EventBatch e) {
+        return this.unackedEventIds.remove(e.getId());
     }
 
     private void resendPreflight(LifecycleEvent e, boolean wasAvailable) {
@@ -304,19 +313,15 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       return getConnection().getSettings();
   }
 
-    private void ackReceived(LifecycleEvent s) {
-        int count = unackedCount.decrementAndGet();
+  private void ackReceived(EventBatchResponse r) {
+        unackedEventIds.remove(r.getEvents().getId()); 
         ackedCount.incrementAndGet();
-        if (count < 0) {
-            String msg = "unacked count is illegal negative value: " + count + " on channel " + getChannelId();
-            throw new HecIllegalStateException(msg,
-                    HecIllegalStateException.Type.NEGATIVE_UNACKED_COUNT);
-        } else if (count == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
+        if (getUnackedCount() == 0) { //we only need to notify when we drop down from FULL. Tighter than syncing this whole method
             if (quiesced) {
                 close();
             }
         }
-    }
+  }
 
   public void closeAndReplace() throws InterruptedException{
       closeAndReplace(false);
@@ -326,7 +331,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     if (!force && (closed || quiesced)) {
       return;
     }
-    LOG.debug("closeAndReplace removing channel channel={}, force={}", this, force);
+    LOG.info("closeAndReplace removing channel channel={}, force={}", this, force);
     this.health.decomissioned();
     //must add channel *before* quiesce(). 'cause if channel empty, quiesce proceeds directly to close which will kill terminate
     //the reaperScheduler, which will interrupt this very thread which was spawned by the reaper scheduler, and then  we
@@ -416,7 +421,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     LOG.info("CLOSE channel  {}", this);
     if (!isEmpty()) {
-        LOG.trace("{} not empty. Quiescing. unacked count={}", this, unackedCount.get());
+        LOG.trace("{} not empty. Quiescing. unacked count={}", this, getUnackedCount());
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
     }
@@ -431,7 +436,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     LOG.info("CLOSE channel  {}", this);
     if (!isEmpty()) {
-        LOG.trace("{} not empty. Quiescing. unacked count={}", this, unackedCount.get());
+        LOG.trace("{} not empty. Quiescing. unacked count={}", this, getUnackedCount());
       quiesce(); //this essentially tells the channel to close after it is empty
       return;
     }
@@ -488,11 +493,11 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
    * @return true if ackwindow is empty
    */
   public boolean isEmpty() {
-    return this.unackedCount.get() == 0;
+    return getUnackedCount() == 0;
   }
 
   int getUnackedCount() {
-    return this.unackedCount.get();
+    return this.unackedEventIds.size();
   }
   
   public boolean isClosed(){
@@ -561,7 +566,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
                 //already, in which case sendRoundRobbin will just ignore the sent messages
                 while (true) { 
                   try {
-                      if(!loadBalancer.sendRoundRobin(e, true)){
+                      if(!loadBalancer.resend(e)){
                           LOG.trace("LoadBalancer did not accept resend of {}", e);
                       }else{
                         LOG.trace("LB ACCEPTED resend of {}", e);
@@ -621,16 +626,16 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         Runnable r = () -> {
         //we here check to see of there has been any activity on the channel since
         //the last time we looked. If not, then we say it was 'frozen' meaning jammed/innactive
-        if (unackedCount.get() > 0 && lastCountOfAcked == ackedCount.get()
-                && lastCountOfUnacked == unackedCount.get()) {
+        if (getUnackedCount() > 0 && lastCountOfAcked == ackedCount.get()
+                && lastCountOfUnacked == getUnackedCount()) {
           killInProgress = true;
-          String msg = HecChannel.this  + " dead. Resending "+unackedCount.get()+" unacked messages and force closing channel";
+          String msg = HecChannel.this  + " dead. Resending "+ getUnackedCount() + " unacked messages and force closing channel";
           LOG.warn(msg);
           getCallbacks().systemWarning(new HecChannelDeathException(msg));   
           closeAndReplaceAndResend();
         } else { //channel was not 'frozen'
           lastCountOfAcked = ackedCount.get();
-          lastCountOfUnacked = unackedCount.get();
+          lastCountOfUnacked = getUnackedCount();
         }
       };//end Runnable
       ThreadScheduler.getSharedExecutorInstance("channel_death_checker_executor").execute(r);
