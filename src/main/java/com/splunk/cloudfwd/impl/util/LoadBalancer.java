@@ -34,6 +34,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -151,11 +152,23 @@ public class LoadBalancer implements Closeable {
         //One channel will be decomissioned each time the scheduler, below, fires. And there will be an interval of decomMS
         //between each channel that is decomissioned. We need to avoid "storm" of decomissioning many channels at once.
         long decomMs = this.connection.getSettings().getChannelDecomMS();
+        LOG.debug("setupReaper: decomMs={}", decomMs);
         if (decomMs > 0) {
-            this.reaperTaskFuture  = ThreadScheduler.getSharedSchedulerInstance("channel_decom_scheduler").scheduleWithFixedDelay(() -> {
-                ArrayList<HecChannel> channels = (ArrayList) this.channels.values();
-                if(!channels.isEmpty()){
-                    channels.get(0).reapChannel(decomMs); //since channels are in unordered map, item "0" is essentially a random member of the values-set
+            ScheduledThreadPoolExecutor x = ThreadScheduler.getSharedSchedulerInstance("channel_decom_scheduler");
+            LOG.debug("setupReaper: executor state x={}", x);
+            this.reaperTaskFuture  = x.scheduleWithFixedDelay(() -> {
+                try {
+                    LOG.debug("setupReaper's task: starting a scheduled channel reaper with decomMs={}", decomMs);
+                    ArrayList<HecChannel> channels = new ArrayList<>(this.channels.values());
+                    if (!channels.isEmpty()) {
+                        HecChannel channel = channels.get(0);
+                        //                    LOG.debug("Starting a reaper on channel={}", channel);
+                        LOG.debug("setupReaper's task: about to ask to reap channel={}", channel);
+                        channel.reapChannel(0); //since channels are in unordered map, item "0" is essentially a random member of the values-set
+                    }
+                } catch(Exception ex) {
+                    LOG.error("setupReaper's task: got an unexpected exception ex={}", ex);
+                    connection.getCallbacks().systemError(ex);
                 }
             }, decomMs, decomMs, TimeUnit.MILLISECONDS); //randomize the channel decommission - so that all channels do not decomission simultaneously.
         }

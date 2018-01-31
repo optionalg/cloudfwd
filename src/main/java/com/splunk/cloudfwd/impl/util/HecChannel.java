@@ -165,17 +165,18 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     
  void reapChannel(long decomMs){
       Runnable r = ()->{
-            LOG.info("decommissioning channel (channel_decom_ms={}): {}",
-                        decomMs, HecChannel.this);
-                try {
-                    closeAndReplace();
-                } catch (InterruptedException ex) {
-                    LOG.warn("Interrupted trying to close and replace '{}'",
-                            HecChannel.this);
-                } catch (Exception e) {
-                    LOG.error("Exception trying to close and replace '{}': {}",
-                            HecChannel.this, e.getMessage());
-                }
+            LOG.debug("reapChannel: decommissioning channel={} after decomMs={}", HecChannel.this, decomMs);
+            try {
+                LOG.debug("reapChannel: calling closeAndReplace for channel={}", HecChannel.this);
+                closeAndReplace();
+            } catch (InterruptedException ex) {
+                LOG.warn("reapChannel: Interrupted trying to close and replace channel={}",
+                        HecChannel.this);
+            } catch (Exception e) {
+                LOG.error("reapChannel: Exception trying to close and replace channel={} exceptionMessage={}",
+                        HecChannel.this, e.getMessage());
+                getConnection().getCallbacks().systemError(e);
+            }
       };
       //avoid having a many channel decommissionings happening at once (maxThreads=1)
       ThreadScheduler.getSharedExecutorInstance("channel_decom_executor_thread",1).execute(r);
@@ -356,7 +357,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     
     if(!quiesced){
         this.health.quiesced();
-        LOG.debug("Scheduling watchdog to forceClose channel (if needed) in 3 minutes");
+        LOG.debug("Scheduling watchdog to forceClose channel (if needed) in {}ms", channelQuiesceTimeout);
         closeWatchDogTaskFuture = ThreadScheduler.getSharedSchedulerInstance("channel_close_watchdog_schedule").
                 schedule(this::watchdogClose, channelQuiesceTimeout, TimeUnit.MILLISECONDS);
     }

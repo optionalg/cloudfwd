@@ -491,6 +491,12 @@ public class ConnectionSettings {
         this.channelDecomMS = decomMS;
     }
     
+    // This should be used for tests only TODO: move to a test Class which is a subclass of ConnectionSettings
+    public void setChannelDecomMS(long decomMS, boolean force) {
+        if(!force) this.setChannelDecomMS(decomMS);
+        this.channelDecomMS = decomMS;
+    }
+    
     public void setChannelQuiesceTimeoutMS(long timeoutMS) {
         if (timeoutMS < PropertyKeys.MIN_CHANNEL_QUIESCE_TIMEOUT_MS && !isMockHttp()) {
             LOG.warn(PropertyKeys.CHANNEL_QUIESCE_TIMEOUT_MS +
@@ -499,6 +505,12 @@ public class ConnectionSettings {
         } else {
             this.channelQuiesceTimeoutMS = timeoutMS;
         }
+    }
+    
+    // This should be used for tests only TODO: move to a test Class which is a subclass of ConnectionSettings
+    public void setChannelQuiesceTimeoutMS(long timeoutMS, Boolean force) {
+        if(!force) this.setChannelQuiesceTimeoutMS(timeoutMS);   
+        this.channelQuiesceTimeoutMS = timeoutMS;
     }
 
     public void setAckTimeoutMS(long timeoutMS) {

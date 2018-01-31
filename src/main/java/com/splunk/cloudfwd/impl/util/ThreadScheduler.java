@@ -17,7 +17,9 @@ package com.splunk.cloudfwd.impl.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
@@ -50,8 +51,8 @@ public class ThreadScheduler {
       return getFromSchedulerCache(name);
   }
   
-public synchronized  static ExecutorService getDedicatedSingleThreadExecutor(String name){
-       ThreadFactory f = (Runnable r) -> {
+  public synchronized static ExecutorService getDedicatedSingleThreadExecutor(String name){ 
+        ThreadFactory f = (Runnable r) -> {
                 Thread t =  new Thread(r, name);  
                 return t;
             };          
@@ -138,6 +139,18 @@ public synchronized  static ExecutorService getDedicatedSingleThreadExecutor(Str
              scheduler.prestartAllCoreThreads();
              return scheduler;
       });
-    }    
+    }
+    
+    public static Map<String, ExecutorService> getExecutorsHealth() {
+      Map ExecutorsHealth = new HashMap();
+      ExecutorsHealth.putAll(schedulers);
+      ExecutorsHealth.putAll(executors);
+      int idx = 0;
+      for (ExecutorService service : dedicatedSingleThreadExecutors) {
+        idx++;
+        ExecutorsHealth.put("dedicatedSingleThreadExecutors" + idx, service);
+      }
+      return ExecutorsHealth;
+    }
   
 }
