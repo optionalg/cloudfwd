@@ -317,7 +317,7 @@ public class LoadBalancer implements Closeable {
         sendRoundRobin(events, false);
     }
 
-    public boolean sendRoundRobin(EventBatchImpl events, boolean resend)
+    private boolean sendRoundRobin(EventBatchImpl events, boolean resend)
             throws HecConnectionTimeoutException, HecNoValidChannelsException {
         interrupted = false;
         events.incrementNumTries();
