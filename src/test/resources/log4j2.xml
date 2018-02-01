@@ -16,24 +16,40 @@ limitations under the License.
 -->
 <Configuration status="info">
   <Appenders>
-    <!-- Do not enable %method (method-level logging is a performance killer) -->
-    <RandomAccessFile name="VerifyLogFile" fileName="verify.log" immediateFlush="false" append="false">
-      <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n"/>
-    </RandomAccessFile>
-  <!-- DO NOT REMOVE Console appender (useful for debugging) -->
--    <Console name="Console" target="SYSTEM_OUT">
--      <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
--    </Console>     
-  </Appenders> 
+    <!--Do not enable %method (method-level logging is a performance killer)-->
+    <!--<RandomAccessFile name="VerifyLogFile" fileName="verify.log" immediateFlush="false" append="false">-->
+      <!--<PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n"/>-->
+    <!--</RandomAccessFile>-->
+    <!--DO NOT REMOVE Console appender (useful for debugging)-->
+    <Console name="Console" target="SYSTEM_OUT">
+        <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n}"/>
+    </Console>
+    <RollingFile name="RollingFile" immediateFlush="false" append="false">
+      <FileName>verify.log</FileName>
+      <FilePattern>verify-%d{yyyy-MM-dd-HH}-%i.log.gz</FilePattern>
+      <PatternLayout>
+        <Pattern>%d{HH:mm:ss.SSS} %-5level [thread:%t] %logger{1} - %msg%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="24" modulate="true"/>
+        <SizeBasedTriggeringPolicy size="400 MB"/>
+        <OnStartupTriggeringPolicy />
+      </Policies>
+      <DefaultRolloverStrategy max="100" />
+    </RollingFile>
+  </Appenders>
   <Loggers>
     <Root level="info">
-      <AppenderRef ref="VerifyLogFile"/>
+      <!--<AppenderRef ref="VerifyLogFile"/>-->
+      <AppenderRef ref ="RollingFile"/>
     </Root>
     <Logger name="org.apache.http" level="error">
-      <AppenderRef ref="VerifyLogFile"/>
-    </Logger>     
+      <!--<AppenderRef ref="VerifyLogFile"/>-->
+      <AppenderRef ref ="RollingFile"/>
+    </Logger>
     <Logger name="org.apache.http.wire" level="error">
-      <AppenderRef ref="VerifyLogFile"/>
-    </Logger>    
+      <!--<AppenderRef ref="VerifyLogFile"/>-->
+      <AppenderRef ref ="RollingFile"/>
+    </Logger>
   </Loggers>
 </Configuration>
