@@ -339,7 +339,7 @@ public final class HttpSender implements Endpoints, CookieClient {
     final HttpPost httpPost = new HttpPost(completeUrl);
     setHeaders(httpPost);
     HttpEntity e= events.getEntity();
-    LOG.info("ConnectionImpl={} executing event batch post on channel={}, eventBatch={}", getConnection(), getChannel(), e.toString());
+    LOG.debug("ConnectionImpl={} executing event batch post on channel={}, eventBatch={}", getConnection(), getChannel(), e.toString());
     httpPost.setEntity(e);
     httpClient.execute(httpPost, httpCallback);
   }
@@ -404,7 +404,7 @@ public final class HttpSender implements Endpoints, CookieClient {
         StringEntity entity;
 
         String req = ackReq.toString();
-        LOG.info("ConnectionImpl={} executing ack poll request on channel={} posting: {}", getConnection(), getChannel(), req);
+        LOG.debug("ConnectionImpl={} executing ack poll request on channel={} posting: {}", getConnection(), getChannel(), req);
         entity = new StringEntity(req);
 
         entity.setContentType(HttpContentType);

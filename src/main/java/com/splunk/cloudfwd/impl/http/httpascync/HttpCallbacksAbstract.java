@@ -60,7 +60,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
   @Override
   final public void completed(HttpResponse response) {
     try {
-        LOG.info("ConnectionImpl={} channel={} Response received. {} took {} ms", 
+        LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms", 
             getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
         int code = response.getStatusLine().getStatusCode();
         handleCookies(response);

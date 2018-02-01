@@ -104,7 +104,7 @@ public class AcknowledgementTracker implements EventTracker {
     EventBatchImpl events = null;
     try {
       Collection<Long> succeeded = apr.getSuccessIds();
-      LOG.info("ConnectionImpl={} channel={} num_success_ackIds={} num_outstanding_ackIds={}. Success acked ids: {}", 
+      LOG.debug("ConnectionImpl={} channel={} num_success_ackIds={} num_outstanding_ackIds={}. Success acked ids: {}", 
         sender.getConnection(), sender.getChannel(), succeeded.size(), apr.getAcks().size(), succeeded);
       if (succeeded.isEmpty()) {
         return;

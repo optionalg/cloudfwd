@@ -54,11 +54,11 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
 //                    );
                     break;
                 case 503: //busy
-                    LOG.info("503 response from ack poll on channel={}", getChannel());
+                    LOG.debug("503 response from ack poll on channel={}", getChannel());
                     warn(reply, code);                    
                     break;
                 case 504: //elb gatewy timeout
-                    LOG.info("504 response from ack poll on channel={}", getChannel());
+                    LOG.debug("504 response from ack poll on channel={}", getChannel());
                     warn(reply, code);
                     break;
                 default:
@@ -76,7 +76,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     @Override
     public void failed(Exception ex) {
         try {
-            LOG.info("channel={} failed to poll acks because exception={}",
+            LOG.warn("channel={} failed to poll acks because exception={}",
                     getChannel(), ex);    
             notifyFailed(LifecycleEvent.Type.ACK_POLL_FAILURE, ex);
         } catch (Exception e) {
@@ -89,7 +89,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     @Override
     public void cancelled() {
         try {
-            LOG.info("HTTP post cancelled while polling for '{}' on channel={}", getOperation(), getChannel());
+            LOG.warn("HTTP post cancelled while polling for '{}' on channel={}", getOperation(), getChannel());
         } catch (Exception ex) {
             error(ex);
         }finally{
