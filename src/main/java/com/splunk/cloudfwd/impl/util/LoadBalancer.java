@@ -460,6 +460,9 @@ public class LoadBalancer implements Closeable {
                 LOG.warn(
                         "LoadBalancer interrupted.");       
                 this.interrupted = true;
+            } catch (NullPointerException e) {
+                // no-op
+                LOG.warn("ignoring NullPointerException caught in waitIfSpinCountToo high: {}", e);
             }
         }
     }
