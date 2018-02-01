@@ -189,7 +189,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     
     //must increment only *after* we exit the blocking condition above
     unackedEventIds.add(events.getId());
-    LOG.info("channel={} unackedCount={} unackedEventIds={}", this, getUnackedCount(), unackedEventIds);
+    LOG.debug("channel={} unackedCount={} unackedEventIds={}", this, getUnackedCount(), unackedEventIds);
     if (!sender.getChannel().equals(this)) {
       String msg = "send channel mismatch: " + this.getChannelId() + " != " + sender.
               getChannel().getChannelId();

@@ -73,12 +73,12 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                     consumeEventPostOkResponse(reply, code);
                     break;
                 case 503:
-                    LOG.info("503 response from event post on channel={}", getChannel());
+                    LOG.debug("503 response from event post on channel={}", getChannel());
                     warn(reply, code);
                     notifyBusyAndResend(reply, code, EVENT_POST_INDEXER_BUSY);
                     break;
                 case 504:                 
-                    LOG.info("504 response from event post on channel={}", getChannel());
+                    LOG.debug("504 response from event post on channel={}", getChannel());
                     warn(reply, code);
                     notifyBusyAndResend(reply, code, EVENT_POST_GATEWAY_TIMEOUT);
                     break;                    
@@ -139,7 +139,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
       
     public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
-        LOG.info("{} Event post response: {} for {}", getChannel(), resp, events);
+        LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (epr.isAckIdReceived()) {
