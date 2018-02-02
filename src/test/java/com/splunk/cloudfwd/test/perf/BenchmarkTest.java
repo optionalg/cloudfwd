@@ -262,7 +262,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
             double lastCpuUsage = operatingSystemMXBean.getProcessCpuLoad();
 
-            if(cpuUsageMin == null || cpuUsageMin > lastCpuUsage) {
+            if(cpuUsageMin == null || cpuUsageMin.doubleValue() > lastCpuUsage) {
                 cpuUsageMin = lastCpuUsage;
             }
             if(cpuUsageMax < lastCpuUsage){
