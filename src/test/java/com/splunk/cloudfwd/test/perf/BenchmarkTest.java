@@ -2,17 +2,21 @@ package com.splunk.cloudfwd.test.perf;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import org.json.simple.JSONObject;
-import com.splunk.cloudfwd.PropertyKeys;
+import com.sun.management.OperatingSystemMXBean;
 
 import org.junit.Test;
 
 import java.io.IOException;
 
+import java.lang.management.ManagementFactory;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 
 
 /**
@@ -67,6 +71,15 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     private long runtimeSecs;
     private long metricsStartTimeMillis = testStartTimeMillis - warmUpTimeMillis;
+
+    private Double cpuUsageMin = null;
+    private double cpuUsageMax = 0;
+    private double cpuUsageTotal = 0;
+
+    private int numofLines = numOfLines();
+
+
+    private long eventsSent = 0;
 
     private long callCount = 0;
 /*
@@ -176,13 +189,14 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     @Override
     protected void checkAndLogPerformance(boolean shouldAssert) {
         super.checkAndLogPerformance(shouldAssert);
-        if (shouldAssert) {
+       if (shouldAssert) {
             callCount++;
 
             // Throughput
             int numAckedBatches = callbacks.getAcknowledgedBatches().size();
             long elapsedSeconds = (System.currentTimeMillis() - testStartTimeMillis) / 1000;
-            float mbps = (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds;
+            float mbps = showThroughput(System.currentTimeMillis(), start)/8;
+//            float mbps = (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds;
             if (mbps != Float.NaN) {
 //                System.out.println("Sourcetype " + sourcetype + " - MBps: " + (mbps / 8F) + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
 //            Assert.assertTrue("Throughput must be above minimum value of " + sourcetypes.get(sourcetype).minMbps,
@@ -244,9 +258,34 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             if (latencyMax < lastLatencySec) {
                 latencyMax = lastLatencySec;
             }
+
+            OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
+            double lastCpuUsage = operatingSystemMXBean.getProcessCpuLoad();
+
+            if(cpuUsageMin == null || cpuUsageMin > lastCpuUsage) {
+                cpuUsageMin = lastCpuUsage;
+            }
+            if(cpuUsageMax < lastCpuUsage){
+                cpuUsageMax = lastCpuUsage;
+            }
+            cpuUsageTotal += lastCpuUsage;
+
+
             double avgLatencySec = ((ThroughputCalculatorCallback) callbacks).getAvgLatency() / 1000;
 //            System.out.println("Average ack Latency: " + avgLatencySec + " seconds");
+
+       }
+    }
+
+    private int numOfLines(){
+        URL resource = getClass().getClassLoader().getResource(eventsFilename); // to use a file on classpath in resources folder.
+        try{
+            List<String> lines = Files.readAllLines(Paths.get(resource.getFile()));
+            numofLines = lines.size();
+        }catch (Exception e){
+            e.printStackTrace();
         }
+        return numofLines;
     }
 
     private void createReport(SourcetypeEnum sourcetype) {
@@ -258,10 +297,13 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         jsonReport.put("threadCount", createThreadStats());
         jsonReport.put("percentageFailed", createFailedStats());
         jsonReport.put("ackLatencySecs", createLatencyStats());
+        jsonReport.put("cpuUsage %",createCpuUsageStats());
+        jsonReport.put("Events per batch", numOfLines());
+        jsonReport.put("Number of events sent",((batchCounter.get()) * numofLines) / ((System.currentTimeMillis() - testStartTimeMillis)/1000));
     }
 
     private HashMap createAckedThroughputStats() {
-        HashMap<String, Float> statsObject = new HashMap();
+        HashMap<String, Float> statsObject = new HashMap<>();
         statsObject.put("min", ackedThroughputMin);
         statsObject.put("max", ackedThroughputMax);
         statsObject.put("avg", ackedThroughputTotal / callCount);
@@ -269,7 +311,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     }
 
     private HashMap createMemoryStats() {
-        HashMap<String, Long> statsObject = new HashMap();
+        HashMap<String, Long> statsObject = new HashMap<>();
         statsObject.put("min", memoryMin);
         statsObject.put("max", memoryMax);
         statsObject.put("avg", memoryTotal / callCount);
@@ -277,7 +319,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     }
 
     private HashMap createThreadStats() {
-        HashMap<String, Long> statsObject = new HashMap();
+        HashMap<String, Long> statsObject = new HashMap<>();
         statsObject.put("min", threadMin);
         statsObject.put("max", threadMax);
         statsObject.put("avg", threadTotal / callCount);
@@ -285,7 +327,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     }
 
     private HashMap createFailedStats() {
-        HashMap<String, Float> statsObject = new HashMap();
+        HashMap<String, Float> statsObject = new HashMap<>();
         statsObject.put("min", failedMin);
         statsObject.put("max", failedMax);
         statsObject.put("avg", failedTotal / callCount);
@@ -293,10 +335,18 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     }
 
     private HashMap createLatencyStats() {
-        HashMap<String, Double> statsObject = new HashMap();
+        HashMap<String, Double> statsObject = new HashMap<>();
         statsObject.put("min", latencyMin);
         statsObject.put("max", latencyMax);
         statsObject.put("avg", ((ThroughputCalculatorCallback) callbacks).getLastLatency() / 1000);
+        return statsObject;
+    }
+
+    private HashMap createCpuUsageStats(){
+        HashMap<String, Double> statsObject = new HashMap<>();
+        statsObject.put("min",cpuUsageMin);
+        statsObject.put("max",cpuUsageMax);
+        statsObject.put("avg",cpuUsageTotal / callCount);
         return statsObject;
     }
 

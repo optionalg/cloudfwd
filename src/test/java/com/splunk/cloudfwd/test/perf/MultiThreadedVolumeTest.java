@@ -46,7 +46,6 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(THREADS_PER_CONNECTION, "1");  //One thread, one connection object
     }
 
-    
     protected int numSenderThreads = 128;
     private int threadsPerConnection = 1;
     protected AtomicInteger batchCounter = new AtomicInteger(0);
