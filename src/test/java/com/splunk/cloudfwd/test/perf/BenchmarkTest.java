@@ -195,7 +195,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
             // Throughput
             int numAckedBatches = callbacks.getAcknowledgedBatches().size();
             long elapsedSeconds = (System.currentTimeMillis() - testStartTimeMillis) / 1000;
-            float mbps = showThroughput(System.currentTimeMillis(), start)/8;
+           float mbps = showThroughput(System.currentTimeMillis(),testStartTimeMillis)/8;
 //            float mbps = (float) batchSizeMB * (float) numAckedBatches / (float) elapsedSeconds;
             if (mbps != Float.NaN) {
 //                System.out.println("Sourcetype " + sourcetype + " - MBps: " + (mbps / 8F) + " - at time(seconds):" + ((System.currentTimeMillis() - testStartTimeMillis) / 1000));
