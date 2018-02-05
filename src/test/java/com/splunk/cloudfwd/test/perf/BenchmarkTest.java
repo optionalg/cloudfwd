@@ -77,7 +77,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
     private double cpuUsageTotal = 0;
 
     private int numofLines = numOfLines();
-
+    private long numberOfEvents = 0;
 
     private long eventsSent = 0;
 
@@ -290,6 +290,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
 
     private void createReport(SourcetypeEnum sourcetype) {
         runtimeSecs = ((System.currentTimeMillis() - metricsStartTimeMillis) / 1000);
+        numberOfEvents = ((batchCounter.get()) * numofLines) / ((System.currentTimeMillis() - testStartTimeMillis)/1000);
         jsonReport = new JSONObject();
         jsonReport.put("runtimeMins", (runtimeSecs / 60));
         jsonReport.put("ackedThroughoutMBps", createAckedThroughputStats());
@@ -299,7 +300,7 @@ public class BenchmarkTest extends MultiThreadedVolumeTest {
         jsonReport.put("ackLatencySecs", createLatencyStats());
         jsonReport.put("cpuUsage %",createCpuUsageStats());
         jsonReport.put("Events per batch", numOfLines());
-        jsonReport.put("Number of events sent",((batchCounter.get()) * numofLines) / ((System.currentTimeMillis() - testStartTimeMillis)/1000));
+        jsonReport.put("Number of events sent",numberOfEvents);
     }
 
     private HashMap createAckedThroughputStats() {
