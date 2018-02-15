@@ -603,11 +603,15 @@ public class LoadBalancer implements Closeable {
     private boolean isResendable(EventBatchImpl events) {
          final int maxRetries = this.connection.getSettings().getMaxRetries();
         if (events.getNumTries() > maxRetries) {
-                              String msg = "Tried to send event id=" + events.
-                              getId() + " " + events.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
-                      LOG.warn(msg);
-                      getConnection().getCallbacks().failed(events,new HecMaxRetriesException(msg));
-                      return false;
+            String lastExceptionMsg = null;
+            if (events.getExceptions() != null && !events.getExceptions().isEmpty()) {
+                lastExceptionMsg = events.getExceptions().get(events.getExceptions().size() - 1).getMessage();
+            }
+            String msg = "Tried to send event id=" + events.getId() + " " + events.getNumTries() + 
+                " times. See property " + PropertyKeys.RETRIES + ". Most recent exception: " + lastExceptionMsg;
+            LOG.warn(msg);
+            getConnection().getCallbacks().failed(events,new HecMaxRetriesException(msg));
+            return false;
         }
         if (events.isAcknowledged() || events.isTimedOut(connection.
                 getSettings().getAckTimeoutMS())) {
