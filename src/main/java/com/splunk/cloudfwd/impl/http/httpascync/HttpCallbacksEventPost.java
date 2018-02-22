@@ -18,7 +18,6 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
-
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerBusyException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
@@ -69,6 +68,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     @Override
     public void completed(String reply, int code) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
+        LOG.info("Event with id = {}  on channel = {} received a response of {}",events.getId(),  getChannel(),code);
         try {
             switch (code) {
                 case 200:
@@ -119,13 +119,17 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
             Exception exc = ex;
             while(!events.isFailed()) {
                 try {
-                    trackSendExceptionAndResend(exc);
+                    LOG.info("Entered into resend for id = {}. The number of times its in resend is = {}",events.getId(),events.getNumTries());
+                    if(trackSendExceptionAndResend(exc)){
+                        break;
+                    }
                 } catch (HecConnectionTimeoutException e) {
                     // we want to retry on blocking timeout exceptions, since resend is performed outside of the 
                     // main thread and the HecConnectionTimeoutException doesn't make it back to the caller.
                     // this will not infinitely loop, because an event can only be resent up to PropertyKeys.RETRIES times
                    // trackSendExceptionAndResend(e);
                     exc = e;
+                    LOG.info("Exception {} caught for id = {} in resend", e, events.getId());
                 } catch (Exception e) {
                     invokeFailedEventsCallback(events, e);
                 }
@@ -134,11 +138,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
     }
     
-    private void trackSendExceptionAndResend(Exception ex) {
+    private boolean trackSendExceptionAndResend(Exception ex) {
         events.addSendException(ex);
         LOG.error("resending events={} through load balancer on channel={} due to ex={}",
                 events, getSender().getChannel(), ex);
-        getSender().getConnection().getLoadBalancer().resend(events); //will callback failed if max retries exceeded   
+        return getSender().getConnection().getLoadBalancer().resend(events); //will callback failed if max retries exceeded
     }
 
     private void notifyFailedAndResend(Exception ex) {
