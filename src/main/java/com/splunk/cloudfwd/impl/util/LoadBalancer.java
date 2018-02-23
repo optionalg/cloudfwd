@@ -375,7 +375,7 @@ public class LoadBalancer implements Closeable {
                 if (tryChannelSend(channelsSnapshot, events, resend)) {//attempt to send through a channel (ret's false if channel not available)
                     //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
                     //because everyone stuck in perpetual wait
-                    //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
+                    //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full
                     break;
                 }
             }
@@ -615,7 +615,7 @@ public class LoadBalancer implements Closeable {
         }
         if (events.isAcknowledged() || events.isTimedOut(connection.
                 getSettings().getAckTimeoutMS())) {
-            return false; //do not resend messages that are in a final state 
+            return false; //do not resend messages that are in a final state
         }
         events.prepareToResend(); //we are going to resend it,so mark it not yet flushed, cancel its acknowledgement tracker, etc
         return true;

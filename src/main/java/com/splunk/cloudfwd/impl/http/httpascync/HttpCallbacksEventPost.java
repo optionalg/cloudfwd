@@ -68,7 +68,6 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     @Override
     public void completed(String reply, int code) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
-        LOG.info("Event with id = {}  on channel = {} received a response of {}",events.getId(),  getChannel(),code);
         try {
             switch (code) {
                 case 200:
@@ -119,7 +118,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
             Exception exc = ex;
             while(!events.isFailed()) {
                 try {
-                    LOG.info("Entered into resend for id = {}. The number of times its in resend is = {}",events.getId(),events.getNumTries());
+                    LOG.info("Entered into resend for id = {}. The number of times its in resend is {}",events.getId(),events.getNumTries());
                     if(trackSendExceptionAndResend(exc)){
                         break;
                     }
