@@ -375,7 +375,7 @@ public class LoadBalancer implements Closeable {
                 if (tryChannelSend(channelsSnapshot, events, resend)) {//attempt to send through a channel (ret's false if channel not available)
                     //the following wait must be done *after* success sending else multithreads can fill the connection and nothing sends
                     //because everyone stuck in perpetual wait
-                    //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full 
+                    //waitWhileFull(startTime, events, closed); //apply backpressure if connection is globally full
                     break;
                 }
             }
@@ -603,15 +603,19 @@ public class LoadBalancer implements Closeable {
     private boolean isResendable(EventBatchImpl events) {
          final int maxRetries = this.connection.getSettings().getMaxRetries();
         if (events.getNumTries() > maxRetries) {
-                              String msg = "Tried to send event id=" + events.
-                              getId() + " " + events.getNumTries() + " times.  See property " + PropertyKeys.RETRIES;
-                      LOG.warn(msg);
-                      getConnection().getCallbacks().failed(events,new HecMaxRetriesException(msg));
-                      return false;
+            String lastExceptionMsg = null;
+            if (events.getExceptions() != null && !events.getExceptions().isEmpty()) {
+                lastExceptionMsg = events.getExceptions().get(events.getExceptions().size() - 1).getMessage();
+            }
+            String msg = "Tried to send event id=" + events.getId() + " " + events.getNumTries() + 
+                " times. See property " + PropertyKeys.RETRIES + ". Most recent exception: " + lastExceptionMsg;
+            LOG.warn(msg);
+            getConnection().getCallbacks().failed(events,new HecMaxRetriesException(msg));
+            return false;
         }
         if (events.isAcknowledged() || events.isTimedOut(connection.
                 getSettings().getAckTimeoutMS())) {
-            return false; //do not resend messages that are in a final state 
+            return false; //do not resend messages that are in a final state
         }
         events.prepareToResend(); //we are going to resend it,so mark it not yet flushed, cancel its acknowledgement tracker, etc
         return true;

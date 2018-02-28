@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
+import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerBusyException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
@@ -114,16 +115,33 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private void resend(Exception ex) {
         //we must run resends through their own thread. Otherwise the apache client thread could wind up blocked in the load balancer
         Runnable r = ()-> {
-             try {
-                events.addSendException(ex);
-                LOG.warn("resending events={} through load balancer on channel={} due to ex={}",
-                    events, getSender().getChannel(), ex);                
-                getSender().getConnection().getLoadBalancer().resend(events); //will callback failed if max retries exceeded   
-            } catch (Exception e) {
-                invokeFailedEventsCallback(events, e); //includes HecMaxRetriesException
-            }                
+            Exception exc = ex;
+            while(!events.isFailed()) {
+                try {
+                    LOG.info("Entered into resend for id = {}. The number of times its in resend is {}",events.getId(),events.getNumTries());
+                    if(trackSendExceptionAndResend(exc)){
+                        break;
+                    }
+                } catch (HecConnectionTimeoutException e) {
+                    // we want to retry on blocking timeout exceptions, since resend is performed outside of the 
+                    // main thread and the HecConnectionTimeoutException doesn't make it back to the caller.
+                    // this will not infinitely loop, because an event can only be resent up to PropertyKeys.RETRIES times
+                   // trackSendExceptionAndResend(e);
+                    exc = e;
+                    LOG.info("Exception {} caught for id = {} in resend", e, events.getId());
+                } catch (Exception e) {
+                    invokeFailedEventsCallback(events, e);
+                }
+            }
         };
         ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
+    }
+    
+    private boolean trackSendExceptionAndResend(Exception ex) {
+        events.addSendException(ex);
+        LOG.error("resending events={} through load balancer on channel={} due to ex={}",
+                events, getSender().getChannel(), ex);
+        return getSender().getConnection().getLoadBalancer().resend(events); //will callback failed if max retries exceeded
     }
 
     private void notifyFailedAndResend(Exception ex) {
