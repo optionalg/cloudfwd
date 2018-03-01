@@ -30,6 +30,7 @@ import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 
 /**
@@ -64,14 +65,19 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         this.events = events;
         LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }
-
+    
     @Override
     public void completed(String reply, int code) {
+        completed(reply, code, false);
+    }
+    
+    @Override
+    public void completed(String reply, int code, boolean isSyncAck) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
         try {
             switch (code) {
                 case 200:
-                    consumeEventPostOkResponse(reply, code);
+                    consumeEventPostOkResponse(reply, code, isSyncAck);
                     break;
                 case 503:
                     LOG.debug("503 response from event post on channel={}", getChannel());
@@ -156,11 +162,15 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         resend(new HecServerBusyException(reply));
     }
       
-    public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
+    public void consumeEventPostOkResponse(String resp, int httpCode, boolean isSyncAck) throws Exception {
         LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
-        if (epr.isAckIdReceived()) {
+        if (epr.isAckDisabled() && isSyncAck) {
+            getConnection().getCallbacks().acknowledged(events);
+//            getSender().getAcknowledgementTracker().cancel(events);
+            return;
+        } else if (epr.isAckIdReceived()) {
             events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
         } else if (epr.isAckDisabled()) {
             throwConfigurationException(getSender(), httpCode, resp);
@@ -173,7 +183,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
 
         notify(EVENT_POST_OK, 200, resp, events);
     }
-
+    
     private void throwConfigurationException(HttpSender sender, int httpCode, String resp) 
             throws HecConnectionStateException {
         notify(EVENT_POST_ACKS_DISABLED,httpCode, resp, events);
