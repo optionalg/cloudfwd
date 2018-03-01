@@ -63,7 +63,6 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms", 
             getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
         int code = response.getStatusLine().getStatusCode();
-        
         handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
@@ -73,15 +72,25 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 //            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
 //        }
         completed(reply, code, isSyncAck(response));      
+//        completed(reply, code, false);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
   }
   
   final private boolean isSyncAck(HttpResponse response) {
-    String xSplunkAck = response.getFirstHeader("X-Splunk-Ack").getValue();
-    LOG.debug("xSplunkAck=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck == "sync"));
-    return xSplunkAck == "sync"; 
+    try {
+      Header xSplunkAckHeader = response.getFirstHeader("X-Splunk-Ack");
+      if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
+        String xSplunkAck = xSplunkAckHeader.getValue();
+        LOG.debug("isSyncAck: found header X-Splunk-Ack=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck.equals("sync")));
+        return xSplunkAck.equals("sync"); 
+      }
+    } catch (Exception e) {
+      LOG.error("isSyncAck: Unexpected exception e=" + e);
+    }
+    LOG.debug("isSyncAck: X-Splunk-Ack header not found");
+    return false;
   }
 
     private void handleCookies(HttpResponse response){
