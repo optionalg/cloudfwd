@@ -63,6 +63,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms", 
             getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
         int code = response.getStatusLine().getStatusCode();
+        
         handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
@@ -71,10 +72,16 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 //        if(code != 200){
 //            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
 //        }
-        completed(reply, code);      
+        completed(reply, code, isSyncAck(response));      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
+  }
+  
+  final private boolean isSyncAck(HttpResponse response) {
+    String xSplunkAck = response.getFirstHeader("X-Splunk-Ack").getValue();
+    LOG.debug("xSplunkAck=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck == "sync"));
+    return xSplunkAck == "sync"; 
   }
 
     private void handleCookies(HttpResponse response){
@@ -103,9 +110,11 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         } catch (Exception ex) {
             error(ex);
         }
-    }  
-
+    }
+  
   public abstract void completed(String reply, int code);
+    
+  public abstract void completed(String reply, int code, boolean syncAck);
   
     protected void notify(final LifecycleEvent.Type type, int httpCode, String resp, EventBatchImpl events){
       notify(new EventBatchResponse(type, httpCode, resp, events, getBaseUrl()));

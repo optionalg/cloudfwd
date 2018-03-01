@@ -52,6 +52,11 @@ public class HttpCallbacksGeneric extends HttpCallbacksAbstract {
     }
 
     @Override
+    public void completed(String reply, int httpCode, boolean syncAck) {
+        completed(reply, httpCode);
+    }
+    
+    @Override
     public void completed(String reply, int httpCode) {
         try {
             LifecycleEvent.Type type = null;

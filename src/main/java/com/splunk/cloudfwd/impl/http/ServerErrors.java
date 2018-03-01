@@ -66,7 +66,7 @@ public class ServerErrors {
                 return new HecServerErrorResponseException(new HecErrorResponseValueObject(), b, type, url);
             }
         }else{
-            //server response without text such as 504 gateway timeout
+            //server response without text such as 504 gate way timeout
             return new HecServerErrorResponseException(new HecErrorResponseValueObject(), b, type, url);
         }
     }
