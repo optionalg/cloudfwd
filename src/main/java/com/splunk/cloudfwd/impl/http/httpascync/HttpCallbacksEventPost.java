@@ -16,12 +16,14 @@
 package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerBusyException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
 import com.splunk.cloudfwd.impl.http.EventPostResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
@@ -68,16 +70,17 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     
     @Override
     public void completed(String reply, int code) {
+        LOG.error("unexpected call completed(String reply, int code) in HttpCallbacksEventPost");
         completed(reply, code, false);
     }
     
     @Override
-    public void completed(String reply, int code, boolean isSyncAck) {
+    public void completed(String reply, int code, boolean syncAck) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
         try {
             switch (code) {
                 case 200:
-                    consumeEventPostOkResponse(reply, code, isSyncAck);
+                    consumeEventPostOkResponse(reply, code, syncAck);
                     break;
                 case 503:
                     LOG.debug("503 response from event post on channel={}", getChannel());
@@ -162,12 +165,12 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         resend(new HecServerBusyException(reply));
     }
       
-    public void consumeEventPostOkResponse(String resp, int httpCode, boolean isSyncAck) throws Exception {
+    public void consumeEventPostOkResponse(String resp, int httpCode, boolean syncAck) throws Exception {
         LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
-        if (epr.isAckDisabled() && isSyncAck) {
-            getConnection().getCallbacks().acknowledged(events);
+        if (syncAck) {
+            handleSyncAck(events);
 //            getSender().getAcknowledgementTracker().cancel(events);
             return;
         } else if (epr.isAckIdReceived()) {
@@ -184,6 +187,19 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         notify(EVENT_POST_OK, 200, resp, events);
     }
     
+    private void handleSyncAck(EventBatchImpl events) {
+        try {
+            LOG.debug("handleSyncAck: started handling events=" + events);
+            getSender().getChannelMetrics().update(new EventBatchResponse(
+                    LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
+                    events, getSender().getBaseUrl()));
+        } catch (Exception e) {
+            LOG.debug("handleSyncAck: unexpected exception e=" + e + ", events=" + events);
+            throw e;
+        }
+        LOG.debug("handleSyncAck: finished handling events=" + events);
+    }
+
     private void throwConfigurationException(HttpSender sender, int httpCode, String resp) 
             throws HecConnectionStateException {
         notify(EVENT_POST_ACKS_DISABLED,httpCode, resp, events);
