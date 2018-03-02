@@ -29,6 +29,7 @@ JVM_HEAP_SIZE = os.environ.get('JVM_HEAP_SIZE', '8G')
 TOKEN_WITH_ACK = '00000000-0000-0000-0000-000000000001'
 DEFAULT_ADMIN = 'admin'
 DEFAULT_PASSWORD = 'Chang3d!'
+SOURCE_TYPE = 'generic_singleline_notimestamp'
 
 
 def create_token(uri, data):
@@ -60,6 +61,7 @@ def create_token_with_ack(host_name):
         'indexes': 'main',
         'useACK': '1',
         'disabled': '0',
+        'sourcetype': SOURCE_TYPE
     }
 
     uri = 'https://{}:8089/servicesNS/nobody/splunk_httpinput/data/inputs/http?output_mode=json'.format(host_name)
@@ -88,7 +90,7 @@ def enable_ack_idle_cleanup(host_name):
 
 if __name__ == '__main__':
 
-    indexer_hosts = []  # Add indexers here
+    indexer_hosts = ["10.141.71.69","10.141.65.122","10.141.71.74"]  # Add indexers here
     for indexer in indexer_hosts:
         create_token_with_ack(indexer)
         logging.info('token created for indexer:  %s', indexer)

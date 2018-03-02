@@ -20,6 +20,7 @@ RUN apt-get install -y --no-install-recommends \
     sudo \
     libgssapi-krb5-2 \
     git \
+    vim \
     ca-certificates \
     software-properties-common \
     python-software-properties \
