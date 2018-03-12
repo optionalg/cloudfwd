@@ -222,6 +222,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private void handleSyncAck(EventBatchImpl events) {
         try {
             LOG.debug("handleSyncAck: started handling events=" + events);
+            events.setAcknowledged(true);
             getSender().getChannelMetrics().update(new EventBatchResponse(
                     LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
                     events, getSender().getBaseUrl()));
