@@ -39,11 +39,6 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
     }
     
     @Override
-    public void completed(String reply, int httpCode, boolean syncAck) {
-        completed(reply, httpCode);
-    }
-    
-    @Override
     public void completed(String reply, int code) {
         try {
             switch(code){

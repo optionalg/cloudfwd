@@ -39,9 +39,9 @@ limitations under the License.
     </RollingFile>
   </Appenders>
   <Loggers>
-    <Root level="trace">
+    <Root level="info">
       <!--<AppenderRef ref="VerifyLogFile"/>-->
-      <AppenderRef ref ="Console"/>
+      <AppenderRef ref ="RollingFile"/>
     </Root>
     <Logger name="org.apache.http" level="error">
       <!--<AppenderRef ref="VerifyLogFile"/>-->
