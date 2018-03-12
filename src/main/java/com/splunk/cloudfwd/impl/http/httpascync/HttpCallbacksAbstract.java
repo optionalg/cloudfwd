@@ -56,9 +56,10 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     this.name = name;
   }
 
+  final long getStart() { return start;}
 
   @Override
-  final public void completed(HttpResponse response) {
+  public void completed(HttpResponse response) {
     try {
         LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms", 
             getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
@@ -68,32 +69,13 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
-//        if(code != 200){
-//            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
-//        }
-        completed(reply, code, isSyncAck(response));      
-//        completed(reply, code, false);      
+        completed(reply, code);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
   }
-  
-  final private boolean isSyncAck(HttpResponse response) {
-    try {
-      Header xSplunkAckHeader = response.getFirstHeader("X-Splunk-Ack");
-      if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
-        String xSplunkAck = xSplunkAckHeader.getValue();
-        LOG.debug("isSyncAck: found header X-Splunk-Ack=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck.equals("sync")));
-        return xSplunkAck.equals("sync"); 
-      }
-    } catch (Exception e) {
-      LOG.error("isSyncAck: Unexpected exception e=" + e);
-    }
-    LOG.debug("isSyncAck: X-Splunk-Ack header not found");
-    return false;
-  }
 
-    private void handleCookies(HttpResponse response){
+    void handleCookies(HttpResponse response){
         Header[] headers = response.getHeaders("Set-Cookie");
         if(null == headers ){
             return;
@@ -119,11 +101,9 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         } catch (Exception ex) {
             error(ex);
         }
-    }
-  
+    }  
+
   public abstract void completed(String reply, int code);
-    
-  public abstract void completed(String reply, int code, boolean syncAck);
   
     protected void notify(final LifecycleEvent.Type type, int httpCode, String resp, EventBatchImpl events){
       notify(new EventBatchResponse(type, httpCode, resp, events, getBaseUrl()));

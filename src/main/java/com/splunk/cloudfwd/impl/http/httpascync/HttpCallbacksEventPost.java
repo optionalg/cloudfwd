@@ -16,24 +16,25 @@
 package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.splunk.cloudfwd.EventBatch;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import com.splunk.cloudfwd.error.HecServerBusyException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
-import com.splunk.cloudfwd.impl.http.AckPollResponseValueObject;
 import com.splunk.cloudfwd.impl.http.EventPostResponseValueObject;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
 
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
-import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
+
+import java.io.IOException;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -69,12 +70,44 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     }
     
     @Override
-    public void completed(String reply, int code) {
-        LOG.error("unexpected call completed(String reply, int code) in HttpCallbacksEventPost");
-        completed(reply, code, false);
+    final public void completed(HttpResponse response) {
+        try {
+            LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms",
+                    getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - getStart());
+            int code = response.getStatusLine().getStatusCode();
+            handleCookies(response);
+            String reply = EntityUtils.toString(response.getEntity(), "utf-8");
+            if(null == reply || reply.isEmpty()){
+                LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
+            }
+            completed(reply, code, isSyncAck(response));
+        } catch (IOException e) {
+            LOG.error("Unable to get String from HTTP response entity", e);
+        }
+    }
+    
+    final private boolean isSyncAck(HttpResponse response) {
+        try {
+            Header xSplunkAckHeader = response.getFirstHeader("X-Splunk-Ack");
+            if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
+                String xSplunkAck = xSplunkAckHeader.getValue();
+                LOG.debug("isSyncAck: found header X-Splunk-Ack=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck.equals("sync")));
+                return xSplunkAck.equals("sync");
+            }
+        } catch (Exception e) {
+            LOG.error("isSyncAck: Unexpected exception e=" + e);
+        }
+        LOG.debug("isSyncAck: X-Splunk-Ack header not found");
+        return false;
     }
     
     @Override
+    public void completed(String reply, int code) {
+        failed(new RuntimeException(
+                "Unexpected call of completed(String reply, int code), " +
+                        "reply=" + reply + ", code=" + code));
+    }
+    
     public void completed(String reply, int code, boolean syncAck) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
         try {
@@ -171,7 +204,6 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
                 EventPostResponseValueObject.class);
         if (syncAck) {
             handleSyncAck(events);
-//            getSender().getAcknowledgementTracker().cancel(events);
             return;
         } else if (epr.isAckIdReceived()) {
             events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
