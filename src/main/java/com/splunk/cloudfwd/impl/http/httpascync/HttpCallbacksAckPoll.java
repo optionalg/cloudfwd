@@ -37,7 +37,7 @@ public class HttpCallbacksAckPoll extends HttpCallbacksAbstract {
         super(m, NAME);
         this.LOG = getConnection().getLogger(HttpCallbacksAckPoll.class.getName());
     }
-    
+
     @Override
     public void completed(String reply, int code) {
         try {
