@@ -31,10 +31,7 @@ import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
-
-import java.io.IOException;
 
 /**
   Code    HTTP status	HTTP status code	Status message
@@ -61,6 +58,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private final EventBatchImpl events;
     private final ObjectMapper mapper = new ObjectMapper();
     public static final String Name = "event_post";
+    
+    private static final String SPLUNK_ACK_HEADER_NAME = "X-Splunk-Ack";
 
     public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {
@@ -69,25 +68,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }
     
-    final private boolean isSyncAck(HttpResponse response) {
-        try {
-            Header xSplunkAckHeader = response.getFirstHeader("X-Splunk-Ack");
-            if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
-                String xSplunkAck = xSplunkAckHeader.getValue();
-                LOG.debug("isSyncAck: found header X-Splunk-Ack=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck.equals("sync")));
-                return xSplunkAck.equals("sync");
-            }
-        } catch (Exception e) {
-            LOG.error("isSyncAck: Unexpected exception e=" + e);
-        }
-        LOG.debug("isSyncAck: X-Splunk-Ack header not found");
-        return false;
-    }
-    
-    // Bypass this call to completed implementation with with syncAck=false
+    // This signature may be coming from internal retries, so call with syncAck set to false
     @Override
     public void completed(String reply, int code) { completed(reply, code, false); }
     
+    // Override this method to get access to HttpResponse, as we need to check response headers
     @Override
     public void completed(String reply, int code, HttpResponse response) {
         completed(reply, code, isSyncAck(response));
@@ -187,7 +172,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
-        if (syncAck) {
+        if (syncAck) { // Immediately acknowledge event if we got Sync ack in HTTP response
             handleSyncAck(events);
             return;
         } else if (epr.isAckIdReceived()) {
@@ -204,6 +189,29 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         notify(EVENT_POST_OK, 200, resp, events);
     }
     
+    /**
+     * @param response - HttpResponse
+     * @return returns true if HttpResponse has SPLUNK_ACK_HEADER_NAME header set and if it'ss value is "sync" 
+     */
+    final private boolean isSyncAck(HttpResponse response) {
+        try {
+            Header xSplunkAckHeader = response.getFirstHeader(SPLUNK_ACK_HEADER_NAME);
+            if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
+                String xSplunkAck = xSplunkAckHeader.getValue();
+                LOG.debug("isSyncAck: found header " + SPLUNK_ACK_HEADER_NAME + "=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck.equals("sync")));
+                return xSplunkAck.equals("sync");
+            }
+        } catch (Exception e) {
+            LOG.error("isSyncAck: Unexpected exception e=" + e);
+        }
+        LOG.debug("isSyncAck: " + SPLUNK_ACK_HEADER_NAME + " header not found");
+        return false;
+    }
+    
+    /**
+     * Immediately acknowledge a batch
+     * @param events - EventBatch to immediately acknowledge
+     */
     private void handleSyncAck(EventBatchImpl events) {
         try {
             LOG.debug("handleSyncAck: started handling events=" + events);

@@ -56,10 +56,9 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
     this.name = name;
   }
 
-  final long getStart() { return start;}
 
   @Override
-  public void completed(HttpResponse response) {
+  final public void completed(HttpResponse response) {
     try {
         LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms", 
             getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
@@ -75,7 +74,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
       }      
   }
 
-    void handleCookies(HttpResponse response){
+    private void handleCookies(HttpResponse response){
         Header[] headers = response.getHeaders("Set-Cookie");
         if(null == headers ){
             return;
@@ -102,12 +101,17 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
             error(ex);
         }
     }
-    
-    // Expose http response for functionality depending on it.  
+  
+  /**
+   * This method can be overridden by subclasses to get access to HttpResponse object. Bypassing it by default
+    * @param reply - http reply body
+   * @param code - http reply code
+   * @param response - http response object
+   */  
     public void completed(String reply, int code, HttpResponse response) {
         completed(reply, code);
-    }
-      
+    }  
+
   public abstract void completed(String reply, int code);
   
     protected void notify(final LifecycleEvent.Type type, int httpCode, String resp, EventBatchImpl events){
