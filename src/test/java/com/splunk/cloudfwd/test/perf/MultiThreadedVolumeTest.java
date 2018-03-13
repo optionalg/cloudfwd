@@ -39,7 +39,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
         cliProperties.put(MAX_THREADS_KEY, "300");
         cliProperties.put(DURATION_MINUTES_KEY, "15");
         cliProperties.put(MAX_MEMORY_MB_KEY, "1024"); //500MB
-        cliProperties.put(NUM_SENDERS_KEY, "1");
+        cliProperties.put(NUM_SENDERS_KEY, "384");
         cliProperties.put(PropertyKeys.TOKEN, null); // will use token in cloudfwd.properties by default
         cliProperties.put(PropertyKeys.COLLECTOR_URI, null); // will use token in cloudfwd.properties by default
         cliProperties.put(ENABLE_LIFECYCLE_METRICS_LOGGING_KEY, "false");
@@ -52,7 +52,7 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
     private AtomicInteger batchCounter = new AtomicInteger(0);
     private Map<Comparable, SenderWorker> waitingSenders = new ConcurrentHashMap<>(); // ackId -> SenderWorker
     private ByteBuffer buffer;
-    private final String eventsFilename = "./many_text_events_no_timestamp.sample";
+    private final String eventsFilename = "./events_from_aws_5MB_batch.sample";
     private long start = 0;
     private long testStartTimeMillis = System.currentTimeMillis();
     private long warmUpTimeMillis = 2*60*1000; // 2 mins
