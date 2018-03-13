@@ -82,7 +82,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
             }
             completed(reply, code, isSyncAck(response));
         } catch (IOException e) {
-            LOG.error("Unable to get String from HTTP response entity", e);
+            LOG.error("Unable to parse HTTP response entity", e);
         }
     }
     
@@ -101,12 +101,9 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         return false;
     }
     
+    // Bypass this call to completed implementation with with syncAck=false
     @Override
-    public void completed(String reply, int code) {
-        failed(new RuntimeException(
-                "Unexpected call of completed(String reply, int code), " +
-                        "reply=" + reply + ", code=" + code));
-    }
+    public void completed(String reply, int code) { completed(reply, code, false); }
     
     public void completed(String reply, int code, boolean syncAck) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
