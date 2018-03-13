@@ -69,23 +69,6 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }
     
-    @Override
-    final public void completed(HttpResponse response) {
-        try {
-            LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms",
-                    getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - getStart());
-            int code = response.getStatusLine().getStatusCode();
-            handleCookies(response);
-            String reply = EntityUtils.toString(response.getEntity(), "utf-8");
-            if(null == reply || reply.isEmpty()){
-                LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
-            }
-            completed(reply, code, isSyncAck(response));
-        } catch (IOException e) {
-            LOG.error("Unable to parse HTTP response entity", e);
-        }
-    }
-    
     final private boolean isSyncAck(HttpResponse response) {
         try {
             Header xSplunkAckHeader = response.getFirstHeader("X-Splunk-Ack");
@@ -104,6 +87,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     // Bypass this call to completed implementation with with syncAck=false
     @Override
     public void completed(String reply, int code) { completed(reply, code, false); }
+    
+    @Override
+    public void completed(String reply, int code, HttpResponse response) {
+        completed(reply, code, isSyncAck(response));
+    }
     
     public void completed(String reply, int code, boolean syncAck) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());

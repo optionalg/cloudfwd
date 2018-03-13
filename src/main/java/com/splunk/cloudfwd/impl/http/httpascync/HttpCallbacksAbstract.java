@@ -69,7 +69,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
-        completed(reply, code);      
+        completed(reply, code, response);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
@@ -101,8 +101,13 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         } catch (Exception ex) {
             error(ex);
         }
-    }  
-
+    }
+    
+    // Expose http response for functionality depending on it.  
+    public void completed(String reply, int code, HttpResponse response) {
+        completed(reply, code);
+    }
+      
   public abstract void completed(String reply, int code);
   
     protected void notify(final LifecycleEvent.Type type, int httpCode, String resp, EventBatchImpl events){
