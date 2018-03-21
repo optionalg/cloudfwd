@@ -218,6 +218,7 @@
                     <argLine>${argLine}</argLine><!-- set heap memory for mvn junit tests -->
                     <excludes>
                         <exclude>**/perf/*.java</exclude>
+                        <exclude>**/SslCertValidCloudTrial*.java</exclude>
                         <!--exclude>**/integration/CreateConnectionAcksDisabledIT.java</exclude-->
                         <!--exclude>**/integration/CreateConnectionInvalidTokenIT.java</exclude-->
                         <!--exclude>**/in_detention_tests/InDetentionAllTest.java</exclude-->

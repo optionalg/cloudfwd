@@ -70,7 +70,9 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     
     // This signature may be coming from internal retries, so call with syncAck set to false
     @Override
-    public void completed(String reply, int code) { completed(reply, code, false); }
+    public void completed(String reply, int code) { 
+        LOG.error("entering completed(String reply, int code) signature, reply=" + reply + ", code=" + code);
+        completed(reply, code, false); }
     
     // Override this method to get access to HttpResponse, as we need to check response headers
     @Override
@@ -173,7 +175,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
         if (syncAck) { // Immediately acknowledge event if we got Sync ack in HTTP response
-            handleSyncAck(events);
+            handleSyncAck(events, resp);
             return;
         } else if (epr.isAckIdReceived()) {
             events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
@@ -212,13 +214,11 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
      * Immediately acknowledge a batch
      * @param events - EventBatch to immediately acknowledge
      */
-    private void handleSyncAck(EventBatchImpl events) {
+    private void handleSyncAck(EventBatchImpl events, String resp) {
         try {
             LOG.debug("handleSyncAck: started handling events=" + events);
             events.setAcknowledged(true);
-            getSender().getChannelMetrics().update(new EventBatchResponse(
-                    LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
-                    events, getSender().getBaseUrl()));
+            notify(EVENT_POST_OK, 200, resp, events);
         } catch (Exception e) {
             LOG.debug("handleSyncAck: unexpected exception e=" + e + ", events=" + events);
             throw e;
