@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * To run, enter configuration for a Splunk instance under "CONFIGURABLE" below.
  *
  * To run tests from CLI (with different configurations)
- * EG: mvn test -Dtest=AWSSourcetypeIT "-DargLine=-Duser=admin -Dpassword=changeme -DsplunkHost=localhost -DmgmtPort=8089"
+ * EG: mvn test -Dtest=AWSSourcetypeIT -Duser=admin -Dpassword=changeme -DsplunkHost=localhost -DmgmtPort=8089
  */
 public abstract class AbstractReconciliationTest extends AbstractConnectionTest {
   protected String SINGLE_LINE_SOURCETYPE = "__singleline"; //SHOULD_LINEMERGE=false  in props.conf
@@ -143,13 +143,12 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    */
   @Override
   protected void extractCliTestProperties() {
-    if (System.getProperty("argLine") != null) {
-      LOG.warn("Replacing test properties with command line arguments");
-      Set<String> keys = cliProperties.keySet();
-      for (String e : keys) {
-        if (System.getProperty(e) != null) {
-          cliProperties.replace(e, System.getProperty(e));
-        }
+    String argLine = System.getProperty("argLine");
+    LOG.warn("Replacing test properties with command line arguments, argLine: " + argLine);
+    Set<String> keys = cliProperties.keySet();
+    for (String e : keys) {
+      if (System.getProperty(e) != null) {
+        cliProperties.replace(e, System.getProperty(e));
       }
     }
     LOG.info("Test Arguments:" + cliProperties);
