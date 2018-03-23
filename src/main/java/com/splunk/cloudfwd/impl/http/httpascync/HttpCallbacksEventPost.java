@@ -59,7 +59,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private final ObjectMapper mapper = new ObjectMapper();
     public static final String Name = "event_post";
     
-    private static final String SPLUNK_ACK_HEADER_NAME = "X-Splunk-Ack";
+    public static final String SPLUNK_ACK_HEADER_NAME = "X-Splunk-Ack";
 
     public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {

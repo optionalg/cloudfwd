@@ -15,11 +15,17 @@
  */
 package com.splunk.cloudfwd.impl.sim;
 
+import com.oracle.tools.packager.Log;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.message.HeaderGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -28,9 +34,16 @@ import org.slf4j.LoggerFactory;
 public class CookiedOKHttpResponse extends CannedOKHttpResponse {
     protected static final Logger LOG = LoggerFactory.getLogger(CookiedOKHttpResponse.class.getName());
     String cookie;
+    Boolean syncAck = false;
 
     public CookiedOKHttpResponse(HttpEntity entity, String cookie) {
         super(entity);
+        this.cookie = cookie;
+    }
+    
+    public CookiedOKHttpResponse(HttpEntity entity, String cookie, Boolean syncAck) {
+        this(entity, cookie);
+        this.syncAck = syncAck;
         this.cookie = cookie;
     }
 
@@ -40,15 +53,14 @@ public class CookiedOKHttpResponse extends CannedOKHttpResponse {
 
     @Override
     public Header[] getHeaders(String headerName) {
+        HeaderGroup headers = new HeaderGroup();
         if (headerName.equalsIgnoreCase("Set-Cookie")) {
-            Header[] h = new Header[1];
-            h[0] = new BasicHeader(headerName, this.cookie);
-            return h;
+            headers.addHeader(new BasicHeader(headerName, this.cookie));
         }
-        else {
-            LOG.debug("getHeaders returns no headers other than for \"Set-Cookie\" -- this is a MOCK.");
-            //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            return new Header[]{};
+        if (syncAck) {
+            headers.addHeader(new BasicHeader(HttpCallbacksEventPost.SPLUNK_ACK_HEADER_NAME, Boolean.toString(this.syncAck)));
         }
+        Log.info("getHeaders, headers=" + headers);
+        return headers.getAllHeaders();
     }
 }
