@@ -30,7 +30,7 @@ public class OnlyOnePreflightPassesIT extends AbstractReconciliationTest {
     @Override
     protected void configureProps(ConnectionSettings settings) {
         settings.setToken(createTestToken(null));
-        settings.setUrls("https://127.0.0.1:8088,https://kinesis4.splunkcloud.com:8088");  //two endpoints. The kinesis4 endpoint exsits, but isn't HEC endpoint (it's search head)
+        settings.setUrls(getTestUrl() + ",https://kinesis4.splunkcloud.com:8088");  //two endpoints. The kinesis4 endpoint exsits, but isn't HEC endpoint (it's search head)
         settings.setMockHttp(false);
         settings.setMaxRetries(3);
         settings.setMaxTotalChannels(2);

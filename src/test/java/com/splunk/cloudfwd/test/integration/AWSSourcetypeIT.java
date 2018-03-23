@@ -58,7 +58,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
             getName());
 
     // filenames
-    private String addOnFileName = "./Splunk_TA_aws-kinesis-firehose-0.9.0.spl";
+    private String addOnFileName = "./splunk-add-on-for-amazon-kinesis-firehose_111.spl";
     private String vpcFlowFileName = "./vpc-flow-log.sample";
     private String cloudwatchFileName = "./cloudwatch.sample";
     private String cloudtrailFileName = "./cloudtrail.sample";
@@ -101,7 +101,7 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
     public void cloudwatchToRaw() throws IOException, InterruptedException {
         LOG.info("test: cloudwatchToRaw");
         connection.getSettings().setHecEndpointType(Connection.HecEndpoint.RAW_EVENTS_ENDPOINT);
-        connection.getSettings().setToken(createTestToken("aws:cloudwatch:events"));
+        connection.getSettings().setToken(createTestToken("aws:firehose:cloudwatchevents"));
         sendFromFile(cloudwatchFileName);
         Set<String> results = getEventsFromSplunk();
         verifyResults(eventStringsFromFile(cloudwatchFileName), results);
@@ -161,9 +161,12 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
 
     /*
      * Installs the Splunk Firehose Add-on on Splunk instance.
+     * This test was designed to be run with a single instance installed on the same box.
+     * Requires add on file in addOnFileName to be local to Splunk instance box. 
      * No restart is required.
      */
     private void installAddOn() throws IOException {
+        LOG.info("Starting installAddOn");
         URL resource = getClass().getClassLoader().getResource(addOnFileName);
         if (resource == null) {
             Assert.fail("Cannot find add-on in classpath.");
@@ -183,13 +186,17 @@ public class AWSSourcetypeIT extends AbstractReconciliationTest {
         httppost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 
         HttpResponse postResponse = httpClient.execute(httppost);
-        String postReplyString = parseHttpResponse(postResponse);
+        String postReplyString = parseHttpResponseOrFail(postResponse, false);
 
-        ObjectNode node = (ObjectNode)json.readTree(postReplyString);
-        String location = node.findValue("location").asText();
-        String status = node.findValue("status").asText();
-        String label = node.findValue("label").asText();
-        LOG.info(label + " " + status + " at " + location);
+        try {
+            ObjectNode node = (ObjectNode) json.readTree(postReplyString);
+            String location = node.findValue("location").asText();
+            String status = node.findValue("status").asText();
+            String label = node.findValue("label").asText();
+            LOG.info(label + " " + status + " at " + location);
+        } catch(Exception e) {
+            LOG.error("Unable to parse Splunk response postResponse=" + postResponse + ", e=" + e);
+        }
     }
 
     @Override
