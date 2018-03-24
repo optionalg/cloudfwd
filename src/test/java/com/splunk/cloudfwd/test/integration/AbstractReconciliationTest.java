@@ -70,7 +70,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   /* ************ CLI CONFIGURABLE ************ */
   // Default values
   static {
-    cliProperties.put("splunkHost", "localhost");
+    cliProperties.put("splunkHost", "127.0.0.1");
     cliProperties.put("mgmtPort", "8089");
     cliProperties.put("hecPort", "8088");
     cliProperties.put("user", "admin");
