@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  * 
  * @author ssergeev
  */
-public class SslCertValidCloudTrialFailByDefaultIT extends AbstractConnectionTest {
+public class SslCertValidCloudTrialFailByDefaultDisabled extends AbstractConnectionTest {
 
 
   @Test
