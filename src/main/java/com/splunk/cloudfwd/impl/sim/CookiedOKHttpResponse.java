@@ -15,7 +15,6 @@
  */
 package com.splunk.cloudfwd.impl.sim;
 
-import com.oracle.tools.packager.Log;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -23,9 +22,6 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.message.HeaderGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  *
@@ -60,7 +56,7 @@ public class CookiedOKHttpResponse extends CannedOKHttpResponse {
         if (syncAck) {
             headers.addHeader(new BasicHeader(HttpCallbacksEventPost.SPLUNK_ACK_HEADER_NAME, Boolean.toString(this.syncAck)));
         }
-        Log.info("getHeaders, headers=" + headers);
+        LOG.info("getHeaders, headers=" + headers);
         return headers.getAllHeaders();
     }
 }
