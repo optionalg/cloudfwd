@@ -216,6 +216,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    * returns the search id of the job.
    */
   protected String createSearchJob(HttpClient httpClient) throws IOException {
+    LOG.debug("Starting createSearchJob: httpClient=" + httpClient);
     // POST to create a new search job
     HttpPost httpPost = new HttpPost(
             mgmtSplunkUrl() + "/services/search/jobs");
@@ -288,8 +289,10 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   private void createTestIndex() {
+    LOG.debug("Starting createTestIndex");
     if (INDEX_NAME != null) deleteTestIndex();
     INDEX_NAME = java.util.UUID.randomUUID().toString();
+    LOG.debug("createTestIndex: INDEX_NAME=" + INDEX_NAME);
     try {
       HttpPost httpPost = new HttpPost(mgmtSplunkUrl() +
               "/services/data/indexes/");
@@ -302,13 +305,15 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       LOG.debug("createTestIndex: httpResponse: " + httpResponse);
       LOG.info("createTestIndex: Index successfully created. INDEX_NAME=" + INDEX_NAME);
     } catch (Exception ex) {
-      Assert.fail("createTestIndex: Failed to create index: " +
+      Assert.fail("createTestIndex: Failed to create INDEX_NAME=" + INDEX_NAME + ", ex.getMessage=" +
         ex.getMessage());
     }
   }
 
   private void deleteTestIndex() {
+    LOG.debug("Starting deleteTestIndex");
     if (INDEX_NAME != null) {
+      LOG.debug("deleteTestIndex: INDEX_NAME=" + INDEX_NAME);
       try {
         HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
                 "/services/data/indexes/" + INDEX_NAME);
@@ -367,6 +372,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
 
   // pass sourcetype=null to use the token default sourcetype
   protected String createTestToken(String sourcetype, boolean useACK) {
+    LOG.debug("Starting createTestToken: sourcetype=" + sourcetype + ", useACK=" + useACK);
     String oldToken = null;
     // delete the existing token AFTER the new one is created so Connection
     // doesn't get stuck with an invalid token
@@ -475,6 +481,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    */
   private Set<String> queryJobForResults(HttpClient httpClient, String sid)
           throws IOException {
+    LOG.debug("Starting queryJobForResults: httpClient=" + httpClient + ", sid=" + sid);
     Set<String> results = new HashSet<>();
     HttpGet httpget = new HttpGet(
             "https://" + cliProperties.get("splunkHost") + ":" + cliProperties.get("mgmtPort")
