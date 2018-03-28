@@ -70,15 +70,21 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   /* ************ CLI CONFIGURABLE ************ */
   // Default values
   static {
-    cliProperties.put("splunkHost", "localhost");
+    cliProperties.put("splunkHost", "127.0.0.1");
     cliProperties.put("mgmtPort", "8089");
+    cliProperties.put("hecPort", "8088");
     cliProperties.put("user", "admin");
     cliProperties.put("password", "changeme");
   }
   /* ************ /CLI CONFIGURABLE ************ */
+  
+  public static String getTestUrl() {
+    return "https://" + cliProperties.get("splunkHost") + ":" + cliProperties.get("hecPort");
+  }
 
   public AbstractReconciliationTest() {
     super();
+    extractCliTestProperties();
     LOG.info("NEXT RECONCILIATION TEST...");
 
     // Build a client to share among tests
@@ -122,6 +128,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   protected void configureProps(ConnectionSettings settings) {
     settings.setMockHttp(false);
     settings.setEventBatchSize(16000);
+    settings.setUrls("https://" + cliProperties.get("splunkHost") + ":" + cliProperties.get("hecPort"));
     settings.setToken(createTestToken(getSourceType()));
   }
   
@@ -143,8 +150,6 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    */
   @Override
   protected void extractCliTestProperties() {
-    String argLine = System.getProperty("argLine");
-    LOG.warn("Replacing test properties with command line arguments, argLine: " + argLine);
     Set<String> keys = cliProperties.keySet();
     for (String e : keys) {
       if (System.getProperty(e) != null) {
@@ -211,6 +216,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    * returns the search id of the job.
    */
   protected String createSearchJob(HttpClient httpClient) throws IOException {
+    LOG.debug("Starting createSearchJob: httpClient=" + httpClient);
     // POST to create a new search job
     HttpPost httpPost = new HttpPost(
             mgmtSplunkUrl() + "/services/search/jobs");
@@ -224,14 +230,21 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
     httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
     //Execute and get the response.
     HttpResponse postResponse = httpClient.execute(httpPost);
-    String reply = parseHttpResponse(postResponse);
+    String reply = parseHttpResponseOrFail(postResponse);
     return json.readTree(reply).path("sid").asText();
   }
-
+  
   /*
    * Checks HTTP request for errors. If no errors, returns the response as a String.
    */
-  protected String parseHttpResponse(HttpResponse httpResponse) throws IOException {
+  protected String parseHttpResponseOrFail(HttpResponse httpResponse) throws IOException {
+    return parseHttpResponseOrFail(httpResponse, true);
+  }
+  
+  /*
+   * Checks HTTP request for errors. If no errors, returns the response as a String.
+   */
+  protected static String parseHttpResponseOrFail(HttpResponse httpResponse, Boolean fail) throws IOException {
     String reply;
     if (httpResponse.getStatusLine().getStatusCode() >= 400) {
       LOG.error("checkHttpResponseOrFail: httpResponse" + httpResponse);
@@ -241,8 +254,13 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       if (reply.toLowerCase().contains("unauthorized")) {
         throw new RuntimeException(reply);
       }
-      Assert.fail("Http request failed. Got error httpResponse: " +
-        httpResponse);
+      if(fail) {
+        Assert.fail("Http request failed. Got error httpResponse: " +
+          httpResponse);
+      } else {
+        LOG.error("checkHttpResponseOrFail: Ignoring failed httpResponse, with error reasonPhrase=" + httpResponse.getStatusLine().getReasonPhrase());
+        return "{}";
+      }
     }
     return EntityUtils.toString(httpResponse.getEntity(), "utf-8");
   }
@@ -251,7 +269,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
         HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
                 "/services/data/inputs/http/" + tokenName);
         HttpResponse httpResponse = httpClient.execute(httpRequest);
-        parseHttpResponse(httpResponse);
+        parseHttpResponseOrFail(httpResponse);
         LOG.debug("deleteTestToken: httpResponse: " + httpResponse);
         LOG.info("deleteTestToken: Successfully deleted token: TOKEN_NAME=" +
           tokenName);
@@ -271,8 +289,10 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
   }
 
   private void createTestIndex() {
+    LOG.debug("Starting createTestIndex");
     if (INDEX_NAME != null) deleteTestIndex();
     INDEX_NAME = java.util.UUID.randomUUID().toString();
+    LOG.debug("createTestIndex: INDEX_NAME=" + INDEX_NAME);
     try {
       HttpPost httpPost = new HttpPost(mgmtSplunkUrl() +
               "/services/data/indexes/");
@@ -281,22 +301,24 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       params.add(new BasicNameValuePair("output_mode", "json"));
       httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
       HttpResponse httpResponse = httpClient.execute(httpPost);
-      parseHttpResponse(httpResponse);
+      parseHttpResponseOrFail(httpResponse);
       LOG.debug("createTestIndex: httpResponse: " + httpResponse);
       LOG.info("createTestIndex: Index successfully created. INDEX_NAME=" + INDEX_NAME);
     } catch (Exception ex) {
-      Assert.fail("createTestIndex: Failed to create index: " +
+      Assert.fail("createTestIndex: Failed to create INDEX_NAME=" + INDEX_NAME + ", ex.getMessage=" +
         ex.getMessage());
     }
   }
 
   private void deleteTestIndex() {
+    LOG.debug("Starting deleteTestIndex");
     if (INDEX_NAME != null) {
+      LOG.debug("deleteTestIndex: INDEX_NAME=" + INDEX_NAME);
       try {
         HttpDelete httpRequest = new HttpDelete(mgmtSplunkUrl() +
                 "/services/data/indexes/" + INDEX_NAME);
         HttpResponse httpResponse = httpClient.execute(httpRequest);
-        parseHttpResponse(httpResponse);
+        parseHttpResponseOrFail(httpResponse);
         LOG.debug("deleteTestIndex: httpResponse: " + httpResponse);
         LOG.info("deleteTestIndex: Successfully deleted index. INDEX_NAME=" + INDEX_NAME);
       } catch (Exception ex) {
@@ -316,9 +338,9 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       params.add(new BasicNameValuePair("disabled", "0"));
       params.add(new BasicNameValuePair("output_mode", "json"));
       httpRequest.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-
+      LOG.debug("enableHec, httpRequest=" + httpRequest + ", params=" + httpRequest.getParams());
       HttpResponse httpResponse = httpClient.execute(httpRequest);
-      String httpReply = parseHttpResponse(httpResponse);
+      String httpReply = parseHttpResponseOrFail(httpResponse);
 
       // Parse json from http reply
       JsonNode json_reply = json.readTree(httpReply);
@@ -350,6 +372,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
 
   // pass sourcetype=null to use the token default sourcetype
   protected String createTestToken(String sourcetype, boolean useACK) {
+    LOG.debug("Starting createTestToken: sourcetype=" + sourcetype + ", useACK=" + useACK);
     String oldToken = null;
     // delete the existing token AFTER the new one is created so Connection
     // doesn't get stuck with an invalid token
@@ -373,7 +396,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
       params.add(new BasicNameValuePair("output_mode", "json"));
       httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
       HttpResponse httpResponse = httpClient.execute(httpPost);
-      String httpReply = parseHttpResponse(httpResponse);
+      String httpReply = parseHttpResponseOrFail(httpResponse);
 
       // Parse json from http reply
       JsonNode json_reply = json.readTree(httpReply);
@@ -406,6 +429,7 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
 
   protected void verifyResults(List<Event> sentEvents, Set<String> searchResults) {
     LOG.info("Verifying results...");
+    LOG.debug("verifyResults: sentEvents= "+sentEvents+ ", results="+searchResults);
     Set<String> searchResultsCopy = new HashSet<>(searchResults); // don't modify the original set of results
     if (sentEvents.size() > 100) {
       throw new RuntimeException(
@@ -457,13 +481,14 @@ public abstract class AbstractReconciliationTest extends AbstractConnectionTest 
    */
   private Set<String> queryJobForResults(HttpClient httpClient, String sid)
           throws IOException {
+    LOG.debug("Starting queryJobForResults: httpClient=" + httpClient + ", sid=" + sid);
     Set<String> results = new HashSet<>();
     HttpGet httpget = new HttpGet(
             "https://" + cliProperties.get("splunkHost") + ":" + cliProperties.get("mgmtPort")
             + "/services/search/jobs/" + sid + "/results?output_mode=json");
 
     HttpResponse getResponse = httpClient.execute(httpget);
-    String getReply = parseHttpResponse(getResponse);
+    String getReply = parseHttpResponseOrFail(getResponse);
 
     JsonNode n = json.readTree(getReply);
     if (getReply.toLowerCase().contains("unauthorized")) {
