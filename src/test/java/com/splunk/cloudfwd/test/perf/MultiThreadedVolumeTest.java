@@ -2,6 +2,7 @@ package com.splunk.cloudfwd.test.perf;
 
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.test.mock.ThroughputCalculatorCallback;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
@@ -278,6 +279,11 @@ public class MultiThreadedVolumeTest extends AbstractPerformanceTest {
             //if (seqno % 25 == 0) {
                 checkAndLogPerformance(!warmingUp); // assert only if we are not warming up
             //}
+//            LOG.info("Connection=" + connection + 
+//                    ", channels_total_count=" + connection.getHealth().size() + 
+//                    ", channels_unhealthy_count=" + connection.getHealth().stream().filter(h->!((HecHealthImpl)h).isHealthy()).count() 
+//////                   + ", channels_not_passed_preflight=" + connection.getHealth().stream().filter(h->!((HecHealthImpl)h).is).count()
+//            );
         }
 
         private EventBatch nextBatch(int seqno) {

@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -192,7 +193,7 @@ public abstract class AbstractConnectionTest {
           for (int i = 0; i < expected; i++) {
           ///final EventBatch events =nextEventBatch(i+1);
               Event event = nextEvent(i + 1);
-                LOG.trace("Send event {} i={}", event.getId(), i);
+              LOG.trace("Send event {} i={}", event.getId(), i);
 
               connection.send(event);
           }          
@@ -491,6 +492,15 @@ public abstract class AbstractConnectionTest {
               "\", but got instead the following exceptions in healths: " +
               Arrays.toString(healths.stream().map(h -> h.getStatus().getException()).toArray()));
     }
+  }
+  
+  public List<String> getChannelId(Connection connection) {
+    ArrayList channels = new ArrayList();
+    for (Object c : connection.getHealth()) {
+      channels.add(((HecHealthImpl) c).getChannelId());
+    }
+    LOG.info("List of channel ids {}", channels);
+    return channels;
   }
   
 }

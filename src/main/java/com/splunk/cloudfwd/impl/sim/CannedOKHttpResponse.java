@@ -108,7 +108,7 @@ public class CannedOKHttpResponse implements HttpResponse{
 
     @Override
     public Header getFirstHeader(String string) {
-      return new BasicHeader("Test", "True");
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override

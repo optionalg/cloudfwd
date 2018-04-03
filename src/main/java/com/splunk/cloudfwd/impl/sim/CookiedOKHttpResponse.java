@@ -30,31 +30,35 @@ import org.slf4j.LoggerFactory;
 public class CookiedOKHttpResponse extends CannedOKHttpResponse {
     protected static final Logger LOG = LoggerFactory.getLogger(CookiedOKHttpResponse.class.getName());
     String cookie;
-    Boolean syncAck = false;
-
+    String syncAck = null;
+    HeaderGroup headers = new HeaderGroup();
+    
     public CookiedOKHttpResponse(HttpEntity entity, String cookie) {
         super(entity);
         this.cookie = cookie;
     }
     
-    public CookiedOKHttpResponse(HttpEntity entity, String cookie, Boolean syncAck) {
+    public CookiedOKHttpResponse(HttpEntity entity, String cookie, String syncAck) {
         this(entity, cookie);
         this.syncAck = syncAck;
         this.cookie = cookie;
     }
-
-    public String getCookie() {
-        return cookie;
+    
+    @Override
+    public Header getFirstHeader(String string) {
+        for (Header h: headers.getAllHeaders()) {
+            if(h.getName().equals(string)) { return h; } 
+        }
+        return null;
     }
 
     @Override
     public Header[] getHeaders(String headerName) {
-        HeaderGroup headers = new HeaderGroup();
         if (headerName.equalsIgnoreCase("Set-Cookie")) {
             headers.addHeader(new BasicHeader(headerName, this.cookie));
         }
-        if (syncAck) {
-            headers.addHeader(new BasicHeader(HttpCallbacksEventPost.SPLUNK_ACK_HEADER_NAME, Boolean.toString(this.syncAck)));
+        if (syncAck != null) {
+            headers.addHeader(new BasicHeader(HttpCallbacksEventPost.SPLUNK_ACK_HEADER_NAME, this.syncAck));
         }
         LOG.info("getHeaders, headers=" + headers);
         return headers.getAllHeaders();
