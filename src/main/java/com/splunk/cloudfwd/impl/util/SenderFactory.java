@@ -71,7 +71,7 @@ public class SenderFactory {
             }
 
             URL url = new URL("https://" + hostAddr + ":" + s.getPort());
-            LOG.debug("Trying to add URL: " + url);
+            LOG.debug("createSender: adding url={}", url);
             //We should provide a hostname for http client, so it can properly set Host header
             //this host is required for many proxy server and virtual servers implementations
             //https://tools.ietf.org/html/rfc7230#section-5.4

@@ -201,13 +201,13 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
             if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
                 String xSplunkAck = xSplunkAckHeader.getValue();
                 Boolean xSplunkAckIsSync = xSplunkAck.equals("sync");
-                LOG.debug("isSyncAck: found header " + SPLUNK_ACK_HEADER_NAME + "=" + xSplunkAck + ", isSyncAck=" + xSplunkAckIsSync);
+                LOG.debug("isSyncAck: found header {}={}, isSyncAck={}", SPLUNK_ACK_HEADER_NAME, xSplunkAck, xSplunkAckIsSync);
                 return xSplunkAckIsSync;
             }
         } catch (Exception e) {
             LOG.error("isSyncAck: Unexpected exception e=" + e);
         }
-        LOG.debug("isSyncAck: " + SPLUNK_ACK_HEADER_NAME + " header not found");
+        LOG.debug("isSyncAck: {} header not found", SPLUNK_ACK_HEADER_NAME);
         return false;
     }
     
@@ -217,16 +217,16 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
      */
     private void handleSyncAck(EventBatchImpl events, String resp) {
         try {
-            LOG.debug("handleSyncAck: started handling events=" + events);
+            LOG.debug("handleSyncAck: started handling events={}", events);
             events.setAcknowledged(true);
             getSender().getChannelMetrics().update(new EventBatchResponse(
                     LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
                     events, getSender().getBaseUrl()));
         } catch (Exception e) {
-            LOG.debug("handleSyncAck: unexpected exception e=" + e + ", events=" + events);
+            LOG.debug("handleSyncAck: unexpected exception e={}, events={}", e, events);
             throw e;
         }
-        LOG.debug("handleSyncAck: finished handling events=" + events);
+        LOG.debug("handleSyncAck: finished handling events={}", events);
     }
 
     private void throwConfigurationException(HttpSender sender, int httpCode, String resp) 

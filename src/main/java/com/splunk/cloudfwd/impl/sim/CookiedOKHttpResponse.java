@@ -60,7 +60,7 @@ public class CookiedOKHttpResponse extends CannedOKHttpResponse {
         if (syncAck != null) {
             headers.addHeader(new BasicHeader(HttpCallbacksEventPost.SPLUNK_ACK_HEADER_NAME, this.syncAck));
         }
-        LOG.info("getHeaders, headers=" + headers);
+        LOG.info("getHeaders, headers={}", headers);
         return headers.getAllHeaders();
     }
 }
