@@ -15,25 +15,24 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
-import com.splunk.cloudfwd.HecHealth;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
+import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
-import com.splunk.cloudfwd.impl.util.ThreadScheduler;
-import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.http.httpascync.GenericCoordinatedResponseHandler;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import com.splunk.cloudfwd.impl.http.httpascync.NoDataEventPostResponseHandler;
 import com.splunk.cloudfwd.impl.http.httpascync.ResponseCoordinator;
+import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import org.apache.http.HttpResponse;
+import org.apache.http.concurrent.FutureCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
 
 /**
  * HecIOManager is the mediator between sending and receiving messages to splunk
@@ -51,6 +50,7 @@ public class HecIOManager implements Closeable {
 
     private Logger LOG = LoggerFactory.getLogger(HecIOManager.class.getName());
     private final HttpSender sender;
+    
     private volatile Future ackPollTask;
     private volatile Future healthPollTask;
     private final AcknowledgementTracker ackTracker;
@@ -61,13 +61,11 @@ public class HecIOManager implements Closeable {
         this.sender = sender;
         this.ackTracker = new AcknowledgementTracker(sender);
     }
-
-    /**
-     * @return the ackPollReq
-     */
-    public String getAckPollReq() {
-        return ackTracker.toString();
+    
+    public Future getAckPollTask() {
+        return ackPollTask;
     }
+    
 
     public void startAckPolling() {
         if(null != ackPollTask){

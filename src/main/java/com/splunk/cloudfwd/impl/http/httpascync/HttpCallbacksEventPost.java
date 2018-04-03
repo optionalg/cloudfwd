@@ -200,8 +200,9 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
             Header xSplunkAckHeader = response.getFirstHeader(SPLUNK_ACK_HEADER_NAME);
             if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
                 String xSplunkAck = xSplunkAckHeader.getValue();
-                LOG.debug("isSyncAck: found header " + SPLUNK_ACK_HEADER_NAME + "=" + xSplunkAck + ", isSyncAck=" + (xSplunkAck.equals("sync")));
-                return xSplunkAck.equals("sync");
+                Boolean xSplunkAckIsSync = xSplunkAck.equals("sync");
+                LOG.debug("isSyncAck: found header " + SPLUNK_ACK_HEADER_NAME + "=" + xSplunkAck + ", isSyncAck=" + xSplunkAckIsSync);
+                return xSplunkAckIsSync;
             }
         } catch (Exception e) {
             LOG.error("isSyncAck: Unexpected exception e=" + e);
@@ -218,7 +219,9 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         try {
             LOG.debug("handleSyncAck: started handling events=" + events);
             events.setAcknowledged(true);
-            notify(EVENT_POST_OK, 200, resp, events);
+            getSender().getChannelMetrics().update(new EventBatchResponse(
+                    LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
+                    events, getSender().getBaseUrl()));
         } catch (Exception e) {
             LOG.debug("handleSyncAck: unexpected exception e=" + e + ", events=" + events);
             throw e;

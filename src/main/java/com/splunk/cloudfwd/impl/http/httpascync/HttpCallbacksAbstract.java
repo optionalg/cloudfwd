@@ -79,7 +79,8 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         if(null == headers ){
             return;
         }
-        LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
+        LOG.debug("Channel={} Cookies={}", getChannel(), Arrays.toString(headers));
+        LOG.trace("Channel={} Cookies={} Response={}", getChannel(), Arrays.toString(headers), response);
         StringBuilder buf = new StringBuilder();
         for(int i=0;i<headers.length;i++){
             buf.append(headers[i].getValue());
