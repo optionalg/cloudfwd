@@ -55,10 +55,10 @@ public class CookiedOKHttpResponse extends CannedOKHttpResponse {
     @Override
     public Header[] getHeaders(String headerName) {
         if (headerName.equalsIgnoreCase("Set-Cookie")) {
-            headers.addHeader(new BasicHeader(headerName, this.cookie));
+            headers.updateHeader(new BasicHeader(headerName, this.cookie));
         }
-        if (syncAck != null) {
-            headers.addHeader(new BasicHeader(HttpCallbacksEventPost.SPLUNK_ACK_HEADER_NAME, this.syncAck));
+        if (syncAck != null && syncAck.equals(HttpCallbacksEventPost.ACK_HEADER_SYNC_VALUE)) {
+            headers.updateHeader(new BasicHeader(HttpCallbacksEventPost.ACK_HEADER_NAME, this.syncAck));
         }
         LOG.info("getHeaders, headers={}", headers);
         return headers.getAllHeaders();

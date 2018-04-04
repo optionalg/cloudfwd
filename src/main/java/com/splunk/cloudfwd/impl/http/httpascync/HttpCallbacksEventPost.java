@@ -59,7 +59,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private final ObjectMapper mapper = new ObjectMapper();
     public static final String Name = "event_post";
     
-    public static final String SPLUNK_ACK_HEADER_NAME = "X-Splunk-Ack";
+    public static final String ACK_HEADER_NAME = "X-Splunk-Ack";
+    public static final String ACK_HEADER_SYNC_VALUE = "sync";
 
     public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {
@@ -193,21 +194,21 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     
     /**
      * @param response - HttpResponse
-     * @return returns true if HttpResponse has SPLUNK_ACK_HEADER_NAME header set and if it'ss value is "sync" 
+     * @return returns true if HttpResponse has ACK_HEADER_NAME header set and if it'ss value is ACK_HEADER_SYNC_VALUE 
      */
     final private boolean isSyncAck(HttpResponse response) {
         try {
-            Header xSplunkAckHeader = response.getFirstHeader(SPLUNK_ACK_HEADER_NAME);
+            Header xSplunkAckHeader = response.getFirstHeader(ACK_HEADER_NAME);
             if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
                 String xSplunkAck = xSplunkAckHeader.getValue();
-                Boolean xSplunkAckIsSync = xSplunkAck.equals("sync");
-                LOG.debug("isSyncAck: found header {}={}, isSyncAck={}", SPLUNK_ACK_HEADER_NAME, xSplunkAck, xSplunkAckIsSync);
+                Boolean xSplunkAckIsSync = xSplunkAck.equals(ACK_HEADER_SYNC_VALUE);
+                LOG.debug("isSyncAck: found header {}={}, isSyncAck={}", ACK_HEADER_NAME, xSplunkAck, xSplunkAckIsSync);
                 return xSplunkAckIsSync;
             }
         } catch (Exception e) {
             LOG.error("isSyncAck: Unexpected exception e=" + e);
         }
-        LOG.debug("isSyncAck: {} header not found", SPLUNK_ACK_HEADER_NAME);
+        LOG.debug("isSyncAck: {} header not found", ACK_HEADER_NAME);
         return false;
     }
     
