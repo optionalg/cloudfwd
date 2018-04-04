@@ -59,7 +59,7 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private final ObjectMapper mapper = new ObjectMapper();
     public static final String Name = "event_post";
     
-    public static final String ACK_HEADER_NAME = "X-Splunk-Ack";
+    public static final String ACK_HEADER_NAME = "X-Splunk-HEC-Ack";
     public static final String ACK_HEADER_SYNC_VALUE = "sync";
 
     public HttpCallbacksEventPost(HecIOManager m,
