@@ -15,9 +15,11 @@
  */
 package com.splunk.cloudfwd.impl.sim;
 
+import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.message.HeaderGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,27 +30,37 @@ import org.slf4j.LoggerFactory;
 public class CookiedOKHttpResponse extends CannedOKHttpResponse {
     protected static final Logger LOG = LoggerFactory.getLogger(CookiedOKHttpResponse.class.getName());
     String cookie;
-
+    String syncAck = null;
+    HeaderGroup headers = new HeaderGroup();
+    
     public CookiedOKHttpResponse(HttpEntity entity, String cookie) {
         super(entity);
         this.cookie = cookie;
     }
-
-    public String getCookie() {
-        return cookie;
+    
+    public CookiedOKHttpResponse(HttpEntity entity, String cookie, String syncAck) {
+        this(entity, cookie);
+        this.syncAck = syncAck;
+        this.cookie = cookie;
+    }
+    
+    @Override
+    public Header getFirstHeader(String string) {
+        for (Header h: headers.getAllHeaders()) {
+            if(h.getName().equals(string)) { return h; } 
+        }
+        return null;
     }
 
     @Override
     public Header[] getHeaders(String headerName) {
         if (headerName.equalsIgnoreCase("Set-Cookie")) {
-            Header[] h = new Header[1];
-            h[0] = new BasicHeader(headerName, this.cookie);
-            return h;
+            headers.updateHeader(new BasicHeader(headerName, this.cookie));
         }
-        else {
-            LOG.debug("getHeaders returns no headers other than for \"Set-Cookie\" -- this is a MOCK.");
-            //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            return new Header[]{};
+        if (syncAck != null && syncAck.equals(HttpCallbacksEventPost.ACK_HEADER_SYNC_VALUE)) {
+            headers.updateHeader(new BasicHeader(HttpCallbacksEventPost.ACK_HEADER_NAME, this.syncAck));
         }
+        LOG.info("getHeaders, headers={}", headers);
+        return headers.getAllHeaders();
     }
 }

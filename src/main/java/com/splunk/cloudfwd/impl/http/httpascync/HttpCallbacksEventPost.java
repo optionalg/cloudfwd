@@ -28,8 +28,9 @@ import com.splunk.cloudfwd.impl.http.HttpSender;
 import static com.splunk.cloudfwd.LifecycleEvent.Type.*;
 
 import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
-import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 
 /**
@@ -57,6 +58,9 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     private final EventBatchImpl events;
     private final ObjectMapper mapper = new ObjectMapper();
     public static final String Name = "event_post";
+    
+    public static final String ACK_HEADER_NAME = "X-Splunk-HEC-Ack";
+    public static final String ACK_HEADER_SYNC_VALUE = "sync";
 
     public HttpCallbacksEventPost(HecIOManager m,
             EventBatchImpl events) {
@@ -64,14 +68,25 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         this.events = events;
         LOG = getConnection().getLogger(HttpCallbacksEventPost.class.getName());
     }
-
+    
+    // This signature may be coming from internal retries, so call with syncAck set to false
     @Override
-    public void completed(String reply, int code) {
+    public void completed(String reply, int code) { 
+        LOG.error("entering completed(String reply, int code) signature, reply=" + reply + ", code=" + code);
+        completed(reply, code, false); }
+    
+    // Override this method to get access to HttpResponse, as we need to check response headers
+    @Override
+    public void completed(String reply, int code, HttpResponse response) {
+        completed(reply, code, isSyncAck(response));
+    }
+    
+    public void completed(String reply, int code, boolean syncAck) {
         events.getLifecycleMetrics().setPostResponseTimeStamp(System.currentTimeMillis());
         try {
             switch (code) {
                 case 200:
-                    consumeEventPostOkResponse(reply, code);
+                    consumeEventPostOkResponse(reply, code, syncAck);
                     break;
                 case 503:
                     LOG.debug("503 response from event post on channel={}", getChannel());
@@ -156,11 +171,14 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         resend(new HecServerBusyException(reply));
     }
       
-    public void consumeEventPostOkResponse(String resp, int httpCode) throws Exception {
+    public void consumeEventPostOkResponse(String resp, int httpCode, boolean syncAck) throws Exception {
         LOG.debug("{} Event post response: {} for {}", getChannel(), resp, events);
         EventPostResponseValueObject epr = mapper.readValue(resp,
                 EventPostResponseValueObject.class);
-        if (epr.isAckIdReceived()) {
+        if (syncAck) { // Immediately acknowledge event if we got Sync ack in HTTP response
+            handleSyncAck(events, resp);
+            return;
+        } else if (epr.isAckIdReceived()) {
             events.setAckId(epr.getAckId()); //tell the batch what its HEC-generated ackId is.
         } else if (epr.isAckDisabled()) {
             throwConfigurationException(getSender(), httpCode, resp);
@@ -172,6 +190,44 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         getManager().startAckPolling();
 
         notify(EVENT_POST_OK, 200, resp, events);
+    }
+    
+    /**
+     * @param response - HttpResponse
+     * @return returns true if HttpResponse has ACK_HEADER_NAME header set and if it'ss value is ACK_HEADER_SYNC_VALUE 
+     */
+    final private boolean isSyncAck(HttpResponse response) {
+        try {
+            Header xSplunkAckHeader = response.getFirstHeader(ACK_HEADER_NAME);
+            if (xSplunkAckHeader != null && xSplunkAckHeader.getValue() != null) {
+                String xSplunkAck = xSplunkAckHeader.getValue();
+                Boolean xSplunkAckIsSync = xSplunkAck.equals(ACK_HEADER_SYNC_VALUE);
+                LOG.debug("isSyncAck: found header {}={}, isSyncAck={}", ACK_HEADER_NAME, xSplunkAck, xSplunkAckIsSync);
+                return xSplunkAckIsSync;
+            }
+        } catch (Exception e) {
+            LOG.error("isSyncAck: Unexpected exception e=" + e);
+        }
+        LOG.debug("isSyncAck: {} header not found", ACK_HEADER_NAME);
+        return false;
+    }
+    
+    /**
+     * Immediately acknowledge a batch
+     * @param events - EventBatch to immediately acknowledge
+     */
+    private void handleSyncAck(EventBatchImpl events, String resp) {
+        try {
+            LOG.debug("handleSyncAck: started handling events={}", events);
+            events.setAcknowledged(true);
+            getSender().getChannelMetrics().update(new EventBatchResponse(
+                    LifecycleEvent.Type.ACK_POLL_OK, 200, "N/A", //we don't care about the message body on 200
+                    events, getSender().getBaseUrl()));
+        } catch (Exception e) {
+            LOG.debug("handleSyncAck: unexpected exception e={}, events={}", e, events);
+            throw e;
+        }
+        LOG.debug("handleSyncAck: finished handling events={}", events);
     }
 
     private void throwConfigurationException(HttpSender sender, int httpCode, String resp) 

@@ -68,10 +68,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
-//        if(code != 200){
-//            LOG.warn("NON-200 response code: {} server reply: {}", code, reply);
-//        }
-        completed(reply, code);      
+        completed(reply, code, response);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);
       }      
@@ -82,7 +79,8 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         if(null == headers ){
             return;
         }
-        LOG.debug("{} Cookies {}", getChannel(), Arrays.toString(headers));
+        LOG.debug("Channel={} Cookies={}", getChannel(), Arrays.toString(headers));
+        LOG.trace("Channel={} Cookies={} Response={}", getChannel(), Arrays.toString(headers), response);
         StringBuilder buf = new StringBuilder();
         for(int i=0;i<headers.length;i++){
             buf.append(headers[i].getValue());
@@ -103,6 +101,16 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         } catch (Exception ex) {
             error(ex);
         }
+    }
+  
+  /**
+   * This method can be overridden by subclasses to get access to HttpResponse object. Bypassing it by default
+    * @param reply - http reply body
+   * @param code - http reply code
+   * @param response - http response object
+   */  
+    public void completed(String reply, int code, HttpResponse response) {
+        completed(reply, code);
     }  
 
   public abstract void completed(String reply, int code);

@@ -40,31 +40,36 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
     private static final String cookie2 = "bitter-cookie=crinkles";
 
     private static String currentCookie = cookie1;
-
+    private static String syncAck = null;
+    
     public static synchronized void toggleCookie() {
         if (currentCookie == cookie1)
             currentCookie = cookie2;
         else
             currentCookie = cookie1;
-        LOG.info("Toggled cookie to " + currentCookie);
+        LOG.info("Toggled cookie to {}", currentCookie);
     }
-
+    
+    public static synchronized void setSyncAck(String syncAckValue) {
+      syncAck = syncAckValue;
+    }
+    
     @Override
     public void checkAckEndpoint(FutureCallback<HttpResponse> httpCallback) {
-        LOG.debug("Preflight check with cookie: " + currentCookie);
+        LOG.debug("Preflight check with currentCookie={}, syncAck={}", currentCookie, syncAck);
         httpCallback.completed(
                 new CookiedOKHttpResponse(
                         new CannedEntity("{\\\"acks\\\":[0:false]}"),
-                        currentCookie));
+                        currentCookie, syncAck));
     }
 
     @Override
     public void checkHealthEndpoint(FutureCallback<HttpResponse> httpCallback) {
-        LOG.debug("Health check with cookie: " + currentCookie);
+        LOG.debug("Health check with currentCookie={}, syncAck={}", currentCookie, syncAck);
         httpCallback.completed(
                 new CookiedOKHttpResponse(
                         new CannedEntity("Healthy with cookies"),
-                        currentCookie));
+                        currentCookie, syncAck));
     }
 
     @Override
@@ -89,7 +94,7 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
                 httpCallback.completed(
                         new CookiedOKHttpResponse(
                                 new CannedEntity("{\\\"acks\\\":[0:false]}"),
-                                currentCookie));
+                                currentCookie, syncAck));
             };
             delayResponse(respond);
         }
@@ -104,11 +109,11 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
         @Override
         public void post(HttpPostable events, FutureCallback<HttpResponse> cb) {
             Runnable respond = () -> {
-                LOG.debug("Event post response with cookie: " + currentCookie);
+                LOG.debug("Event post response with currentCookie={}, syncAck={}", currentCookie, syncAck);
                 ((HttpCallbacksAbstract) cb).completed(
                         new CookiedOKHttpResponse(
                                 new CannedEntity("{\"ackId\":" + nextAckId() + "}"),
-                                currentCookie));
+                                currentCookie, syncAck));
             };
             delayResponse(respond);
         }
@@ -129,9 +134,9 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
 
         @Override
         protected HttpResponse getHttpResponse(String entity) {
-            LOG.info("Ack response with cookie: " + currentCookie);
+            LOG.info("Ack response with currentCookie={}, syncAck={}", currentCookie, syncAck);
             CannedEntity e = new CannedEntity(entity);
-            return new CookiedOKHttpResponse(e, currentCookie);
+            return new CookiedOKHttpResponse(e, currentCookie, syncAck);
         }
     }
 

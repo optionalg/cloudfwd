@@ -42,17 +42,9 @@ public class SessionCookiesTest extends AbstractConnectionTest {
 
     @Override
     protected int getNumEventsToSend() {
-        return 1000;
+        return 10000;
     }
 
-    protected List<String> getChannelId(Connection connection) {
-        ArrayList channels = new ArrayList();
-        for (Object c : connection.getHealth()) {
-            channels.add(((HecHealthImpl) c).getChannelId());
-        }
-        LOG.info("List of channel ids {}", channels);
-        return channels;
-    }
 
     @Override
     protected void configureProps(ConnectionSettings settings) {

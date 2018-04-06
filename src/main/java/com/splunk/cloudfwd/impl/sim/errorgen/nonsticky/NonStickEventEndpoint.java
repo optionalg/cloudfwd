@@ -67,7 +67,7 @@ public class NonStickEventEndpoint extends EventEndpoint {
   @Override
   public AckEndpoint getAckEndpoint() {
     AckEndpoint a = ackEndpoints.get(currentChannelIdx);
-    LOG.trace("AckEndpoint is " + a);
+    LOG.trace("AckEndpoint is {}", a);
     return a;
   }
 
