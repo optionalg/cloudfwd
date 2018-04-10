@@ -34,7 +34,7 @@ import org.junit.Test;
  */
 public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
 
-    final int n = 100;
+    final int n = 10;
     boolean fail = true;
 
     
@@ -71,7 +71,7 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
                 "SENDING EVENTS WITH CLASS GUID: " + TEST_CLASS_INSTANCE_GUID
                         + "And test method GUID " + testMethodGUID);
           for (int i = 0; i < expected; i++) {
-              if (i % 25 == 0) {
+              if (i % (n/4) == 0) {
                 fail = !fail; //0-25:ok, 26-50: fail, 51-75:fail, 76-100:ok
                 OutOfOrderAckIDFailEndpoints.toggleFail(fail);
               }            
@@ -94,7 +94,7 @@ public class OutOfOrderAckIdWithFailTest extends AbstractConnectionTest {
     @Override
     protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.acks.OutOfOrderAckIDFailEndpoints");
-        settings.setBlockingTimeoutMS(30000);
+        settings.setBlockingTimeoutMS(3000);
         settings.setUnresponsiveMS(-1); //no dead channel detection
         settings.setMaxTotalChannels(4);
         settings.setAckTimeoutMS(60000); //we don't want the ack timout kicking in

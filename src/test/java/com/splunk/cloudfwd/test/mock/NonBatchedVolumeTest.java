@@ -28,7 +28,7 @@ import org.junit.Test;
  */
 public class NonBatchedVolumeTest extends AbstractConnectionTest {
 
-  protected int numToSend = 1000000;
+  protected int numToSend = 100000;
 
   @Test
   public void sendWithoutBatching() throws InterruptedException, TimeoutException, HecConnectionTimeoutException {

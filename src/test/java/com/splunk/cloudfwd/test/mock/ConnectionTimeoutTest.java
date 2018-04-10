@@ -43,7 +43,9 @@ public class ConnectionTimeoutTest extends AbstractConnectionTest {
     settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints");
     settings.setMaxUnackedEventBatchPerChannel(1);
     settings.setMaxTotalChannels(1);
+    settings.setMaxTotalChannels(1);
     settings.setAckTimeoutMS(60000);
+    settings.setBlockingTimeoutMS(750);
     settings.setAckPollMS(250);
     settings.setUnresponsiveMS(-1);
   }

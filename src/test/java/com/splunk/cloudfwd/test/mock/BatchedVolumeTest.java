@@ -28,7 +28,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class BatchedVolumeTest extends AbstractConnectionTest {
 
-  protected int numToSend = 1000000;
+  protected int numToSend = 100000;
 
   public BatchedVolumeTest() {
   }
