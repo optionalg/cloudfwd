@@ -28,8 +28,8 @@ import org.apache.http.concurrent.FutureCallback;
  * @author ghendrey
  */
 public class SlowEndpoints extends SimulatedHECEndpoints {
-  public static long sleep = 10000; //10 second
-
+  public static long sleep = 1000; //1 second
+  
   @Override
   public void pollAcks(HecIOManager ackMgr,
           FutureCallback<HttpResponse> httpCallback) {

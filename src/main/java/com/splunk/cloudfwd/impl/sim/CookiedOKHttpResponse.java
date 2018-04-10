@@ -31,7 +31,6 @@ public class CookiedOKHttpResponse extends CannedOKHttpResponse {
     protected static final Logger LOG = LoggerFactory.getLogger(CookiedOKHttpResponse.class.getName());
     String cookie;
     String syncAck = null;
-    HeaderGroup headers = new HeaderGroup();
     
     public CookiedOKHttpResponse(HttpEntity entity, String cookie) {
         super(entity);
@@ -42,14 +41,6 @@ public class CookiedOKHttpResponse extends CannedOKHttpResponse {
         this(entity, cookie);
         this.syncAck = syncAck;
         this.cookie = cookie;
-    }
-    
-    @Override
-    public Header getFirstHeader(String string) {
-        for (Header h: headers.getAllHeaders()) {
-            if(h.getName().equals(string)) { return h; } 
-        }
-        return null;
     }
 
     @Override
