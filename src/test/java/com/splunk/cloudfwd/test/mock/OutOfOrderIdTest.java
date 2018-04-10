@@ -29,7 +29,7 @@ import org.junit.Test;
  */
 public class OutOfOrderIdTest extends AbstractConnectionTest {
 
-    final int n = 100000;
+    final int n = 10000;
     
     @Test
     public void testOutofOrderIDsWithCheckpointDisabled() throws InterruptedException{
