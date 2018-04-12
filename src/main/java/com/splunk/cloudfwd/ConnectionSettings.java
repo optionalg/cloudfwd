@@ -147,6 +147,9 @@ public class ConnectionSettings {
     
     @JsonProperty("event_batch_flush_timeout_ms")
     private long eventBatchFlushTimeout = DEFAULT_EVENT_BATCH_FLUSH_TIMEOUT_MS;
+    
+    @JsonProperty("connection_throws_exception_on_creation")
+    private boolean conntctionThrowsExceptionOnCreation = DEFAULT_CONNECTION_THROWS_EXCEPTION_ON_CREATION;
 
     @Deprecated
     /*
@@ -402,7 +405,9 @@ public class ConnectionSettings {
     public String getIndex() {
         return this.splunkHecIndex;
     }
-
+    
+    public Boolean getConntctionThrowsExceptionOnCreation() { return this.conntctionThrowsExceptionOnCreation; }
+    
     /* ***************************** SETTERS ******************************* */
     // Setters should not throw Exceptions or call callbacks on Connection instance
     // because they may be called before the Connection is instantiated.
@@ -741,6 +746,15 @@ public class ConnectionSettings {
           checkAndRefreshChannels(); 
       }
   }
+    
+    /**
+     * enable or disable connnection to throw exception in creation if no channels 
+     * pass preflights within 
+     * @param enable set to true to enable, false to disable
+     */
+    public void setConntctionThrowsExceptionOnCreation(Boolean enable) { 
+      this.conntctionThrowsExceptionOnCreation = enable;
+    }
   
     /**
      * Checking if LoadBalancer exists before refreshing channels
@@ -753,7 +767,7 @@ public class ConnectionSettings {
     }
 
     protected Logger getLog() {
-      if (this.connection != null) {
+      if (this.connection != null)  {
           return LOG;
       } else {
           if (GENERIC_LOG == null) {
@@ -800,6 +814,9 @@ public class ConnectionSettings {
                     break;
                 case PropertyKeys.SOURCETYPE:
                     setSourcetype(val);
+                    break;
+                case PropertyKeys.CONNECTION_THROWS_EXCEPTION_ON_CREATION:
+                    setConntctionThrowsExceptionOnCreation(Boolean.valueOf(val));
                     break;
                 default:
                     LOG.error("Attempt to change property not supported: " + key);

@@ -266,8 +266,19 @@ public class PropertyKeys {
    * @see EVENT_BATCH_SIZE
    */
   public static final String EVENT_BATCH_FLUSH_TIMEOUT_MS = "event_batch_flush_timeout_ms";
-
-
+  
+  
+  /**
+   * Make connection to wait for at least one channel to pass preflight tests 
+   * to validate configuration settings. If no channels pass preflight tests 
+   * in PREFLIGHT_TIMEOUT_MS, connection instantiation throws an exception.
+   * If disabled, Connection instantiation always succeeds and an exception 
+   * will be thrown on send, if no channels are available.
+   * 
+   * @see PREFLIGHT_TIMEOUT_MS
+   */
+  public static final String CONNECTION_THROWS_EXCEPTION_ON_CREATION = "connection_throws_exception_on_creation";
+  
   /* **************************** DEFAULTS ************************* */
   /**
    * Default value for EVENT_BATCH_SIZE property.
@@ -444,6 +455,13 @@ public class PropertyKeys {
    *
    * @see ACK_TIMEOUT_MS
    */
-  public static final long MIN_CHANNEL_QUIESCE_TIMEOUT_MS = MIN_ACK_TIMEOUT_MS + 30000; 
+  public static final long MIN_CHANNEL_QUIESCE_TIMEOUT_MS = MIN_ACK_TIMEOUT_MS + 30000;
   
+  
+  /**
+   * By default connection waits for at least one channel to pass preflight 
+   * tests to validate configuration settings. If disabled, Connection instantiation
+   * always succeeds and an exception will be thrown on send, if no channels are available. 
+   */
+  public static final boolean DEFAULT_CONNECTION_THROWS_EXCEPTION_ON_CREATION = false;
 }

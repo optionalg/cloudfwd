@@ -9,7 +9,7 @@ import org.junit.Test;
 /**
  * Created by eprokop on 10/5/17.
  */
-public class CreateConnectionInvalidTokenIT extends AbstractReconciliationTest {
+public class CreateConnectionInvalidTokenConnThrowsIT extends AbstractReconciliationTest {
 
     // Scenario: Connection created with invalid token
     // Expected behavior: Connection fails to instantiate and throws proper exception
@@ -20,6 +20,7 @@ public class CreateConnectionInvalidTokenIT extends AbstractReconciliationTest {
     @Override
     protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
+        settings.setConntctionThrowsExceptionOnCreation(true);
         settings.setToken("invalid_token");
     }
 

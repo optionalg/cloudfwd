@@ -15,15 +15,12 @@ package com.splunk.cloudfwd.test.integration.ssl_cert_tests;/*
  */
 
 import com.splunk.cloudfwd.ConnectionSettings;
-import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
-import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Test;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -35,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  * 
  * @author ssergeev
  */
-public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
+public class SslCertDoesNotMatchHostConnThrowsIT extends AbstractConnectionTest {
   
   @Test
   /**
@@ -43,12 +40,13 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
    * during the send and validates that all channels became unhealthy caused by
    * SSLPeerUnverifiedException exception. 
    */
-  public void sendThrowsAndHealthContainsException() throws InterruptedException, HecConnectionTimeoutException {
-    sendEvents();
+  public void connCreationThrows() throws InterruptedException, HecConnectionTimeoutException {
+      LOG.info("test: sendThrowsAndHealthContainsException");
   }
   
   @Override
   protected void configureProps(ConnectionSettings settings) {
+    settings.setConntctionThrowsExceptionOnCreation(true);
     settings.setUrls("https://kinesis1-indexers-229328170.us-east-1.elb.amazonaws.com:443");
     settings.setToken("DB22D948-5A1D-4E73-8626-0AB3143BEE47");
     settings.enableCertValidation();
@@ -56,15 +54,32 @@ public class SslCertDoesNotMatchHostIT extends AbstractConnectionTest {
   }
   
   
-  @Override
-  protected int getNumEventsToSend() {
-      return 1;
-  }
-
-  @Override
-  protected boolean shouldSendThrowException() { return true; }
+      @Override
+    protected int getNumEventsToSend() {
+        return 0;
+    }
+    
+    protected boolean isExpectedConnInstantiationException(Exception e) {
+        return e.getCause() instanceof SSLPeerUnverifiedException;
+    }
   
-  @Override
-  protected boolean isExpectedSendException(Exception e) { return e instanceof HecNoValidChannelsException; }
+    /**
+     * Override in test if your test wants Connection instantiation to fail
+     * @return
+     */
+    protected boolean connectionInstantiationShouldFail() {
+        return true;
+    }
 
+
+  @Override
+  protected BasicCallbacks getCallbacks() {
+    return new BasicCallbacks(getNumEventsToSend()) {
+      @Override
+      public void await(long timeout, TimeUnit u) throws InterruptedException {
+        // don't need to wait for anything since we don't get a failed callback
+      }
+    };
+  }
+  
 }

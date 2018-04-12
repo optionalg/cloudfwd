@@ -12,6 +12,7 @@ import com.splunk.cloudfwd.error.HecMaxRetriesException;
 public class CreateConnectionUnknownHostTest extends ExceptionConnInstantiationTest {
     @Override
     protected void configureProps(ConnectionSettings settings) {
+        settings.setConntctionThrowsExceptionOnCreation(true);
         settings.setUrls("https://foobarunknownhostbaz:8088");
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.unknownhost.UnknownHostEndpoints");
     }

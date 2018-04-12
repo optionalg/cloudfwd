@@ -16,7 +16,7 @@ import java.util.ArrayList;
 /**
  * Created by mhora on 10/4/17.
  */
-public class DownIndexersAllDownTest extends AbstractConnectionTest {
+public class DownIndexersAllDownConnectionThrowsTest extends AbstractConnectionTest {
 
     protected int getNumEventsToSend() {
         return 1000;
@@ -30,6 +30,7 @@ public class DownIndexersAllDownTest extends AbstractConnectionTest {
 
     @Override
     protected void configureProps(ConnectionSettings settings) {
+        settings.setConntctionThrowsExceptionOnCreation(true);
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.indexer.DownIndexerEndpoints");
         settings.setMaxTotalChannels(4);
         settings.setBlockingTimeoutMS(10000);

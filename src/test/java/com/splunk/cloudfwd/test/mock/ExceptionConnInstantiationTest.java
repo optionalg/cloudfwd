@@ -34,6 +34,7 @@ public class ExceptionConnInstantiationTest extends AbstractConnectionTest{
 
     @Override
     protected void configureProps(ConnectionSettings settings) {
+        settings.setConntctionThrowsExceptionOnCreation(true);
         settings.setUrls("floort");
     }
     

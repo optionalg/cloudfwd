@@ -9,7 +9,7 @@ import org.junit.Test;
 /**
  * Created by eprokop on 10/4/17.
  */
-public class CreateConnectionAcksDisabledIT extends AbstractReconciliationTest {
+public class CreateConnectionAcksDisabledConnThrowsIT extends AbstractReconciliationTest {
     @Override
     protected int getNumEventsToSend() {
         return 0;
@@ -17,11 +17,13 @@ public class CreateConnectionAcksDisabledIT extends AbstractReconciliationTest {
 
     @Test
     public void createConnectionWithAcksDisabled() {
+        
     }
 
     @Override
     protected void configureProps(ConnectionSettings settings) {
         super.configureProps(settings);
+        settings.setConntctionThrowsExceptionOnCreation(true);
         settings.setToken(createTestToken(null, false));
         settings.setMaxTotalChannels(1);
     }
