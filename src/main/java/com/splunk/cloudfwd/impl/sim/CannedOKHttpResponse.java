@@ -35,10 +35,12 @@ import org.slf4j.LoggerFactory;
 public class CannedOKHttpResponse implements HttpResponse{
   protected static final Logger LOG = LoggerFactory.getLogger(CannedOKHttpResponse.class.getName());
   HttpEntity entity;
-  HeaderGroup headers = new HeaderGroup();
+  HeaderGroup headers;
 
   public CannedOKHttpResponse(HttpEntity entity) {
-    this.entity = entity;
+    headers = new HeaderGroup();
+    this.entity = entity
+    ;
   }
   
    @Override
@@ -112,7 +114,7 @@ public class CannedOKHttpResponse implements HttpResponse{
     @Override
     public Header getFirstHeader(String string) {
       for (Header h: headers.getAllHeaders()) {
-        if(h.getName().equals(string)) { return h; }
+        if(h.getName().equalsIgnoreCase(string)) { return h; }
       }
       return null;
     }

@@ -35,23 +35,26 @@ public class CookiedOKHttpResponse extends CannedOKHttpResponse {
     public CookiedOKHttpResponse(HttpEntity entity, String cookie) {
         super(entity);
         this.cookie = cookie;
+        headers.updateHeader(new BasicHeader("Set-Cookie", this.cookie));
+        LOG.info("getHeaders, headers={}", headers);
     }
     
     public CookiedOKHttpResponse(HttpEntity entity, String cookie, String syncAck) {
         this(entity, cookie);
         this.syncAck = syncAck;
-        this.cookie = cookie;
-    }
-
-    @Override
-    public Header[] getHeaders(String headerName) {
-        if (headerName.equalsIgnoreCase("Set-Cookie")) {
-            headers.updateHeader(new BasicHeader(headerName, this.cookie));
-        }
         if (syncAck != null && syncAck.equals(HttpCallbacksEventPost.ACK_HEADER_SYNC_VALUE)) {
             headers.updateHeader(new BasicHeader(HttpCallbacksEventPost.ACK_HEADER_NAME, this.syncAck));
         }
         LOG.info("getHeaders, headers={}", headers);
+    }
+
+    @Override
+    public Header[] getHeaders(String headerName) {
+        return headers.getHeaders(headerName);
+    }
+    
+    @Override
+    public Header[] getAllHeaders() {
         return headers.getAllHeaders();
     }
 }

@@ -585,6 +585,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     
     public void closeAndReplaceAndFail() throws InterruptedException {
       closeAndReplace(true);
+      if(!this.preflightCompleted) return;
       for (EventBatchImpl e : getConnection().getUnackedEvents(this)) {
         getConnection().getCallbacks().failed(e, new HecNonStickySessionException("Sticky Session Violation exception"));
       }
@@ -603,7 +604,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       LOG.warn("Force closing dead channel {}", HecChannel.this);
       interalForceClose();
       health.dead();
-      resendInFlightEvents();
+      if(!this.preflightCompleted) {
+        LOG.info("closeAndReplaceAndResend: dispatuching resending of inFlightEvents");
+        resendInFlightEvents();
+      }
     }
 
 

@@ -15,6 +15,7 @@
  */
 package com.splunk.cloudfwd.impl.http;
 
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -94,6 +95,9 @@ public class AcknowledgementTracker implements EventTracker {
           return;
       }
     Long ackId = epr.getAckId();
+    if (polledAcksByAckId.get(ackId) != null) {
+      throw new HecNonStickySessionException("Got duplucated ackId=" + ackId);
+    }
     polledAcksByAckId.put(ackId, events);
   }
 

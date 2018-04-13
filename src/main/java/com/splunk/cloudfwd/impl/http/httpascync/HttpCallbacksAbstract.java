@@ -18,10 +18,10 @@ package com.splunk.cloudfwd.impl.http.httpascync;
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.error.HecServerErrorResponseException;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
-import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpSender;
@@ -31,7 +31,12 @@ import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -58,12 +63,13 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
 
 
   @Override
-  final public void completed(HttpResponse response) {
+  public void completed(HttpResponse response) {
     try {
         LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms", 
             getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
         int code = response.getStatusLine().getStatusCode();
-        handleCookies(response);
+        getSender().checkStickySesssionViolation(response);
+        //handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
@@ -71,25 +77,59 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         completed(reply, code, response);      
       } catch (IOException e) {      
         LOG.error("Unable to get String from HTTP response entity", e);
-      }      
+      } catch (HecNonStickySessionException e) {
+        LOG.warn("completed call hangle got e={} e.message={}", e, e.getMessage());
+      }
   }
 
-    private void handleCookies(HttpResponse response){
-        Header[] headers = response.getHeaders("Set-Cookie");
-        if(null == headers ){
-            return;
-        }
-        LOG.debug("Channel={} Cookies={}", getChannel(), Arrays.toString(headers));
-        LOG.trace("Channel={} Cookies={} Response={}", getChannel(), Arrays.toString(headers), response);
-        StringBuilder buf = new StringBuilder();
-        for(int i=0;i<headers.length;i++){
-            buf.append(headers[i].getValue());
-            if(i < headers.length-1){
-                buf.append(';'); //cookies are semi-colon separated
-            }
-        }
-        ((CookieClient) getSender()).setSessionCookies(buf.toString());
+//    private void handleCookies(HttpResponse response){
+//        Header[] headers = response.getHeaders("Set-Cookie");
+//        if(null == headers ){
+//            return;
+//        }
+//        LOG.debug("Channel={} Cookies={}", getChannel(), Arrays.toString(headers));
+//        LOG.trace("Channel={} Cookies={} Response={}", getChannel(), Arrays.toString(headers), response);
+//        StringBuilder buf = new StringBuilder();
+//        for(int i=0;i<headers.length;i++){
+//          buf.append(headers[i].getValue());
+//          if(i < headers.length-1){
+//              buf.append(';'); //cookies are semi-colon separated
+//          }
+//        }
+//        getSender().setSessionCookies(buf.toString());
+//    }
+  
+  protected String handleStickySession(HttpResponse response) {
+    Header[] headers = response.getHeaders("Set-Cookie");
+    if(null == headers ){
+      return null;
     }
+    LOG.debug("Channel={} Cookies={}", getChannel(), Arrays.toString(headers));
+    LOG.trace("Channel={} Cookies={} Response={}", getChannel(), Arrays.toString(headers), response);
+    Map<String, HttpCookie> m = new HashMap<>();
+    for(int i=0;i<headers.length;i++){
+      List<HttpCookie> cookies = HttpCookie.parse(headers[i].toString());
+      for (HttpCookie cookie: cookies) {
+        // replace the latter 
+        m.put(cookie.getName() + cookie.getPath() + cookie.getDomain(), cookie);
+        LOG.debug("cookie={} Path={} maxAge={}", cookie, cookie.getPath(), cookie.getMaxAge());
+      }
+    }
+    LOG.debug("m={}", m);
+    StringBuilder buf = new StringBuilder();
+    for(HttpCookie cookie: m.values()){
+     if(cookie.getMaxAge() > 0) {
+       getSender().handleStickySessionViolation(new HecNonStickySessionException(
+               "Received a sticky session with non-empty max-age parameter. " +
+                       "Disable sticky session expiration to fix this problem. " +
+                       "cookie=" + cookie.toString() +
+                       " max-age=" + cookie.getMaxAge())); 
+     }
+      
+      buf.append(';'); //cookies are semi-colon separated
+    }
+    return buf.toString();
+  }
   
     /**
      * Cancelled is invoked when we abort HttpRequest in process of closing a channel. It is not indicative a problem.
