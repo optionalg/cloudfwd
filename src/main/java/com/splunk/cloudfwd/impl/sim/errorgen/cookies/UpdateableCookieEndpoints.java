@@ -32,6 +32,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.ion.Timestamp;
 
 public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
     private static final Logger LOG = LoggerFactory.getLogger(UpdateableCookieEndpoints.class.getName());
@@ -43,11 +44,8 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
     private static String syncAck = null;
     
     public static synchronized void toggleCookie() {
-        if (currentCookie == cookie1)
-            currentCookie = cookie2;
-        else
-            currentCookie = cookie1;
-        LOG.info("Toggled cookie to {}", currentCookie);
+        currentCookie = "cookie="+Long.toHexString(Double.doubleToLongBits(Math.random()));
+        LOG.info("Toggled cookie to " + currentCookie);
     }
     
     public static synchronized void setSyncAck(String syncAckValue) {
