@@ -36,6 +36,7 @@ public class SessionCookiesRandomTest extends AbstractConnectionTest {
             LOG.trace("Toggling cookies from event 21-100: {}", i);
             UpdateableCookieEndpoints.toggleCookie();
         }
+        LOG.debug("number of channels={}", connection.getHealth().size());
         return super.nextEvent(i);
     }
 
@@ -45,7 +46,8 @@ public class SessionCookiesRandomTest extends AbstractConnectionTest {
         return 1000;
     }
 
-    protected List<String> getChannelId(Connection connection) {
+    @Override
+    public List<String> getChannelId(Connection connection) {
         ArrayList channels = new ArrayList();
         for (Object c : connection.getHealth()) {
             channels.add(((HecHealthImpl) c).getChannelId());
