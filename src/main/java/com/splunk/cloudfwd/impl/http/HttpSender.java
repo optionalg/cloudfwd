@@ -523,7 +523,7 @@ public final class HttpSender implements Endpoints, CookieClient {
                             getChannel());
                     getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
                     getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
-                    resendEvents(); //will ultimately result in this channel getting killed
+                    dispatchChannelCloseAndReplace(); //will ultimately result in this channel getting killed
                 }
             }//end sync
         } else {
@@ -531,11 +531,11 @@ public final class HttpSender implements Endpoints, CookieClient {
         }
     }
     
-    private void resendEvents(){
+    private void dispatchChannelCloseAndReplace(){
         Runnable r = ()->{
              try {
-                LOG.debug("HttpSender resendEvents on channel={}", getChannel());
-                getChannel().closeAndReplaceAndResend();
+                LOG.debug("HttpSender dispatchChannelCloseAndReplace on channel={}", getChannel());
+                getChannel().closeAndReplaceAndFail();
             } catch (Exception ex) {
                 ex.printStackTrace();
                 LOG.error("Exception '{}' trying to handle sticky session-cookie violation on channel={}", ex.getMessage(), getChannel(), ex);
