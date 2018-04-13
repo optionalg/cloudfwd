@@ -513,7 +513,8 @@ public final class HttpSender implements Endpoints, CookieClient {
         }
         if (null != this.cookie && !this.cookie.equals(cookie)) {
             synchronized (this) { //we don't want to make multiple attempts to handle the same detected change
-                if (null != this.cookie && !this.cookie.equals(cookie)) { //must double-check the condition once inside sync'd block
+                if (null != this.cookie && !this.cookie.equals(cookie) &&
+                        !getChannel().isQuiesced()) { //must double-check the condition once inside sync'd block
                     LOG.warn(
                             "An attempt was made to change the Session-Cookie from {} to {} on {}",
                             this.cookie, cookie, getChannel());
@@ -538,7 +539,7 @@ public final class HttpSender implements Endpoints, CookieClient {
             } catch (Exception ex) {
                 ex.printStackTrace();
                 LOG.error("Exception '{}' trying to handle sticky session-cookie violation on channel={}", ex.getMessage(), getChannel(), ex);
-            }            
+            }
         };//end runnable
         ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
     }
