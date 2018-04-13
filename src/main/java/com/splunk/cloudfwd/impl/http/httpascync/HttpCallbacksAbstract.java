@@ -31,7 +31,10 @@ import com.splunk.cloudfwd.impl.http.lifecycle.EventBatchResponse;
 import com.splunk.cloudfwd.impl.http.lifecycle.RequestFailed;
 import com.splunk.cloudfwd.impl.http.lifecycle.Response;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.util.Arrays;
+import java.util.List;
+
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -83,6 +86,8 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.trace("Channel={} Cookies={} Response={}", getChannel(), Arrays.toString(headers), response);
         StringBuilder buf = new StringBuilder();
         for(int i=0;i<headers.length;i++){
+          List<HttpCookie> cookies = HttpCookie.parse(headers[i].toString());
+          LOG.debug("cookies={}", cookies);
             buf.append(headers[i].getValue());
             if(i < headers.length-1){
                 buf.append(';'); //cookies are semi-colon separated
