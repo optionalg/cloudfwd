@@ -78,10 +78,10 @@ public class SessionCookiesRandomTest extends AbstractConnectionTest {
     @Override
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
-            @Override
-            public void await(long timeout, TimeUnit u) throws InterruptedException {
-                // don't need to wait for anything since we don't get a failed callback
-            }
+//            @Override
+//            public void await(long timeout, TimeUnit u) throws InterruptedException {
+//                // don't need to wait for anything since we don't get a failed callback
+//            }
 
             @Override
             protected boolean isExpectedFailureType(Exception e){
