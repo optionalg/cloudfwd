@@ -3,6 +3,7 @@ package com.splunk.cloudfwd.test.mock;
 import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
+import com.splunk.cloudfwd.error.HecMaxRetriesException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints;
 import com.splunk.cloudfwd.impl.util.HecHealthImpl;
@@ -60,14 +61,9 @@ public class SessionCookiesTest extends AbstractConnectionTest {
     protected BasicCallbacks getCallbacks() {
         return new BasicCallbacks(getNumEventsToSend()) {
             @Override
-            public void await(long timeout, TimeUnit u) throws InterruptedException {
-                // don't need to wait for anything since we don't get a failed callback
-            }
-            
-            @Override
             protected boolean isExpectedFailureType(Exception e){
                 LOG.debug("isExpectedFailureType: e={}", e.toString());
-                return e instanceof HecNonStickySessionException;
+                return (e instanceof HecNonStickySessionException || e instanceof HecMaxRetriesException);
             }
             
         };
