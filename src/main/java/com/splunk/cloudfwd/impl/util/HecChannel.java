@@ -17,6 +17,7 @@ package com.splunk.cloudfwd.impl.util;
 
 import com.splunk.cloudfwd.ConnectionCallbacks;
 import com.splunk.cloudfwd.EventBatch;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
@@ -582,20 +583,27 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         LOG.info("Resent {} Events from dead channel {}", count,  HecChannel.this);
     }
     
+    public void closeAndReplaceAndFail() throws InterruptedException {
+      closeAndReplace(true);
+      for (EventBatchImpl e : getConnection().getUnackedEvents(this)) {
+        getConnection().getCallbacks().failed(e, new HecNonStickySessionException("Sticky Session Violation exception"));
+      }
+    }
+    
     public void closeAndReplaceAndResend(){
-        try {
-            //synchronize on the load balancer so we do not allow the load balancer to be
-            //closed before  resendInFlightEvents. If that
-            //could happen, then the channel we replace this one with
-            //can be removed before we resendInFlightEvents
-            closeAndReplace(true); //force=true
-        } catch (InterruptedException ex) {
-            LOG.error("Exception caught will attempting to closeAndReplace dead channel: {}", ex.getMessage(), ex);
-        }
-      LOG.warn("Force closing dead channel {}", HecChannel.this);            
+      try {
+        //synchronize on the load balancer so we do not allow the load balancer to be
+        //closed before  resendInFlightEvents. If that
+        //could happen, then the channel we replace this one with
+        //can be removed before we resendInFlightEvents
+        closeAndReplace(true); //force=true
+      } catch (InterruptedException ex) {
+        LOG.error("Exception caught will attempting to closeAndReplace dead channel: {}", ex.getMessage(), ex);
+      }
+      LOG.warn("Force closing dead channel {}", HecChannel.this);
       interalForceClose();
-      health.dead();            
-      resendInFlightEvents();   
+      health.dead();
+      resendInFlightEvents();
     }
 
 

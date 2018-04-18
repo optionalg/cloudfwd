@@ -121,10 +121,13 @@ public class BasicCallbacks implements ConnectionCallbacks {
 
         int c = ackdEventCount.addAndGet(events.getNumEvents());
         //LOG.info("expected ack count {}, current {}", expectedAckCount, ackdEventCount);
-        if (c == expectedAckCount) {
+        if (c + failedCount.get() == expectedAckCount ) {
             latch.countDown();
+            LOG.info("BasicCallbacks.acknowledged: expectedAckCount={} ackEventCount={} failedCount={} events={}", 
+                    expectedAckCount, c, failedCount.get(), events);
         }
-
+        LOG.debug("BasicCallbacks.acknowledged: ackEventCount={} failedCount={} events={}", 
+                c, failedCount.get(), events);
         if (!acknowledgedBatches.add(events.getId())) {
             Assert.fail(
                     "Received duplicate acknowledgement for event batch:" + events.
@@ -136,7 +139,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
   @Override
   public void failed(EventBatch events, Exception ex) {
     failed = true;
-    failedCount.incrementAndGet();
+    int failedEventsCount = failedCount.incrementAndGet();
     failMsg = "EventBatch failed to send. Exception message: " + ex.
             getMessage();
     exception = ex;
@@ -146,6 +149,12 @@ public class BasicCallbacks implements ConnectionCallbacks {
     } else {
         LOG.info("Got expected failed exception: " + ex);
     }
+    if (ackdEventCount.get()  + failedCount.get() == expectedAckCount) {
+      LOG.info("BasicCallbacks.failed: expectedAckCount={} failedEventsCount={} failMsg={} events={}",
+              ackdEventCount.get(), failedEventsCount, failMsg, events);
+      latch.countDown();
+    }
+    LOG.debug("BasicCallbacks.failed: failedEventsCount={} failMsg={} events={}", failedEventsCount, failMsg, events);
     //make sure we set the failed, failMsg and Exception *before* we unlatch    
     failLatch.countDown(); //will lest test exit
 
@@ -162,7 +171,7 @@ public class BasicCallbacks implements ConnectionCallbacks {
           //ex.printStackTrace(); //print the stack trace if we were not expecting failure
           LOG.error(ex.getMessage());
         }        
-       failLatch .countDown();
+       failLatch.countDown();
     }
 
     @Override
