@@ -18,6 +18,7 @@ package com.splunk.cloudfwd.impl.http;
 import com.splunk.cloudfwd.LifecycleEvent;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.impl.http.httpascync.CoordinatedFirstResponseHandler;
 import com.splunk.cloudfwd.impl.http.httpascync.GenericCoordinatedResponseHandler;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAckPoll;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksEventPost;
@@ -173,7 +174,7 @@ public class HecIOManager implements Closeable {
                 ()->{      
                     try {
                           LOG.info("preflight checks on {}", sender.getChannel());
-                          GenericCoordinatedResponseHandler cb1 = new GenericCoordinatedResponseHandler(
+                          GenericCoordinatedResponseHandler cb1 = new CoordinatedFirstResponseHandler(
                                   this,
                                   LifecycleEvent.Type.PREFLIGHT_OK,
                                   LifecycleEvent.Type.PREFLIGHT_FAILED,

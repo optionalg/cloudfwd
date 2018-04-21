@@ -19,6 +19,7 @@ package com.splunk.cloudfwd.impl.http;
  */
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import com.splunk.cloudfwd.error.HecIllegalStateException;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
 import com.splunk.cloudfwd.impl.CookieClient;
@@ -46,7 +47,7 @@ import org.apache.http.client.utils.URIBuilder;
  * This class performs the actually HTTP send to HEC
  * event collector.
  */
-public final class HttpSender implements Endpoints, CookieClient {
+public final class HttpSender implements Endpoints{
 
   // Default to SLF4J Logger, and set custom LoggerFactory when channel (and therefore Connection instance) is available
   private Logger LOG = LoggerFactory.getLogger(HttpSender.class.getName());
@@ -78,12 +79,13 @@ public final class HttpSender implements Endpoints, CookieClient {
   private Endpoints simulatedEndpoints;
   private final HecIOManager hecIOManager;
   private final String baseUrl; 
-  private String cookie;
+  private ChannelCookies cookies;
   //the following  posts/gets are used by health checks and preflight checks. We record them so we can cancel them on close. 
   private HttpPost ackCheck;
   private HttpGet healthEndpointCheck;
   private HttpPost dummyEventPost;
   private final ConnectionSettings connectionSettings;
+  private boolean stickySessionViolation = false;
 
   /**
    * Initialize HttpEventCollectorSender
@@ -290,9 +292,29 @@ public final class HttpSender implements Endpoints, CookieClient {
       setCookieHeader(r);
   }
   
+  public void checkStickySesssionViolation(HttpResponse response) {
+    ChannelCookies cookies = new ChannelCookies(getChannel(), response);
+    LOG.debug("checkStickySesssionViolation: response={} cookies={}", response, cookies);
+    if(cookies.isEmpty()) return;
+    if(this.cookies.equals(cookies)){
+      LOG.warn("Received a HTTP Response with unexpected cookie. Cookie should " +
+              "be set only once in the first pre-flight response "+
+              "channel=" + getChannel() +
+              "cookies=" + cookies.toString());
+    } else {
+      HecNonStickySessionException ex = new HecNonStickySessionException(
+              "Received a HTTP Response with a cookie set which does " +
+              "not match this channel cookie " +
+              "channel=" + getChannel() +
+              " cookies=" + cookies.toString());
+      handleStickySessionViolation(ex);
+      throw ex;
+    }
+  } 
+  
   private void setCookieHeader(HttpRequestBase r){
-      if(null != this.cookie && !this.cookie.isEmpty()){
-          r.setHeader("Cookie", this.cookie);
+      if(null != this.cookies && !this.cookies.isEmpty()){
+          r.setHeader("Cookie", this.cookies.getCookieHeader());
       }
   }
   
@@ -506,29 +528,67 @@ public final class HttpSender implements Endpoints, CookieClient {
     return baseUrl;
   }
 
-    @Override
-    public void setSessionCookies(String cookie) {
-        if (null == cookie || cookie.isEmpty()) {
-            return;
-        }
-        if (null != this.cookie && !this.cookie.equals(cookie)) {
-            synchronized (this) { //we don't want to make multiple attempts to handle the same detected change
-                if (null != this.cookie && !this.cookie.equals(cookie) &&
-                        !getChannel().isQuiesced()) { //must double-check the condition once inside sync'd block
-                    LOG.warn(
-                            "An attempt was made to change the Session-Cookie from {} to {} on {}",
-                            this.cookie, cookie, getChannel());
-                    this.cookie = cookie; //record the new cookie so that subsequent same cookies don't try to resend again                    
-                    LOG.warn("replacing channel, resending events, and killing {}",
-                            getChannel());
-                    getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
-                    getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
-                    dispatchChannelCloseAndReplace(); //will ultimately result in this channel getting killed
-                }
-            }//end sync
-        } else {
-            this.cookie = cookie;
-        }
+//    @Override
+//    public void setSessionCookies(String cookie) {
+//        if (null == cookie || cookie.isEmpty()) {
+//            return;
+//        }
+//        if (null != this.cookies && !this.cookies.equals(cookie)) {
+//            synchronized (this) { //we don't want to make multiple attempts to handle the same detected change
+//                if (null != this.cookies && !this.cookies.equals(cookie) &&
+//                        !getChannel().isQuiesced()) { //must double-check the condition once inside sync'd block
+//                    LOG.warn(
+//                            "An attempt was made to change the Session-Cookie from {} to {} on {}",
+//                            this.cookies, cookie, getChannel());
+////                    this.cookies.getCookieHeader() = cookie; //record the new cookies so that subsequent same cookies don't try to resend again                    
+//                    LOG.warn("replacing channel, resending events, and killing {}",
+//                            getChannel());
+//                    getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
+//                    getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
+//                    dispatchChannelCloseAndReplace(); //will ultimately result in this channel getting killed
+//                }
+//            }//end sync
+//        } else {
+////            this.cookies = cookie;
+//        }
+//    }
+  
+  /**
+   * 
+   * @param cause
+   */
+  public synchronized void handleStickySessionViolation(Exception cause) {
+    if(stickySessionViolation) {
+      LOG.warn("handleStickySessionViolation: attempt to handle already handled channel={}", getChannel());
+      return;
+    }
+    stickySessionViolation = true;
+    LOG.warn("handleStickySessionViolation: casuse={} cause_message={}", cause, cause.getMessage());
+    LOG.warn("replacing channel, resending events, and killing {}",
+            getChannel());
+    getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
+    getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
+    dispatchChannelCloseAndReplace(); //will ultimately result in this channel getting killed
+  }
+    
+  public void setCookies(ChannelCookies cookies) {
+    if (this.cookies != null) {
+      LOG.error("setCookies: unexpected setCookie." + 
+              "Attempt to set cookies on a channel with cookies already set." +
+              " channel=" + getChannel() +
+                      " channel.cookies=" + this.cookies +
+                      " cookies=" + cookies.toString());
+      handleStickySessionViolation(new RuntimeException(
+              "Attempt to set cookies on a channel with cookies already set." +
+              " channel=" + getChannel() +
+              " channel.cookies=" + this.cookies + 
+              " cookies=" + cookies.toString())); 
+    }
+    this.cookies = cookies;
+  }
+    
+    public String getCookies() {
+      return this.cookies.getCookieHeader();
     }
     
     private void dispatchChannelCloseAndReplace(){
@@ -538,7 +598,7 @@ public final class HttpSender implements Endpoints, CookieClient {
                 getChannel().closeAndReplaceAndFail();
             } catch (Exception ex) {
                 ex.printStackTrace();
-                LOG.error("Exception '{}' trying to handle sticky session-cookie violation on channel={}", ex.getMessage(), getChannel(), ex);
+                LOG.error("Exception '{}' trying to handle sticky session-cookies violation on channel={}", ex.getMessage(), getChannel(), ex);
             }
         };//end runnable
         ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);

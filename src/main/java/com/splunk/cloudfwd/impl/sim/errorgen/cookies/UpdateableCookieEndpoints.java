@@ -15,12 +15,9 @@
  */
 package com.splunk.cloudfwd.impl.sim.errorgen.cookies;
 
-import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.HttpPostable;
 import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 import com.splunk.cloudfwd.impl.sim.*;
-import com.splunk.cloudfwd.impl.http.HttpPostable;
-import com.splunk.cloudfwd.impl.http.httpascync.HttpCallbacksAbstract;
 
 import com.splunk.cloudfwd.impl.sim.AckEndpoint;
 import com.splunk.cloudfwd.impl.sim.CannedEntity;
@@ -32,16 +29,24 @@ import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.ion.Timestamp;
+
+import java.net.HttpCookie;
+import java.util.Random;
 
 public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
-    private static final Logger LOG = LoggerFactory.getLogger(UpdateableCookieEndpoints.class.getName());
+    protected static final Logger LOG = LoggerFactory.getLogger(UpdateableCookieEndpoints.class.getName());
 
     private static final String cookie1 = "tasty-cookie=strawberry";
     private static final String cookie2 = "bitter-cookie=crinkles";
 
-    private static String currentCookie = cookie1;
+    protected static String currentCookie = cookie1;
+    private static HttpCookie currentHttpCookie;
     private static String syncAck = null;
+    public static int maxAge;
+    
+    public static final int ELB_COOKIE_LENGTH = 139;
+    public static final String ELB_COOKIE_PATH = "/";
+    public static final String AWSELB_HEADER_TEMPLATE = "AWSELB=%s;PATH=/;MAX-AGE=1";
     
     public static synchronized void toggleCookie() {
         currentCookie = "cookie="+Long.toHexString(Double.doubleToLongBits(Math.random()));
@@ -49,7 +54,7 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
     }
     
     public static synchronized void setSyncAck(String syncAckValue) {
-      syncAck = syncAckValue;
+        syncAck = syncAckValue;
     }
     
     @Override
