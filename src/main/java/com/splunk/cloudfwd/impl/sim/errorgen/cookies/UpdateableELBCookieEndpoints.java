@@ -45,10 +45,6 @@ public class UpdateableELBCookieEndpoints extends UpdateableCookieEndpoints {
      * Provides a Generates a new AWSELB cookie. 
      */
     public static synchronized void toggleELBCookie() {
-//        currentHttpCookie = new HttpCookie("AWSELB", getRandomHexString(ELB_COOKIE_LENGTH));
-//        currentHttpCookie.setPath(ELB_COOKIE_PATH);
-//        currentHttpCookie.setMaxAge(300);
-        
         //FixMe: HttpCookie does not provide methods to print a proper header string, 
         //so we just construct the header string manually
         currentCookie = "AWSELB="+ getRandomHexString(ELB_COOKIE_LENGTH) + ";PATH=/";
