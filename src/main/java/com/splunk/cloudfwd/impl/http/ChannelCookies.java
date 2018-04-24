@@ -59,7 +59,8 @@ public class ChannelCookies implements Cloneable {
    */
   public boolean isExpirationSet() {
       for (HttpCookie cookie: cookies) {
-        if (cookie.getMaxAge() != 0 ) {
+        LOG.debug("ChannelCookies: isExpirationSet: cookie_max_age={}", cookie.getMaxAge());
+        if (cookie.getMaxAge() >= 0 ) {
           return true;
         }
       }

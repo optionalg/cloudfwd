@@ -298,15 +298,6 @@ public final class HttpSender implements Endpoints{
     ChannelCookies cookies = new ChannelCookies(getChannel(), response);
     LOG.debug("checkStickySesssionViolation: response={} cookies={}", response, cookies);
     if(cookies.isEmpty()) return;
-    if(this.cookies.isExpirationSet()){
-      HecNonStickySessionException ex = new HecNonStickySessionException(
-              "Received a HTTP Response with a cookie with an expiration time" +
-                      "configured " +
-                      "channel=" + getChannel() +
-                      " cookies=" + cookies.toString());
-      handleStickySessionViolation(ex);
-      throw ex;
-    }
     if(this.cookies.equals(cookies)){
       LOG.warn("Received a HTTP Response with unexpected cookie. Cookie should " +
               "be set only once in the first pre-flight response "+
@@ -575,6 +566,19 @@ public final class HttpSender implements Endpoints{
               " channel=" + getChannel() +
               " channel.cookies=" + this.cookies + 
               " cookies=" + cookies.toString())); 
+    }
+    if(cookies.isExpirationSet()){
+      LOG.debug("Received a HTTP Response with a cookie with an expiration time" +
+              "configured " +
+              "channel=" + getChannel() +
+              " cookies=" + cookies.toString());
+      HecNonStickySessionException ex = new HecNonStickySessionException(
+              "Received a HTTP Response with a cookie with an expiration time" +
+                      "configured " +
+                      "channel=" + getChannel() +
+                      " cookies=" + cookies.toString());
+      handleStickySessionViolation(ex);
+      throw ex;
     }
     this.cookies = cookies;
   }
