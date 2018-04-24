@@ -40,6 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
 
@@ -296,6 +298,15 @@ public final class HttpSender implements Endpoints{
     ChannelCookies cookies = new ChannelCookies(getChannel(), response);
     LOG.debug("checkStickySesssionViolation: response={} cookies={}", response, cookies);
     if(cookies.isEmpty()) return;
+    if(this.cookies.isExpirationSet()){
+      HecNonStickySessionException ex = new HecNonStickySessionException(
+              "Received a HTTP Response with a cookie with an expiration time" +
+                      "configured " +
+                      "channel=" + getChannel() +
+                      " cookies=" + cookies.toString());
+      handleStickySessionViolation(ex);
+      throw ex;
+    }
     if(this.cookies.equals(cookies)){
       LOG.warn("Received a HTTP Response with unexpected cookie. Cookie should " +
               "be set only once in the first pre-flight response "+
@@ -527,31 +538,6 @@ public final class HttpSender implements Endpoints{
   public String getBaseUrl() {
     return baseUrl;
   }
-
-//    @Override
-//    public void setSessionCookies(String cookie) {
-//        if (null == cookie || cookie.isEmpty()) {
-//            return;
-//        }
-//        if (null != this.cookies && !this.cookies.equals(cookie)) {
-//            synchronized (this) { //we don't want to make multiple attempts to handle the same detected change
-//                if (null != this.cookies && !this.cookies.equals(cookie) &&
-//                        !getChannel().isQuiesced()) { //must double-check the condition once inside sync'd block
-//                    LOG.warn(
-//                            "An attempt was made to change the Session-Cookie from {} to {} on {}",
-//                            this.cookies, cookie, getChannel());
-////                    this.cookies.getCookieHeader() = cookie; //record the new cookies so that subsequent same cookies don't try to resend again                    
-//                    LOG.warn("replacing channel, resending events, and killing {}",
-//                            getChannel());
-//                    getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
-//                    getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
-//                    dispatchChannelCloseAndReplace(); //will ultimately result in this channel getting killed
-//                }
-//            }//end sync
-//        } else {
-////            this.cookies = cookie;
-//        }
-//    }
   
   /**
    * 
@@ -563,9 +549,15 @@ public final class HttpSender implements Endpoints{
       return;
     }
     stickySessionViolation = true;
+    try {
+      //FIXME: move hardcoded value to parameters
+      LOG.debug("handleStickySessionViolation backing off for 10 seconds");
+      Thread.sleep(TimeUnit.SECONDS.toMillis(10));
+    } catch (InterruptedException e) {
+      LOG.warn("handleStickySessionViolation was interrupted, e_message={}", e.getMessage());
+      return; 
+    }
     LOG.warn("handleStickySessionViolation: casuse={} cause_message={}", cause, cause.getMessage());
-    LOG.warn("replacing channel, resending events, and killing {}",
-            getChannel());
     getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
     getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
     dispatchChannelCloseAndReplace(); //will ultimately result in this channel getting killed
