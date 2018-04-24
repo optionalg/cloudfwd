@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.splunk.cloudfwd.error.HecConnectionStateException;
 import static com.splunk.cloudfwd.error.HecConnectionStateException.Type.CONFIGURATION_EXCEPTION;
 import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.error.HecServerBusyException;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
 import com.splunk.cloudfwd.LifecycleEvent;
@@ -183,8 +184,14 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         } else if (epr.isAckDisabled()) {
             throwConfigurationException(getSender(), httpCode, resp);
         }
-
-        getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
+    
+        try {
+            getSender().getAcknowledgementTracker().handleEventPostResponse(epr, events);
+        } catch (HecNonStickySessionException e) {
+            LOG.error("consumeEventPostOkResponse: e={}", e);
+            getSender().handleStickySessionViolation(e);
+            return;
+        }
 
         // start polling for acks
         getManager().startAckPolling();
