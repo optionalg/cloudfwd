@@ -593,8 +593,13 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         getConnection().getCallbacks().failed(e, new HecNonStickySessionException("Sticky Session Violation exception"));
       }
     }
-    
-    public void closeAndReplaceAndResend(){
+  
+  /**
+   * close and replace and resend should be called when we replacing a channel with another one. 
+   * The method will call closeAndReplace and internalForceClose. If channel was preflighted, resending events 
+   * will be dispatched as well. 
+   */
+  public void closeAndReplaceAndResend(){
       try {
         //synchronize on the load balancer so we do not allow the load balancer to be
         //closed before  resendInFlightEvents. If that
@@ -602,11 +607,12 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         //can be removed before we resendInFlightEvents
         closeAndReplace(true); //force=true
       } catch (InterruptedException ex) {
-        LOG.error("Exception caught will attempting to closeAndReplace dead channel: {}", ex.getMessage(), ex);
+        LOG.error("closeAndReplaceAndResend: Exception caught while attempting to closeAndReplace dead channel: {}", ex.getMessage(), ex);
       }
       LOG.warn("Force closing dead channel {}", HecChannel.this);
       interalForceClose();
       health.dead();
+      // 
       if(!this.preflightCompleted) {
         LOG.info("closeAndReplaceAndResend: dispatuching resending of inFlightEvents");
         resendInFlightEvents();

@@ -31,7 +31,7 @@ public class InDetentionAllTest extends AbstractExceptionOnSendTest {
                 "com.splunk.cloudfwd.impl.sim.errorgen.indexer.InDetentionEndpoints");
         settings.setBlockingTimeoutMS(500);
         settings.setUnresponsiveMS(-1);
-        settings.setMaxTotalChannels(2);
+        settings.setMaxTotalChannels(1);
         return settings;
     }
     

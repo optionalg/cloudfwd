@@ -48,6 +48,13 @@ public class AbstractExceptionOnSendTest extends AbstractConnectionTest{
       return false;
     }
     
+    @Override
+    protected void configureProps(ConnectionSettings settings) {
+      super.configureProps(settings);
+      settings.setMaxTotalChannels(1);
+    }
+    
+    
     protected BasicCallbacks getCallbacks() {
       return new BasicCallbacks(getNumEventsToSend()) {
         @Override
