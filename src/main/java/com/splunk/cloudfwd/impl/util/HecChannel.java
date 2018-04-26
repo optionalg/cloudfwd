@@ -585,7 +585,10 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     
     public void closeAndReplaceAndFail() throws InterruptedException {
       closeAndReplace(true);
-      if(!this.preflightCompleted) return;
+      if(!this.preflightCompleted) {
+        LOG.info("closeAndReplaceAndFail: preflight is not completed for channel={}, not failing events", this);
+        return;        
+      }
       for (EventBatchImpl e : getConnection().getUnackedEvents(this)) {
         getConnection().getCallbacks().failed(e, new HecNonStickySessionException("Sticky Session Violation exception"));
       }

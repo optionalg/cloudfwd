@@ -279,6 +279,14 @@ public class PropertyKeys {
    */
   public static final String CONNECTION_THROWS_EXCEPTION_ON_CREATION = "connection_throws_exception_on_creation";
   
+  /**
+   * Delay new channels creation when replacing an existing channel with a non-sticky behavior detected. New channel 
+   * spins up a few threads, so we should do delay it to let a previous channel threads to be handled and closed. 
+   * 
+   * @see DEFAULT_NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS
+   */
+  public static final String NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS = "non_sticky_channel_replacement_delay_ms";
+  
   /* **************************** DEFAULTS ************************* */
   /**
    * Default value for EVENT_BATCH_SIZE property.
@@ -464,4 +472,10 @@ public class PropertyKeys {
    * always succeeds and an exception will be thrown on send, if no channels are available. 
    */
   public static final boolean DEFAULT_CONNECTION_THROWS_EXCEPTION_ON_CREATION = false;
+  
+  /**
+   * We want to delay new channels creation when replacing an existing channel with a 
+   * non-sticky behavior detected
+   */
+  public static final int DEFAULT_NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS = 10000;
 }

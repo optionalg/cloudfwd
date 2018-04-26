@@ -541,9 +541,9 @@ public final class HttpSender implements Endpoints{
     }
     stickySessionViolation = true;
     try {
-      //FIXME: move hardcoded value to parameters
-      LOG.debug("handleStickySessionViolation backing off for 10 seconds");
-      Thread.sleep(TimeUnit.SECONDS.toMillis(10));
+      LOG.debug("handleStickySessionViolation backing off for {} seconds", 
+              getConnection().getSettings().getNonStickyChannelReplacementDelayMs());
+      Thread.sleep(getConnection().getSettings().getNonStickyChannelReplacementDelayMs());
     } catch (InterruptedException e) {
       LOG.warn("handleStickySessionViolation was interrupted, e_message={}", e.getMessage());
       return; 

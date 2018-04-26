@@ -150,6 +150,9 @@ public class ConnectionSettings {
     
     @JsonProperty("connection_throws_exception_on_creation")
     private boolean conntctionThrowsExceptionOnCreation = DEFAULT_CONNECTION_THROWS_EXCEPTION_ON_CREATION;
+    
+    @JsonProperty("non_sticky_channel_replacement_delay_ms")
+    private int nonStickyChannelReplacementDelayMs = DEFAULT_NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS;
 
     @Deprecated
     /*
@@ -407,6 +410,8 @@ public class ConnectionSettings {
     }
     
     public Boolean getConntctionThrowsExceptionOnCreation() { return this.conntctionThrowsExceptionOnCreation; }
+    
+    public int getNonStickyChannelReplacementDelayMs() { return this.nonStickyChannelReplacementDelayMs; }
     
     /* ***************************** SETTERS ******************************* */
     // Setters should not throw Exceptions or call callbacks on Connection instance
@@ -757,6 +762,21 @@ public class ConnectionSettings {
     }
   
     /**
+     * set custom delay between channel being replace when a non-sticky behavior
+     * detected. New channel creation should be delayed to let channel-related 
+     * threads to be terminated and garbage collected to avoid thread 
+     * leaking/high GC pressure
+     */
+    public void setNonStickyChannelReplacementDelayMs(int delay) {
+        if (delay <= 0) {
+            delay = DEFAULT_NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS;
+            getLog().warn("Property {} must be greater than 0. Using default value of {}",
+                    NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS, DEFAULT_NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS);
+        }
+        this.nonStickyChannelReplacementDelayMs = delay;
+    }
+  
+    /**
      * Checking if LoadBalancer exists before refreshing channels
      */
     private void checkAndRefreshChannels() {
@@ -817,6 +837,9 @@ public class ConnectionSettings {
                     break;
                 case PropertyKeys.CONNECTION_THROWS_EXCEPTION_ON_CREATION:
                     setConntctionThrowsExceptionOnCreation(Boolean.valueOf(val));
+                    break;
+                case PropertyKeys.NON_STICKY_CHANNEL_REPLACEMENT_DELAY_MS:
+                    setNonStickyChannelReplacementDelayMs(Integer.valueOf(val));
                     break;
                 default:
                     LOG.error("Attempt to change property not supported: " + key);
