@@ -76,7 +76,7 @@ public class ChannelCookies implements Cloneable {
     for (HttpCookie cookie: cookies) {
       String cookie_header = cookie.getName() + "=" + cookie.getValue() +
               ";" + PATH_NAME + "=" + cookie.getPath();
-      if(cookie.getMaxAge() != 0) {
+      if(cookie.getMaxAge() >= 0) {
         cookie_header = cookie_header + ";" + MAX_AGE_NAME + "=" + cookie.getMaxAge();
       }
       cookie_headers.add(cookie_header);

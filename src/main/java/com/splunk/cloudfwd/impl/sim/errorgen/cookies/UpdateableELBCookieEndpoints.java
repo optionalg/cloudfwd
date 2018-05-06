@@ -36,6 +36,8 @@ import java.util.Random;
  * This endpoint emulates an ELB endpoint with stickySession cookie
  */
 public class UpdateableELBCookieEndpoints extends UpdateableCookieEndpoints {
+    public static int maxAge = 0;
+    
     public UpdateableELBCookieEndpoints() {
         super();
         toggleELBCookie();
@@ -59,7 +61,7 @@ public class UpdateableELBCookieEndpoints extends UpdateableCookieEndpoints {
      * @param maxAge
      */
     public static synchronized void toggleELBCookie(int maxAge) {
-        UpdateableCookieEndpoints.maxAge = maxAge;
+        UpdateableELBCookieEndpoints.maxAge = maxAge;
         toggleELBCookie();
     }
     

@@ -24,6 +24,13 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(ELBStickySessionViolationTest.class.getName());
 
     @Test
+    /**
+     * Test sends events to an endpoint and periodically changes sticky session 
+     * on the endpoint. 
+     * Cloudfwd should 
+     *   * detect ELB cookie change on a channel
+     *   * fail events in flight with HecNonStickySessionException exception 
+     */
     public void testWithSessionCookies() throws InterruptedException {
         List<String> listofChannelIds = getChannelId(this.connection);
         sendEvents(false, false);
@@ -45,7 +52,8 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
     protected Event nextEvent(int i) {
         if (i>20 && (i%10) == 0 && i < getNumEventsToSend() / 2) {
             LOG.trace("Toggling cookies from event 21-100: {}", i);
-            UpdateableELBCookieEndpoints.toggleELBCookie(300);
+//            UpdateableELBCookieEndpoints.toggleELBCookie(300);
+            UpdateableELBCookieEndpoints.toggleELBCookie();
         }
         LOG.debug("number of channels={}", connection.getHealth().size());
         return super.nextEvent(i);
@@ -54,7 +62,7 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
 
     @Override
     protected int getNumEventsToSend() {
-        return 1000;
+        return 100;
     }
 
     @Override

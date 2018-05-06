@@ -43,11 +43,8 @@ public class UpdateableCookieEndpoints extends SimulatedHECEndpoints {
     protected static String currentCookie = cookie1;
     private static HttpCookie currentHttpCookie;
     private static String syncAck = null;
-    public static int maxAge;
     
     public static final int ELB_COOKIE_LENGTH = 139;
-    public static final String ELB_COOKIE_PATH = "/";
-    public static final String AWSELB_HEADER_TEMPLATE = "AWSELB=%s;PATH=/;MAX-AGE=1";
     
     public static synchronized void toggleCookie() {
         currentCookie = "cookie="+Long.toHexString(Double.doubleToLongBits(Math.random()));
