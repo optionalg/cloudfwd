@@ -613,7 +613,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
       interalForceClose();
       health.dead();
       // 
-      if(!this.preflightCompleted) {
+      if(this.preflightCompleted) {
         LOG.info("closeAndReplaceAndResend: dispatuching resending of inFlightEvents");
         resendInFlightEvents();
       }

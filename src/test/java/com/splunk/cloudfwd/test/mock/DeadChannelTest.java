@@ -61,7 +61,7 @@ public class DeadChannelTest extends AbstractConnectionTest {
   }
   @Override
   protected int getNumEventsToSend() {
-    return 10000;
+    return 1000;
   }
   
   @Test
