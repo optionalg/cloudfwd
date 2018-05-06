@@ -52,6 +52,7 @@ public class AbstractExceptionOnSendTest extends AbstractConnectionTest{
     protected void configureProps(ConnectionSettings settings) {
       super.configureProps(settings);
       settings.setMaxTotalChannels(1);
+      settings.setUrls("https://127.0.0.1:8088");
     }
     
     
