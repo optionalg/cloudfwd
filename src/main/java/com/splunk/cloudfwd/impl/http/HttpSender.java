@@ -22,8 +22,8 @@ import com.splunk.cloudfwd.error.HecIllegalStateException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.*;
-import com.splunk.cloudfwd.impl.CookieClient;
 import com.splunk.cloudfwd.impl.EventBatchImpl;
+import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
@@ -40,7 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.net.URISyntaxException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
@@ -531,52 +530,57 @@ public final class HttpSender implements Endpoints{
   }
   
   /**
-   * 
-   * @param cause
+   * As soon as we detect a sticky session violation, we want to perform the following with the channel:
+   *  * mark that stickySessionViolation was handled, so we handle it only once
+   *  * kill acknowledgement tracker, to minimize possibility of false-positive acknowledgements
+   *  * set status as failed with a proper lifecycle event and cause exception, so :
+   *      * no new events sent to channel
+   *      * failure cause is exposed to getHealth method
+   *  * fail all events in the channel, if it is not empty
+   * Final step is to dispatch channel replacement thread
+   *
+   * @param cause - exception to add as a channel status
    */
   public synchronized void handleStickySessionViolation(Exception cause) {
+    LOG.warn("handleStickySessionViolation: starting handling sticky session violation, channel={} cause={} cause_message={}", getChannel(), cause, cause.getMessage());
     if(stickySessionViolation) {
       LOG.warn("handleStickySessionViolation: attempt to handle already handled channel={}", getChannel());
       return;
     }
     stickySessionViolation = true;
-    try {
-      LOG.debug("handleStickySessionViolation backing off for {} seconds", 
-              getConnection().getSettings().getNonStickyChannelReplacementDelayMs());
-      Thread.sleep(getConnection().getSettings().getNonStickyChannelReplacementDelayMs());
-    } catch (InterruptedException e) {
-      LOG.warn("handleStickySessionViolation was interrupted, e_message={}", e.getMessage());
-      return; 
-    }
-    LOG.warn("handleStickySessionViolation: casuse={} cause_message={}", cause, cause.getMessage());
+    getChannel().getHealth().setStatus(new PreflightFailed(cause), false);
     getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
-    getChannel().close(); //close the channel as quickly as possible to prevent more event piling into it
-    dispatchChannelCloseAndReplace(); //will ultimately result in this channel getting killed
+    getChannel().failEventsInFlight(cause);
+    dispatchChannelCloseAndReplace(); //schedule channel to be killed and replaced by a new one
+    LOG.debug("handleStickySessionViolation: finished handling sticky session violation, channel={} cause={} cause_message={}", getChannel(), cause, cause.getMessage());
   }
-    
+
+  /**
+   * Sets a ChannelCookie for channel. Channel cookie should be set only once, handling a response from the first
+   * preflight request
+   *
+   * @param cookies
+   */
   public void setCookies(ChannelCookies cookies) {
+    // this is an unexpected behavior, throw a RuntimeException
+    // Just to guard this complex code does not hit this condition
     if (this.cookies != null) {
-      LOG.error("setCookies: unexpected setCookie." + 
-              "Attempt to set cookies on a channel with cookies already set." +
-              " channel=" + getChannel() +
-                      " channel.cookies=" + this.cookies +
-                      " cookies=" + cookies.toString());
-      handleStickySessionViolation(new RuntimeException(
-              "Attempt to set cookies on a channel with cookies already set." +
-              " channel=" + getChannel() +
-              " channel.cookies=" + this.cookies + 
-              " cookies=" + cookies.toString())); 
+      String msg = "setCookies: unexpected setCookie." +
+          "Attempt to set cookies on a channel with cookies already set." +
+          " channel=" + getChannel() +
+          " channel.cookies=" + this.cookies +
+          " cookies=" + cookies.toString();
+      LOG.error(msg);
+      throw new RuntimeException(msg);
     }
+
+    // when cookie expiration is enabled on ELB we need to handle it as a sticky session violation
     if(cookies.isExpirationSet()){
-      LOG.debug("Received a HTTP Response with a cookie with an expiration time" +
-              "configured " +
-              "channel=" + getChannel() +
-              " cookies=" + cookies.toString());
-      HecNonStickySessionException ex = new HecNonStickySessionException(
-              "Received a HTTP Response with a cookie with an expiration time" +
-                      "configured " +
-                      "channel=" + getChannel() +
-                      " cookies=" + cookies.toString());
+      String msg = "Received an HTTP Response with a cookie with an expiration time enabled" +
+          " channel=" + getChannel() +
+          " cookies=" + cookies.toString();
+      LOG.error(msg);
+      HecNonStickySessionException ex = new HecNonStickySessionException(msg);
       handleStickySessionViolation(ex);
       throw ex;
     }

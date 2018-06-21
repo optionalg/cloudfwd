@@ -585,15 +585,20 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     
     public void closeAndReplaceAndFail() throws InterruptedException {
       closeAndReplace(true);
-      if(!this.preflightCompleted) {
-        LOG.info("closeAndReplaceAndFail: preflight is not completed for channel={}, not failing events", this);
-        return;        
-      }
-      for (EventBatchImpl e : getConnection().getUnackedEvents(this)) {
-        getConnection().getCallbacks().failed(e, new HecNonStickySessionException("Sticky Session Violation exception"));
-      }
     }
-  
+
+  /**
+   * Fail all events in flight
+   *
+   * @param cause - cause of the event failure
+   */
+  public void failEventsInFlight(Exception cause) {
+    for (EventBatchImpl e : getConnection().getUnackedEvents(this)) {
+      getConnection().getCallbacks().failed(e, cause);
+    }
+  }
+
+
   /**
    * close and replace and resend should be called when we replacing a channel with another one. 
    * The method will call closeAndReplace and internalForceClose. If channel was preflighted, resending events 
@@ -670,13 +675,6 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
         }
     }
 
-    /**
-     * @return the killInProgress
-     */
-    public boolean isKillInProgress() {
-        return killInProgress;
-    }
-   
   }
 
 }

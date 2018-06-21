@@ -16,8 +16,10 @@
 package com.splunk.cloudfwd.impl.http.httpascync;
 
 import com.splunk.cloudfwd.LifecycleEvent;
+import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.http.HecIOManager;
 import com.splunk.cloudfwd.impl.http.ChannelCookies;
+import com.splunk.cloudfwd.impl.http.lifecycle.PreflightFailed;
 import com.splunk.cloudfwd.impl.util.HecChannel;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
@@ -39,7 +41,7 @@ public class CoordinatedFirstResponseHandler extends GenericCoordinatedResponseH
                                            LifecycleEvent.Type failType, String name) {
         super(m, okType, failType, name);  
         this.LOG = m.getSender().getConnection().getLogger(
-                HttpCallbacksGeneric.class.
+                CoordinatedFirstResponseHandler.class.
                 getName());
     }
     
@@ -67,10 +69,14 @@ public class CoordinatedFirstResponseHandler extends GenericCoordinatedResponseH
         } catch (IOException e) {
             LOG.error("Unable to get String from HTTP response entity", e);
             failed(new RuntimeException("Unable to get String from HTTP response entity, response=" + response));
+        } catch (HecNonStickySessionException e) {
+            LOG.warn("Got HecNonStickySessionException exception, failing the channel", e);
+            failed(e);
+            LOG.debug("finished failing the channel", e);
         } catch (Exception e) {
             LOG.error("Unexpected exception handling complete callback for response=" + response +
                     " exception=" + e + "exception_message=" + e.getMessage());
-            failed(new RuntimeException("Unexpected exception handling complete callback for response=" + response + 
+            failed(new RuntimeException("Unexpected exception handling complete callback for response=" + response +
                     " exception=" + e + "exception_message=" + e.getMessage()));
         }
     }

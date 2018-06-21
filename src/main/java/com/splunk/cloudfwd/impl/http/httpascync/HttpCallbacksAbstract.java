@@ -82,38 +82,7 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
       }
   }
 
-  protected String handleStickySession(HttpResponse response) {
-    Header[] headers = response.getHeaders("Set-Cookie");
-    if(null == headers ){
-      return null;
-    }
-    LOG.debug("Channel={} Cookies={}", getChannel(), Arrays.toString(headers));
-    LOG.trace("Channel={} Cookies={} Response={}", getChannel(), Arrays.toString(headers), response);
-    Map<String, HttpCookie> m = new HashMap<>();
-    for(int i=0;i<headers.length;i++){
-      List<HttpCookie> cookies = HttpCookie.parse(headers[i].toString());
-      for (HttpCookie cookie: cookies) {
-        // replace the latter 
-        m.put(cookie.getName() + cookie.getPath() + cookie.getDomain(), cookie);
-        LOG.debug("cookie={} Path={} maxAge={}", cookie, cookie.getPath(), cookie.getMaxAge());
-      }
-    }
-    LOG.debug("m={}", m);
-    StringBuilder buf = new StringBuilder();
-    for(HttpCookie cookie: m.values()){
-     if(cookie.getMaxAge() > 0) {
-       getSender().handleStickySessionViolation(new HecNonStickySessionException(
-               "Received a sticky session with non-empty max-age parameter. " +
-                       "Disable sticky session expiration to fix this problem. " +
-                       "cookie=" + cookie.toString() +
-                       " max-age=" + cookie.getMaxAge())); 
-     }
-      
-      buf.append(';'); //cookies are semi-colon separated
-    }
-    return buf.toString();
-  }
-  
+
     /**
      * Cancelled is invoked when we abort HttpRequest in process of closing a channel. It is not indicative a problem.
      */
@@ -180,7 +149,8 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
       return manager.getSender();
   }
   
-  protected ConnectionCallbacks getCallbacks(){
+  protected ConnectionCallbacks
+  getCallbacks(){
       return getConnection().getCallbacks();
   }
 

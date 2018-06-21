@@ -43,6 +43,13 @@ public class UpdateableELBCookieEndpoints extends UpdateableCookieEndpoints {
         toggleELBCookie();
     }
     
+    /*
+    Setter for maxAge
+     */
+    public static void setMaxAge(int age) {
+        maxAge = age;
+    }
+    
     /**
      * Provides a Generates a new AWSELB cookie. 
      */

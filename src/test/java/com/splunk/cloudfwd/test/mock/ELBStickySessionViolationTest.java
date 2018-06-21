@@ -11,6 +11,7 @@ import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ import java.util.List;
 public class ELBStickySessionViolationTest extends AbstractConnectionTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(ELBStickySessionViolationTest.class.getName());
-
+    
     @Test
     /**
      * Test sends events to an endpoint and periodically changes sticky session 
@@ -34,7 +35,7 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
     public void testWithSessionCookies() throws InterruptedException {
         List<String> listofChannelIds = getChannelId(this.connection);
         sendEvents(false, false);
-        
+
         List<String> listofChannelsAfterCookieChanges = getChannelId(this.connection);
         for (String i : listofChannelsAfterCookieChanges) {
             if (listofChannelIds.contains(i)) {
@@ -42,11 +43,6 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
             }
         }
         connection.close();
-        while(connection.getHealth().size() > 0) {
-            Thread.sleep(5000);
-            LOG.debug("not closed channels in connection, number_of_channels={} healths={}" , connection.getHealth().size(), connection.getHealth());
-        }
-        
     }
 
     protected Event nextEvent(int i) {

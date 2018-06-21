@@ -16,6 +16,7 @@ import com.splunk.cloudfwd.error.HecConnectionTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
+import java.util.regex.Pattern;
 
 /*
  * Copyright 2017 Splunk, Inc..
@@ -472,23 +473,23 @@ public abstract class AbstractConnectionTest {
   
   /**
    * assert that health is not empty and all channels failed with 
-   * provided exceptionClass and exceptionMessage.
+   * provided exceptionClass and exceptionMessageRegex.
    *
    * @param exceptionClass
-   * @param exceptionMessage
+   * @param exceptionMessageRegex
    */
-  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessage) {
+  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessageRegex) {
     List<HecHealth> healths = connection.getHealth();
     Assert.assertTrue("Expected health checks to be not empty, but got this healths: \"" + healths + "\"", !healths.isEmpty());
-    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight 
+    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight
     healths.stream().forEach(e ->LOG.debug("Got exception in healths: " + e.getStatus().getException().getMessage()));
     if (healths.stream()
             .map(h -> h.getStatus().getException())
             .filter(e -> exceptionClass.isInstance(e))
-            .filter(e -> e.getMessage().equals(exceptionMessage))
+            .filter(e -> Pattern.matches(exceptionMessageRegex, e.getMessage()))
             .count() != healths.size()) {
       Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass +
-              "\" and message: \"" + exceptionMessage +
+              "\" and message: \"" + exceptionMessageRegex +
               "\", but got instead the following exceptions in healths: " +
               Arrays.toString(healths.stream().map(h -> h.getStatus().getException()).toArray()));
     }

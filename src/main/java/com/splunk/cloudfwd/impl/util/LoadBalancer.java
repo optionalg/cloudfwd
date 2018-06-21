@@ -53,6 +53,7 @@ public class LoadBalancer implements Closeable {
     private final Logger LOG;
     private int channelsPerDestination;
     private final Map<String, HecChannel> channels = new ConcurrentHashMap<>();
+    private HecChannel lastRemoved = null; // store last removed channel
     private final Map<String, HecChannel> staleChannels = new ConcurrentHashMap<>();
     private final IndexDiscoverer discoverer;
     private int robin; //incremented (mod channels) to perform round robin
@@ -89,6 +90,10 @@ public class LoadBalancer implements Closeable {
     public List<HecHealth> getHealthNonBlocking() {
         final List<HecHealth> h = new ArrayList<>();
         channels.values().forEach(c->h.add(c.getHealthNonblocking()));
+        if(h.isEmpty() && lastRemoved != null) {
+            LOG.warn("getHealthNonBlocking: empty channels, returning lastRemoved channel health");
+            h.add(lastRemoved.getHealthNonblocking());
+        }
         return h;
     }    
 
@@ -289,6 +294,7 @@ public class LoadBalancer implements Closeable {
     //also must not be synchronized
     public void removeChannel(String channelId, boolean force) {
         LOG.info("removing from load balancer: channel id {}", channelId);
+        this.lastRemoved = this.channels.get(channelId);
         HecChannel c = this.channels.remove(channelId);
         if (c == null) {
             c = this.staleChannels.remove(channelId);
