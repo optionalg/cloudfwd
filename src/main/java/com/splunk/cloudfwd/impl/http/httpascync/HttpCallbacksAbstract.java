@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.splunk.cloudfwd.impl.sim.errorgen.nonsticky.NonStickEndpoints;
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -68,17 +69,14 @@ public abstract class HttpCallbacksAbstract implements FutureCallback<HttpRespon
         LOG.debug("ConnectionImpl={} channel={} Response received. {} took {} ms", 
             getConnection(), getChannel(), getOperation(), System.currentTimeMillis() - start);
         int code = response.getStatusLine().getStatusCode();
-        getSender().checkStickySesssionViolation(response);
         //handleCookies(response);
         String reply = EntityUtils.toString(response.getEntity(), "utf-8");
         if(null == reply || reply.isEmpty()){
             LOG.warn("reply with code {} was empty for function '{}'",code,  getOperation());
         }
         completed(reply, code, response);      
-      } catch (IOException e) {      
+      } catch (IOException e) {
         LOG.error("Unable to get String from HTTP response entity", e);
-      } catch (HecNonStickySessionException e) {
-        LOG.warn("completed call hangle got e={} e.message={}", e, e.getMessage());
       }
   }
 

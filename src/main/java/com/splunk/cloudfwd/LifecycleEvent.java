@@ -64,7 +64,9 @@ public class LifecycleEvent {
     PREFLIGHT_OK,
     PREFLIGHT_NOT_OK,
     PREFLIGHT_FAILED,
-    INVALID_AUTH
+    INVALID_AUTH,
+
+    NON_STICKY_SESSION
 
   };
 

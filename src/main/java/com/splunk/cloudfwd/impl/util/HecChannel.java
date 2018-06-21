@@ -584,6 +584,7 @@ public class HecChannel implements Closeable, LifecycleEventObserver {
     }
     
     public void closeAndReplaceAndFail() throws InterruptedException {
+      this.loadBalancer.saveLastFailedChannel(channelId);
       closeAndReplace(true);
     }
 

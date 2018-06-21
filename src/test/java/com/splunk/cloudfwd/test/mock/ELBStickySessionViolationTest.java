@@ -4,6 +4,7 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints;
 import com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableELBCookieEndpoints;
@@ -32,7 +33,7 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
      *   * detect ELB cookie change on a channel
      *   * fail events in flight with HecNonStickySessionException exception 
      */
-    public void testWithSessionCookies() throws InterruptedException {
+    public void testWithElbSessionCookies() throws InterruptedException {
         List<String> listofChannelIds = getChannelId(this.connection);
         sendEvents(false, false);
 
@@ -46,9 +47,8 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
     }
 
     protected Event nextEvent(int i) {
-        if (i>20 && (i%10) == 0 && i < getNumEventsToSend() / 2) {
+        if (i==20) {
             LOG.trace("Toggling cookies from event 21-100: {}", i);
-//            UpdateableELBCookieEndpoints.toggleELBCookie(300);
             UpdateableELBCookieEndpoints.toggleELBCookie();
         }
         LOG.debug("number of channels={}", connection.getHealth().size());
@@ -75,8 +75,10 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
     protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableELBCookieEndpoints");
         settings.setMaxTotalChannels(1);
-        settings.setMaxRetries(1);
+        settings.setMaxRetries(2);
+        settings.setBlockingTimeoutMS(10000);
         settings.setAckTimeoutMS(10000);
+        settings.setNonStickyChannelReplacementDelayMs(0);
     }
     
     @Override
@@ -90,5 +92,15 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
             
         };
     }
+
+//    @Override
+//    protected boolean shouldSendThrowException() {return true;}
+//
+//    @Override
+//    protected boolean isExpectedSendException(Exception e) {
+//        LOG.debug("isExpectedSendException: e={}", e.toString());
+//        return (e instanceof HecNoValidChannelsException);
+//    }
+
 
 }

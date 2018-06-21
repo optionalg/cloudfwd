@@ -473,12 +473,12 @@ public abstract class AbstractConnectionTest {
   
   /**
    * assert that health is not empty and all channels failed with 
-   * provided exceptionClass and exceptionMessageRegex.
+   * provided exceptionClass and exceptionMessage.
    *
    * @param exceptionClass
-   * @param exceptionMessageRegex
+   * @param exceptionMessage
    */
-  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessageRegex) {
+  public void assertAllChannelsFailed(Class exceptionClass, String exceptionMessage) {
     List<HecHealth> healths = connection.getHealth();
     Assert.assertTrue("Expected health checks to be not empty, but got this healths: \"" + healths + "\"", !healths.isEmpty());
     // we expect all channels to fail catching SSLPeerUnverifiedException in preflight
@@ -486,15 +486,40 @@ public abstract class AbstractConnectionTest {
     if (healths.stream()
             .map(h -> h.getStatus().getException())
             .filter(e -> exceptionClass.isInstance(e))
-            .filter(e -> Pattern.matches(exceptionMessageRegex, e.getMessage()))
+            .filter(e -> e.getMessage().equals(exceptionMessage))
             .count() != healths.size()) {
       Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass +
-              "\" and message: \"" + exceptionMessageRegex +
+              "\" and message: \"" + exceptionMessage +
               "\", but got instead the following exceptions in healths: " +
               Arrays.toString(healths.stream().map(h -> h.getStatus().getException()).toArray()));
     }
   }
-  
+
+  /**
+   * assert that health is not empty and all channels failed with
+   * provided exceptionClass and match exceptionMessageRegex.
+   *
+   * @param exceptionClass
+   * @param exceptionMessageRegex
+   */
+  public void assertAllChannelsFailedWithRegex(Class exceptionClass, String exceptionMessageRegex) {
+    List<HecHealth> healths = connection.getHealth();
+    Assert.assertTrue("Expected health checks to be not empty, but got this healths: \"" + healths + "\"", !healths.isEmpty());
+    // we expect all channels to fail catching SSLPeerUnverifiedException in preflight
+    healths.stream().forEach(e ->LOG.debug("Got exception in healths: " + e.getStatus().getException().getMessage()));
+    if (healths.stream()
+        .map(h -> h.getStatus().getException())
+        .filter(e -> exceptionClass.isInstance(e))
+        .filter(e -> Pattern.matches(exceptionMessageRegex, e.getMessage()))
+        .count() != healths.size()) {
+      Assert.fail("Expected all health channels to fail with ex: \"" + exceptionClass +
+          "\" and message: \"" + exceptionMessageRegex +
+          "\", but got instead the following exceptions in healths: " +
+          Arrays.toString(healths.stream().map(h -> h.getStatus().getException()).toArray()));
+    }
+  }
+
+
   public List<String> getChannelId(Connection connection) {
     ArrayList channels = new ArrayList();
     for (Object c : connection.getHealth()) {

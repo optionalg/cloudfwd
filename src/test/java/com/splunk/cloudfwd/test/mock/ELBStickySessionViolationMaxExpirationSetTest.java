@@ -45,7 +45,7 @@ public class ELBStickySessionViolationMaxExpirationSetTest extends AbstractExcep
     public void testWithSessionCookies() throws InterruptedException {
         sendEvents(false, false);
         LOG.debug("getHealth: " + connection.getHealth());
-        assertAllChannelsFailed(HecMaxRetriesException.class, "Caused by: " +
+        assertAllChannelsFailedWithRegex(HecMaxRetriesException.class, "Caused by: " +
             "com.splunk.cloudfwd.error.HecNonStickySessionException, with message: " +
             "Received an HTTP Response with a cookie with an expiration time enabled.*");
     }
@@ -63,6 +63,7 @@ public class ELBStickySessionViolationMaxExpirationSetTest extends AbstractExcep
         settings.setMaxRetries(1);
         settings.setAckTimeoutMS(10000);
         settings.setPreFlightTimeoutMS(3000);
+        settings.setNonStickyChannelReplacementDelayMs(1000);
     }
 
 //    @Override

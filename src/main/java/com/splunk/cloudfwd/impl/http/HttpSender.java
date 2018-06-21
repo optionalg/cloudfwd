@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.splunk.cloudfwd.impl.util.ThreadScheduler;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
@@ -294,6 +295,11 @@ public final class HttpSender implements Endpoints{
   }
   
   public void checkStickySesssionViolation(HttpResponse response) {
+    if (stickySessionViolation) {
+      String msg = "Response on channel=" + channel + " marked as stickySessionViolation=" + stickySessionViolation;
+      LOG.warn(msg);
+      throw new HecNonStickySessionException(msg);
+    }
     ChannelCookies cookies = new ChannelCookies(getChannel(), response);
     LOG.debug("checkStickySesssionViolation: response={} cookies={}", response, cookies);
     if(cookies.isEmpty()) return;
@@ -532,11 +538,11 @@ public final class HttpSender implements Endpoints{
   /**
    * As soon as we detect a sticky session violation, we want to perform the following with the channel:
    *  * mark that stickySessionViolation was handled, so we handle it only once
-   *  * kill acknowledgement tracker, to minimize possibility of false-positive acknowledgements
    *  * set status as failed with a proper lifecycle event and cause exception, so :
    *      * no new events sent to channel
    *      * failure cause is exposed to getHealth method
    *  * fail all events in the channel, if it is not empty
+   *  * kill acknowledgement tracker, to minimize possibility of false-positive acknowledgements
    * Final step is to dispatch channel replacement thread
    *
    * @param cause - exception to add as a channel status
@@ -549,8 +555,8 @@ public final class HttpSender implements Endpoints{
     }
     stickySessionViolation = true;
     getChannel().getHealth().setStatus(new PreflightFailed(cause), false);
-    getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
     getChannel().failEventsInFlight(cause);
+    getChannel().killAckTracker(); //we want to immediately ignore any in-flight acks that could arrive from the channel
     dispatchChannelCloseAndReplace(); //schedule channel to be killed and replaced by a new one
     LOG.debug("handleStickySessionViolation: finished handling sticky session violation, channel={} cause={} cause_message={}", getChannel(), cause, cause.getMessage());
   }
@@ -592,16 +598,19 @@ public final class HttpSender implements Endpoints{
     }
     
     private void dispatchChannelCloseAndReplace(){
-        Runnable r = ()->{
-             try {
-                LOG.debug("HttpSender dispatchChannelCloseAndReplace on channel={}", getChannel());
-                getChannel().closeAndReplaceAndFail();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                LOG.error("Exception '{}' trying to handle sticky session-cookies violation on channel={}", ex.getMessage(), getChannel(), ex);
-            }
-        };//end runnable
-        ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
+      Runnable r = ()->{
+        try {
+          LOG.debug("dispatchChannelCloseAndReplace starting on channel={}", getChannel());
+          LOG.debug("handleStickySessionViolation backing off for {} seconds",
+              getConnection().getSettings().getNonStickyChannelReplacementDelayMs());
+          Thread.sleep(getConnection().getSettings().getNonStickyChannelReplacementDelayMs());
+          getChannel().closeAndReplaceAndFail();
+        } catch (Exception ex) {
+          ex.printStackTrace();
+          LOG.error("Exception '{}' trying to handle sticky session-cookies violation on channel={}", ex.getMessage(), getChannel(), ex);
+        }
+      };//end runnable
+      ThreadScheduler.getSharedExecutorInstance("event_resender").execute(r);
     }
     
     public String getSslHostname(){

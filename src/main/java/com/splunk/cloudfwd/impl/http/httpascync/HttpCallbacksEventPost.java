@@ -79,7 +79,14 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
     // Override this method to get access to HttpResponse, as we need to check response headers
     @Override
     public void completed(String reply, int code, HttpResponse response) {
-        completed(reply, code, isSyncAck(response));
+        try {
+            getSender().checkStickySesssionViolation(response);
+            completed(reply, code, isSyncAck(response));
+        } catch (HecNonStickySessionException e) {
+            LOG.warn("Failed handling completed reply={} code={} events={}, cause e={} e.message={}", reply, code, events, e, e.getMessage());
+            // we want to avoid resending the event in this case
+            notifyFailed(EVENT_POST_FAILED, events, e);
+        }
     }
     
     public void completed(String reply, int code, boolean syncAck) {

@@ -23,6 +23,7 @@ import com.splunk.cloudfwd.HecHealth;
 import com.splunk.cloudfwd.error.HecAcknowledgmentTimeoutException;
 import com.splunk.cloudfwd.impl.ConnectionImpl;
 import com.splunk.cloudfwd.impl.sim.errorgen.slow.SlowEndpoints;
+import com.splunk.cloudfwd.impl.util.HecHealthImpl;
 import com.splunk.cloudfwd.test.util.AbstractConnectionTest;
 import com.splunk.cloudfwd.test.util.BasicCallbacks;
 
@@ -86,7 +87,7 @@ public class WatchdogChannelKillerTest extends AbstractConnectionTest {
         LOG.info("After Health={}",connection.getHealth());
         Assert.assertTrue( // we check that the channel was successfully closed
                 "Watchdog have not killed channel=" + channel_id_after,
-                connection.getHealth().isEmpty()); 
+                connection.getHealth().isEmpty());
         connection.closeNow();
     }
 }
