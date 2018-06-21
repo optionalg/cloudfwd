@@ -4,6 +4,7 @@ import com.splunk.cloudfwd.Connection;
 import com.splunk.cloudfwd.ConnectionSettings;
 import com.splunk.cloudfwd.Event;
 import com.splunk.cloudfwd.error.HecMaxRetriesException;
+import com.splunk.cloudfwd.error.HecNoValidChannelsException;
 import com.splunk.cloudfwd.error.HecNonStickySessionException;
 import com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints;
 import com.splunk.cloudfwd.impl.util.HecHealthImpl;
@@ -36,7 +37,7 @@ public class SessionCookiesTest extends AbstractConnectionTest {
     }
 
     protected Event nextEvent(int i) {
-        if (i == 1 || i == getNumEventsToSend() / 2) {
+        if (i == 100 || i == getNumEventsToSend() / 2) {
             LOG.trace("Toggling cookies twice while sending message: {}", i);
             UpdateableCookieEndpoints.toggleCookie();
         }
@@ -54,6 +55,8 @@ public class SessionCookiesTest extends AbstractConnectionTest {
     protected void configureProps(ConnectionSettings settings) {
         settings.setMockHttpClassname("com.splunk.cloudfwd.impl.sim.errorgen.cookies.UpdateableCookieEndpoints");
         settings.setMaxTotalChannels(1);
+        settings.setMaxRetries(2);
+        settings.setNonStickyChannelReplacementDelayMs(0);
     }
     
     
@@ -63,10 +66,13 @@ public class SessionCookiesTest extends AbstractConnectionTest {
             @Override
             protected boolean isExpectedFailureType(Exception e){
                 LOG.debug("isExpectedFailureType: e={}", e.toString());
-                return (e instanceof HecNonStickySessionException || e instanceof HecMaxRetriesException);
+                return (e instanceof HecNonStickySessionException );
             }
             
         };
     }
+
+
+
 
 }

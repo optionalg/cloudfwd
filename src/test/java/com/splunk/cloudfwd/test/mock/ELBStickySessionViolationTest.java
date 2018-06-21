@@ -92,15 +92,4 @@ public class ELBStickySessionViolationTest extends AbstractConnectionTest {
             
         };
     }
-
-//    @Override
-//    protected boolean shouldSendThrowException() {return true;}
-//
-//    @Override
-//    protected boolean isExpectedSendException(Exception e) {
-//        LOG.debug("isExpectedSendException: e={}", e.toString());
-//        return (e instanceof HecNoValidChannelsException);
-//    }
-
-
 }

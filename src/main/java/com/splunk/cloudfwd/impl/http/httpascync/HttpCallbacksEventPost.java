@@ -85,7 +85,8 @@ public class HttpCallbacksEventPost extends HttpCallbacksAbstract {
         } catch (HecNonStickySessionException e) {
             LOG.warn("Failed handling completed reply={} code={} events={}, cause e={} e.message={}", reply, code, events, e, e.getMessage());
             // we want to avoid resending the event in this case
-            notifyFailed(EVENT_POST_FAILED, events, e);
+            notifyFailed(NON_STICKY_SESSION, events, e);
+            invokeFailedEventsCallback(events, e);
         }
     }
     
